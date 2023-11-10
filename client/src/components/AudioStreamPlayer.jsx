@@ -16,7 +16,7 @@ const AudioStreamPlayer = ({ prompt }) => {
     fetch(`${SERVER_PREFIX}/text/to/speech/v1/voices`)
       .then(response => response.json())
       .then(json => {
-        setVoices(json);
+        setVoices(json)
       });
     // setup audio play button element
     const audioElement = audioRef.current
@@ -26,7 +26,7 @@ const AudioStreamPlayer = ({ prompt }) => {
     }
 
     const handleClickOutsidePlayModal = (e) => {
-      if (playModalRef.current.contains(e.target)) {
+      if (playModalRef.current?.contains(e.target)) {
         return
       }
       handleClose()
@@ -40,6 +40,10 @@ const AudioStreamPlayer = ({ prompt }) => {
       document.removeEventListener('mousedown', handleClickOutsidePlayModal)
     }
   }, [])
+
+  useEffect(() => {
+    setAudioMap({})
+  }, [prompt]);
 
   const handlePlayButton = (event) => {
     setAnchorEl(event.currentTarget)
@@ -60,7 +64,7 @@ const AudioStreamPlayer = ({ prompt }) => {
       const blob = new Blob([buffer], { type: 'audio/mpeg' });
       const audioSrc = URL.createObjectURL(blob)
       setIsVoiceLoading(false)
-      const newAudioMap = {...audioSrc}
+      const newAudioMap = {...audioMap}
       newAudioMap[voice] = audioSrc
       setAudioMap(newAudioMap)
 
@@ -115,7 +119,7 @@ const AudioStreamPlayer = ({ prompt }) => {
       )}
       {open && (
         <div style={{top: anchorEl.clientY, left: anchorEl.clientX}} ref={playModalRef} className="absolute z-10">
-          <div className="bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48">
+          <div className="bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48 font-bold">
             <ul>
               {voices.map((voice) => (
                 <li
