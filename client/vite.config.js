@@ -5,10 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Needed for the Docker Container port mapping to work IF we have the Dockerfile doing "npm run dev".
-    // Otherwise, the build will just create the index.html that nginx.conf takes care of
+    // Only used for Dev, as we will build the client and nginx will serve the files on 8080 from Dockerfile
     host: true,
     strictPort: true,
-    port: 8080,
-  },
+    port: 3000
+  }
 })

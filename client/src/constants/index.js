@@ -1,9 +1,9 @@
 export const navLinks = [
   {
     id: 'storybook',
-    title: 'Story Book',
-  },
-];
+    title: 'Story Book'
+  }
+]
 
 export const languages = [
   { name: 'English', code: 'en-US' },

@@ -4,7 +4,7 @@ A webapp frontend that interfaces with a node backend that serves as a learning 
 
 Navigate to client directory and run `npm i`. Then, run `npm run dev` to start the client app using Vite.
 
-Update the .env file with API keys for Elevenlabs and ChatGPT and then navigate to server directory and run `npm i`. 
+Update the .env file with API keys for Elevenlabs and ChatGPT and Google Credentials and then navigate to server directory and run `npm i`. 
 Then, run `npm run start` to start the server app using Express.
 
 ## Deploy

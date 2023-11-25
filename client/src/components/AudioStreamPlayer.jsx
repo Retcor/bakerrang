@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { SERVER_PREFIX } from "../App"
-import LoadingSpinner from "./icons/LoadingSpinner.jsx";
+import { SERVER_PREFIX } from '../App'
+import LoadingSpinner from './icons/LoadingSpinner.jsx'
+import { request } from '../utils/fetchUtils.js'
 
 const AudioStreamPlayer = ({ prompt }) => {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -13,11 +14,11 @@ const AudioStreamPlayer = ({ prompt }) => {
 
   useEffect(() => {
     // setup the voice selections
-    fetch(`${SERVER_PREFIX}/text/to/speech/v1/voices`)
+    request(`${SERVER_PREFIX}/text/to/speech/v1/voices`, 'GET')
       .then(response => response.json())
       .then(json => {
         setVoices(json)
-      });
+      })
     // setup audio play button element
     const audioElement = audioRef.current
 
@@ -43,7 +44,7 @@ const AudioStreamPlayer = ({ prompt }) => {
 
   useEffect(() => {
     setAudioMap({})
-  }, [prompt]);
+  }, [prompt])
 
   const handlePlayButton = (event) => {
     setAnchorEl(event.currentTarget)
@@ -55,16 +56,14 @@ const AudioStreamPlayer = ({ prompt }) => {
 
     if (!audioMap || !audioMap[voice]) {
       setIsVoiceLoading(true)
-      const res = await fetch(`${SERVER_PREFIX}/text/to/speech/v1/convert/${voice}?prompt=${prompt}`, {
-        headers: {
-          Accept: 'audio/mpeg',
-        },
+      const res = await request(`${SERVER_PREFIX}/text/to/speech/v1/convert/${voice}?prompt=${prompt}`, 'GET', {
+        Accept: 'audio/mpeg'
       })
-      const buffer = await res.arrayBuffer();
-      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      const buffer = await res.arrayBuffer()
+      const blob = new Blob([buffer], { type: 'audio/mpeg' })
       const audioSrc = URL.createObjectURL(blob)
       setIsVoiceLoading(false)
-      const newAudioMap = {...audioMap}
+      const newAudioMap = { ...audioMap }
       newAudioMap[voice] = audioSrc
       setAudioMap(newAudioMap)
 
@@ -96,35 +95,39 @@ const AudioStreamPlayer = ({ prompt }) => {
     <div>
       <audio ref={audioRef} />
 
-      {isPlaying ? (
-        <button className="mr-2 focus:outline-none" onClick={handlePause}>
-          <svg
-            className="w-6 h-6 fill-current text-gray hover:text-blue-500"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M14 19h4V5h-4v14zm-6 0h4V5h-4v14z" />
-          </svg>
-        </button>
-      ) : isVoiceLoading ? <LoadingSpinner /> : (
-        <button className="mr-2 focus:outline-none" onClick={handlePlayButton}>
-          <svg
-            className="w-6 h-6 fill-current text-gray hover:text-blue-500"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </button>
-      )}
+      {isPlaying
+        ? (
+          <button className='mr-2 focus:outline-none' onClick={handlePause}>
+            <svg
+              className='w-6 h-6 fill-current text-gray hover:text-blue-500'
+              viewBox='0 0 24 24'
+              xmlns='http://www.w3.org/2000/svg'
+            >
+              <path d='M14 19h4V5h-4v14zm-6 0h4V5h-4v14z' />
+            </svg>
+          </button>
+          )
+        : isVoiceLoading
+          ? <LoadingSpinner className='mr-2' />
+          : (
+            <button className='mr-2 focus:outline-none' onClick={handlePlayButton}>
+              <svg
+                className='w-6 h-6 fill-current text-gray hover:text-blue-500'
+                viewBox='0 0 24 24'
+                xmlns='http://www.w3.org/2000/svg'
+              >
+                <path d='M8 5v14l11-7z' />
+              </svg>
+            </button>
+            )}
       {open && (
-        <div style={{top: anchorEl.clientY, left: anchorEl.clientX}} ref={playModalRef} className="absolute z-10">
-          <div className="bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48 font-bold">
+        <div style={{ top: anchorEl.clientY, left: anchorEl.clientX }} ref={playModalRef} className='absolute z-10'>
+          <div className='bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48 font-bold'>
             <ul>
               {voices.map((voice) => (
                 <li
                   key={voice.voice_id}
-                  className="cursor-pointer px-4 py-2 hover:bg-gray-600"
+                  className='cursor-pointer px-4 py-2 hover:bg-gray-600'
                   onClick={() => handleVoiceSelect(voice.voice_id)}
                 >
                   {voice.name}

@@ -1,10 +1,9 @@
-import Navbar from "./Navbar";
-import StoryBook from "./StoryBook.jsx";
-import CanvasLoader from "./Loader";
-
+import MainContent from './MainContent.jsx'
+import StoryBook from './StoryBook.jsx'
+import CanvasLoader from './Loader'
 
 export {
-  Navbar,
+  MainContent,
   StoryBook,
   CanvasLoader
-};
+}
