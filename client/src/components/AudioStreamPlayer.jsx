@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { SERVER_PREFIX } from '../App'
-import LoadingSpinner from './icons/LoadingSpinner.jsx'
-import { request } from '../utils/fetchUtils.js'
+import { request } from '../utils/index.js'
+import { LoadingSpinner } from './index.js'
+import { useAppContext } from '../providers/AppProvider.jsx'
 
 const AudioStreamPlayer = ({ prompt }) => {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -9,16 +10,10 @@ const AudioStreamPlayer = ({ prompt }) => {
   const [audioMap, setAudioMap] = useState({})
   const [anchorEl, setAnchorEl] = useState(null)
   const [isVoiceLoading, setIsVoiceLoading] = useState(false)
-  const [voices, setVoices] = useState([])
+  const { voices } = useAppContext()
   const playModalRef = useRef()
 
   useEffect(() => {
-    // setup the voice selections
-    request(`${SERVER_PREFIX}/text/to/speech/v1/voices`, 'GET')
-      .then(response => response.json())
-      .then(json => {
-        setVoices(json)
-      })
     // setup audio play button element
     const audioElement = audioRef.current
 
@@ -45,6 +40,22 @@ const AudioStreamPlayer = ({ prompt }) => {
   useEffect(() => {
     setAudioMap({})
   }, [prompt])
+
+  const calculateModalPosition = (anchorEl) => {
+    const modalWidth = 192 // w-48 width used for modal
+    const viewportWidth = window.innerWidth
+    const buttonRect = anchorEl.getBoundingClientRect()
+    let left = null
+
+    // We need to calculate the width from the button to the edge of the screen
+    // if it's less than the modal width, then we know the modal will appear outside the screen
+    const buttonToScreenEdgeWidth = viewportWidth - buttonRect.right
+    if (modalWidth > buttonToScreenEdgeWidth) {
+      left = buttonRect.width - modalWidth
+    }
+
+    return { left }
+  }
 
   const handlePlayButton = (event) => {
     setAnchorEl(event.currentTarget)
@@ -121,14 +132,14 @@ const AudioStreamPlayer = ({ prompt }) => {
             </button>
             )}
       {open && (
-        <div style={{ top: anchorEl.clientY, left: anchorEl.clientX }} ref={playModalRef} className='absolute z-10'>
+        <div style={calculateModalPosition(anchorEl)} ref={playModalRef} className='absolute z-10'>
           <div className='bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48 font-bold'>
             <ul>
               {voices.map((voice) => (
                 <li
-                  key={voice.voice_id}
+                  key={voice.id}
                   className='cursor-pointer px-4 py-2 hover:bg-gray-600'
-                  onClick={() => handleVoiceSelect(voice.voice_id)}
+                  onClick={() => handleVoiceSelect(voice.id)}
                 >
                   {voice.name}
                 </li>

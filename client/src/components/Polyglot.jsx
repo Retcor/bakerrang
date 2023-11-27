@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import SpeechToText from './SpeechToText.jsx'
-import LoadingSpinner from './icons/LoadingSpinner.jsx'
-import AudioStreamPlayer from './AudioStreamPlayer.jsx'
 import { SERVER_PREFIX } from '../App.jsx'
-import Dropdown from './Dropdown.jsx'
 import { languages } from '../constants/index.js'
-import { request } from '../utils/fetchUtils.js'
+import { request } from '../utils/index.js'
+import { AudioStreamPlayer, Dropdown, LoadingSpinner, SpeechToText } from './index.js'
+import ContentWrapper from './ContentWrapper.jsx'
 
 const Polyglot = () => {
   const [speechToText, setSpeechToText] = useState('')
@@ -28,9 +26,8 @@ const Polyglot = () => {
   }
 
   return (
-    <div className='bg-gray-800 p-8 m-4 rounded-lg'>
-      <h2 className='text-4xl text-white font-black'>Polyglot</h2>
-      <p className='mt-2 text-md text-white font-medium'>
+    <ContentWrapper title='Polyglot'>
+      <p className='text-md text-white font-medium'>
         Polyglot: knowing or using several languages. This functionality strives to allow
         communication across languages. Just type or speak what you want to be said, select the language and
         hear it spoken in your voice.  Imagine if we all had a tool like this, how quickly we could
@@ -62,7 +59,7 @@ const Polyglot = () => {
                 </div>
                 )
               : (
-                <span className='text-gray bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Translate</span>
+                <span className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Translate</span>
                 )}
           </button>
         </div>
@@ -79,7 +76,7 @@ const Polyglot = () => {
           )}
         </div>
       </div>
-    </div>
+    </ContentWrapper>
   )
 }
 

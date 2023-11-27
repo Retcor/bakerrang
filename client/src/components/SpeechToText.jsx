@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { debounce } from '../utils/index.js'
 
 const SpeechToText = ({ speechToText, setSpeechToText, lang }) => {
   const [isRecording, setIsRecording] = useState(false)
@@ -7,10 +8,10 @@ const SpeechToText = ({ speechToText, setSpeechToText, lang }) => {
   recognition.interimResults = true
   recognition.lang = lang
 
-  recognition.onresult = (event) => {
+  recognition.onresult = debounce((event) => {
     const result = event.results[event.results.length - 1]
     setSpeechToText(result[0].transcript)
-  }
+  }, 300)
 
   recognition.onend = () => {
     setIsRecording(false)

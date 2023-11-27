@@ -1,7 +1,15 @@
 import Firestore from '@google-cloud/firestore'
 
-const db = new Firestore({
+export const db = new Firestore({
   projectId: 'avian-cable-379805'
 })
 
-export default db
+export const userCanAccess = async (userId, recordId, collection) => {
+  const query = db
+    .collection(collection)
+    .where('userId', '==', userId)
+    .where('id', '==', recordId)
+  const snapshot = await query.get()
+
+  return snapshot.size > 0
+}

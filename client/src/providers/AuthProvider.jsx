@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { request } from '../utils/fetchUtils.js'
+import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
 
 const AuthContext = createContext()

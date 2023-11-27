@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import LoadingSpinner from './icons/LoadingSpinner.jsx'
 import ReactMarkdown from 'react-markdown'
-import AudioStreamPlayer from './AudioStreamPlayer.jsx'
 import { SERVER_PREFIX } from '../App.jsx'
 import { v4 } from 'uuid'
 import remarkGfm from 'remark-gfm'
-import { request } from '../utils/fetchUtils.js'
+import { request } from '../utils/index.js'
+import { AudioStreamPlayer, LoadingSpinner, ContentWrapper, InputWrapper, ConfirmModal } from './index.js'
 
 const StoryBook = () => {
   const [loading, setLoading] = useState(false)
@@ -16,11 +15,6 @@ const StoryBook = () => {
   const [percentage, setPercentage] = useState(0)
   const [page, setPage] = useState(1)
 
-  const handleKeyDown = async (e) => {
-    if (e.key === 'Enter') {
-      await handleGenerateStory()
-    }
-  }
   const handleClearClick = () => setPrompt('')
   const handleGenerateStory = async () => {
     if (storyBookPages.length) {
@@ -29,9 +23,7 @@ const StoryBook = () => {
       await getGPTResponse()
     }
   }
-  const handleClose = () => {
-    setConfirmOpen(false)
-  }
+
   const handleChange = (event, value) => setPage(value)
   const getGPTResponse = async () => {
     setLoading(true)
@@ -76,56 +68,31 @@ const StoryBook = () => {
   }
 
   return (
-    <div className='bg-gray-800 p-8 m-4 rounded-lg'>
-      <h2 className='text-4xl text-white font-black'>Story Book</h2>
-      <p className='mt-2 text-md text-white font-medium'>
+    <ContentWrapper title='Story Book'>
+      <p className='text-md text-white font-medium'>
         Story Book uses Dall-E, ChatGPT 3.5 and ElevenLabs
         to generate random Story Books with AI generated text,
         images and voice cloning.  This allows for a fun and
         creative way to read all new types of stories!
       </p>
       <div className='mt-8 flex flex-col gap-4'>
-        {confirmOpen && (
-          <div className='fixed inset-0 z-50 flex items-center justify-center'>
-            <div className='bg-gray-800 w-96 p-6 rounded-lg shadow-lg'>
-              <h2 className='text-xl font-medium mb-4'>Confirmation</h2>
-              <p className='mb-4'>
-                Are you sure you want to generate a new story? This will replace the current story.
-              </p>
-              <div className='flex justify-end'>
-                <button className='mr-2 px-4 py-2 text-white bg-gray-500 rounded' onClick={handleClose}>
-                  Cancel
-                </button>
-                <button
-                  className='px-4 py-2 text-white bg-blue-500 rounded'
-                  onClick={getGPTResponse}
-                  disabled={loading}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmModal
+          open={confirmOpen}
+          title='Confirmation'
+          message='Are you sure you want to generate a new story? This will replace the current story.'
+          confirmFunc={getGPTResponse}
+          cancelFunc={() => setConfirmOpen(false)}
+        />
         <div className='relative flex flex-col'>
-          <input
-            style={{ width: '100%' }}
-            type='text'
-            placeholder='What story would you like to hear about today?'
-            className='bg-gray-700 py-4 px-6 placeholder:text-secondary text-white rounded-lg outline-none border-none font-medium'
-            onKeyDown={handleKeyDown}
-            onChange={(e) => setPrompt(e.target.value)}
-            value={prompt}
-            disabled={loading}
-          />
+          <InputWrapper label='What story would you like to hear about today?' value={prompt} setValue={setPrompt} />
           {prompt && (
-            <div className='absolute right-3 bottom-4 flex items-center'>
+            <div className='absolute right-3 bottom-2 flex items-center'>
               <button
                 className='mr-2 text-gray hover:text-red-500'
                 onClick={handleClearClick}
                 disabled={loading}
               >
-                <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-6 h-6'>
+                <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-5 h-5'>
                   <path fillRule='evenodd' d='M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z' clipRule='evenodd' />
                 </svg>
               </button>
@@ -135,9 +102,9 @@ const StoryBook = () => {
                 disabled={loading}
               >
                 {loading
-                  ? <LoadingSpinner />
+                  ? <LoadingSpinner svgClassName='!h-5 !w-5' />
                   : (
-                    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-6 h-6'>
+                    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-5 h-5'>
                       <path d='M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z' />
                     </svg>
                     )}
@@ -150,11 +117,11 @@ const StoryBook = () => {
         <div>
           <br />
           <div className='flex justify-between mb-1'>
-            <span className='text-base font-medium text-blue-700 dark:text-white'>{loadingDescription}</span>
-            <span className='text-sm font-medium text-blue-700 dark:text-white'>{percentage}%</span>
+            <span className='text-base font-medium text-[#D4ED31]'>{loadingDescription}</span>
+            <span className='text-sm font-medium text-[#D4ED31]'>{percentage}%</span>
           </div>
-          <div className='w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700'>
-            <div className='bg-blue-600 h-2.5 rounded-full' style={{ width: `${percentage}%` }} />
+          <div className='w-full bg-gray-700 rounded-full h-2.5'>
+            <div className='bg-[#D4ED31] h-2.5 rounded-full' style={{ width: `${percentage}%` }} />
           </div>
         </div>
       )}
@@ -207,7 +174,7 @@ const StoryBook = () => {
           </div>
         )}
       </div>
-    </div>
+    </ContentWrapper>
   )
 }
 

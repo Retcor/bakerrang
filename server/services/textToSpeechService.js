@@ -1,10 +1,10 @@
 import axios from 'axios'
-import db from '../client/firestoreClient.js'
+import { db } from '../client/firestoreClient.js'
 const apiKey = process.env.ELEVEN_LABS_API_KEY
 const baseUrl = 'https://api.elevenlabs.io'
 const modelId = 'eleven_multilingual_v2'
 
-export const v1ConvertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu') => {
+export const convertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu') => {
   const url = `${baseUrl}/v1/text-to-speech/${voice}?optimize_streaming_latency=4&output_format=mp3_44100_128`
   const options = {
     method: 'POST',
@@ -29,10 +29,10 @@ export const v1ConvertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu
   return axios(url, options)
 }
 
-export const v1GetVoices = async userId => {
+export const getVoices = async userId => {
   const query = db
     .collection('voices')
-    .where('user_id', '==', userId)
+    .where('userId', '==', userId)
   const snapshot = await query.get()
 
   if (snapshot.size > 0) {
@@ -42,7 +42,7 @@ export const v1GetVoices = async userId => {
   }
 }
 
-export const v1GetLanguages = async () => {
+export const getLanguages = async () => {
   const url = `${baseUrl}/v1/models`
   const options = {
     method: 'GET',
@@ -56,5 +56,90 @@ export const v1GetLanguages = async () => {
   if (response.data) {
     const multiLingualModel = response.data.filter(model => model.model_id === modelId)[0]
     return multiLingualModel.languages.map(language => language.name)
+  }
+}
+
+export const postVoice = async (userId, voice, files) => {
+  const url = `${baseUrl}/v1/voices/${voice.id ? `${voice.id}/edit` : 'add'}`
+  const formData = new FormData()
+  formData.append('name', voice.name)
+  formData.append('description', voice.description)
+
+  if (files && files.length) {
+    // Append each file to the new FormData object
+    files.forEach((file, index) => {
+      const blob = new Blob([file.buffer], { type: file.mimetype })
+      formData.append('files', blob, file.originalname)
+    })
+  }
+
+  const options = {
+    url,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'xi-api-key': apiKey
+    },
+    data: formData
+  }
+
+  // Save at 3rd party vendor
+  const postVoiceRes = await axios(options)
+
+  // Now save it on our side so we can associate it to a user
+  const updatedVoice = postVoiceRes.data
+  // Update the voice id if it's returned. It's only returned if it's a new record
+  if (updatedVoice?.voice_id) {
+    voice.id = updatedVoice.voice_id
+  }
+
+  const collection = db.collection('voices')
+
+  try {
+    // Check if the record already exists
+    const existingDoc = await collection.doc(voice.id).get()
+    voice.userId = userId
+
+    if (existingDoc.exists) {
+      // Update the existing record
+      await collection.doc(voice.id).update(voice)
+      console.log(`Voice record with ID ${voice.id} already exists. Updating with any new details.`)
+    } else {
+      // Store a new record
+      await collection.doc(voice.id).set(voice)
+      console.log(`New voice record with ID ${voice.id} stored successfully.`)
+    }
+  } catch (error) {
+    console.error('Error checking or storing voice record:', error)
+  }
+
+  return voice
+}
+
+export const deleteVoice = async (userId, voiceId) => {
+  const url = `${baseUrl}/v1/voices/${voiceId}`
+  const options = {
+    method: 'DELETE',
+    headers: {
+      'xi-api-key': apiKey
+    }
+  }
+
+  // Delete from 3rd party vendor
+  await axios(url, options)
+  // Now delete it on our side
+  const collection = db.collection('voices')
+
+  try {
+    // Check if the record already exists
+    const existingDoc = await collection.doc(voiceId).get()
+
+    if (existingDoc.exists) {
+      // Update the existing record
+      await collection.doc(voiceId).delete()
+      console.log(`Voice record with ID ${voiceId} deleted successfully.`)
+    }
+  } catch (error) {
+    console.error('Error deleting voice record:', error)
   }
 }

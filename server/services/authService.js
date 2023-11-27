@@ -1,4 +1,4 @@
-import db from '../client/firestoreClient.js'
+import { db } from '../client/firestoreClient.js'
 
 export const checkAndStoreUser = async user => {
   const collection = db.collection('users')
@@ -10,13 +10,13 @@ export const checkAndStoreUser = async user => {
     if (existingDoc.exists) {
       // Update the existing record
       await collection.doc(user.id).update(user)
-      console.log(`Record with ID ${user.id} already exists. Updating with any new details.`)
+      console.log(`User record with ID ${user.id} already exists. Updating with any new details.`)
     } else {
       // Store a new record
       await collection.doc(user.id).set(user)
-      console.log(`New record with ID ${user.id} stored successfully.`)
+      console.log(`New user record with ID ${user.id} stored successfully.`)
     }
   } catch (error) {
-    console.error('Error checking or storing record:', error)
+    console.error('Error checking or storing user record:', error)
   }
 }
