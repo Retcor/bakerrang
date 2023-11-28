@@ -77,17 +77,12 @@ const MainContent = () => {
             {isMenuOpen && (
               <div className='md:hidden'>
                 <div className='px-2 pt-2 pb-3 space-y-1 sm:px-3'>
-                  <Link to='/' className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Story Book</Link>
-                  <Link to='/polyglot' className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Polyglot</Link>
+                  <Link to='/' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Story Book</Link>
+                  <Link to='/polyglot' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Polyglot</Link>
                 </div>
                 <div className='pt-4 pb-3 border-t border-gray-700'>
                   <div className='flex flex-col px-5'>
-                    <button
-                      className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'
-                      onClick={() => console.log('Account clicked')}
-                    >
-                      Account
-                    </button>
+                    <Link to='/account' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Account</Link>
                     <button
                       className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'
                       onClick={() => logout()}
