@@ -70,8 +70,7 @@ const StoryBook = () => {
   return (
     <ContentWrapper title='Story Book'>
       <p className='text-md text-white font-medium'>
-        Story Book uses Dall-E, ChatGPT 3.5 and ElevenLabs
-        to generate random Story Books with AI generated text,
+        Story Book generates random Story Books with AI generated text,
         images and voice cloning.  This allows for a fun and
         creative way to read all new types of stories!
       </p>
