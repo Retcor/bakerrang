@@ -17,6 +17,8 @@ const MainContent = () => {
               <div className='hidden md:flex items-center space-x-4 ml-10'>
                 <Link to='/' className='text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-black'>Story Book</Link>
                 <Link to='/polyglot' className='text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-black'>Polyglot</Link>
+                <Link to='/polyglot/instant' className='text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-black'>Polyglot Instant</Link>
+                <Link to='/supermarket' className='text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-black'>Supermarket</Link>
               </div>
             </div>
             <div className='md:hidden'>
@@ -79,6 +81,8 @@ const MainContent = () => {
                 <div className='px-2 pt-2 pb-3 space-y-1 sm:px-3'>
                   <Link to='/' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Story Book</Link>
                   <Link to='/polyglot' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Polyglot</Link>
+                  <Link to='/polyglot/instant' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Polyglot Instant</Link>
+                  <Link to='/supermarket' onClick={() => setIsMenuOpen(false)} className='text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium'>Supermarket</Link>
                 </div>
                 <div className='pt-4 pb-3 border-t border-gray-700'>
                   <div className='flex flex-col px-5'>

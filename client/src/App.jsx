@@ -6,7 +6,9 @@ import {
   NoPage,
   Login,
   Polyglot,
-  Account
+  PolyglotInstant,
+  Account,
+  SuperMarket
 } from './components'
 
 export const SERVER_PREFIX = 'https://api.bakerrang.com'
@@ -17,6 +19,8 @@ const App = () => {
       <Route element={<MainContent />}>
         <Route path='/' element={<StoryBook />} />
         <Route path='/polyglot' element={<Polyglot />} />
+        <Route path='/polyglot/instant' element={<PolyglotInstant />} />
+        <Route path='/supermarket' element={<SuperMarket />} />
         <Route path='/account' element={<Account />} />
         <Route path='*' element={<NoPage />} />
       </Route>

@@ -7,6 +7,7 @@ import GoogleLogin from './GoogleLogin.jsx'
 import Login from './Login.jsx'
 import NoPage from './NoPage.jsx'
 import Polyglot from './Polyglot.jsx'
+import PolyglotInstant from './PolyglotInstant.jsx'
 import SpeechToText from './SpeechToText.jsx'
 import Account from './Account.jsx'
 import ContentWrapper from './ContentWrapper.jsx'
@@ -15,6 +16,7 @@ import VoiceRow from './VoiceRow.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import AddVoiceModal from './AddVoiceModal.jsx'
 import DropzoneWrapper from './DropzoneWrapper.jsx'
+import SuperMarket from './SuperMarket.jsx'
 
 export {
   MainContent,
@@ -26,6 +28,7 @@ export {
   Login,
   NoPage,
   Polyglot,
+  PolyglotInstant,
   SpeechToText,
   Account,
   ContentWrapper,
@@ -33,5 +36,6 @@ export {
   VoiceRow,
   ConfirmModal,
   AddVoiceModal,
-  DropzoneWrapper
+  DropzoneWrapper,
+  SuperMarket
 }

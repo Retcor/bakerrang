@@ -7,6 +7,7 @@ import cors from 'cors'
 import authRouter, { isAuthenticated } from './routes/auth.js'
 import chatgptRouter from './routes/chatgpt.js'
 import textToSpeechRouter from './routes/textToSpeech.js'
+import superMarketRouter from './routes/superMarket.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -53,6 +54,7 @@ passport.use(new GoogleStrategy({
 app.use('/auth', authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
+app.use('/supermarket', isAuthenticated, superMarketRouter)
 
 app.get('/health', (req, res) => {
   res.status(200).send('Healthy')
