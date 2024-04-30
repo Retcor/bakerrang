@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
+const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassname }) => {
   const [isOpen, setIsOpen] = useState(false)
 
   const toggleDropdown = () => {
@@ -41,7 +41,7 @@ const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
       </div>
 
       {isOpen && (
-        <div className='z-10 origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg text-gray font-bold bg-gray-700 border border-gray-600 ring-1 ring-black ring-opacity-5 max-h-[20rem] overflow-auto'>
+        <div className={`z-10 origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg text-gray font-bold bg-gray-700 border border-gray-600 ring-1 ring-black ring-opacity-5 max-h-[20rem] overflow-auto ${dropdownClassname}`}>
           <div
             className='py-1'
             role='menu'
