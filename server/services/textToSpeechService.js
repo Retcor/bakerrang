@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { db } from '../client/firestoreClient.js'
+import { v1p1beta1 as speech } from '@google-cloud/speech'
 const apiKey = process.env.ELEVEN_LABS_API_KEY
 const baseUrl = 'https://api.elevenlabs.io'
 const modelId = 'eleven_multilingual_v2'
+const speechToTextClient = new speech.SpeechClient()
 
 export const convertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu') => {
   const url = `${baseUrl}/v1/text-to-speech/${voice}?optimize_streaming_latency=4&output_format=mp3_44100_128`
@@ -57,6 +59,26 @@ export const getLanguages = async () => {
     const multiLingualModel = response.data.filter(model => model.model_id === modelId)[0]
     return multiLingualModel.languages.map(language => language.name)
   }
+}
+
+export const getGoogleTextToSpeech = async (audioBytes, lang) => {
+  const audio = {
+    content: audioBytes,
+  };
+  const config = {
+    languageCode: lang,
+    enableAutomaticPunctuation: true,
+  };
+  const request = {
+    audio: audio,
+    config: config,
+  };
+
+  const [response] = await speechToTextClient.recognize(request);
+  const transcription = response.results
+    .map(result => result.alternatives[0].transcript)
+    .join('\n');
+  return { transcription }
 }
 
 export const postVoice = async (userId, voice, files) => {

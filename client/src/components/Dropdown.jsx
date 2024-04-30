@@ -1,15 +1,13 @@
 import React, { useState } from 'react'
 
-const Dropdown = ({ options, defaultOption, onChange }) => {
+const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedOption, setSelectedOption] = useState(defaultOption)
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen)
   }
 
   const handleOptionClick = (option) => {
-    onChange(option)
     setSelectedOption(option)
     setIsOpen(false)
   }

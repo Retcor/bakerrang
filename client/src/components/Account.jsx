@@ -13,6 +13,7 @@ const Account = () => {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [licenses, setLicenses] = useState([])
   const [isLicenseSaving, setIsLicenseSaving] = useState(false)
+  const [isVoicesUpdating, setIsVoicesUpdating] = useState(false)
 
   useEffect(() => {
     const getLicenses = async () => {
@@ -35,6 +36,12 @@ const Account = () => {
     setIsLicenseSaving(false)
   }
 
+  const updateVoices = async () => {
+    setIsVoicesUpdating(true)
+    await request(`${SERVER_PREFIX}/text/to/speech/v1/voices`, 'PUT', { 'Content-Type': 'application/json' }, JSON.stringify({ voices }))
+    setIsVoicesUpdating(false)
+  }
+
   return (
     <ContentWrapper title='Account'>
       <Card className='mt-8 bg-gray-900 w-full'>
@@ -55,6 +62,9 @@ const Account = () => {
         </CardBody>
         <CardFooter className='pt-0'>
           <Button onClick={() => setAddModalOpen(true)} className='text-white font-bold bg-blue-500 hover:bg-blue-700'>Add</Button>
+          <Button onClick={() => updateVoices()} className='text-white font-bold bg-blue-500 hover:bg-blue-700 ml-2'>
+            {isVoicesUpdating ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Update'}
+          </Button>
           <AddVoiceModal open={addModalOpen} cancel={() => setAddModalOpen(false)} success={addVoiceSuccess} />
         </CardFooter>
       </Card>

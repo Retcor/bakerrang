@@ -19,7 +19,7 @@ export const image = async input => {
   console.log(`prompting for image content ${input.substring(0, 50)}`)
   try {
     const res = await openai.images.generate({
-      prompt: `Generate an image based on a summary of the following text: ${input}`,
+      prompt: `Generate an image, in the style of a children's book, based on a summary of the following story: ${input}`,
       n: 1,
       size: '256x256',
       response_format: 'b64_json'
@@ -39,5 +39,5 @@ export const translate = async (language, input) => {
 }
 
 export const promptStory = async input => {
-  return prompt(`Tell me a 1 paragraph story about: ${input}`)
+  return prompt(`Tell me a 3 paragraph story about: ${input}`)
 }

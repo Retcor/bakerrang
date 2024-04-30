@@ -8,27 +8,18 @@ import { useAppContext } from '../providers/AppProvider.jsx'
 const VoiceRow = ({ voice }) => {
   const [name, setName] = useState(voice.name)
   const [description, setDescription] = useState(voice.description)
-  const [updateLoading, setUpdateLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { voices, setVoices } = useAppContext()
 
-  const handleVoiceUpdate = async id => {
-    setUpdateLoading(true)
-    const formData = new FormData()
-    formData.append('name', name)
-    formData.append('description', description)
-    formData.append('id', id)
-
-    await request(`${SERVER_PREFIX}/text/to/speech/v1/voice`, 'POST', null, formData)
+  const handleMarkAsPrimary = () => {
     setVoices(voices.map(v => {
       if (v.id === voice.id) {
-        return { ...v, name, description }
+        return { ...v, isPrimary: true }
       } else {
-        return v
+        return { ...v, isPrimary: false }
       }
     }))
-    setUpdateLoading(false)
   }
 
   const handleVoiceDelete = async id => {
@@ -40,7 +31,7 @@ const VoiceRow = ({ voice }) => {
   }
 
   return (
-    <div className='md:flex md:mb-4'>
+    <div className='md:flex md:items-center md:mb-4'>
       <ConfirmModal
         open={confirmOpen}
         title='Confirmation'
@@ -54,9 +45,18 @@ const VoiceRow = ({ voice }) => {
       <div className='md:mr-4 mb-4 md:mb-0'>
         <InputWrapper value={description} setValue={setDescription} label='Description' />
       </div>
+      <div className='mr-4 mb-4 md:mb-0 relative'>
+        <span className='absolute left-12 md:-left-1 text-[#D4ED31] text-xs top-3 md:-top-2'>Primary</span>
+        <div className='p-2 cursor-pointer bg-gray-700 rounded-[7px] w-10 h-10' onClick={handleMarkAsPrimary}>
+          <svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' stroke='currentColor' className={`w-6 h-6 ${voice.isPrimary ? 'text-green-500' : 'text-gray-700'}`}>
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+          </svg>
+        </div>
+      </div>
       <div className='md:mr-4 mb-4 md:mb-0 flex justify-end'>
-        <Button onClick={() => handleVoiceUpdate(voice.id)} disabled={updateLoading} className='mr-2 text-white font-bold bg-blue-500 hover:bg-blue-700'>{updateLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Update'}</Button>
-        <Button onClick={() => setConfirmOpen(true)} disabled={deleteLoading} className='text-white font-bold bg-red-500 hover:bg-red-700'>{deleteLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Delete'}</Button>
+        <Button onClick={() => setConfirmOpen(true)} disabled={deleteLoading} className='text-white font-bold bg-red-500 hover:bg-red-700'>
+          {deleteLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Delete'}
+        </Button>
       </div>
     </div>
   )
