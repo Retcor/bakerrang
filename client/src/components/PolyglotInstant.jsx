@@ -70,7 +70,7 @@ const PolyglotInstant = () => {
       </div>
       <div className='flex justify-center mt-4'>
         <div className='w-full flex justify-center'>
-          <Microphone setSpeechToText={setSpeechToText} lang={inputLangCode} buttonClassName='w-64 h-64' isLoading={isProcessing} />
+          <Microphone setSpeechToText={setSpeechToText} lang={inputLangCode} buttonClassName='!w-64 !h-64' isLoading={isProcessing} />
           <AudioStreamPlayer audioSrc={audioSrc} controlTrigger={controlTrigger} />
         </div>
       </div>
