@@ -38,7 +38,7 @@ const Polyglot = () => {
 
   return (
     <ContentWrapper title='Polyglot'>
-      <p className='text-md text-white font-medium'>
+      <p className='text-xs text-white font-medium'>
         Polyglot: knowing or using several languages. This functionality strives to allow
         communication across languages. Just type or speak what you want to be said, select the language and
         hear it spoken in your voice.  Imagine if we all had a tool like this, how quickly we could

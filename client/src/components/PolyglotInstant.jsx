@@ -56,8 +56,8 @@ const PolyglotInstant = () => {
 
   return (
     <ContentWrapper title='Polyglot Instant'>
-      <p className='text-md text-white font-medium'>
-        Polyglot but instant! Voice used will be the primary voice set in the Account settings or the first voice found if there is no primary.
+      <p className='text-xs text-white font-medium'>
+        Polyglot but instant! Voice used will be the primary voice set in the <a href="/account" className="text-blue-400 hover:text-blue-500 hover:underline">Account settings</a> or the first voice found if there is no primary.
       </p>
       <div className='flex justify-center mt-8'>
         <div className='flex space-x-8'>

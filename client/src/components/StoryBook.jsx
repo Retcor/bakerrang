@@ -69,7 +69,7 @@ const StoryBook = () => {
 
   return (
     <ContentWrapper title='Story Book'>
-      <p className='text-md text-white font-medium'>
+      <p className='text-xs text-white font-medium'>
         Story Book generates random Story Books with AI generated text,
         images and voice cloning.  This allows for a fun and
         creative way to read all new types of stories!

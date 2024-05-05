@@ -5,10 +5,12 @@ import { request } from '../utils/index.js'
 import ContentWrapper from './ContentWrapper.jsx'
 import { Button } from '@material-tailwind/react'
 import ProductCounter from './ProductCounter.jsx'
+import { ConfirmModal } from './index.js'
 
 const SuperMarket = () => {
   const [initialProducts, setInitialProducts] = useState([])
   const [products, setProducts] = useState([])
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -56,19 +58,31 @@ const SuperMarket = () => {
     )
   }
 
+  const checkResetProducts = () => {
+    setConfirmOpen(true)
+  }
+
   const resetProducts = () => {
     setProducts([...initialProducts])
+    setConfirmOpen(false)
   }
 
   return (
     <ContentWrapper title='Supermarket'>
+      <ConfirmModal
+        open={confirmOpen}
+        title='Confirmation'
+        message='Are you sure you want to reset the list?'
+        confirmFunc={resetProducts}
+        cancelFunc={() => setConfirmOpen(false)}
+      />
       <p className='text-xs text-white font-medium'>
         A simple checklist app to manage Supermarket Simulator products. Visit the Account page to add Product Licenses to list Products here.
       </p>
       {products.length > 0 && (
         <div className='my-2'>
           <Button onClick={sortProducts} className='text-white font-bold bg-blue-500 hover:bg-blue-700'>Sort</Button>
-          <Button onClick={resetProducts} className='text-white mx-2 font-bold bg-blue-500 hover:bg-blue-700'>Reset</Button>
+          <Button onClick={checkResetProducts} className='text-white mx-2 font-bold bg-blue-500 hover:bg-blue-700'>Reset</Button>
         </div>
       )}
       {products.length > 0 && products.map(product => (
