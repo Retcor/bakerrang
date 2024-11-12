@@ -2,6 +2,7 @@ import MainContent from './MainContent.jsx'
 import StoryBook from './StoryBook.jsx'
 import LoadingSpinner from './icons/LoadingSpinner.jsx'
 import AudioStreamPlayer from './AudioStreamPlayer.jsx'
+import AudioStreamPlayerSelector from './AudioStreamPlayerSelector.jsx'
 import Dropdown from './Dropdown.jsx'
 import GoogleLogin from './GoogleLogin.jsx'
 import Login from './Login.jsx'
@@ -23,6 +24,7 @@ export {
   StoryBook,
   LoadingSpinner,
   AudioStreamPlayer,
+  AudioStreamPlayerSelector,
   Dropdown,
   GoogleLogin,
   Login,

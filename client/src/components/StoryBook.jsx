@@ -4,7 +4,7 @@ import { SERVER_PREFIX } from '../App.jsx'
 import { v4 } from 'uuid'
 import remarkGfm from 'remark-gfm'
 import { request } from '../utils/index.js'
-import { AudioStreamPlayer, LoadingSpinner, ContentWrapper, InputWrapper, ConfirmModal } from './index.js'
+import { AudioStreamPlayerSelector, LoadingSpinner, ContentWrapper, InputWrapper, ConfirmModal } from './index.js'
 
 const StoryBook = () => {
   const [loading, setLoading] = useState(false)
@@ -49,12 +49,12 @@ const StoryBook = () => {
       }, intervalTime)
 
       setLoadingDescription(`Generating image${replyArr.length > 1 ? 's' : ''}...`)
-      const replyImgArr = await Promise.all(replyArr.map(async i => {
-        const imageRes = await request(`${SERVER_PREFIX}/chat/gpt/image/prompt?prompt=${i}`, 'GET')
+      const replyImgArr = await Promise.all(replyArr.map(async (text, index) => {
+        const imageRes = await request(`${SERVER_PREFIX}/chat/gpt/image/prompt?prompt=${replyArr[index - 1]}${text}`, 'GET')
         const image = await imageRes.text()
         return {
           id: v4(),
-          reply: i,
+          reply: text,
           image
         }
       }))
@@ -130,7 +130,7 @@ const StoryBook = () => {
           <div>
             <div className='flex'>
               <div className='flex-none w-50 pt-1'>
-                <AudioStreamPlayer prompt={storyBookPages[page - 1].reply} />
+                <AudioStreamPlayerSelector prompt={storyBookPages[page - 1].reply} />
               </div>
               <div className='grow px-2'>
                 <div
