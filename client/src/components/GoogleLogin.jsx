@@ -1,12 +1,15 @@
 import React from 'react'
 import google from '../assets/google-icon.png'
 import { SERVER_PREFIX } from '../App.jsx'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 
 const GoogleLogin = ({ onClick }) => {
+  const { isDark } = useTheme()
+
   return (
     <a
       href={`${SERVER_PREFIX}/auth/google`}
-      className='flex items-center bg-white text-gray-700 font-semibold py-2 px-4 rounded border border-gray-300 hover:bg-gray-100 focus:outline-none focus:shadow-outline-blue active:bg-gray-200'
+      className={`flex items-center font-semibold py-2 px-4 rounded transition-all duration-200 focus:outline-none ${isDark ? 'glass-light text-gray-800 hover:bg-white/30' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'}`}
       onClick={() => onClick()}
     >
       <img

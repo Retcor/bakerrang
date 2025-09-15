@@ -4,9 +4,11 @@ import { SERVER_PREFIX } from '../App.jsx'
 import { v4 } from 'uuid'
 import remarkGfm from 'remark-gfm'
 import { request } from '../utils/index.js'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import { AudioStreamPlayerSelector, LoadingSpinner, ContentWrapper, InputWrapper, ConfirmModal } from './index.js'
 
 const StoryBook = () => {
+  const { isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [storyBookPages, setStoryBookPages] = useState([])
@@ -69,7 +71,7 @@ const StoryBook = () => {
 
   return (
     <ContentWrapper title='Story Book'>
-      <p className='text-xs text-white font-medium'>
+      <p className={`text-xs font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
         Story Book generates random Story Books with AI generated text,
         images and voice cloning.  This allows for a fun and
         creative way to read all new types of stories!
@@ -87,7 +89,7 @@ const StoryBook = () => {
           {prompt && (
             <div className='absolute right-3 bottom-2 flex items-center'>
               <button
-                className='mr-2 text-gray hover:text-red-500'
+                className={`mr-2 transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-red-400' : 'text-theme-secondary-light hover:text-red-500'}`}
                 onClick={handleClearClick}
                 disabled={loading}
               >
@@ -96,7 +98,7 @@ const StoryBook = () => {
                 </svg>
               </button>
               <button
-                className='text-gray hover:text-blue-500'
+                className={`transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-blue-400' : 'text-theme-secondary-light hover:text-blue-500'}`}
                 onClick={handleGenerateStory}
                 disabled={loading}
               >
@@ -119,22 +121,22 @@ const StoryBook = () => {
             <span className='text-base font-medium text-[#D4ED31]'>{loadingDescription}</span>
             <span className='text-sm font-medium text-[#D4ED31]'>{percentage}%</span>
           </div>
-          <div className='w-full bg-gray-700 rounded-full h-2.5'>
-            <div className='bg-[#D4ED31] h-2.5 rounded-full' style={{ width: `${percentage}%` }} />
+          <div className={`w-full rounded-full h-2.5 ${isDark ? 'bg-white/20' : 'bg-black/20'}`}>
+            <div className='bg-[#D4ED31] h-2.5 rounded-full transition-all duration-300' style={{ width: `${percentage}%` }} />
           </div>
         </div>
       )}
       <br />
       <div>
         {storyBookPages.length > 0 && (
-          <div>
+          <div className={`p-6 rounded-lg transition-all duration-300 ${isDark ? 'glass-light' : 'glass-dark'}`}>
             <div className='flex'>
               <div className='flex-none w-50 pt-1'>
                 <AudioStreamPlayerSelector prompt={storyBookPages[page - 1].reply} />
               </div>
               <div className='grow px-2'>
                 <div
-                  className='text-sm md:text-lg text-secondary mb-4'
+                  className={`text-sm md:text-lg mb-4 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {storyBookPages[page - 1].reply}
@@ -145,6 +147,7 @@ const StoryBook = () => {
                 {storyBookPages[page - 1].image && (
                   <img
                     alt='No Image canneth be foundest'
+                    className='rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl'
                     src={`data:image/png;base64,${storyBookPages[page - 1].image}`}
                   />
                 )}
@@ -156,11 +159,13 @@ const StoryBook = () => {
                   {Array.from({ length: storyBookPages.length }).map((_, index) => (
                     <li key={index}>
                       <button
-                        className={`${
+                        className={`px-3 py-2 mx-1 rounded transition-all duration-200 ${
                           index + 1 === page
-                            ? 'bg-[#D4ED31] text-gray-600'
-                            : 'bg-gray-300 text-gray-600'
-                        } hover:bg-[#D4ED31] px-3 py-2 mx-1 rounded`}
+                            ? 'bg-[#D4ED31] text-gray-800 shadow-lg'
+                            : isDark
+                              ? 'glass-dark text-theme-dark hover:bg-[#D4ED31] hover:text-gray-800'
+                              : 'glass-light text-theme-light hover:bg-[#D4ED31] hover:text-gray-800'
+                        }`}
                         onClick={() => handleChange(null, index + 1)}
                       >
                         {index + 1}

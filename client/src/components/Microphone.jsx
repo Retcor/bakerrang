@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { debounce } from '../utils/index.js'
 import { LoadingSpinner } from './index.js'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 
 const Microphone = ({ className, buttonClassName, setSpeechToText, lang, isLoading }) => {
+  const { isDark } = useTheme()
   const [isRecording, setIsRecording] = useState(false)
   const recognition = new window.webkitSpeechRecognition()
 
@@ -31,7 +33,7 @@ const Microphone = ({ className, buttonClassName, setSpeechToText, lang, isLoadi
 
   return !isRecording
     ? (
-      <button onClick={handleStart} className={`bg-gray-700 rounded-full hover:text-blue-500 w-8 h-8 flex items-center justify-center p-0 ${buttonClassName}`}>
+      <button onClick={handleStart} className={`rounded-full w-8 h-8 flex items-center justify-center p-0 transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20 hover:text-blue-400' : 'glass-light text-theme-light hover:bg-black/20 hover:text-blue-500'} ${buttonClassName}`}>
         {isLoading
           ? <LoadingSpinner className='flex justify-center items-center' svgClassName='!h-3/5 !w-3/5' />
           : <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className='w-3/5 h-3/5 self-center'>
@@ -40,7 +42,7 @@ const Microphone = ({ className, buttonClassName, setSpeechToText, lang, isLoadi
       </button>
       )
     : (
-      <button onClick={handleStop} className={`bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center p-0 ${buttonClassName}`}>
+      <button onClick={handleStop} className={`rounded-full w-8 h-8 flex items-center justify-center p-0 transition-all duration-200 ${isDark ? 'glass-dark' : 'glass-light'} ${buttonClassName}`}>
         {isLoading
           ? <LoadingSpinner className='flex justify-center items-center' svgClassName='!h-3/5 !w-3/5' />
           : <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-3/5 h-3/5 self-center text-red-500 animate-pulse'>

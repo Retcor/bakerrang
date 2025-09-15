@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { getTextToSpeechAudioSrc } from '../utils/index.js'
 import { LoadingSpinner } from './index.js'
 import { useAppContext } from '../providers/AppProvider.jsx'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import AudioStreamPlayer from './AudioStreamPlayer.jsx'
 
 const AudioStreamPlayerSelector = ({ prompt }) => {
+  const { isDark } = useTheme()
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioMap, setAudioMap] = useState({})
   const [anchorEl, setAnchorEl] = useState(null)
@@ -97,9 +99,9 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
 
       {isPlaying
         ? (
-          <button className='mr-2 focus:outline-none' onClick={handlePause}>
+          <button className='mr-2 focus:outline-none transition-all duration-200' onClick={handlePause}>
             <svg
-              className='w-6 h-6 fill-current text-gray hover:text-blue-500'
+              className={`w-6 h-6 fill-current transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-blue-400' : 'text-theme-secondary-light hover:text-blue-500'}`}
               viewBox='0 0 24 24'
               xmlns='http://www.w3.org/2000/svg'
             >
@@ -110,9 +112,9 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
         : isVoiceLoading
           ? <LoadingSpinner className='mr-2' />
           : (
-            <button className='mr-2 focus:outline-none' onClick={handlePlayButton}>
+            <button className='mr-2 focus:outline-none transition-all duration-200' onClick={handlePlayButton}>
               <svg
-                className='w-6 h-6 fill-current text-gray hover:text-blue-500'
+                className={`w-6 h-6 fill-current transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-blue-400' : 'text-theme-secondary-light hover:text-blue-500'}`}
                 viewBox='0 0 24 24'
                 xmlns='http://www.w3.org/2000/svg'
               >
@@ -121,13 +123,13 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
             </button>
             )}
       {open && (
-        <div style={calculateModalPosition(anchorEl)} ref={playModalRef} className='absolute z-10'>
-          <div className='bg-gray-700 border border-gray-600 shadow-lg py-2 rounded w-48 font-bold'>
+        <div style={calculateModalPosition(anchorEl)} ref={playModalRef} className='absolute z-50'>
+          <div className={`shadow-lg py-2 rounded w-48 font-bold transition-all duration-200 ${isDark ? 'glass-dropdown-dark' : 'glass-dropdown-light'}`}>
             <ul>
               {voices.map((voice) => (
                 <li
                   key={voice.id}
-                  className='cursor-pointer px-4 py-2 hover:bg-gray-600'
+                  className={`cursor-pointer px-4 py-2 transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-white/20' : 'text-theme-light hover:bg-black/20'}`}
                   onClick={() => handleVoiceSelect(voice.id)}
                 >
                   {voice.name}

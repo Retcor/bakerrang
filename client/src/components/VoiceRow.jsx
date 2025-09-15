@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { Button } from '@material-tailwind/react'
 import { InputWrapper, LoadingSpinner, ConfirmModal } from './index.js'
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import { useAppContext } from '../providers/AppProvider.jsx'
 
 const VoiceRow = ({ voice }) => {
@@ -11,6 +11,7 @@ const VoiceRow = ({ voice }) => {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { voices, setVoices } = useAppContext()
+  const { isDark } = useTheme()
 
   const handleMarkAsPrimary = () => {
     setVoices(voices.map(v => {
@@ -54,9 +55,13 @@ const VoiceRow = ({ voice }) => {
         </div>
       </div>
       <div className='md:mr-4 mb-4 md:mb-0 flex justify-end'>
-        <Button onClick={() => setConfirmOpen(true)} disabled={deleteLoading} className='text-white font-bold bg-red-500 hover:bg-red-700'>
+        <button
+          onClick={() => setConfirmOpen(true)}
+          disabled={deleteLoading}
+          className={`px-4 py-2 font-bold text-white bg-red-500 hover:bg-red-700 rounded transition-all duration-200 disabled:opacity-50 ${isDark ? 'glass-dark' : 'glass-light'}`}
+        >
           {deleteLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Delete'}
-        </Button>
+        </button>
       </div>
     </div>
   )

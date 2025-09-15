@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react'
 import { SERVER_PREFIX } from '../App.jsx'
 import { productLicenses } from '../constants/index.js'
 import { request } from '../utils/index.js'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import ContentWrapper from './ContentWrapper.jsx'
-import { Button } from '@material-tailwind/react'
 import ProductCounter from './ProductCounter.jsx'
 import { ConfirmModal } from './index.js'
 
 const SuperMarket = () => {
+  const { isDark } = useTheme()
   const [initialProducts, setInitialProducts] = useState([])
   const [products, setProducts] = useState([])
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -76,13 +77,13 @@ const SuperMarket = () => {
         confirmFunc={resetProducts}
         cancelFunc={() => setConfirmOpen(false)}
       />
-      <p className='text-xs text-white font-medium'>
+      <p className={`text-xs font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
         A simple checklist app to manage Supermarket Simulator products. Visit the Account page to add Product Licenses to list Products here.
       </p>
       {products.length > 0 && (
         <div className='my-2'>
-          <Button onClick={sortProducts} className='text-white font-bold bg-blue-500 hover:bg-blue-700'>Sort</Button>
-          <Button onClick={checkResetProducts} className='text-white mx-2 font-bold bg-blue-500 hover:bg-blue-700'>Reset</Button>
+          <button onClick={sortProducts} className={`font-bold px-4 py-2 rounded transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}>Sort</button>
+          <button onClick={checkResetProducts} className='bg-[#D4ED31] hover:bg-[#c4d929] text-gray-800 font-bold px-4 py-2 mx-2 rounded transition-all duration-200 shadow-lg'>Reset</button>
         </div>
       )}
       {products.length > 0 && products.map(product => (

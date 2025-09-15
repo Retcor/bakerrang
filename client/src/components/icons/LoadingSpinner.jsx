@@ -1,10 +1,13 @@
 import React from 'react'
+import { useTheme } from '../../providers/ThemeProvider.jsx'
 
 const LoadingSpinner = ({ className, svgClassName }) => {
+  const { isDark } = useTheme()
+
   return (
     <div role='status' className={className}>
       <svg
-        aria-hidden='true' className={`w-6 h-6 text-gray-400 animate-spin fill-[#D4ED31] ${svgClassName}`}
+        aria-hidden='true' className={`w-6 h-6 animate-spin fill-[#D4ED31] ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'} ${svgClassName}`}
         viewBox='0 0 100 101' fill='none' xmlns='http://www.w3.org/2000/svg'
       >
         <path

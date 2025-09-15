@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react'
 import { SERVER_PREFIX } from '../App.jsx'
 import { languages } from '../constants/index.js'
 import { request } from '../utils/index.js'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import { Dropdown, LoadingSpinner, SpeechToText } from './index.js'
 import ContentWrapper from './ContentWrapper.jsx'
 import AudioStreamPlayerSelector from './AudioStreamPlayerSelector.jsx'
 
 const Polyglot = () => {
+  const { isDark } = useTheme()
   const [speechToText, setSpeechToText] = useState('')
   const [translation, setTranslation] = useState('')
   const [translationLoading, setTranslationLoading] = useState(false)
@@ -38,7 +40,7 @@ const Polyglot = () => {
 
   return (
     <ContentWrapper title='Polyglot'>
-      <p className='text-xs text-white font-medium'>
+      <p className={`text-xs font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
         Polyglot: knowing or using several languages. This functionality strives to allow
         communication across languages. Just type or speak what you want to be said, select the language and
         hear it spoken in your voice.  Imagine if we all had a tool like this, how quickly we could
@@ -47,7 +49,7 @@ const Polyglot = () => {
       <div className='flex justify-center mt-8'>
         <div className='flex space-x-8'>
           <Dropdown options={langNameList} setSelectedOption={setSelectedInputOption} selectedOption={selectedInputOption} dropdownClassname='left-0' />
-          <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' onClick={swapLanguages} className='mt-2 w-6 h-6 cursor-pointer hover:text-blue-500'>
+          <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' onClick={swapLanguages} className={`mt-2 w-6 h-6 cursor-pointer transition-all duration-200 ${isDark ? 'text-theme-dark hover:text-blue-400' : 'text-theme-light hover:text-blue-500'}`}>
             <path strokeLinecap='round' strokeLinejoin='round' d='M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5' />
           </svg>
           <Dropdown options={langNameList} setSelectedOption={setSelectedOutputOption} selectedOption={selectedOutputOption} />
@@ -70,14 +72,14 @@ const Polyglot = () => {
                 </div>
                 )
               : (
-                <span className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Translate</span>
+                <span className='bg-[#D4ED31] hover:bg-[#c4d929] text-gray-800 font-bold py-2 px-4 rounded transition-all duration-200 shadow-lg'>Translate</span>
                 )}
           </button>
         </div>
         <div className='lg:w-5/12 mt-4 flex flex-col relative'>
           <textarea
             onChange={(e) => setTranslation(e.target.value)}
-            className='bg-gray-700 py-4 px-6 placeholder:text-secondary h-32 text-white rounded-lg outline-none border-none font-medium resize-none'
+            className={`py-4 px-6 h-32 rounded-lg outline-none border-none font-medium resize-none transition-all duration-300 ${isDark ? 'glass-dark text-theme-dark placeholder:text-theme-secondary-dark' : 'glass-light text-theme-light placeholder:text-theme-secondary-light'}`}
             value={translation}
           />
           {translation && (

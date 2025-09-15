@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { AddVoiceModal, ContentWrapper, LoadingSpinner } from './index.js'
-import { Button, Card, CardBody, CardFooter, CardHeader, Typography } from '@material-tailwind/react'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import { useAppContext } from '../providers/AppProvider.jsx'
 import VoiceRow from './VoiceRow.jsx'
 import { request } from '../utils/index.js'
@@ -9,6 +9,7 @@ import { productLicenses } from '../constants/index.js'
 import ProductLicense from './ProductLicense.jsx'
 
 const Account = () => {
+  const { isDark } = useTheme()
   const { voices, setVoices } = useAppContext()
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [licenses, setLicenses] = useState([])
@@ -44,50 +45,44 @@ const Account = () => {
 
   return (
     <ContentWrapper title='Account'>
-      <Card className='mt-8 bg-gray-900 w-full'>
-        <CardHeader
-          variant='gradient'
-          className='mb-4 grid top-3 h-6 bg-[#D4ED31] w-36 place-items-center'
-        >
-          <Typography variant='h6' className='text-gray-900'>
+      <div className={`mt-8 w-full p-6 rounded-lg transition-all duration-300 ${isDark ? 'glass-card-dark glass-hover-dark' : 'glass-card-light glass-hover-light'}`}>
+        <div className='mb-4 bg-[#D4ED31] rounded-md p-2 w-36 text-center'>
+          <h3 className='text-gray-900 font-bold text-lg'>
             Cloned Voices
-          </Typography>
-        </CardHeader>
-        <CardBody>
+          </h3>
+        </div>
+        <div className='mb-4'>
           {voices && voices.map(v => (
             <React.Fragment key={v.id}>
               <VoiceRow voice={v} />
             </React.Fragment>
           ))}
-        </CardBody>
-        <CardFooter className='pt-0'>
-          <Button onClick={() => setAddModalOpen(true)} className='text-white font-bold bg-blue-500 hover:bg-blue-700'>Add</Button>
-          <Button onClick={() => updateVoices()} className='text-white font-bold bg-blue-500 hover:bg-blue-700 ml-2'>
+        </div>
+        <div className='flex gap-2'>
+          <button onClick={() => setAddModalOpen(true)} className={`font-bold px-4 py-2 rounded transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}>Add</button>
+          <button onClick={() => updateVoices()} className='bg-[#D4ED31] hover:bg-[#c4d929] text-gray-800 font-bold px-4 py-2 rounded transition-all duration-200 shadow-lg'>
             {isVoicesUpdating ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Update'}
-          </Button>
+          </button>
           <AddVoiceModal open={addModalOpen} cancel={() => setAddModalOpen(false)} success={addVoiceSuccess} />
-        </CardFooter>
-      </Card>
-      <Card className='mt-8 bg-gray-900 w-full'>
-        <CardHeader
-          variant='gradient'
-          className='mb-4 grid top-3 h-6 bg-[#D4ED31] w-48 place-items-center'
-        >
-          <Typography variant='h6' className='text-gray-900'>
+        </div>
+      </div>
+      <div className={`mt-8 w-full p-6 rounded-lg transition-all duration-300 ${isDark ? 'glass-card-dark glass-hover-dark' : 'glass-card-light glass-hover-light'}`}>
+        <div className='mb-4 bg-[#D4ED31] rounded-md p-2 w-48 text-center'>
+          <h3 className='text-gray-900 font-bold text-lg'>
             SuperMarket Licenses
-          </Typography>
-        </CardHeader>
-        <CardBody className='flex flex-wrap -mx-2'>
+          </h3>
+        </div>
+        <div className='flex flex-wrap -mx-2 mb-4'>
           {productLicenses.map(pl => (
             <ProductLicense key={pl.licenseId} licenses={licenses} setLicenses={setLicenses} productLicense={pl} />
           ))}
-        </CardBody>
-        <CardFooter className='pt-0'>
-          <Button onClick={() => saveLicenses()} className='text-white font-bold bg-blue-500 hover:bg-blue-700'>
+        </div>
+        <div>
+          <button onClick={() => saveLicenses()} className='bg-[#D4ED31] hover:bg-[#c4d929] text-gray-800 font-bold px-4 py-2 rounded transition-all duration-200 shadow-lg'>
             {isLicenseSaving ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Save'}
-          </Button>
-        </CardFooter>
-      </Card>
+          </button>
+        </div>
+      </div>
     </ContentWrapper>
   )
 }
