@@ -126,7 +126,7 @@ const AddVoiceModal = ({ open, success, cancel }) => {
                 Cancel
               </button>
               <button
-                className={`px-4 py-2 rounded transition-all duration-200 disabled:opacity-25 ${isDark ? 'glass-dark text-blue-400 hover:bg-blue-400/20' : 'glass-light text-blue-500 hover:bg-blue-500/20'}`}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
                 onClick={handleSave}
                 disabled={(!files.length && !recording) || !name.length || isSaving}
               >
