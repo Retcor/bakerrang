@@ -16,6 +16,30 @@ const AddVoiceModal = ({ open, success, cancel }) => {
   const [recording, setRecording] = useState(null)
 
   useEffect(() => {
+    if (open) {
+      // Disable background scrolling with more specific properties
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.width = '100%'
+      document.body.style.height = '100%'
+    } else {
+      // Re-enable background scrolling
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+      document.body.style.height = ''
+    }
+
+    // Cleanup function to restore scrolling
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+      document.body.style.height = ''
+    }
+  }, [open])
+
+  useEffect(() => {
     if (audioBlob) {
       const audioFile = new File([audioBlob], 'recording.mp3', { type: 'audio/mp3' })
       setRecording(audioFile)
@@ -58,9 +82,9 @@ const AddVoiceModal = ({ open, success, cancel }) => {
   return (
     <>
       {open && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center'>
-          <div className='fixed inset-0 bg-black opacity-50' />
-          <div className={`w-96 p-6 rounded-lg shadow-lg relative z-10 transition-all duration-300 ${isDark ? 'glass-card-dark' : 'glass-card-light'}`}>
+        <div className='fixed inset-0 z-50 flex justify-center items-start pt-[15vh] p-4' style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
+          <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' />
+          <div className={`w-full max-w-lg p-6 rounded-xl shadow-2xl relative z-10 transition-all duration-300 max-h-[90vh] overflow-y-auto ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}>
             <h2 className={`text-xl font-medium mb-2 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Add Voice</h2>
             <p className={`text-xs mb-2 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Add a name and description (optional) and up to 3 audio files containing samples of the voice desired to be cloned.</p>
             <div className={`flex items-center p-3 mb-2 rounded-lg transition-all duration-200 ${isDark ? 'glass-dark border border-blue-400/30' : 'glass-light border border-blue-500/30'}`}>

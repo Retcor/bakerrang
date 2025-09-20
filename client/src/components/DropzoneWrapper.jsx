@@ -65,7 +65,7 @@ const DropzoneWrapper = ({ files, setFiles }) => {
       <div className='mt-2'>
         {files.map((file, index) => (
           <div key={index} className='flex items-center justify-between mb-2'>
-            <span className={`mr-2 text-sm ${isDark ? 'text-[#D4ED31]' : 'text-[#8B5CF6]'}`}>{truncateFileName(file.name, 30)}</span>
+            <span className={`mr-2 text-sm ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>{truncateFileName(file.name, 30)}</span>
             <div className='flex items-center'>
               <button
                 className='mr-2'

@@ -72,7 +72,7 @@ const Polyglot = () => {
                 </div>
                 )
               : (
-                <span className='bg-[#D4ED31] hover:bg-[#c4d929] text-gray-800 font-bold py-2 px-4 rounded transition-all duration-200 shadow-lg'>Translate</span>
+                <span className={`font-bold py-2 px-4 rounded transition-all duration-200 shadow-lg ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}>Translate</span>
                 )}
           </button>
         </div>
