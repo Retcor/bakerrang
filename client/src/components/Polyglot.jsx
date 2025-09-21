@@ -59,7 +59,7 @@ const Polyglot = () => {
         </div>
 
         {/* Statistics */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
             <div className={`text-2xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
               {langNameList.length}
@@ -96,10 +96,7 @@ const Polyglot = () => {
         {/* Language Selection Bar */}
         <div className={`rounded-xl p-4 mb-8 ${isDark ? 'bg-white/35' : 'bg-black/35'}`}>
           <div className='flex items-center justify-center space-x-8'>
-            <div className='flex items-center space-x-3'>
-              <span className={`text-sm font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>From:</span>
-              <Dropdown options={langNameList} setSelectedOption={setSelectedInputOption} selectedOption={selectedInputOption} dropdownClassname='left-0' />
-            </div>
+            <Dropdown options={langNameList} setSelectedOption={setSelectedInputOption} selectedOption={selectedInputOption} dropdownClassname='left-0' />
 
             <button
               onClick={swapLanguages}
@@ -111,10 +108,7 @@ const Polyglot = () => {
               </svg>
             </button>
 
-            <div className='flex items-center space-x-3'>
-              <span className={`text-sm font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>To:</span>
-              <Dropdown options={langNameList} setSelectedOption={setSelectedOutputOption} selectedOption={selectedOutputOption} />
-            </div>
+            <Dropdown options={langNameList} setSelectedOption={setSelectedOutputOption} selectedOption={selectedOutputOption} />
           </div>
         </div>
 
