@@ -1,9 +1,26 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 
 const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassname }) => {
   const { isDark } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen)
@@ -15,7 +32,7 @@ const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassnam
   }
 
   return (
-    <div className='relative inline-block text-left'>
+    <div ref={dropdownRef} className='relative inline-block text-left'>
       <div>
         <button
           type='button'

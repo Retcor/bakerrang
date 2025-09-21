@@ -152,12 +152,12 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
             )}
       {open && (
         <div ref={playModalRef} className='absolute right-0 top-full mt-2 z-50'>
-          <div className={`shadow-xl py-2 rounded-xl w-48 font-medium transition-all duration-200 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`shadow-xl py-2 rounded-xl w-48 font-medium transition-all duration-200 ${isDark ? 'glass-dropdown-dark' : 'glass-dropdown-light'}`}>
             <ul className="space-y-1 px-2">
               {voices.map((voice) => (
                 <li
                   key={voice.id}
-                  className={`cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-gray-800' : 'text-theme-light hover:bg-gray-100'}`}
+                  className={`cursor-pointer px-4 py-2 rounded-lg transition-all duration-200 text-sm w-full text-left ${isDark ? 'text-theme-dark hover:bg-white/20' : 'text-theme-light hover:bg-black/20'}`}
                   onClick={() => handleVoiceSelect(voice.id)}
                 >
                   {voice.name}
