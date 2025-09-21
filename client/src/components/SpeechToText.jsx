@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTheme } from '../providers/ThemeProvider.jsx'
-import Microphone from './Microphone.jsx'
+import GoogleSpeechToText from './GoogleSpeechToText.jsx'
 
 const SpeechToText = ({ speechToText, setSpeechToText, lang }) => {
   const { isDark } = useTheme()
@@ -13,7 +13,7 @@ const SpeechToText = ({ speechToText, setSpeechToText, lang }) => {
         value={speechToText}
       />
       <div className='absolute right-2 top-2 flex items-center'>
-        <Microphone setSpeechToText={setSpeechToText} lang={lang} />
+        <GoogleSpeechToText setSpeechToText={setSpeechToText} lang={lang} buttonClassName='!w-8 !h-8' />
       </div>
     </div>
   )
