@@ -105,52 +105,66 @@ const StoryBook = () => {
               </svg>
             </div>
             <div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
+              <h2 className={`text-xl sm:text-2xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
                 AI Story Generator
               </h2>
-              <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+              <p className={`text-xs sm:text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
                 Create immersive stories with AI-generated text, images, and voice narration
               </p>
             </div>
           </div>
 
           {/* Input Section */}
-          <div className='relative'>
-            <InputWrapper
-              label='What story would you like to hear about today?'
-              value={prompt}
-              setValue={setPrompt}
-              onKeyDown={handleKeyDown}
-            />
+          <div className='space-y-4'>
+            <div className='relative'>
+              <InputWrapper
+                label='What story would you like to hear about?'
+                value={prompt}
+                setValue={setPrompt}
+                onKeyDown={handleKeyDown}
+                className="pr-12"
+              />
+              {prompt && (
+                <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
+                  <button
+                    className={`p-2 rounded-lg transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-red-400 hover:bg-red-500/10' : 'text-theme-secondary-light hover:text-red-500 hover:bg-red-500/10'}`}
+                    onClick={handleClearClick}
+                    disabled={loading}
+                    title="Clear input"
+                  >
+                    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4'>
+                      <path fillRule='evenodd' d='M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z' clipRule='evenodd' />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
             {prompt && (
-              <div className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2'>
+              <div className="flex justify-end">
                 <button
-                  className={`p-2 rounded-lg transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:text-red-400 hover:bg-red-500/10' : 'text-theme-secondary-light hover:text-red-500 hover:bg-red-500/10'}`}
-                  onClick={handleClearClick}
-                  disabled={loading}
-                  title="Clear input"
-                >
-                  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-5 h-5'>
-                    <path fillRule='evenodd' d='M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z' clipRule='evenodd' />
-                  </svg>
-                </button>
-                <button
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
-                  onClick={handleGenerateStory}
+                  type="button"
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleGenerateStory()
+                  }}
                   disabled={loading || !prompt.trim()}
                   title="Generate story"
                 >
                   {loading ? (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <LoadingSpinner svgClassName='!h-4 !w-4' />
-                      <span>Generating...</span>
+                      <span className="hidden sm:inline">Generating...</span>
+                      <span className="sm:hidden">...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4'>
                         <path d='M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z' />
                       </svg>
-                      <span>Generate Story</span>
+                      <span className="hidden sm:inline">Generate Story</span>
+                      <span className="sm:hidden">Generate</span>
                     </div>
                   )}
                 </button>
@@ -208,8 +222,8 @@ const StoryBook = () => {
       {storyBookPages.length > 0 && (
         <div className={`rounded-2xl overflow-hidden transition-all duration-300 ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           {/* Story Header */}
-          <div className={`px-8 py-6 border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
-            <div className="flex items-center justify-between">
+          <div className={`px-4 sm:px-8 py-4 sm:py-6 border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center space-x-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
                   <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -217,24 +231,25 @@ const StoryBook = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className={`text-xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
+                  <h3 className={`text-lg sm:text-xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
                     Your Story
                   </h3>
-                  <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                  <p className={`text-xs sm:text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
                     Page {page} of {storyBookPages.length}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <button
                   onClick={handleNewStoryClick}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'} border ${isDark ? 'border-white/20' : 'border-black/20'}`}
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'} border ${isDark ? 'border-white/20' : 'border-black/20'}`}
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
                     <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4'>
                       <path fillRule="evenodd" d='M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5H12.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z' clipRule="evenodd" />
                     </svg>
-                    <span>New Story</span>
+                    <span className="hidden sm:inline">New Story</span>
+                    <span className="sm:hidden">New</span>
                   </div>
                 </button>
                 <AudioStreamPlayerSelector prompt={storyBookPages[page - 1].reply} />
@@ -243,7 +258,7 @@ const StoryBook = () => {
           </div>
 
           {/* Story Content */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Story Text */}
               <div className="lg:col-span-2 space-y-4">

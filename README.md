@@ -29,7 +29,7 @@ account setup. The Firestore library will look for the Google credentials once l
 
 Both the server and client directories contain a Dockerfile that can be built and deployed.
 
-For changes, build the image from either the server or client folder where the Dockerfile is: `docker build -t gcr.io/<kubernetes-project-id>/<image-name>:<version> .`
+For changes, build the image from either the server or client folder where the Dockerfile is: `docker build -t us-docker.pkg.dev/<kubernetes-project-id>/gcr.io/<image-name>:<version> .`
 
 Push the image up to Google Registry. This requires access to the kubernetes project and gcloud authorization as well as
-docker config settings updated to communicate with that project: `docker push gcr.io/<kubernetes-project-id>/<image name>:<version>`
+docker config settings updated to communicate with that project: `docker push us-docker.pkg.dev/<kubernetes-project-id>/gcr.io/<image-name>:<version>`
