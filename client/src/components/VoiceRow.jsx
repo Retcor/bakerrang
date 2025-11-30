@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { Button } from '@material-tailwind/react'
 import { InputWrapper, LoadingSpinner, ConfirmModal } from './index.js'
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 import { useAppContext } from '../providers/AppProvider.jsx'
 
 const VoiceRow = ({ voice }) => {
@@ -11,6 +11,7 @@ const VoiceRow = ({ voice }) => {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { voices, setVoices } = useAppContext()
+  const { isDark } = useTheme()
 
   const handleMarkAsPrimary = () => {
     setVoices(voices.map(v => {
@@ -45,18 +46,39 @@ const VoiceRow = ({ voice }) => {
       <div className='md:mr-4 mb-4 md:mb-0'>
         <InputWrapper value={description} setValue={setDescription} label='Description' />
       </div>
-      <div className='mr-4 mb-4 md:mb-0 relative'>
-        <span className='absolute left-12 md:-left-1 text-[#D4ED31] text-xs top-3 md:-top-2'>Primary</span>
-        <div className='p-2 cursor-pointer bg-gray-700 rounded-[7px] w-10 h-10' onClick={handleMarkAsPrimary}>
-          <svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' stroke='currentColor' className={`w-6 h-6 ${voice.isPrimary ? 'text-green-500' : 'text-gray-700'}`}>
-            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
-          </svg>
+      <div className='mr-4 mb-4 md:mb-0'>
+        <div className="flex flex-col items-center space-y-1">
+          <span className={`text-xs font-medium ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>Primary</span>
+          <div
+            className={`p-1 cursor-pointer rounded-md w-6 h-6 transition-all duration-200 ${
+              voice.isPrimary
+                ? isDark
+                  ? 'bg-accent-dark'
+                  : 'bg-accent-light'
+                : isDark
+                  ? 'bg-gray-700 hover:bg-gray-600'
+                  : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            onClick={handleMarkAsPrimary}
+          >
+            {voice.isPrimary ? (
+              <svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' stroke='currentColor' className={`w-4 h-4 ${isDark ? 'text-gray-900' : 'text-white'} stroke-2`}>
+                <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
+              </svg>
+            ) : (
+              <div className="w-4 h-4" />
+            )}
+          </div>
         </div>
       </div>
       <div className='md:mr-4 mb-4 md:mb-0 flex justify-end'>
-        <Button onClick={() => setConfirmOpen(true)} disabled={deleteLoading} className='text-white font-bold bg-red-500 hover:bg-red-700'>
+        <button
+          onClick={() => setConfirmOpen(true)}
+          disabled={deleteLoading}
+          className="px-4 py-2 font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 shadow-lg hover:shadow-xl"
+        >
           {deleteLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Delete'}
-        </Button>
+        </button>
       </div>
     </div>
   )

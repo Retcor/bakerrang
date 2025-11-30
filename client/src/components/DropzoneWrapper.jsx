@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 
 const DropzoneWrapper = ({ files, setFiles }) => {
+  const { isDark } = useTheme()
   const [audioPlayer, setAudioPlayer] = useState(null)
   const [filePlaying, setFilePlaying] = useState({})
 
@@ -50,20 +52,20 @@ const DropzoneWrapper = ({ files, setFiles }) => {
 
   return (
     <>
-      <div className={`border-2 border-gray-400 p-4 cursor-pointer transition ${
+      <div className={`border-2 p-4 cursor-pointer transition-all duration-200 rounded-lg ${
               isDragActive ? 'border-solid' : 'border-dashed'
-            }`}
+            } ${isDark ? 'border-gray-400 glass-dark glass-hover-dark' : 'border-gray-300 glass-light glass-hover-light'}`}
       >
         <div {...getRootProps()}>
           <input {...getInputProps()} />
-          <p className='text-center text-white text-sm'>Drop files here, or click to select files</p>
-          <p className='text-center text-gray-500 text-xs'>Audio files up to 10mb each. Max of 3</p>
+          <p className={`text-center text-sm ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Drop files here, or click to select files</p>
+          <p className={`text-center text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Audio files up to 10mb each. Max of 3</p>
         </div>
       </div>
       <div className='mt-2'>
         {files.map((file, index) => (
           <div key={index} className='flex items-center justify-between mb-2'>
-            <span className='mr-2 text-[#D4ED31] text-sm'>{truncateFileName(file.name, 30)}</span>
+            <span className={`mr-2 text-sm ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>{truncateFileName(file.name, 30)}</span>
             <div className='flex items-center'>
               <button
                 className='mr-2'
@@ -72,7 +74,7 @@ const DropzoneWrapper = ({ files, setFiles }) => {
                 {filePlaying === file
                   ? (
                     <svg
-                      className='w-6 h-6 fill-current text-white hover:text-blue-500'
+                      className={`w-6 h-6 fill-current transition-colors duration-200 ${isDark ? 'text-theme-dark hover:text-blue-400' : 'text-theme-light hover:text-blue-500'}`}
                       viewBox='0 0 24 24'
                       xmlns='http://www.w3.org/2000/svg'
                     >
@@ -81,7 +83,7 @@ const DropzoneWrapper = ({ files, setFiles }) => {
                     )
                   : (
                     <svg
-                      className='w-6 h-6 fill-current text-white hover:text-blue-500'
+                      className={`w-6 h-6 fill-current transition-colors duration-200 ${isDark ? 'text-theme-dark hover:text-blue-400' : 'text-theme-light hover:text-blue-500'}`}
                       viewBox='0 0 24 24'
                       xmlns='http://www.w3.org/2000/svg'
                     >
@@ -90,7 +92,7 @@ const DropzoneWrapper = ({ files, setFiles }) => {
                     )}
               </button>
               <button
-                className='text-white hover:text-red-500 disabled:opacity-25'
+                className={`transition-colors duration-200 disabled:opacity-25 ${isDark ? 'text-theme-dark hover:text-red-400' : 'text-theme-light hover:text-red-500'}`}
                 onClick={() => removeFile(index)}
                 disabled={filePlaying === file}
               >

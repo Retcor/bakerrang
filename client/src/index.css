@@ -44,7 +44,7 @@
 }
 
 .green-pink-gradient {
-  background: "#00cea8";
+  background: #00cea8;
   background: linear-gradient(90.13deg, #00cea8 1.9%, #bf61ff 97.5%);
   background: -webkit-linear-gradient(-90.13deg, #00cea8 1.9%, #bf61ff 97.5%);
 }
@@ -201,4 +201,160 @@
       -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5),
       -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
   }
+}
+
+/* Theme backgrounds */
+.theme-bg {
+  transition: all 0.3s ease;
+}
+
+.light-theme-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #cbd5e1 75%, #94a3b8 100%);
+  min-height: 100vh;
+}
+
+.dark-theme-bg {
+  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  min-height: 100vh;
+}
+
+/* Glassmorphism styles */
+.glass-light {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.1);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+.glass-nav-light {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.2);
+}
+
+.glass-nav-dark {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.15);
+}
+
+.glass-card-dark {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.glass-dropdown-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.4);
+}
+
+.glass-dropdown-dark {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Hover effects for glass elements */
+.glass-hover-light:hover {
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(15, 23, 42, 0.2);
+}
+
+.glass-hover-dark:hover {
+  background: rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
+}
+
+/* Text colors for themes */
+.text-theme-light {
+  color: rgba(15, 23, 42, 0.95);
+}
+
+.text-theme-dark {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.text-theme-secondary-light {
+  color: rgba(51, 65, 85, 0.8);
+}
+
+.text-theme-secondary-dark {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Brand color that adapts to theme */
+.text-brand-light {
+  color: #1e40af; /* Modern blue for light mode */
+}
+
+.text-brand-dark {
+  color: #D4ED31; /* Original yellow for dark mode */
+}
+
+/* Button styles that adapt to theme */
+.btn-primary-light {
+  background-color: #1e40af;
+  color: white;
+}
+
+.btn-primary-light:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-primary-dark {
+  background-color: #D4ED31;
+  color: #1f2937;
+}
+
+.btn-primary-dark:hover {
+  background-color: #c4d929;
+}
+
+/* Accent color for backgrounds and decorative elements */
+.bg-accent-light {
+  background-color: #1e40af;
+}
+
+.bg-accent-dark {
+  background-color: #D4ED31;
+}
+
+/* Fill color for SVGs */
+.fill-accent-light {
+  fill: #1e40af;
+}
+
+.fill-accent-dark {
+  fill: #D4ED31;
 }

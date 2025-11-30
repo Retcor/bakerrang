@@ -1,7 +1,26 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useTheme } from '../providers/ThemeProvider.jsx'
 
 const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassname }) => {
+  const { isDark } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen)
@@ -13,11 +32,11 @@ const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassnam
   }
 
   return (
-    <div className='relative inline-block text-left'>
+    <div ref={dropdownRef} className='relative inline-block text-left'>
       <div>
         <button
           type='button'
-          className='inline-flex justify-between w-full rounded-md text-gray font-bold bg-blue-500 px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500'
+          className={`inline-flex justify-between w-full rounded-md font-bold px-4 py-2 text-sm focus:outline-none transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
           id='options-menu'
           aria-haspopup='true'
           aria-expanded='true'
@@ -41,7 +60,7 @@ const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassnam
       </div>
 
       {isOpen && (
-        <div className={`z-10 origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg text-gray font-bold bg-gray-700 border border-gray-600 ring-1 ring-black ring-opacity-5 max-h-[20rem] overflow-auto ${dropdownClassname}`}>
+        <div className={`z-50 origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg font-bold max-h-[20rem] overflow-auto transition-all duration-200 ${isDark ? 'glass-dropdown-dark' : 'glass-dropdown-light'} ${dropdownClassname}`}>
           <div
             className='py-1'
             role='menu'
@@ -52,7 +71,7 @@ const Dropdown = ({ options, selectedOption, setSelectedOption, dropdownClassnam
               <button
                 key={index}
                 onClick={() => handleOptionClick(option)}
-                className='block px-4 py-2 text-sm w-full text-left hover:bg-gray-100 hover:text-gray-900'
+                className={`block px-4 py-2 text-sm w-full text-left transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-white/20' : 'text-theme-light hover:bg-black/20'}`}
                 role='menuitem'
               >
                 {option}

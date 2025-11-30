@@ -1,16 +1,19 @@
 import React from 'react'
-import Microphone from './Microphone.jsx'
+import { useTheme } from '../providers/ThemeProvider.jsx'
+import GoogleSpeechToText from './GoogleSpeechToText.jsx'
 
 const SpeechToText = ({ speechToText, setSpeechToText, lang }) => {
+  const { isDark } = useTheme()
+
   return (
     <div className='relative flex flex-col'>
       <textarea
         onChange={(e) => setSpeechToText(e.target.value)}
-        className='bg-gray-700 py-4 pr-9 px-6 placeholder:text-secondary h-32 text-white rounded-lg outline-none border-none font-medium resize-none'
+        className={`py-4 pr-9 px-6 h-32 rounded-lg outline-none border-none font-medium resize-none transition-all duration-300 ${isDark ? 'glass-dark text-theme-dark placeholder:text-theme-secondary-dark' : 'glass-light text-theme-light placeholder:text-theme-secondary-light'}`}
         value={speechToText}
       />
       <div className='absolute right-2 top-2 flex items-center'>
-        <Microphone setSpeechToText={setSpeechToText} lang={lang} />
+        <GoogleSpeechToText setSpeechToText={setSpeechToText} lang={lang} buttonClassName='!w-8 !h-8' />
       </div>
     </div>
   )
