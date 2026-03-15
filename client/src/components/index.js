@@ -1,4 +1,5 @@
 import MainContent from './MainContent.jsx'
+import Home from './Home.jsx'
 import StoryBook from './Storybook.jsx'
 import LoadingSpinner from './icons/LoadingSpinner.jsx'
 import AudioStreamPlayer from './AudioStreamPlayer.jsx'
@@ -21,6 +22,7 @@ import SuperMarket from './SuperMarket.jsx'
 
 export {
   MainContent,
+  Home,
   StoryBook,
   LoadingSpinner,
   AudioStreamPlayer,

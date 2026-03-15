@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './providers/ThemeProvider.jsx'
 
 import {
+  Home,
   StoryBook,
   MainContent,
   NoPage,
@@ -19,7 +20,8 @@ const App = () => {
     <ThemeProvider>
       <Routes>
         <Route element={<MainContent />}>
-          <Route path='/' element={<StoryBook />} />
+          <Route path='/' element={<Home />} />
+          <Route path='/storybook' element={<StoryBook />} />
           <Route path='/polyglot' element={<Polyglot />} />
           <Route path='/polyglot/instant' element={<PolyglotInstant />} />
           <Route path='/supermarket' element={<SuperMarket />} />
