@@ -46,7 +46,7 @@ passport.use(new GoogleStrategy({
     id: profile.id,
     displayName: profile.displayName,
     email: profile.emails[0].value,
-    photo: profile.photos[0].value
+    photo: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null
   }
   done(null, authUser)
 }))
