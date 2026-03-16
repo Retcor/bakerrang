@@ -1,12 +1,8 @@
 import React from 'react'
-import { useTheme } from '../providers/ThemeProvider.jsx'
 
-const ContentWrapper = ({ children, title }) => {
-  const { isDark } = useTheme()
-
+const ContentWrapper = ({ children }) => {
   return (
-    <div className={`p-8 m-4 rounded-lg transition-all duration-300 ${isDark ? 'glass-card-dark' : 'glass-card-light'}`}>
-      <h2 className={`text-4xl font-black mb-2 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{title}</h2>
+    <div className='p-4 sm:p-8'>
       {children}
     </div>
   )

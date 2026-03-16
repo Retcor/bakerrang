@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm:*)",
+      "Bash(find C:/Users/jakey/.claude/ -name *.json)",
+      "Bash(xargs grep:*)",
+      "Bash(find C:/Users/jakey/ -name *.json)",
+      "Bash(find C:/Users/jakey/AppData/ -path *Claude* -name *.json)",
+      "Bash(find C:/Users/jakey/AppData/ -path *claude-code* -o -path '*Claude Code*')",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_snapshot",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''C:/Users/jakey/.claude.json''\\)\\); [print\\(k\\) for k in d.keys\\(\\)]\")"
+    ]
+  }
+}
