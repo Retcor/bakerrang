@@ -1,6 +1,6 @@
 import MainContent from './MainContent.jsx'
 import Home from './Home.jsx'
-import StoryBook from './Storybook.jsx'
+import StoryBook from './StoryBook.jsx'
 import LoadingSpinner from './icons/LoadingSpinner.jsx'
 import AudioStreamPlayer from './AudioStreamPlayer.jsx'
 import AudioStreamPlayerSelector from './AudioStreamPlayerSelector.jsx'
