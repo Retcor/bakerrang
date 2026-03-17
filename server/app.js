@@ -8,6 +8,7 @@ import authRouter, { isAuthenticated } from './routes/auth.js'
 import chatgptRouter from './routes/chatgpt.js'
 import textToSpeechRouter from './routes/textToSpeech.js'
 import superMarketRouter from './routes/superMarket.js'
+import budgetRouter from './routes/budget.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -55,6 +56,7 @@ app.use('/auth', authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)
+app.use('/budget', isAuthenticated, budgetRouter)
 
 app.get('/health', (req, res) => {
   res.status(200).send('Healthy')

@@ -19,6 +19,7 @@ import ConfirmModal from './ConfirmModal.jsx'
 import AddVoiceModal from './AddVoiceModal.jsx'
 import DropzoneWrapper from './DropzoneWrapper.jsx'
 import SuperMarket from './SuperMarket.jsx'
+import Budget from './Budget.jsx'
 
 export {
   MainContent,
@@ -41,5 +42,6 @@ export {
   ConfirmModal,
   AddVoiceModal,
   DropzoneWrapper,
-  SuperMarket
+  SuperMarket,
+  Budget
 }

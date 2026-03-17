@@ -10,7 +10,8 @@ import {
   Polyglot,
   PolyglotInstant,
   Account,
-  SuperMarket
+  SuperMarket,
+  Budget
 } from './components'
 
 export const SERVER_PREFIX = 'https://api.bakerrang.com'
@@ -26,6 +27,7 @@ const App = () => {
           <Route path='/polyglot/instant' element={<PolyglotInstant />} />
           <Route path='/supermarket' element={<SuperMarket />} />
           <Route path='/account' element={<Account />} />
+          <Route path='/budget' element={<Budget />} />
           <Route path='*' element={<NoPage />} />
         </Route>
         <Route path='/login' element={<Login />} />

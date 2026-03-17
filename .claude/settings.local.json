@@ -12,7 +12,11 @@
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_snapshot",
-      "Bash(python3 -c \"import json; d=json.load\\(open\\(''C:/Users/jakey/.claude.json''\\)\\); [print\\(k\\) for k in d.keys\\(\\)]\")"
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''C:/Users/jakey/.claude.json''\\)\\); [print\\(k\\) for k in d.keys\\(\\)]\")",
+      "Bash(grep -E \"\\\\.jsx$\")",
+      "mcp__playwright__browser_tabs",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_hover"
     ]
   }
 }
