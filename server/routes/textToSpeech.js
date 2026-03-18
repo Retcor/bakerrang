@@ -33,7 +33,8 @@ router.get('/v1/convert/:voiceId', async (req, res, next) => {
 
   try {
     const ttsResponse = await convertTextToSpeech(req.query.prompt, req.params.voiceId)
-    res.send(ttsResponse.data)
+    res.setHeader('Content-Type', 'audio/mpeg')
+    ttsResponse.data.pipe(res)
   } catch (error) {
     console.error(error)
     res.status(500).send(error)

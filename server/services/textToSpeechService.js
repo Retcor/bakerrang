@@ -15,7 +15,7 @@ export const convertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu')
       'content-type': 'application/json',
       'xi-api-key': apiKey
     },
-    responseType: 'arraybuffer',
+    responseType: 'stream',
     data: {
       text: input,
       model_id: modelId,

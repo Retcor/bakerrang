@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { SERVER_PREFIX } from '../App.jsx'
 import { languages } from '../constants/index.js'
-import { getTextToSpeechAudioSrc, request } from '../utils/index.js'
+import { request } from '../utils/index.js'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import { AudioStreamPlayer, Dropdown } from './index.js'
 import ContentWrapper from './ContentWrapper.jsx'
@@ -22,9 +22,7 @@ const PolyglotInstant = () => {
 
   useEffect(() => {
     if (speechToText) {
-      // Speech to text resolved, now translate
       console.log(`SpeechToText changed: ${speechToText}`)
-      setIsProcessing(true)
       handleTranslate()
     }
   }, [speechToText])
@@ -41,8 +39,9 @@ const PolyglotInstant = () => {
     const translation = await res.text()
 
     if (voices?.length > 0) {
-      const audioSrc = await getTextToSpeechAudioSrc(translation, voices.find(p => p.isPrimary)?.id || voices[0].id)
-      setAudioSrc(audioSrc)
+      const voiceId = voices.find(p => p.isPrimary)?.id || voices[0].id
+      // Pass URL directly — browser <audio> streams + starts playback progressively
+      setAudioSrc(`${SERVER_PREFIX}/text/to/speech/v1/convert/${voiceId}?prompt=${encodeURIComponent(translation)}`)
       setControlTrigger('PLAY')
     }
 
@@ -144,6 +143,7 @@ const PolyglotInstant = () => {
               lang={inputLangCode}
               buttonClassName='!w-40 !h-40 sm:!w-48 sm:!h-48'
               isLoading={isProcessing}
+              onRecordingStop={() => setIsProcessing(true)}
             />
             <AudioStreamPlayer audioSrc={audioSrc} controlTrigger={controlTrigger} />
           </div>

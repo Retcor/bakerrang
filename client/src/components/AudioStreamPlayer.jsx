@@ -2,14 +2,18 @@ import React, { useEffect, useRef } from 'react'
 
 const AudioStreamPlayer = ({ audioSrc, handleAudioEnded, controlTrigger }) => {
   const audioRef = useRef(null)
+  const handleAudioEndedRef = useRef(handleAudioEnded)
 
   useEffect(() => {
-    // setup audio play button element
+    handleAudioEndedRef.current = handleAudioEnded
+  }, [handleAudioEnded])
+
+  useEffect(() => {
     const audioElement = audioRef.current
 
     const audioEnded = () => {
-      if (handleAudioEnded) {
-        handleAudioEnded()
+      if (handleAudioEndedRef.current) {
+        handleAudioEndedRef.current()
       }
     }
 

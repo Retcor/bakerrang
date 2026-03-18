@@ -37,7 +37,11 @@ export const image = async input => {
 }
 
 export const translate = async (language, input) => {
-  return prompt(`Translate this to ${language} and only return the translation: ${input}`)
+  const res = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: `Translate this to ${language} and only return the translation: ${input}` }]
+  })
+  return res.choices[0].message.content
 }
 
 export const promptStory = async input => {

@@ -3,7 +3,7 @@ import { blobToBase64 } from '../utils/index.js'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import { LoadingSpinner } from './index.js'
 
-const AudioRecorder = ({ className, setAudioBlob, setAudioURL, setAudioBase64, isLoading, buttonClassName }) => {
+const AudioRecorder = ({ className, setAudioBlob, setAudioURL, setAudioBase64, isLoading, buttonClassName, onStop }) => {
   const { isDark } = useTheme()
   const [isRecording, setIsRecording] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState(null)
@@ -51,6 +51,7 @@ const AudioRecorder = ({ className, setAudioBlob, setAudioURL, setAudioBase64, i
 
   const stopRecording = () => {
     if (!mediaRecorder) return
+    if (onStop) onStop()
     mediaRecorder.stop()
     setIsRecording(false)
     if (audioStream) {

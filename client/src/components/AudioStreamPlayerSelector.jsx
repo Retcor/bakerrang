@@ -1,18 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { getTextToSpeechAudioSrc } from '../utils/index.js'
-import { LoadingSpinner } from './index.js'
+import { SERVER_PREFIX } from '../App.jsx'
 import { useAppContext } from '../providers/AppProvider.jsx'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import AudioStreamPlayer from './AudioStreamPlayer.jsx'
 
+// Split text into sentence-grouped chunks so each generates quickly
+const chunkText = (text, maxLen = 220) => {
+  const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text]
+  const chunks = []
+  let current = ''
+  for (const s of sentences) {
+    if (current && (current + s).length > maxLen) {
+      chunks.push(current.trim())
+      current = s
+    } else {
+      current += s
+    }
+  }
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.filter(c => c.length > 0)
+}
+
 const AudioStreamPlayerSelector = ({ prompt }) => {
   const { isDark } = useTheme()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [audioMap, setAudioMap] = useState({})
   const [anchorEl, setAnchorEl] = useState(null)
   const [audioSrc, setAudioSrc] = useState(null)
-  const [isVoiceLoading, setIsVoiceLoading] = useState(false)
   const [controlTrigger, setControlTrigger] = useState(null)
+  const [chunkQueue, setChunkQueue] = useState([])
+  const [currentChunkIdx, setCurrentChunkIdx] = useState(0)
   const { voices } = useAppContext()
   const playModalRef = useRef()
 
@@ -37,13 +53,18 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
     }
   }, [anchorEl])
 
-  useEffect(() => {
-    setAudioMap({})
-  }, [prompt])
-
   const handleAudioEnded = () => {
-    setControlTrigger(null)
-    setIsPlaying(false)
+    const nextIdx = currentChunkIdx + 1
+    if (nextIdx < chunkQueue.length) {
+      setCurrentChunkIdx(nextIdx)
+      setAudioSrc(chunkQueue[nextIdx])
+      // controlTrigger stays 'PLAY' — AudioStreamPlayer fires on audioSrc change
+    } else {
+      setControlTrigger(null)
+      setIsPlaying(false)
+      setChunkQueue([])
+      setCurrentChunkIdx(0)
+    }
   }
 
   const calculateModalPosition = (anchorEl) => {
@@ -77,23 +98,17 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
     }
   }
 
-  const handleVoiceSelect = async (voice) => {
+  const handleVoiceSelect = (voice) => {
     handleClose()
 
-    if (!audioMap || !audioMap[voice]) {
-      setIsVoiceLoading(true)
-      const audioSrc = await getTextToSpeechAudioSrc(prompt, voice)
-      setIsVoiceLoading(false)
+    const chunks = chunkText(prompt)
+    const urls = chunks.map(chunk =>
+      `${SERVER_PREFIX}/text/to/speech/v1/convert/${voice}?prompt=${encodeURIComponent(chunk)}`
+    )
 
-      const newAudioMap = { ...audioMap }
-      newAudioMap[voice] = audioSrc
-
-      setAudioMap(newAudioMap)
-      setAudioSrc(audioSrc)
-    } else {
-      setAudioSrc(audioMap[voice])
-    }
-
+    setChunkQueue(urls)
+    setCurrentChunkIdx(0)
+    setAudioSrc(urls[0])
     setControlTrigger('PLAY')
     setIsPlaying(true)
   }
@@ -128,14 +143,7 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
             <span>Pause</span>
           </button>
           )
-        : isVoiceLoading
-          ? (
-            <div className={`px-3 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 ${isDark ? 'glass-dark text-theme-dark border border-white/20' : 'glass-light text-theme-light border border-black/20'}`}>
-              <LoadingSpinner svgClassName='!h-4 !w-4' />
-              <span>Loading...</span>
-            </div>
-          )
-          : (
+        : (
             <button className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20 border border-white/20' : 'glass-light text-theme-light hover:bg-black/20 border border-black/20'}`} onClick={handlePlayButton}>
               <svg
                 className='w-4 h-4 fill-current'

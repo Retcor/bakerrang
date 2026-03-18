@@ -3,7 +3,7 @@ import AudioRecorder from './AudioRecorder.jsx'
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
 
-const GoogleSpeechToText = ({ className, setSpeechToText, lang, isLoading, buttonClassName }) => {
+const GoogleSpeechToText = ({ className, setSpeechToText, lang, isLoading, buttonClassName, onRecordingStop }) => {
   const [audioBase64, setAudioBase64] = useState()
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const GoogleSpeechToText = ({ className, setSpeechToText, lang, isLoading, butto
   }
 
   return (
-    <AudioRecorder setAudioBase64={setAudioBase64} className={className} isLoading={isLoading} buttonClassName={buttonClassName} />
+    <AudioRecorder setAudioBase64={setAudioBase64} className={className} isLoading={isLoading} buttonClassName={buttonClassName} onStop={onRecordingStop} />
   )
 }
 
