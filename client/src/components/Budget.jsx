@@ -172,6 +172,13 @@ const buildMonthlySummary = (items, paydays, year, month) => {
   const unassigned = []
 
   itemOccurrences.forEach(item => {
+    // If pinned to a specific payday, go there directly
+    if (item.paydayId) {
+      const target = groups.find(g => g.payday.id === item.paydayId)
+      if (target) { target.items.push(item); return }
+      // Pinned payday not in this month — fall through to chronological logic
+    }
+
     // Find the last payday that is <= item day
     let assigned = false
     for (let i = groups.length - 1; i >= 0; i--) {
@@ -244,7 +251,7 @@ const SelectInput = ({ value, onChange, options, isDark }) => (
 
 // ─── Item Form ────────────────────────────────────────────────────────────────
 
-const ItemForm = ({ category, initial, onSave, isDark }) => {
+const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
   const isPayday = category === 'payday'
 
   const [name, setName] = useState(initial?.name || '')
@@ -259,6 +266,7 @@ const ItemForm = ({ category, initial, onSave, isDark }) => {
   const [endDate, setEndDate] = useState(initial?.endDate || '')
   const [frequency, setFrequency] = useState(initial?.frequency || 'monthly')
   const [startDate, setStartDate] = useState(initial?.startDate || new Date().toISOString().slice(0, 10))
+  const [paydayId, setPaydayId] = useState(initial?.paydayId || '')
 
   const dayTypeOptions = [
     { value: 'fixed', label: 'Fixed day of month' },
@@ -285,6 +293,7 @@ const ItemForm = ({ category, initial, onSave, isDark }) => {
     setEndDate('')
     setFrequency('monthly')
     setStartDate(new Date().toISOString().slice(0, 10))
+    setPaydayId('')
   }
 
   const handleSave = () => {
@@ -313,7 +322,8 @@ const ItemForm = ({ category, initial, onSave, isDark }) => {
         autoPay,
         active,
         balance: category === 'debt' && balance ? parseFloat(balance) : null,
-        endDate: category === 'debt' && endDate ? endDate : null
+        endDate: category === 'debt' && endDate ? endDate : null,
+        paydayId: paydayId || null
       })
     }
     if (!initial) resetForm()
@@ -405,6 +415,24 @@ const ItemForm = ({ category, initial, onSave, isDark }) => {
             <TextInput value={url} onChange={setUrl} placeholder='https://...' isDark={isDark} />
           </FormField>
 
+          {paydays && paydays.length > 0 && (
+            <FormField label='Associate with Payday (optional)' isDark={isDark}>
+              <select
+                value={paydayId}
+                onChange={e => setPaydayId(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg text-sm border transition-colors duration-200 outline-none cursor-pointer
+                  ${isDark
+                    ? 'bg-white/10 border-white/20 text-white focus:border-white/40'
+                    : 'bg-black/5 border-black/15 text-gray-900 focus:border-black/30'}`}
+              >
+                <option value='' className={isDark ? 'bg-gray-800' : 'bg-white'}>(auto-assign)</option>
+                {paydays.map(pd => (
+                  <option key={pd.id} value={pd.id} className={isDark ? 'bg-gray-800' : 'bg-white'}>{pd.name}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
+
           <div className='flex items-center gap-4 mt-4 mb-3'>
             <label className='flex items-center gap-2 cursor-pointer'>
               <input
@@ -448,7 +476,15 @@ const ItemForm = ({ category, initial, onSave, isDark }) => {
 
 const CalendarCell = ({ day, entries, isDark, onEntryClick, col }) => {
   const [hovered, setHovered] = useState(null)
+  const [expanded, setExpanded] = useState(false)
   const today = new Date()
+
+  const mobileLimit = 1
+  const desktopLimit = 3
+  const visibleMobile = expanded ? entries.length : mobileLimit
+  const visibleDesktop = expanded ? entries.length : desktopLimit
+  const hiddenMobile = entries.length - mobileLimit
+  const hiddenDesktop = entries.length - desktopLimit
 
   return (
     <div className={`min-h-[52px] sm:min-h-[80px] md:min-h-[90px] p-1 border-b border-r overflow-visible
@@ -462,44 +498,63 @@ const CalendarCell = ({ day, entries, isDark, onEntryClick, col }) => {
             {day}
           </span>
           <div className='space-y-0.5'>
-            {entries.slice(0, 3).map((entry, i) => (
-              <div
-                key={`${entry.id}-${i}`}
-                className={`relative overflow-visible${i >= 1 ? ' hidden sm:block' : ''}`}
-                onMouseEnter={() => setHovered(i)}
-                onMouseLeave={() => setHovered(null)}
-              >
-                <button
-                  onClick={() => onEntryClick(entry)}
-                  className='w-full text-left px-1.5 py-0.5 rounded text-xs truncate text-white font-medium transition-opacity hover:opacity-80'
-                  style={{ backgroundColor: CATEGORY_COLORS[entry._type === 'payday' ? 'payday' : entry.category] }}
+            {entries.map((entry, i) => {
+              const hiddenOnMobile = i >= visibleMobile
+              const hiddenOnDesktop = i >= visibleDesktop
+              if (hiddenOnMobile && hiddenOnDesktop) return null
+              return (
+                <div
+                  key={`${entry.id}-${i}`}
+                  className={`relative overflow-visible${hiddenOnMobile ? ' hidden sm:block' : ''}${!hiddenOnMobile && hiddenOnDesktop ? ' sm:hidden' : ''}`}
+                  onMouseEnter={() => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
                 >
-                  {entry._type === 'payday' ? '💰 ' : ''}{entry.name}
-                </button>
-                {hovered === i && (
-                  <div className={`absolute top-full mt-1 z-[100] w-44 rounded-lg p-2 shadow-xl border text-xs pointer-events-none
-                    ${col >= 5 ? 'right-0' : 'left-0'}
-                    ${isDark ? 'bg-gray-900 border-white/10 text-white' : 'bg-white border-black/10 text-gray-900'}`}
+                  <button
+                    onClick={() => onEntryClick(entry)}
+                    className='w-full text-left px-1.5 py-0.5 rounded text-xs truncate text-white font-medium transition-opacity hover:opacity-80'
+                    style={{ backgroundColor: CATEGORY_COLORS[entry._type === 'payday' ? 'payday' : entry.category] }}
                   >
-                    <p className='font-semibold truncate'>{entry.name}</p>
-                    <p className='mt-0.5'>${parseFloat(entry.amount).toFixed(2)}</p>
-                    {entry._type !== 'payday' && <CategoryBadge category={entry.category} isDark={isDark} />}
-                    {entry.autoPay && <p className='mt-0.5 text-emerald-400'>✓ Auto-pay</p>}
-                    {entry.notes && <p className='mt-0.5 opacity-70 truncate'>{entry.notes}</p>}
-                    <p className='mt-1 opacity-50 italic'>Click to edit / delete</p>
-                  </div>
-                )}
-              </div>
-            ))}
-            {entries.length > 1 && (
-              <p className={`text-xs px-1 sm:hidden ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                +{entries.length - 1} more
-              </p>
+                    {entry._type === 'payday' ? '💰 ' : ''}{entry.name}
+                  </button>
+                  {hovered === i && (
+                    <div className={`absolute top-full mt-1 z-[100] w-44 rounded-lg p-2 shadow-xl border text-xs pointer-events-none
+                      ${col >= 5 ? 'right-0' : 'left-0'}
+                      ${isDark ? 'bg-gray-900 border-white/10 text-white' : 'bg-white border-black/10 text-gray-900'}`}
+                    >
+                      <p className='font-semibold truncate'>{entry.name}</p>
+                      <p className='mt-0.5'>${parseFloat(entry.amount).toFixed(2)}</p>
+                      {entry._type !== 'payday' && <CategoryBadge category={entry.category} isDark={isDark} />}
+                      {entry.autoPay && <p className='mt-0.5 text-emerald-400'>✓ Auto-pay</p>}
+                      {entry.notes && <p className='mt-0.5 opacity-70 truncate'>{entry.notes}</p>}
+                      <p className='mt-1 opacity-50 italic'>Click to edit / delete</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {!expanded && hiddenMobile > 0 && (
+              <button
+                onClick={() => setExpanded(true)}
+                className={`text-xs px-1 sm:hidden hover:underline ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
+              >
+                +{hiddenMobile} more
+              </button>
             )}
-            {entries.length > 3 && (
-              <p className={`text-xs px-1 hidden sm:block ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                +{entries.length - 3} more
-              </p>
+            {!expanded && hiddenDesktop > 0 && (
+              <button
+                onClick={() => setExpanded(true)}
+                className={`text-xs px-1 hidden sm:block hover:underline ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
+              >
+                +{hiddenDesktop} more
+              </button>
+            )}
+            {expanded && entries.length > desktopLimit && (
+              <button
+                onClick={() => setExpanded(false)}
+                className={`text-xs px-1 hover:underline ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
+              >
+                show less
+              </button>
             )}
           </div>
         </>
@@ -522,12 +577,19 @@ const Budget = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeTab, setActiveTab] = useState('utility')
   const [showExisting, setShowExisting] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
 
   // Modal state
   const [editEntry, setEditEntry] = useState(null) // entry clicked on calendar
   const [confirmDelete, setConfirmDelete] = useState(null)
+
+  const toggleGroup = (id) => setCollapsedGroups(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
 
   // ── Fetch data ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -698,6 +760,7 @@ const Budget = () => {
                     category={activeTab}
                     isDark={isDark}
                     onSave={activeTab === 'payday' ? handleSavePayday : handleSaveItem}
+                    paydays={activeTab !== 'payday' ? paydays : undefined}
                   />
 
                   {/* Existing items list */}
@@ -846,44 +909,63 @@ const Budget = () => {
                   {summary.groups.map((group, gi) => {
                     const groupTotal = group.items.reduce((s, i) => s + i.amount, 0)
                     const leftover = group.payday.amount - groupTotal
+                    const isExpanded = collapsedGroups.has(group.payday.id)
+                    const ordinal = group.payday._day
+                      ? `${group.payday._day}${['st','nd','rd'][((group.payday._day + 90) % 100 - 10 + 9) % 9] || 'th'}`
+                      : ''
                     return (
-                      <div key={`${group.payday.id}-${gi}`} className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                        <div className='flex items-center justify-between mb-2'>
-                          <div>
-                            <p className={`text-xs font-semibold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
+                      <div key={`${group.payday.id}-${gi}`} className={`rounded-xl overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                        {/* Clickable header — always visible */}
+                        <button
+                          onClick={() => toggleGroup(group.payday.id)}
+                          className={`w-full flex items-center justify-between p-3 text-left transition-colors duration-150 ${isDark ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}
+                        >
+                          <div className='min-w-0 flex-1'>
+                            <p className={`text-xs font-semibold truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
                               💰 {group.payday.name}
                             </p>
                             <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                              {group.payday._day ? `${group.payday._day}${['st','nd','rd'][((group.payday._day + 90) % 100 - 10 + 9) % 9] || 'th'}` : ''} — ${group.payday.amount.toFixed(2)}
+                              {ordinal ? `${ordinal} — ` : ''}<span className={`font-medium ${leftover >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>${leftover.toFixed(2)}</span> left
                             </p>
                           </div>
-                        </div>
-                        {group.items.length > 0
-                          ? (
-                            <div className='space-y-1 mb-2'>
-                              {group.items.map((item, ii) => (
-                                <div key={`${item.id}-${ii}`} className='flex items-center justify-between'>
-                                  <div className='flex items-center gap-1 min-w-0'>
-                                    <span className='w-2 h-2 rounded-full flex-shrink-0' style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
-                                    <span className={`text-xs truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{item.name}</span>
-                                    {item.autoPay && <span className='text-xs text-emerald-400 flex-shrink-0'>A</span>}
+                          <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
+                            className={`w-3 h-3 flex-shrink-0 ml-2 transition-transform duration-200 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'} ${isExpanded ? 'rotate-180' : ''}`}
+                          >
+                            <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
+                          </svg>
+                        </button>
+
+                        {/* Expandable body */}
+                        {isExpanded && (
+                          <div className={`px-3 pb-3 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+                            <div className='pt-2'>
+                              {group.items.length > 0
+                                ? (
+                                  <div className='space-y-1 mb-2'>
+                                    {group.items.map((item, ii) => (
+                                      <div key={`${item.id}-${ii}`} className='flex items-center justify-between'>
+                                        <div className='flex items-center gap-1 min-w-0'>
+                                          <span className='w-2 h-2 rounded-full flex-shrink-0' style={{ backgroundColor: CATEGORY_COLORS[item.category] }} />
+                                          <span className={`text-xs truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{item.name}</span>
+                                          {item.autoPay && <span className='text-xs text-emerald-400 flex-shrink-0'>A</span>}
+                                        </div>
+                                        <span className={`text-xs ml-2 flex-shrink-0 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                                          ${item.amount.toFixed(2)}
+                                        </span>
+                                      </div>
+                                    ))}
                                   </div>
-                                  <span className={`text-xs ml-2 flex-shrink-0 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                                    ${item.amount.toFixed(2)}
-                                  </span>
-                                </div>
-                              ))}
+                                  )
+                                : (
+                                  <p className={`text-xs italic mb-2 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>No bills this period</p>
+                                  )}
+                              <div className={`pt-2 border-t flex items-center justify-between ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+                                <span className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Income</span>
+                                <span className={`text-xs font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>${group.payday.amount.toFixed(2)}</span>
+                              </div>
                             </div>
-                            )
-                          : (
-                            <p className={`text-xs italic mb-2 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>No bills this period</p>
-                            )}
-                        <div className={`pt-2 border-t flex items-center justify-between ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-                          <span className={`text-xs font-medium ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Leftover</span>
-                          <span className={`text-xs font-bold ${leftover >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            ${leftover.toFixed(2)}
-                          </span>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -933,6 +1015,7 @@ const Budget = () => {
           onClose={() => setEditEntry(null)}
           onSave={editEntry._type === 'payday' ? handleSavePayday : handleSaveItem}
           onDelete={() => setConfirmDelete(editEntry)}
+          paydays={paydays}
         />
       )}
 

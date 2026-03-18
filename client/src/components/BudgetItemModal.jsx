@@ -20,7 +20,7 @@ const FREQUENCY_OPTIONS = [
   { value: 'weekly', label: 'Weekly' }
 ]
 
-const BudgetItemModal = ({ entry, onClose, onSave, onDelete }) => {
+const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => {
   const { isDark } = useTheme()
   const isPayday = entry._type === 'payday'
 
@@ -36,6 +36,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete }) => {
   const [endDate, setEndDate] = useState(entry.endDate || '')
   const [frequency, setFrequency] = useState(entry.frequency || 'monthly')
   const [startDate, setStartDate] = useState(entry.startDate || new Date().toISOString().slice(0, 10))
+  const [paydayId, setPaydayId] = useState(entry.paydayId || '')
 
   // Scroll lock
   useEffect(() => {
@@ -84,7 +85,8 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete }) => {
         autoPay,
         active,
         balance: entry.category === 'debt' && balance ? parseFloat(balance) : null,
-        endDate: entry.category === 'debt' && endDate ? endDate : null
+        endDate: entry.category === 'debt' && endDate ? endDate : null,
+        paydayId: paydayId || null
       })
     }
   }
@@ -223,6 +225,17 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete }) => {
                 <label className={labelClass}>URL (optional)</label>
                 <input type='text' value={url} onChange={e => setUrl(e.target.value)} className={inputClass} placeholder='https://...' />
               </div>
+              {paydays.length > 0 && (
+                <div>
+                  <label className={labelClass}>Associate with Payday (optional)</label>
+                  <select value={paydayId} onChange={e => setPaydayId(e.target.value)} className={selectClass}>
+                    <option value='' className={isDark ? 'bg-gray-800' : 'bg-white'}>(auto-assign)</option>
+                    {paydays.map(pd => (
+                      <option key={pd.id} value={pd.id} className={isDark ? 'bg-gray-800' : 'bg-white'}>{pd.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className='flex items-center gap-6'>
                 <label className='flex items-center gap-2 cursor-pointer'>
                   <input type='checkbox' checked={autoPay} onChange={e => setAutoPay(e.target.checked)} className='w-4 h-4 rounded accent-emerald-500' />
