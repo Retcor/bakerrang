@@ -16,7 +16,8 @@
       "Bash(grep -E \"\\\\.jsx$\")",
       "mcp__playwright__browser_tabs",
       "mcp__playwright__browser_resize",
-      "mcp__playwright__browser_hover"
+      "mcp__playwright__browser_hover",
+      "Bash(npm install:*)"
     ]
   }
 }

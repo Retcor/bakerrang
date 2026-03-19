@@ -1,10 +1,10 @@
 import axios from 'axios'
 import { db } from '../client/firestoreClient.js'
-import { v1p1beta1 as speech } from '@google-cloud/speech'
+import { createClient as createDeepgramClient } from '@deepgram/sdk'
 const apiKey = process.env.ELEVEN_LABS_API_KEY
 const baseUrl = 'https://api.elevenlabs.io'
 const modelId = 'eleven_multilingual_v2'
-const speechToTextClient = new speech.SpeechClient()
+const deepgram = createDeepgramClient(process.env.DEEPGRAM_API_KEY)
 
 export const convertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu') => {
   const url = `${baseUrl}/v1/text-to-speech/${voice}?optimize_streaming_latency=4&output_format=mp3_44100_128`
@@ -61,23 +61,18 @@ export const getLanguages = async () => {
   }
 }
 
-export const getGoogleTextToSpeech = async (audioBytes, lang) => {
-  const audio = {
-    content: audioBytes,
-  };
-  const config = {
-    languageCode: lang,
-    enableAutomaticPunctuation: true,
-  };
-  const request = {
-    audio: audio,
-    config: config,
-  };
-
-  const [response] = await speechToTextClient.recognize(request);
-  const transcription = response.results
-    .map(result => result.alternatives[0].transcript)
-    .join('\n');
+export const getDeepgramTranscription = async (audioBase64, lang) => {
+  const audioBuffer = Buffer.from(audioBase64, 'base64')
+  const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+    audioBuffer,
+    {
+      model: 'nova-2',
+      smart_format: true,
+      language: lang || 'en-US'
+    }
+  )
+  if (error) throw error
+  const transcription = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
   return { transcription }
 }
 

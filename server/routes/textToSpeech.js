@@ -1,6 +1,6 @@
 import express from 'express'
 import {
-  convertTextToSpeech, deleteVoice, getGoogleTextToSpeech, getLanguages,
+  convertTextToSpeech, deleteVoice, getDeepgramTranscription, getLanguages,
   getVoices, postVoice
 } from '../services/textToSpeechService.js'
 import multipart from '../multer.js'
@@ -43,7 +43,7 @@ router.get('/v1/convert/:voiceId', async (req, res, next) => {
 
 router.post('/google/transcribe', async (req, res, next) => {
   try {
-    res.send(await getGoogleTextToSpeech(req.body.audio, req.body.lang))
+    res.send(await getDeepgramTranscription(req.body.audio, req.body.lang))
   } catch (error) {
     console.error(error)
     res.status(500).send(error)

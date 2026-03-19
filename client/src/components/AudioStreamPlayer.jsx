@@ -30,6 +30,7 @@ const AudioStreamPlayer = ({ audioSrc, handleAudioEnded, controlTrigger }) => {
 
       if (controlTrigger === 'PLAY') {
         audioElement.src = audioSrc
+        audioElement.currentTime = 0
         audioElement.play()
       } else if (controlTrigger === 'RESUME') {
         audioElement.play()

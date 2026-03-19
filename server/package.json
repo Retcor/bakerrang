@@ -9,8 +9,8 @@
     "lint:fix": "standard --fix"
   },
   "dependencies": {
+    "@deepgram/sdk": "^3.13.0",
     "@google-cloud/firestore": "^7.1.0",
-    "@google-cloud/speech": "^6.5.0",
     "axios": "^1.4.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
