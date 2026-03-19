@@ -18,6 +18,7 @@ const PolyglotInstant = () => {
   const [selectedOutputOption, setSelectedOutputOption] = useState(langNameList[0])
   const [audioSrc, setAudioSrc] = useState(null)
   const [controlTrigger, setControlTrigger] = useState(null)
+  const [lastAudioSrc, setLastAudioSrc] = useState(null)
   const { voices } = useAppContext()
 
   useEffect(() => {
@@ -41,7 +42,9 @@ const PolyglotInstant = () => {
     if (voices?.length > 0) {
       const voiceId = voices.find(p => p.isPrimary)?.id || voices[0].id
       // Pass URL directly — browser <audio> streams + starts playback progressively
-      setAudioSrc(`${SERVER_PREFIX}/text/to/speech/v1/convert/${voiceId}?prompt=${encodeURIComponent(translation)}`)
+      const url = `${SERVER_PREFIX}/text/to/speech/v1/convert/${voiceId}?prompt=${encodeURIComponent(translation)}`
+      setAudioSrc(url)
+      setLastAudioSrc(url)
       setControlTrigger('PLAY')
     }
 
@@ -153,6 +156,20 @@ const PolyglotInstant = () => {
             <div className={`px-4 py-2 rounded-full text-sm font-medium ${isDark ? 'bg-accent-dark/20 text-accent-dark' : 'bg-accent-light/20 text-accent-light'}`}>
               Processing translation...
             </div>
+          )}
+
+          {/* Replay button */}
+          {lastAudioSrc && !isProcessing && (
+            <button
+              onClick={() => { setControlTrigger(null); setAudioSrc(lastAudioSrc); setTimeout(() => setControlTrigger('PLAY'), 0) }}
+              className={`mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-theme-dark' : 'bg-black/10 hover:bg-black/20 text-theme-light'}`}
+              title='Replay last translation'
+            >
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4'>
+                <path d='M5.055 7.06C3.805 6.347 2.25 7.25 2.25 8.69v8.122c0 1.44 1.555 2.343 2.805 1.628L12 14.471v2.34c0 1.44 1.555 2.343 2.805 1.628l7.108-4.061c1.26-.72 1.26-2.536 0-3.256L14.805 7.06C13.555 6.347 12 7.25 12 8.69v2.34L5.055 7.06z' />
+              </svg>
+              Replay
+            </button>
           )}
         </div>
       </div>
