@@ -10,6 +10,7 @@ import textToSpeechRouter from './routes/textToSpeech.js'
 import superMarketRouter from './routes/superMarket.js'
 import budgetRouter from './routes/budget.js'
 import storybookRouter from './routes/storybook.js'
+import chatbotRouter from './routes/chatbot.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -21,8 +22,13 @@ const __dirname = dirname(__filename)
 
 const app = express()
 
+const allowedOrigins = [process.env.CLIENT_DOMAIN, process.env.CHATBOT_ORIGIN].filter(Boolean)
 app.use(cors({
-  origin: process.env.CLIENT_DOMAIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (server-to-server, curl, etc.)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS: origin ${origin} not allowed`))
+  },
   credentials: true
 }))
 app.use(logger('dev'))
@@ -53,6 +59,7 @@ passport.use(new GoogleStrategy({
   done(null, authUser)
 }))
 
+app.use('/chatbot', chatbotRouter)
 app.use('/auth', authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)

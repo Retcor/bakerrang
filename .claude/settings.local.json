@@ -17,7 +17,14 @@
       "mcp__playwright__browser_tabs",
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_hover",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node -e \"const f = require\\(''@google-cloud/firestore''\\); console.log\\(require\\(''./node_modules/@google-cloud/firestore/package.json''\\).version\\)\")",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_run_code",
+      "mcp__playwright__browser_console_messages",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)",
+      "Bash(ls C:UsersjakeyIdeaProjectsbakerrang*.md)"
     ]
   }
 }
