@@ -199,7 +199,7 @@ Stack: React, Vite, Tailwind, Express, Firestore, GCP, Docker, Kubernetes
 - Senior or lead developer position with real ownership and impact
 - Company where engineering quality and craftsmanship are valued
 - Opportunity to work across the full stack (not siloed to just frontend or backend)
-- Teams that move fast but care about doing things right
+- Teams that care about doing things right
 - Work from home position or possibly hybrid. No relocation.
 - The AI field is really interesting but not really picky as long as it's a good company.
 - Looking for anything between 140k and 160k depending on additional benefits.
@@ -246,6 +246,11 @@ Stack: React, Vite, Tailwind, Express, Firestore, GCP, Docker, Kubernetes
 ---
 
 ## Frequently Asked Questions from Employers
+
+**Q: What are you hobbies outside of work?**
+A: Video games, both helping make them and playing them.  I love problem solving and video games give me that
+chance in a fun way to solve problems, whether that be in the form of puzzles or min maxing my character's stats
+to make them undefeatable.  Also love making music to express myself in a way that words cannot.
 
 **Q: What made you not take another lead role?**
 A: There was no need for the role and I don't strive to be a lead or manage, as I enjoy the engineering side much more.
