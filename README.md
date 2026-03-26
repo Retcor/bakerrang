@@ -82,11 +82,16 @@ Wait until the status shows `READY` before running the ingestion script for the 
 
 Add the following to the server `.env` file:
 ```
-OPENAI_API_KEY=...         # Used for generating embeddings and RAG responses
-ELEVENLABS_API_KEY=...     # Used for voice responses
+CHAT_GPT_API_KEY=...          # OpenAI API key — used for GPT, embeddings, vision, and RAG
+ELEVEN_LABS_API_KEY=...       # ElevenLabs API key — used for TTS and voice cloning
+DEEPGRAM_API_KEY=...          # Deepgram API key — used for speech-to-text transcription
+GOOGLE_OAUTH_CLIENT_ID=...    # Google OAuth client ID — used for user authentication
+GOOGLE_OAUTH_CLIENT_SECRET=.. # Google OAuth client secret — used for user authentication
+CLIENT_DOMAIN=...             # URL of the frontend client (e.g. http://localhost:3001)
+SERVER_DOMAIN=...             # URL of this server (e.g. http://localhost:8080)
+CHATBOT_ORIGIN=...            # Allowed origin for the dan-baker-info chatbot (e.g. https://danbaker.info)
+CHATBOT_VOICE_ID=...          # ElevenLabs voice ID used for chatbot audio responses
 ```
-
-The `ELEVENLABS_VOICE_ID` for the chatbot voice is configured in `server/routes/chatbot.js`.
 
 ## Deploy
 
