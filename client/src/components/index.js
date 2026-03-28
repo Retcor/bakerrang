@@ -20,6 +20,7 @@ import AddVoiceModal from './AddVoiceModal.jsx'
 import DropzoneWrapper from './DropzoneWrapper.jsx'
 import SuperMarket from './SuperMarket.jsx'
 import Budget from './Budget.jsx'
+import SignLanguage from './SignLanguage.jsx'
 
 export {
   MainContent,
@@ -43,5 +44,6 @@ export {
   AddVoiceModal,
   DropzoneWrapper,
   SuperMarket,
-  Budget
+  Budget,
+  SignLanguage
 }
