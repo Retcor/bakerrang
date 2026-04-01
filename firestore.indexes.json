@@ -1,0 +1,40 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "resume_chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "__name__", "order": "ASCENDING" },
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": { "dimension": 1536, "flat": {} }
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "wow_game_data",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "region", "order": "ASCENDING" },
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": { "dimension": 1536, "flat": {} }
+        }
+      ]
+    },
+    {
+      "collectionGroup": "wow_character_chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "charKey", "order": "ASCENDING" },
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": { "dimension": 1536, "flat": {} }
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

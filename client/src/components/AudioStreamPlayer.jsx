@@ -29,9 +29,10 @@ const AudioStreamPlayer = ({ audioSrc, handleAudioEnded, controlTrigger }) => {
       const audioElement = audioRef.current
 
       if (controlTrigger === 'PLAY') {
+        audioElement.src = ''
         audioElement.src = audioSrc
         audioElement.currentTime = 0
-        audioElement.play()
+        audioElement.play().catch(err => console.error('Audio play error:', err))
       } else if (controlTrigger === 'RESUME') {
         audioElement.play()
       } else if (controlTrigger === 'PAUSE') {

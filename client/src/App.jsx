@@ -12,7 +12,8 @@ import {
   Account,
   SuperMarket,
   Budget,
-  SignLanguage
+  SignLanguage,
+  WoWAdvisor
 } from './components'
 
 export const SERVER_PREFIX = 'https://api.bakerrang.com'
@@ -30,6 +31,7 @@ const App = () => {
           <Route path='/account' element={<Account />} />
           <Route path='/budget' element={<Budget />} />
           <Route path='/sign-language' element={<SignLanguage />} />
+          <Route path='/wow' element={<WoWAdvisor />} />
           <Route path='*' element={<NoPage />} />
         </Route>
         <Route path='/login' element={<Login />} />

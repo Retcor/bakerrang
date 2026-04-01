@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: BakerRang Advisor
+## Notes: AI-powered World of Warcraft advisor. Type /bakergpt to open.
+## Version: 1.0.0
+## Author: BakerRang
+## Category: Interface Enhancements
+
+BakerRangAdvisor.lua

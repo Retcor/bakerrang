@@ -21,6 +21,7 @@ import DropzoneWrapper from './DropzoneWrapper.jsx'
 import SuperMarket from './SuperMarket.jsx'
 import Budget from './Budget.jsx'
 import SignLanguage from './SignLanguage.jsx'
+import WoWAdvisor from './WoW/WoWAdvisor.jsx'
 
 export {
   MainContent,
@@ -45,5 +46,6 @@ export {
   DropzoneWrapper,
   SuperMarket,
   Budget,
-  SignLanguage
+  SignLanguage,
+  WoWAdvisor
 }

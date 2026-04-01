@@ -24,7 +24,26 @@
       "mcp__playwright__browser_console_messages",
       "Bash(python3 -c \":*)",
       "Bash(node -e \":*)",
-      "Bash(ls C:UsersjakeyIdeaProjectsbakerrang*.md)"
+      "Bash(ls C:UsersjakeyIdeaProjectsbakerrang*.md)",
+      "mcp__playwright__browser_wait_for",
+      "WebSearch",
+      "WebFetch(domain:warcraft.wiki.gg)",
+      "WebFetch(domain:wowpedia.fandom.com)",
+      "WebFetch(domain:www.wowinterface.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:simpleicons.org)",
+      "WebFetch(domain:cdn.simpleicons.org)",
+      "WebFetch(domain:icon.horse)",
+      "WebFetch(domain:www.svgrepo.com)",
+      "WebFetch(domain:worldvectorlogo.com)",
+      "WebFetch(domain:www.svgviewer.dev)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:worldofwarcraft.blizzard.com)",
+      "WebFetch(domain:fonts.gstatic.com)",
+      "WebFetch(domain:www.google.com)",
+      "WebFetch(domain:t2.gstatic.com)"
     ]
   }
 }
