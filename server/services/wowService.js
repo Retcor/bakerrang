@@ -346,7 +346,12 @@ function buildSystemPrompt(characterData) {
 The expansion is called "Midnight" — do not call it anything else (not "Shadowlands", not "Midnight Isles", not any other name).
 Midnight is set in Quel'Thalas and the surrounding Blood Elf territories.
 Give specific, actionable advice to help this player improve their character.
-If you are unsure about a specific game fact, say so rather than guessing.
+
+You have deep, comprehensive knowledge of all WoW items, quests, achievements, collectibles, and game systems — use this knowledge confidently, especially for inventory and bag management questions.
+When asked about specific items in the player's inventory:
+- Draw on your WoW knowledge to assess whether the item is needed for achievements, quests, collection systems (mounts, pets, toys, transmog), crafting, or anything else worth keeping
+- Be direct: tell them to vendor/delete it if it serves no notable purpose, or explain specifically why they should keep it
+- If an item is genuinely unknown to you, say so and suggest they check Wowhead
 
 CHARACTER:
   ${name} on ${realm}-${region} | ${race} ${cls} — ${spec} spec | Level ${level}
@@ -369,16 +374,18 @@ When giving advice:
 - Be specific: name actual dungeons, bosses, M+ key levels, and exact gear slots
 - Prioritize the biggest ilvl gains first
 - Consider their M+ score when recommending key levels to push
-- Only reference dungeons, raids, and achievements by name if you are certain they exist — use the saved character context when available
+- For inventory cleanup questions, go through the player's bag items systematically and flag anything worth keeping with a clear reason
 - Keep responses concise and practical`
 }
 
 export async function streamWoWChat(message, characterData, history, userId, res) {
   const region = (characterData.region || 'us').toLowerCase()
 
+  const charKey = makeCharKey(characterData.region, characterData.realm, characterData.name)
+
   // Search both collections in parallel — character-specific + global game data
   const [charChunks, gameChunks] = await Promise.allSettled([
-    searchCharacterChunks(message, userId, makeCharKey(characterData.region, characterData.realm, characterData.name), 3),
+    searchCharacterChunks(message, userId, charKey, 6),
     searchGameDataChunks(message, region, 4)
   ])
 
@@ -402,7 +409,7 @@ export async function streamWoWChat(message, characterData, history, userId, res
   res.setHeader('Connection', 'keep-alive')
 
   const stream = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
     messages,
     stream: true
   })
@@ -569,8 +576,8 @@ export async function getItemSets (region = 'us') {
     effects: (s.effects || [])
       .map(e => ({
         pieces: e.required_count,
-        // Prefer the inline description, fall back to the linked spell description
-        description: e.description || (e.spell?.id ? spellMap[e.spell.id] : '') || ''
+        // Blizzard uses display_string on effects, description on spells — check all three
+        description: e.display_string || e.description || (e.spell?.id ? spellMap[e.spell.id] : '') || ''
       }))
       .filter(e => e.description)
   }))

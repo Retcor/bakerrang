@@ -6,15 +6,15 @@
  *   node scripts/populateWowGameData.js                        — all regions, staleness check
  *   node scripts/populateWowGameData.js us                     — single region, staleness check
  *   node scripts/populateWowGameData.js us eu                  — specific regions, staleness check
- *   node scripts/populateWowGameData.js us --itemSets          — force-refresh itemSets for us only
- *   node scripts/populateWowGameData.js us --itemSets --professions  — force multiple types
+ *   node scripts/populateWowGameData.js us --customTierSets    — force-refresh customTierSets for us only
+ *   node scripts/populateWowGameData.js us --customTierSets --professions  — force multiple types
  *   node scripts/populateWowGameData.js --force                — force-refresh ALL types, all regions
  *   node scripts/populateWowGameData.js us --force             — force-refresh ALL types for us only
  *
  * Available --type flags:
  *   --allAchievements       --expansionInfo         --playableClasses
  *   --playableSpecs         --mythicKeystoneDungeons  --journalInstances
- *   --reputationFactions    --itemSets              --professions
+ *   --reputationFactions    --customTierSets        --professions
  *   --mountIndex            --titleIndex            --toyPetIndex
  *   --force                 (shorthand for all of the above)
  *
@@ -38,7 +38,7 @@ const VALID_TYPES = [
   'mythicKeystoneDungeons',
   'journalInstances',
   'reputationFactions',
-  'itemSets',
+  'customTierSets',
   'professions',
   'mountIndex',
   'titleIndex',

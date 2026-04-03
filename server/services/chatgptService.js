@@ -7,7 +7,7 @@ const openai = new OpenAI({
 export const prompt = async input => {
   console.log(`prompting for content ${input.substring(0, 50)}`)
   const res = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
     messages: [{ role: 'user', content: input }]
   })
   return res.choices[0].message.content

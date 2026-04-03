@@ -192,10 +192,10 @@ const WoWAdvisor = () => {
           }
         }
       } else {
-        alert('Clipboard does not contain valid addon data. Run /bakergpt in-game first.')
+        alert('Clipboard does not contain valid addon data. Run /wowadvisor in-game first.')
       }
     } catch {
-      alert('Could not read clipboard. Make sure you ran /bakergpt in-game first.')
+      alert('Could not read clipboard. Make sure you ran /wowadvisor in-game first.')
     }
   }
 
@@ -222,7 +222,7 @@ const WoWAdvisor = () => {
               <button
                 onClick={handlePasteAddonData}
                 disabled={savedState === 'saving'}
-                title='Paste addon data copied by the /bakergpt in-game command'
+                title='Paste addon data copied by the /wowadvisor in-game command'
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 ${
                   addonData
                     ? isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-white'

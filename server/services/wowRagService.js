@@ -131,7 +131,8 @@ Mythic+ Score (current season): ${mPlusScore}`
         const count = i.count > 1 ? ` x${i.count}` : ''
         const ilvl = i.ilvl > 0 ? ` (ilvl ${i.ilvl})` : ''
         const type = i.type ? ` — ${i.type}${i.subtype ? '/' + i.subtype : ''}` : ''
-        return `  [${i.quality}] ${i.name}${count}${ilvl}${type}`
+        const id = i.id ? ` [id:${i.id}]` : ''
+        return `  [${i.quality}] ${i.name}${id}${count}${ilvl}${type}`
       })
       chunks.inventory = splitLargeList('Bag Inventory (grey excluded)', lines, addonData.inventory.length)
     }
@@ -141,7 +142,8 @@ Mythic+ Score (current season): ${mPlusScore}`
         const count = i.count > 1 ? ` x${i.count}` : ''
         const ilvl = i.ilvl > 0 ? ` (ilvl ${i.ilvl})` : ''
         const type = i.type ? ` — ${i.type}${i.subtype ? '/' + i.subtype : ''}` : ''
-        return `  [${i.quality}] ${i.name}${count}${ilvl}${type}`
+        const id = i.id ? ` [id:${i.id}]` : ''
+        return `  [${i.quality}] ${i.name}${id}${count}${ilvl}${type}`
       })
       chunks.bank = splitLargeList('Bank Contents (grey excluded)', lines, addonData.bank.length)
     }

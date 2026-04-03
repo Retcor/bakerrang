@@ -50,7 +50,7 @@ The chatbot on the dan-baker-info site uses a vector database stored in Firestor
 
 ## WoW Game Data Knowledge Base (wow_game_data)
 
-The WoW Advisor RAG system uses a shared Firestore collection (`wow_game_data`) that stores global WoW knowledge — achievements, expansion info, playable classes/specs, M+ dungeons, boss encounters, reputation factions, item sets, professions, mount index, title index, and toys/pets. This data is shared across all users and characters.
+The WoW Advisor RAG system uses a shared Firestore collection (`wow_game_data`) that stores global WoW knowledge — achievements, expansion info, playable classes/specs, M+ dungeons, boss encounters, reputation factions, tier set bonuses, professions, mount index, title index, and toys/pets. This data is shared across all users and characters. It is populated manually via the scripts below — the server does not auto-populate on startup.
 
 ### Populating the Knowledge Base
 
@@ -60,11 +60,23 @@ Run the population script manually from the `server/` directory whenever you wan
 node scripts/populateWowGameData.js                        # all regions, staleness check
 node scripts/populateWowGameData.js us                     # single region, staleness check
 node scripts/populateWowGameData.js us eu                  # specific regions, staleness check
-node scripts/populateWowGameData.js us --itemSets          # force-refresh itemSets for us only
-node scripts/populateWowGameData.js us --itemSets --professions  # force multiple types
+node scripts/populateWowGameData.js us --customTierSets    # force-refresh customTierSets for us only
+node scripts/populateWowGameData.js us --customTierSets --professions  # force multiple types
 node scripts/populateWowGameData.js --force                # force-refresh all types, all regions
 node scripts/populateWowGameData.js us --force             # force-refresh all types for us only
 ```
+
+### Custom Tier Set Bonuses (`wow-tier-sets.md`)
+
+Current-expansion tier set bonuses are not available through the Blizzard API. Instead they are maintained in `server/data/wow-tier-sets.md` and ingested as part of the population process.
+
+**To update tier set bonuses:**
+1. Log into WoW and type `/wowadvisor tiersets` in chat
+2. A popup will appear with all tier set bonuses from the current encounter journal — press **Ctrl+A** then **Ctrl+C** to copy
+3. Replace the contents of `server/data/wow-tier-sets.md` with the copied text
+4. Run: `node scripts/populateWowGameData.js --customTierSets`
+
+Re-run this process after any patch that changes tier set bonuses.
 
 Each data type has a **24-hour staleness check** — re-running within 24 hours will skip anything already fresh. Use `--typeName` flags to force-refresh specific types regardless of staleness. On first run, expect the script to take several minutes since boss encounter details are fetched for every dungeon and raid in the game.
 
@@ -72,7 +84,7 @@ Each data type has a **24-hour staleness check** — re-running within 24 hours 
 ```
 --allAchievements       --expansionInfo         --playableClasses
 --playableSpecs         --mythicKeystoneDungeons  --journalInstances
---reputationFactions    --itemSets              --professions
+--reputationFactions    --customTierSets        --professions
 --mountIndex            --titleIndex            --toyPetIndex
 --force                 (shorthand for all of the above)
 ```
@@ -131,7 +143,7 @@ A World of Warcraft character advisor page at `/wow`. Look up any character by n
 - Streaming AI chat powered by GPT-4o with character context in the system prompt
 - Extended in-game data via the BakerRang Advisor addon (world quests, vault, currencies, affixes, stats, mounts, bag inventory, bank contents)
 - Per-user vector database (RAG) — extended addon data is embedded and stored in Firestore per character, persisting between sessions and enabling semantic search so only relevant context is injected per question
-- Global game knowledge RAG — expansion info, full achievement index, M+ dungeons, boss encounters, reputation factions, item sets, professions, mounts, titles, and toys/pets are stored in a shared `wow_game_data` collection, available to all characters without duplication
+- Global game knowledge RAG — expansion info, full achievement index, M+ dungeons, boss encounters, reputation factions, tier set bonuses, professions, mounts, titles, and toys/pets are stored in a shared `wow_game_data` collection, available to all characters without duplication
 - Recent characters list stored in localStorage for quick re-lookup
 - Character data pulled from the Blizzard API and RaiderIO
 
@@ -150,9 +162,9 @@ The WoW Advisor uses the **Client Credentials** OAuth flow (server-to-server), s
 
 ### BakerRang Advisor — WoW Addon
 
-The addon lives at `addon/BakerRangAdvisor/`. It collects live in-game data and sends it to the WoW Advisor page to give the AI richer context than the Blizzard API alone provides.
+The addon lives at `addon/WoWAdvisor/`. It collects live in-game data and sends it to the WoW Advisor page to give the AI richer context than the Blizzard API alone provides.
 
-**Data collected by the addon:**
+**Data collected by the addon** (`/wowadvisor`):
 - Character basics (name, realm, level, class, spec, item level)
 - Active world quests in the current zone and nearby zones
 - Great Vault weekly reward slots (progress, threshold, available ilvl)
@@ -163,11 +175,23 @@ The addon lives at `addon/BakerRangAdvisor/`. It collects live in-game data and 
 - Bag inventory (all non-grey items across all 5 bag slots)
 - Bank contents (captured automatically when the bank is opened in-game)
 
+**Data fetched from Blizzard API on paste** (enriches the character's saved data):
+- All completed achievements with timestamps
+- Collected mount names
+- Reputation standings with all factions (value, standing, renown level)
+- Mythic+ keystone profile — season score and best key level timed per dungeon
+- Professions — primary and secondary with skill level and tier breakdowns
+- Active talent build — every selected talent node and PvP talents
+- PvP summary — honor level, honorable kills, bracket ratings and W/L records
+- Collected battle pets and toys
+- Earned character titles
+- Primary statistics (strength, agility, intellect, stamina, armor, crit, haste, mastery, versatility)
+
 **Installation:**
 
-1. Copy the `addon/BakerRangAdvisor/` folder into your WoW addons directory:
+1. Copy the `addon/WoWAdvisor/` folder into your WoW addons directory:
    ```
-   World of Warcraft/_retail_/Interface/AddOns/BakerRangAdvisor/
+   World of Warcraft/_retail_/Interface/AddOns/WoWAdvisor/
    ```
 2. Launch WoW and enable **BakerRang Advisor** in the AddOns list on the character select screen.
 
@@ -176,7 +200,7 @@ The addon lives at `addon/BakerRangAdvisor/`. It collects live in-game data and 
 1. Log in to your character
 2. (Optional) Open your bank to capture bank contents — the addon automatically records items when the bank window opens
 3. (Optional) Be in a zone with active world quests for richer world quest data
-4. Type `/bakergpt` in chat
+4. Type `/wowadvisor` in chat
 5. A popup will appear with your character data as JSON — press **Ctrl+A** then **Ctrl+C** to copy it
 6. Navigate to the WoW Advisor page on the site and look up your character
 7. Click **Paste Addon Data** on the page — a "Saved to cloud ✓" badge confirms the data was embedded and stored in the vector database
@@ -185,12 +209,13 @@ The addon lives at `addon/BakerRangAdvisor/`. It collects live in-game data and 
 **Slash commands:**
 | Command | Description |
 |---|---|
-| `/bakergpt` | Collect in-game data and show the copy popup |
-| `/bakergpt zones` | Print your current zone's map ID to chat (useful for adding new zones to `SCAN_ZONES`) |
+| `/wowadvisor` | Collect in-game data and show the copy popup |
+| `/wowadvisor zones` | Print your current zone's map ID to chat (useful for adding new zones to `SCAN_ZONES`) |
+| `/wowadvisor tiersets` | Scan the encounter journal for tier set bonuses and show the result as markdown for pasting into `server/data/wow-tier-sets.md` |
 
 **Adding new zone IDs:**
 
-World quest zone IDs are defined in the `SCAN_ZONES` table at the top of `BakerRangAdvisor.lua`. If world quests in a new zone aren't being picked up, stand in that zone and run `/bakergpt zones` to get the map ID, then add it to the table:
+World quest zone IDs are defined in the `SCAN_ZONES` table at the top of `WoWAdvisor.lua`. If world quests in a new zone aren't being picked up, stand in that zone and run `/wowadvisor zones` to get the map ID, then add it to the table:
 ```lua
 local SCAN_ZONES = {
   2248,  -- Isle of Dorn
@@ -203,7 +228,7 @@ local SCAN_ZONES = {
 
 **Re-pasting to update:**
 
-The addon data ages quickly (vault resets weekly, world quests change daily). Re-run `/bakergpt` and paste again any time you want to refresh the AI's knowledge. Each paste overwrites the previous saved data for that character.
+The addon data ages quickly (vault resets weekly, world quests change daily). Re-run `/wowadvisor` and paste again any time you want to refresh the AI's knowledge. Each paste overwrites the previous saved data for that character.
 
 ## Deploy
 

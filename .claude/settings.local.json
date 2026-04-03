@@ -43,7 +43,10 @@
       "WebFetch(domain:worldofwarcraft.blizzard.com)",
       "WebFetch(domain:fonts.gstatic.com)",
       "WebFetch(domain:www.google.com)",
-      "WebFetch(domain:t2.gstatic.com)"
+      "WebFetch(domain:t2.gstatic.com)",
+      "Bash(findstr /n \"Slash\\\\|slash\\\\|SLASH\\\\|bakergpt\\\\|zones\\\\|tiersets\\\\|cmd\\\\|Cmd\\\\|CMD\")",
+      "WebFetch(domain:www.icy-veins.com)",
+      "WebFetch(domain:developers.openai.com)"
     ]
   }
 }

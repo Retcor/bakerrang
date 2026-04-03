@@ -9,7 +9,7 @@ router.post('/interpret', async (req, res, next) => {
     if (!image) return res.status(400).json({ error: 'No image provided' })
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       max_tokens: 20,
       messages: [{
         role: 'user',

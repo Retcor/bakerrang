@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: WoW Advisor
+## Notes: Collects your character data and bag contents, then shows a popup to copy. Visit bakerrang.com > WoW Advisor and paste it in for AI-powered advice. Type /wowadvisor to get started.
+## Version: 1.0.0
+## Author: BakerRang
+## Category: Interface Enhancements
+
+WoWAdvisor.lua

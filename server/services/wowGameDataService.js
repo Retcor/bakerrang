@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs'
 import { FieldValue } from '@google-cloud/firestore'
 import { db } from '../client/firestoreClient.js'
 import { embedText } from './chatbotService.js'
@@ -12,7 +13,6 @@ import {
   getJournalInstances,
   getJournalEncounter,
   getReputationFactions,
-  getItemSets,
   getProfessions,
   getMountIndex,
   getTitleIndex,
@@ -265,12 +265,21 @@ async function populateItemSets (region, force = false) {
   const sets = await getItemSets(region)
   if (!sets.length) return
 
-  const lines = []
-  for (const s of sets) {
-    const effectStr = s.effects.map(e => `(${e.pieces}pc) ${e.description}`).join(' | ')
-    lines.push(`  - ${s.name}${effectStr ? ': ' + effectStr : ''}`)
+  // One chunk per set for precise vector retrieval — asking about a specific set
+  // should pull exactly that set's chunk, not a giant list containing hundreds of sets.
+  const chunks = sets
+    .filter(s => s.effects.length > 0)
+    .map(s => {
+      const bonusLines = s.effects.map(e => `  ${e.pieces}-piece bonus: ${e.description}`)
+      const itemLine = s.items.length ? `Items: ${s.items.join(', ')}` : ''
+      return ['Item Set: ' + s.name, ...bonusLines, ...(itemLine ? [itemLine] : [])].join('\n')
+    })
+
+  if (!chunks.length) {
+    console.log(`[WoW Game Data] No item sets with bonus descriptions found (${region}) — skipping`)
+    return
   }
-  const chunks = splitLargeList('Item Sets and Tier Set Bonuses in World of Warcraft', lines, sets.length)
+
   await deleteGameChunks('itemSets', region)
   await storeGameChunks('itemSets', region, chunks)
 }
@@ -366,6 +375,40 @@ async function populateToyAndPetIndex (region, force = false) {
   await storeGameChunks('toyPetIndex', region, chunks)
 }
 
+async function populateCustomTierSets (region, force = false) {
+  const lastUpdated = await getLastUpdated('customTierSets', region)
+  if (!force && !isStale(lastUpdated)) {
+    console.log(`[WoW Game Data] customTierSets (${region}) is fresh — skipping`)
+    return
+  }
+
+  const filePath = new URL('../data/wow-tier-sets.md', import.meta.url).pathname
+    .replace(/^\/([A-Z]:)/, '$1') // fix Windows paths like /C:/... -> C:/...
+  let raw
+  try {
+    raw = readFileSync(filePath, 'utf-8')
+  } catch {
+    console.log('[WoW Game Data] server/data/wow-tier-sets.md not found — skipping customTierSets')
+    return
+  }
+
+  if (!raw.trim() || raw.trim().startsWith('<!--')) {
+    console.log('[WoW Game Data] wow-tier-sets.md is empty or placeholder — skipping customTierSets')
+    return
+  }
+
+  // Chunk by ## sections — each set gets its own embedding for precise retrieval
+  const sections = raw.split(/\n(?=## )/).map(s => s.trim()).filter(s => s.startsWith('## '))
+  if (!sections.length) {
+    console.log('[WoW Game Data] No ## sections found in wow-tier-sets.md — skipping customTierSets')
+    return
+  }
+
+  console.log(`[WoW Game Data] Ingesting ${sections.length} tier set sections from wow-tier-sets.md (${region})...`)
+  await deleteGameChunks('customTierSets', region)
+  await storeGameChunks('customTierSets', region, sections)
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -399,8 +442,8 @@ export async function populateGameData (region = 'us', forceTypes = new Set()) {
       populateReputationFactions(region, f('reputationFactions')).catch(e =>
         console.error(`[WoW Game Data] Failed to populate reputation factions (${region}):`, e.message)
       ),
-      populateItemSets(region, f('itemSets')).catch(e =>
-        console.error(`[WoW Game Data] Failed to populate item sets (${region}):`, e.message)
+      populateCustomTierSets(region, f('customTierSets')).catch(e =>
+        console.error(`[WoW Game Data] Failed to populate custom tier sets (${region}):`, e.message)
       ),
       populateProfessions(region, f('professions')).catch(e =>
         console.error(`[WoW Game Data] Failed to populate professions (${region}):`, e.message)

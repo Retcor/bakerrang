@@ -146,7 +146,13 @@ const WoWChat = ({ character, savedState }) => {
             >
               {msg.content
                 ? renderMessage(msg.content)
-                : <span className='inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin' />
+                : (
+                  <span className='flex items-center gap-1'>
+                    <span className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-white/60' : 'bg-gray-400'}`} style={{ animationDelay: '0ms' }} />
+                    <span className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-white/60' : 'bg-gray-400'}`} style={{ animationDelay: '150ms' }} />
+                    <span className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-white/60' : 'bg-gray-400'}`} style={{ animationDelay: '300ms' }} />
+                  </span>
+                )
               }
             </div>
           </div>
