@@ -66,6 +66,15 @@ const apps = [
         alt='WoW'
       />
     )
+  },
+  {
+    label: 'Passwords',
+    route: '/passwords',
+    icon: (
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className='w-8 h-8'>
+        <path strokeLinecap='round' strokeLinejoin='round' d='M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z' />
+      </svg>
+    )
   }
 ]
 
@@ -79,14 +88,12 @@ const AppGrid = ({ onNavigate }) => {
   }
 
   return (
-    <div className='grid grid-cols-2 gap-2 p-3'>
-      {apps.map((app, index) => {
-        const isLastOdd = index === apps.length - 1 && apps.length % 2 !== 0
-        return (
+    <div className='grid grid-cols-4 gap-2 p-3'>
+      {apps.map((app) => (
         <button
           key={app.route}
           onClick={() => handleClick(app.route)}
-          className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200 hover:scale-105 group ${isLastOdd ? 'col-span-2 justify-self-center' : ''} ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/8'}`}
+          className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 hover:scale-105 group ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/8'}`}
         >
           <div className={`mb-2 transition-colors duration-200 ${isDark ? 'text-brand-dark group-hover:text-white' : 'text-brand-light group-hover:text-blue-700'}`}>
             {app.icon}
@@ -95,8 +102,7 @@ const AppGrid = ({ onNavigate }) => {
             {app.label}
           </span>
         </button>
-        )
-      })}
+      ))}
     </div>
   )
 }

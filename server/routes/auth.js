@@ -1,6 +1,7 @@
 import express from 'express'
 import passport from 'passport'
 import { checkAndStoreUser } from '../services/authService.js'
+import { generateCsrfToken } from '../middleware/security.js'
 const router = express.Router()
 
 // Middleware to check if the user is authenticated
@@ -31,6 +32,12 @@ router.get('/google/callback',
 
 router.get('/check', isAuthenticated, (req, res) => {
   res.json({ isAuthenticated: true, user: req.user })
+})
+
+// Issues a CSRF token (and sets the paired cookie) for the client to attach
+// as the `x-csrf-token` header on state-changing requests.
+router.get('/csrf', (req, res) => {
+  res.json({ csrfToken: generateCsrfToken(req, res) })
 })
 
 router.get('/logout', (req, res) => {

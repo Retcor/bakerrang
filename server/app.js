@@ -3,6 +3,10 @@ import path, { dirname } from 'path'
 import cookieParser from 'cookie-parser'
 import logger from 'morgan'
 import cors from 'cors'
+import helmet from 'helmet'
+
+import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
+import { csrfProtection, authLimiter, vaultLimiter, chatbotLimiter } from './middleware/security.js'
 
 import authRouter, { isAuthenticated } from './routes/auth.js'
 import chatgptRouter from './routes/chatgpt.js'
@@ -13,6 +17,7 @@ import storybookRouter from './routes/storybook.js'
 import chatbotRouter from './routes/chatbot.js'
 import signLanguageRouter from './routes/signLanguage.js'
 import wowRouter from './routes/wow.js'
+import vaultRouter from './routes/vault.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -23,6 +28,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const app = express()
+
+// Trust the upstream proxy so req.secure reflects X-Forwarded-Proto behind
+// TLS termination (used by the 'auto' secure-cookie setting below).
+app.set('trust proxy', 1)
+
+app.use(helmet())
 
 const allowedOrigins = [process.env.CLIENT_DOMAIN, process.env.CHATBOT_ORIGIN].filter(Boolean)
 app.use(cors({
@@ -39,10 +50,32 @@ app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
 
-app.use(session({ secret: 'bakerrang-not-bangarang', resave: true, saveUninitialized: true }))
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET is not set. Refusing to start with an insecure session secret.')
+}
+
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: new FirestoreSessionStore(),
+  cookie: {
+    // 'auto' = Secure only when the connection is actually HTTPS, so the
+    // cookie is stored over plain http://localhost in local dev but stays
+    // Secure in production (behind the trusted TLS proxy).
+    secure: 'auto',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
+  }
+}))
 
 app.use(passport.initialize())
 app.use(passport.session())
+
+// CSRF protection for all state-changing requests (skips GET/HEAD/OPTIONS and
+// the public /chatbot route). Must come after session + cookie-parser.
+app.use(csrfProtection)
 
 passport.serializeUser((user, done) => done(null, user))
 passport.deserializeUser((user, done) => done(null, user))
@@ -61,8 +94,8 @@ passport.use(new GoogleStrategy({
   done(null, authUser)
 }))
 
-app.use('/chatbot', chatbotRouter)
-app.use('/auth', authRouter)
+app.use('/chatbot', chatbotLimiter, chatbotRouter)
+app.use('/auth', authLimiter, authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)
@@ -70,6 +103,7 @@ app.use('/budget', isAuthenticated, budgetRouter)
 app.use('/storybook', isAuthenticated, storybookRouter)
 app.use('/sign-language', isAuthenticated, signLanguageRouter)
 app.use('/wow', isAuthenticated, wowRouter)
+app.use('/vault', vaultLimiter, isAuthenticated, vaultRouter)
 
 app.get('/health', (req, res) => {
   res.status(200).send('Healthy')
