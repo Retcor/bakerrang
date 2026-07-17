@@ -10,6 +10,14 @@
   box-sizing: border-box;
   font-family: "Poppins", sans-serif;
   scroll-behavior: smooth;
+}
+
+/* Native controls (checkboxes, selects, scrollbars) follow the app theme. */
+html {
+  color-scheme: light;
+}
+
+html.dark {
   color-scheme: dark;
 }
 

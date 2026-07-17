@@ -153,7 +153,7 @@ const MainContent = () => {
               </div>
             </nav>
           </div>
-          <div className='relative z-10'>
+          <div className='relative'>
             <Outlet />
           </div>
         </div>

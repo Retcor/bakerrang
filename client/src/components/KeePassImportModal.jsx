@@ -39,15 +39,19 @@ const fieldText = (value) => {
 }
 
 // Recursively flatten KeePass groups into a list of entries tagged with their
-// folder path (e.g. 'Internet / Banking'). `path` is the display path for the
-// current group — '' for the root group, whose entries are treated as unfiled.
+// folder path. `pathArr` is the array of group names from the root down to the
+// current group ([] for the root group, whose entries are treated as unfiled).
+// Each entry carries `groupPath` (the array, used to rebuild a nested folder
+// tree on import) and `group` (the joined string, used for display grouping).
 // recycleBinId (if any) is skipped.
-const flattenGroup = (group, out, recycleBinId, path) => {
+const flattenGroup = (group, out, recycleBinId, pathArr) => {
+  const groupLabel = pathArr.join(' / ')
   for (const entry of group.entries) {
     const f = entry.fields
     out.push({
       key: entry.uuid ? entry.uuid.id : `${out.length}`,
-      group: path,
+      group: groupLabel,
+      groupPath: pathArr,
       title: fieldText(f.get('Title')),
       username: fieldText(f.get('UserName')),
       password: fieldText(f.get('Password')),
@@ -58,9 +62,7 @@ const flattenGroup = (group, out, recycleBinId, path) => {
   }
   for (const child of group.groups) {
     if (recycleBinId && child.uuid && child.uuid.id === recycleBinId) continue
-    const childName = fieldText(child.name)
-    const childPath = path ? `${path} / ${childName}` : childName
-    flattenGroup(child, out, recycleBinId, childPath)
+    flattenGroup(child, out, recycleBinId, [...pathArr, fieldText(child.name)])
   }
 }
 
@@ -113,7 +115,7 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
       const db = await kdbxweb.Kdbx.load(buffer, credentials)
       const recycleBinId = db.meta && db.meta.recycleBinUuid ? db.meta.recycleBinUuid.id : null
       const flat = []
-      flattenGroup(db.getDefaultGroup(), flat, recycleBinId, '')
+      flattenGroup(db.getDefaultGroup(), flat, recycleBinId, [])
       setEntries(flat)
     } catch (err) {
       console.error('KeePass import failed:', err)
@@ -210,7 +212,9 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
                 onClick={handleParse}
                 disabled={!file || (!password && !keyFile) || loading}
               >
-                {loading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Open File'}
+                {loading
+                  ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                  : 'Open File'}
               </button>
             </div>
           </div>
@@ -270,7 +274,9 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
                 onClick={handleImport}
                 disabled={selectedCount === 0 || importing}
               >
-                {importing ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : `Import ${selectedCount} entr${selectedCount === 1 ? 'y' : 'ies'}`}
+                {importing
+                  ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                  : `Import ${selectedCount} entr${selectedCount === 1 ? 'y' : 'ies'}`}
               </button>
             </div>
           </div>

@@ -118,6 +118,25 @@ export const deleteItem = async (userId, id) => {
   await itemsRef(userId).doc(id).delete()
 }
 
+// Bulk-moves items to a folder (or to no folder when folderId is null). Only the
+// plaintext folderId is changed — the encrypted content is never touched.
+export const moveItems = async (userId, ids, folderId) => {
+  assert(Array.isArray(ids) && ids.length > 0, 'Expected a non-empty array of item ids')
+  assert(ids.length <= 2000, 'Too many items in one move')
+  ids.forEach((id) => assert(typeof id === 'string', 'Invalid item id'))
+  assert(folderId == null || typeof folderId === 'string', 'Invalid folderId')
+
+  const now = Date.now()
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = db.batch()
+    for (const id of ids.slice(i, i + 400)) {
+      batch.update(itemsRef(userId).doc(id), { folderId: folderId || null, updatedAt: now })
+    }
+    await batch.commit()
+  }
+  return { success: true }
+}
+
 // Bulk create for KeePass import. Firestore batches cap at 500 writes.
 export const bulkCreateItems = async (userId, items) => {
   assert(Array.isArray(items) && items.length > 0, 'Expected a non-empty array of items')
@@ -155,9 +174,41 @@ export const createFolder = async (userId, folder) => {
   validateFolder(folder)
   const id = folder.id || randomUUID()
   const now = Date.now()
-  const record = { parentId: folder.parentId || null, ciphertext: folder.ciphertext, createdAt: now, updatedAt: now }
+  const record = {
+    parentId: folder.parentId || null,
+    ciphertext: folder.ciphertext,
+    position: typeof folder.position === 'number' ? folder.position : null,
+    createdAt: now,
+    updatedAt: now
+  }
   await foldersRef(userId).doc(id).set(record)
   return { id, ...record }
+}
+
+// Batch-updates the parent and ordering of folders (used for drag-and-drop
+// reorder / re-parent). Only parentId + position are touched, so the encrypted
+// name is never rewritten.
+export const reorderFolders = async (userId, updates) => {
+  assert(Array.isArray(updates) && updates.length > 0, 'Expected a non-empty array of folder updates')
+  assert(updates.length <= 1000, 'Too many folder updates')
+  updates.forEach((u) => {
+    assert(u && typeof u.id === 'string', 'Invalid folder id')
+    assert(u.parentId == null || typeof u.parentId === 'string', 'Invalid parentId')
+    assert(typeof u.position === 'number', 'Invalid position')
+  })
+  const now = Date.now()
+  for (let i = 0; i < updates.length; i += 400) {
+    const batch = db.batch()
+    for (const u of updates.slice(i, i + 400)) {
+      batch.update(foldersRef(userId).doc(u.id), {
+        parentId: u.parentId || null,
+        position: u.position,
+        updatedAt: now
+      })
+    }
+    await batch.commit()
+  }
+  return { success: true }
 }
 
 export const updateFolder = async (userId, id, folder) => {
@@ -170,12 +221,41 @@ export const updateFolder = async (userId, id, folder) => {
   return { id, ...record }
 }
 
-// Deleting a folder detaches its items (moves them to "no folder") rather than
-// deleting them, then removes the folder itself.
+// Deleting a folder removes it and all of its descendant folders. Items in any
+// of those folders are detached (moved to "no folder") rather than deleted, so
+// no passwords are lost. Writes are chunked to respect Firestore's 500-op batch
+// limit.
 export const deleteFolder = async (userId, id) => {
-  const snap = await itemsRef(userId).where('folderId', '==', id).get()
-  const batch = db.batch()
-  snap.docs.forEach((d) => batch.update(d.ref, { folderId: null, updatedAt: Date.now() }))
-  batch.delete(foldersRef(userId).doc(id))
-  await batch.commit()
+  const foldersSnap = await foldersRef(userId).get()
+  const childrenByParent = new Map()
+  foldersSnap.docs.forEach((d) => {
+    const pid = d.data().parentId || null
+    if (!childrenByParent.has(pid)) childrenByParent.set(pid, [])
+    childrenByParent.get(pid).push(d.id)
+  })
+
+  // Collect the folder plus every descendant.
+  const subtree = new Set()
+  const stack = [id]
+  while (stack.length) {
+    const cur = stack.pop()
+    if (subtree.has(cur)) continue
+    subtree.add(cur)
+    for (const child of (childrenByParent.get(cur) || [])) stack.push(child)
+  }
+
+  const itemsSnap = await itemsRef(userId).get()
+  const ops = []
+  itemsSnap.docs.forEach((d) => {
+    if (subtree.has(d.data().folderId)) {
+      ops.push((b) => b.update(d.ref, { folderId: null, updatedAt: Date.now() }))
+    }
+  })
+  subtree.forEach((fid) => ops.push((b) => b.delete(foldersRef(userId).doc(fid))))
+
+  for (let i = 0; i < ops.length; i += 400) {
+    const batch = db.batch()
+    ops.slice(i, i + 400).forEach((op) => op(batch))
+    await batch.commit()
+  }
 }

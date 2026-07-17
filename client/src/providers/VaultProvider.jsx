@@ -83,6 +83,7 @@ export const VaultProvider = ({ children }) => {
     const decFolders = await Promise.all(rawFolders.map(async (r) => ({
       id: r.id,
       parentId: r.parentId || null,
+      position: typeof r.position === 'number' ? r.position : null,
       ...(await decryptFolder(vaultKey, r))
     })))
     setItems(decItems)
@@ -144,6 +145,12 @@ export const VaultProvider = ({ children }) => {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
+  const moveItems = useCallback(async (ids, folderId) => {
+    await request(`${VAULT_URL}/items/move`, 'PUT', { 'Content-Type': 'application/json' },
+      JSON.stringify({ ids, folderId: folderId || null })).then(jsonOrThrow)
+    setItems((prev) => prev.map((i) => (ids.includes(i.id) ? { ...i, folderId: folderId || null } : i)))
+  }, [])
+
   const saveFolder = useCallback(async (folder) => {
     const vaultKey = requireKey()
     const encrypted = await encryptFolder(vaultKey, { name: folder.name || '' })
@@ -153,13 +160,29 @@ export const VaultProvider = ({ children }) => {
       ? await request(`${VAULT_URL}/folders/${folder.id}`, 'PUT', headers, body).then(jsonOrThrow)
       : await request(`${VAULT_URL}/folders`, 'POST', headers, body).then(jsonOrThrow)
 
-    const merged = { id: saved.id, parentId: saved.parentId || null, name: folder.name || '' }
+    let result
     setFolders((prev) => {
+      const existing = prev.find((f) => f.id === saved.id)
+      // Preserve ordering: the rename response doesn't echo position.
+      const position = typeof saved.position === 'number'
+        ? saved.position
+        : (existing ? existing.position : null)
+      const merged = { id: saved.id, parentId: saved.parentId || null, position, name: folder.name || '' }
+      result = merged
       const idx = prev.findIndex((f) => f.id === merged.id)
       if (idx >= 0) { const copy = [...prev]; copy[idx] = merged; return copy }
       return [...prev, merged]
     })
-    return merged
+    return result
+  }, [])
+
+  const reorderFolders = useCallback(async (updates) => {
+    await request(`${VAULT_URL}/folders/reorder`, 'PUT',
+      { 'Content-Type': 'application/json' }, JSON.stringify({ updates })).then(jsonOrThrow)
+    setFolders((prev) => prev.map((f) => {
+      const u = updates.find((x) => x.id === f.id)
+      return u ? { ...f, parentId: u.parentId || null, position: u.position } : f
+    }))
   }, [])
 
   const deleteFolder = useCallback(async (id) => {
@@ -231,8 +254,10 @@ export const VaultProvider = ({ children }) => {
     lock,
     saveItem,
     deleteItem,
+    moveItems,
     saveFolder,
     deleteFolder,
+    reorderFolders,
     importItems,
     changeMasterPassword
   }
