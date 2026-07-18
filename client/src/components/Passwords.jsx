@@ -4,6 +4,7 @@ import { useVault } from '../providers/VaultProvider.jsx'
 import { LoadingSpinner, ConfirmModal } from './index.js'
 import PasswordEntryPanel from './PasswordEntryPanel.jsx'
 import KeePassImportModal from './KeePassImportModal.jsx'
+import FolderSelect from './FolderSelect.jsx'
 
 const Passwords = () => {
   const { isDark } = useTheme()
@@ -130,9 +131,6 @@ const FolderMenuItem = ({ isDark, danger, onClick, children }) => (
 
 const cardClass = (isDark) => `rounded-2xl p-6 ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`
 const inputClass = (isDark) => `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
-// Selects need a SOLID background — a translucent bg (like the inputs use)
-// renders white on native <select> boxes. The option popup follows color-scheme.
-const selectClass = (isDark) => `px-3 py-2 rounded-lg text-sm outline-none cursor-pointer border ${isDark ? 'bg-gray-800 text-theme-dark border-white/10 focus:border-white/30' : 'bg-white text-theme-light border-black/15 focus:border-black/40'}`
 const primaryBtn = (isDark) => `px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`
 
 const CreateVaultView = ({ isDark, vault }) => {
@@ -246,6 +244,10 @@ const VaultView = ({ isDark, vault }) => {
   // the current collapse state (for the sidebar tree).
   const allFolders = useMemo(() => orderFolders(folders, NO_COLLAPSE), [folders, NO_COLLAPSE])
   const visibleFolders = useMemo(() => orderFolders(folders, collapsed), [folders, collapsed])
+  const moveOptions = useMemo(() => [
+    { value: '__none__', label: 'Unfiled (no folder)', depth: 0 },
+    ...allFolders.map((f) => ({ value: f.id, label: f.name, depth: f.depth || 0 }))
+  ], [allFolders])
 
   const toggleCollapse = (id) => setCollapsed((prev) => {
     const next = new Set(prev)
@@ -721,19 +723,16 @@ const VaultView = ({ isDark, vault }) => {
           {moveError && <div className='mb-2 text-center text-xs text-red-400'>{moveError}</div>}
           <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl shadow-2xl border backdrop-blur ${isDark ? 'bg-gray-900/95 border-white/5' : 'bg-white/95 border-black/10'}`}>
             <span className={`text-sm font-medium whitespace-nowrap flex-shrink-0 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{selectedIds.size} selected</span>
-            <select
+            <FolderSelect
+              isDark={isDark}
               value=''
+              placeholder='Move to…'
+              options={moveOptions}
+              dropUp
               disabled={moving}
-              onChange={(e) => { const v = e.target.value; if (v) handleBulkMove(v === '__none__' ? null : v) }}
-              style={{ colorScheme: isDark ? 'dark' : 'light' }}
-              className={`${selectClass(isDark)} flex-1 min-w-0`}
-            >
-              <option value='' disabled>Move to…</option>
-              <option value='__none__'>Unfiled (no folder)</option>
-              {allFolders.map((f) => (
-                <option key={f.id} value={f.id}>{'  '.repeat(f.depth || 0)}{f.name}</option>
-              ))}
-            </select>
+              className='flex-1 min-w-0'
+              onChange={(v) => { if (v) handleBulkMove(v === '__none__' ? null : v) }}
+            />
             <button
               onClick={clearSelection}
               className={`text-sm px-2 py-2 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}

@@ -7,6 +7,38 @@ Full-stack learning playground with React frontend and Express backend. Features
 - Supermarket shopping list management
 - Story generation tools
 - Google OAuth authentication
+- **Zero-knowledge Password Vault** (`/passwords`) — KeePass-style, client-side encrypted
+
+## Password Vault + Security Hardening (2026-07)
+
+### Zero-Knowledge Password Vault ✅
+A KeePass-style password manager at `/passwords` where **the server never sees plaintext** — all encryption happens in the browser.
+
+**Crypto model (client-side):**
+- Separate **master password** (not the Google login). `client/src/utils/crypto.js` derives a master key via **Argon2id** (`hash-wasm`) and uses **AES-256-GCM** (Web Crypto).
+- Key hierarchy: master key wraps a random **vault key**, which wraps a **per-item content key** (per-item keys keep Phase 2 sharing forward-compatible). Wrong master password fails via the GCM auth tag — no server-side password check. **No recovery by design.**
+- Unlock state lives only in memory in `client/src/providers/VaultProvider.jsx` (auto-locks after 15 min); never persisted.
+- KeePass `.kdbx` import decrypts **in-browser** (`kdbxweb` + hash-wasm Argon2) via `KeePassImportModal.jsx`; supports key files, rebuilds the nested group hierarchy as vault folders, and lets you pick which entries to import.
+
+**Storage (server, ciphertext only):** Firestore `vaults/{userId}` doc + `items` and `folders` subcollections. Ownership is structural (everything under `vaults/{userId}`). See `server/services/vaultService.js` + `server/routes/vault.js` (mounted `/vault`, behind `isAuthenticated` + rate limit). Endpoints include vault init/`key` (master-password change), item CRUD + `/items/bulk` (import) + `/items/move` (bulk move), and folder CRUD + `/folders/reorder` (drag-and-drop order/parent). Move/reorder only touch plaintext metadata (`folderId`, `parentId`, `position`) — never re-encrypt.
+
+**UI (`Passwords.jsx`, `PasswordEntryPanel.jsx`):**
+- Master-detail: entry list + a responsive **side panel** (slides in on desktop, full-screen overlay with a ← Back button on mobile) — replaces the old modal.
+- Folders: nested tree with expand/collapse chevrons, drag-and-drop reorder/re-parent (Pointer Events, works on touch via a grip handle), rename, and a **⋮ kebab menu** per folder (Rename / New subfolder / Delete). Deleting a folder cascades to subfolders and moves their entries to Unfiled (no passwords deleted).
+- Entries: Username / Password (show-hide eye icon, copy, generate) / URL / Notes; **multi-select checkboxes** + a floating bottom **bulk-move bar**.
+- Folder dropdowns use a **custom `FolderSelect` component** (`client/src/components/FolderSelect.jsx`), NOT a native `<select>`. Native selects render their **option popup as an OS-drawn window** that can't be reliably themed for dark mode (it kept rendering white) — so both the closed control and the open list are plain themed DOM here. Used in the entry panel and the bulk-move bar (`dropUp` for the bottom bar). `color-scheme` still follows the theme (`index.css`, keyed on `html.dark`) for other native controls (checkboxes). Don't reintroduce a native `<select>` for themed dropdowns.
+
+### Backend Security Hardening ✅
+The backend had **zero encryption** and several gaps before this work. Fixed:
+- **Session** (`server/app.js`): secret moved to `process.env.SESSION_SECRET`; `resave:false`, `saveUninitialized:false`; cookie `secure:'auto'` (works on local http, Secure in prod), `httpOnly`, `sameSite:'lax'`; persistent **Firestore session store** (`server/client/firestoreSessionStore.js`) replacing the in-memory store.
+- **helmet**, **express-rate-limit**, and **CSRF** (double-submit via `csrf-csrf`, enforced on authenticated mutations, `/chatbot` exempt) — `server/middleware/security.js`. Client `request()` (`client/src/utils/index.js`) auto-attaches the `x-csrf-token` header and retries once on 403.
+- Fixed a **broken-access-control** bug in `server/routes/textToSpeech.js` (missing `return` after 403 let privileged actions run).
+- `server/.env` untracked (`git rm --cached`), added to `.dockerignore`; `.env.example` added.
+- **CSRF/production gating** keys off `NODE_ENV === 'production'`; set `NODE_ENV=production` when deploying. Local dev needs no env for cookies to work.
+
+**⚠️ Operational follow-ups the user must still do by hand:** rotate every key that was in the committed `server/.env` (OpenAI, ElevenLabs, Google OAuth secret, Deepgram, Blizzard) and scrub git history — they remain retrievable from history.
+
+**Phase 2 (not built): password sharing** between Gmail users with an owner who grants/revokes. Data model (per-item keys) is forward-compatible; needs per-user keypairs + a `vault_shares` collection + invite flow.
 
 ## Recent Major Updates (2025-09-14)
 

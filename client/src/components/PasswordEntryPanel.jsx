@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { LoadingSpinner } from './index.js'
+import FolderSelect from './FolderSelect.jsx'
 
 const EMPTY = { title: '', username: '', password: '', url: '', notes: '', folderId: null }
 
@@ -55,6 +56,7 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
   const fieldClass = `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
   const labelClass = `block text-xs font-semibold mb-1 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`
+  const folderOptions = [{ value: '', label: 'No folder', depth: 0 }, ...folders.map((f) => ({ value: f.id, label: f.name, depth: f.depth || 0 }))]
 
   return (
     <div
@@ -128,17 +130,12 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
           <div>
             <label className={labelClass}>Folder</label>
-            <select
+            <FolderSelect
+              isDark={isDark}
               value={form.folderId || ''}
-              onChange={(e) => setForm((p) => ({ ...p, folderId: e.target.value || null }))}
-              style={{ colorScheme: isDark ? 'dark' : 'light' }}
-              className={`w-full px-3 py-2 rounded-lg outline-none cursor-pointer border ${isDark ? 'bg-gray-800 text-theme-dark border-white/10 focus:border-white/30' : 'bg-white text-theme-light border-black/15 focus:border-black/40'}`}
-            >
-              <option value=''>No folder</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>{'  '.repeat(f.depth || 0)}{f.name}</option>
-              ))}
-            </select>
+              options={folderOptions}
+              onChange={(v) => setForm((p) => ({ ...p, folderId: v || null }))}
+            />
           </div>
 
           <div>
@@ -180,7 +177,7 @@ const IconButton = ({ isDark, title, onClick, children }) => (
     type='button'
     title={title}
     onClick={onClick}
-    className={`px-3 rounded-lg flex-shrink-0 transition-all duration-200 ${isDark ? 'bg-white/5 hover:bg-white/15 text-theme-dark border border-white/10' : 'bg-black/5 hover:bg-black/15 text-theme-light border border-black/10'}`}
+    className={`px-3 rounded-lg flex-shrink-0 flex items-center justify-center font-medium shadow-lg transition-all duration-200 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
   >
     {children}
   </button>
