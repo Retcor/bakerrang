@@ -16,7 +16,7 @@ const generatePassword = (length = 20) => {
 // sits as a column beside the entry list; on small screens it slides over the
 // list as a full overlay with a Back control. Parent should remount it (via a
 // `key`) when the selected entry changes so the form resets cleanly.
-const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = null, onSave, onDelete, onClose }) => {
+const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = null, readOnly = false, hideDelete = false, hideFolder = false, onSave, onDelete, onClose }) => {
   const isNew = !(entry && entry.id)
   const [form, setForm] = useState(() => (isNew ? { ...EMPTY, folderId: defaultFolderId } : { ...EMPTY, ...entry }))
   const [showPassword, setShowPassword] = useState(false)
@@ -81,13 +81,21 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
         <div className='space-y-3'>
           <div>
             <label className={labelClass}>Title</label>
-            <input className={fieldClass} value={form.title} onChange={update('title')} placeholder='e.g. Gmail' autoFocus />
+            <input className={fieldClass} value={form.title} onChange={update('title')} placeholder='e.g. Gmail' autoComplete='off' autoFocus />
           </div>
 
           <div>
             <label className={labelClass}>Username</label>
             <div className='flex gap-2'>
-              <input className={fieldClass} value={form.username} onChange={update('username')} placeholder='user@example.com' />
+              <input
+                className={fieldClass}
+                value={form.username}
+                onChange={update('username')}
+                placeholder='user@example.com'
+                autoComplete='off'
+                data-1p-ignore
+                data-lpignore='true'
+              />
               <CopyButton isDark={isDark} active={copied === 'username'} onClick={() => copy('username')} />
             </div>
           </div>
@@ -96,11 +104,16 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             <label className={labelClass}>Password</label>
             <div className='flex gap-2'>
               <input
-                className={fieldClass}
-                type={showPassword ? 'text' : 'password'}
+                className={`${fieldClass} ${showPassword ? '' : 'mask-text'}`}
+                type='text'
                 value={form.password}
                 onChange={update('password')}
-                placeholder='••••••••'
+                autoComplete='off'
+                autoCorrect='off'
+                autoCapitalize='off'
+                spellCheck='false'
+                data-1p-ignore
+                data-lpignore='true'
               />
               <IconButton isDark={isDark} title={showPassword ? 'Hide' : 'Show'} onClick={() => setShowPassword((s) => !s)}>
                 {showPassword
@@ -125,18 +138,20 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
           <div>
             <label className={labelClass}>URL</label>
-            <input className={fieldClass} value={form.url} onChange={update('url')} placeholder='https://…' />
+            <input className={fieldClass} value={form.url} onChange={update('url')} placeholder='https://…' autoComplete='off' />
           </div>
 
-          <div>
-            <label className={labelClass}>Folder</label>
-            <FolderSelect
-              isDark={isDark}
-              value={form.folderId || ''}
-              options={folderOptions}
-              onChange={(v) => setForm((p) => ({ ...p, folderId: v || null }))}
-            />
-          </div>
+          {!hideFolder && (
+            <div>
+              <label className={labelClass}>Folder</label>
+              <FolderSelect
+                isDark={isDark}
+                value={form.folderId || ''}
+                options={folderOptions}
+                onChange={(v) => setForm((p) => ({ ...p, folderId: v || null }))}
+              />
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Notes</label>
@@ -146,8 +161,14 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
         {saveError && <p className='text-sm text-red-400 mt-3'>{saveError}</p>}
 
+        {readOnly && (
+          <p className={`text-xs mt-3 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+            You have view-only access to this shared folder.
+          </p>
+        )}
+
         <div className='flex justify-between items-center mt-5'>
-          {!isNew
+          {!isNew && !hideDelete
             ? (
               <button
                 className='px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-all duration-200'
@@ -157,15 +178,17 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
               </button>
               )
             : <span />}
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
-            onClick={handleSave}
-            disabled={isSaving || !form.title.trim()}
-          >
-            {isSaving
-              ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
-              : 'Save'}
-          </button>
+          {!readOnly && (
+            <button
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+              onClick={handleSave}
+              disabled={isSaving || !form.title.trim()}
+            >
+              {isSaving
+                ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                : 'Save'}
+            </button>
+          )}
         </div>
       </div>
     </div>

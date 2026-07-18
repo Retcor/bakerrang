@@ -5,6 +5,7 @@ import { LoadingSpinner, ConfirmModal } from './index.js'
 import PasswordEntryPanel from './PasswordEntryPanel.jsx'
 import KeePassImportModal from './KeePassImportModal.jsx'
 import FolderSelect from './FolderSelect.jsx'
+import ShareFolderModal from './ShareFolderModal.jsx'
 
 const Passwords = () => {
   const { isDark } = useTheme()
@@ -222,8 +223,9 @@ const UnlockView = ({ isDark, vault }) => {
 }
 
 const VaultView = ({ isDark, vault }) => {
-  const { items, folders } = vault
-  const [selectedFolder, setSelectedFolder] = useState('all') // 'all' | 'none' | folderId
+  const { items, folders, sharedFolders, sharedItems, myShares } = vault
+  // 'all' | 'none' | folderId | `shared:<shareId>` (a folder shared WITH me)
+  const [selectedFolder, setSelectedFolder] = useState('all')
   const [selected, setSelected] = useState(null) // entry object (edit), {} (new), or null (closed)
   const [importOpen, setImportOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // { type, id, name }
@@ -233,6 +235,10 @@ const VaultView = ({ isDark, vault }) => {
   const [renamingId, setRenamingId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [menuOpenId, setMenuOpenId] = useState(null) // folder id whose action menu is open
+  const [shareTarget, setShareTarget] = useState(null) // folder being shared
+  const [sharedSubfolderId, setSharedSubfolderId] = useState(null) // subfolder within the open shared tree
+  const [addingSharedFolder, setAddingSharedFolder] = useState(false)
+  const [newSharedFolderName, setNewSharedFolderName] = useState('')
   const [selectedIds, setSelectedIds] = useState(() => new Set()) // entries selected for bulk actions
   const [moveError, setMoveError] = useState(null)
   const [moving, setMoving] = useState(false)
@@ -256,15 +262,76 @@ const VaultView = ({ isDark, vault }) => {
     return next
   })
 
+  // A folder shared WITH me is selected as `shared:<shareId>`.
+  const activeShared = useMemo(() => (
+    typeof selectedFolder === 'string' && selectedFolder.startsWith('shared:')
+      ? (sharedFolders || []).find((s) => `shared:${s.shareId}` === selectedFolder) || null
+      : null
+  ), [selectedFolder, sharedFolders])
+  const isSharedView = !!activeShared
+  const canEditShared = !activeShared || activeShared.permission === 'edit'
+  // Descendant folders of the open shared subtree, in display order (the root
+  // itself is rendered separately in the sidebar).
+  const sharedSubfolders = useMemo(() => {
+    if (!activeShared) return []
+    return orderFolders(vault.sharedTreeFolders || [], NO_COLLAPSE)
+      .filter((f) => f.id !== activeShared.folderId)
+  }, [activeShared, vault.sharedTreeFolders, NO_COLLAPSE])
+  // Where new entries/folders land inside the shared tree.
+  const sharedTarget = sharedSubfolderId || (activeShared ? activeShared.folderId : null)
+  // Move-to options while a shared tree is open (only folders inside it).
+  const sharedMoveOptions = useMemo(() => {
+    if (!activeShared) return []
+    return [
+      { value: activeShared.folderId, label: activeShared.name, depth: 0 },
+      ...sharedSubfolders.map((f) => ({ value: f.id, label: f.name, depth: f.depth || 0 }))
+    ]
+  }, [activeShared, sharedSubfolders])
+  // Folders I have shared with someone (for the sidebar indicator).
+  const sharedFolderIds = useMemo(
+    () => new Set((myShares || []).map((s) => s.folderId)),
+    [myShares]
+  )
+
   const visibleItems = useMemo(() => {
-    const sorted = [...items].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    const source = activeShared ? (sharedItems || []) : items
+    const sorted = [...source].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    // In a shared tree, show only the entries directly in the selected folder —
+    // same as a normal folder, so a parent with no entries of its own is empty.
+    if (activeShared) return sorted.filter((i) => i.folderId === (sharedSubfolderId || activeShared.folderId))
     if (selectedFolder === 'all') return sorted
     if (selectedFolder === 'none') return sorted.filter((i) => !i.folderId)
     return sorted.filter((i) => i.folderId === selectedFolder)
-  }, [items, selectedFolder])
+  }, [items, sharedItems, activeShared, sharedSubfolderId, selectedFolder])
+
+  // Sharing
+  const handleOpenShare = async (folder) => {
+    setShareTarget(folder)
+    await vault.loadMyShares().catch(() => {})
+  }
+  const handleShare = async (email, permission) => { await vault.shareFolder(shareTarget.id, email, permission) }
+  const handleRevoke = async (shareId) => { await vault.revokeShare(shareId) }
+  const handleSelectShared = async (s) => {
+    setSelectedFolder(`shared:${s.shareId}`)
+    setSharedSubfolderId(null)
+    setSelected(null)
+    await vault.openSharedFolder(s)
+  }
+
+  const cancelAddSharedFolder = () => { setAddingSharedFolder(false); setNewSharedFolderName('') }
+
+  const handleAddSharedFolder = async () => {
+    const name = newSharedFolderName.trim()
+    if (!name || !activeShared) return
+    await vault.createSharedFolder(activeShared, sharedTarget, name)
+    setNewSharedFolderName('')
+    setAddingSharedFolder(false)
+  }
 
   const handleSaveEntry = async (entry) => {
-    const saved = await vault.saveItem(entry)
+    const saved = activeShared
+      ? await vault.saveSharedItem(activeShared, entry, sharedTarget)
+      : await vault.saveItem(entry)
     // Keep the panel open showing the saved entry (also promotes a new entry
     // from the 'new' state to its saved identity).
     setSelected(saved)
@@ -274,6 +341,35 @@ const VaultView = ({ isDark, vault }) => {
   // folders that already exist at the same path, then bulk-import the selected
   // entries into the matching (leaf) folder.
   const handleImportKeepass = async (selected) => {
+    // Importing while a shared folder is open: rebuild the KeePass groups as
+    // subfolders of the shared tree and bulk-add the entries there, so the owner
+    // and every other recipient see them too.
+    if (activeShared) {
+      const idByPath = new Map()
+      const ensureSharedFolder = async (segments) => {
+        let parentId = sharedTarget
+        const cum = []
+        for (const name of segments) {
+          cum.push(name)
+          const k = cum.join('|')
+          if (!idByPath.has(k)) {
+            const created = await vault.createSharedFolder(activeShared, parentId, name)
+            idByPath.set(k, created.id)
+          }
+          parentId = idByPath.get(k)
+        }
+        return parentId
+      }
+      const sharedEntries = []
+      for (const e of selected) {
+        const segments = e.groupPath || []
+        const folderId = segments.length ? await ensureSharedFolder(segments) : sharedTarget
+        sharedEntries.push({ title: e.title, username: e.username, password: e.password, url: e.url, notes: e.notes, folderId })
+      }
+      await vault.importSharedItems(activeShared, sharedEntries)
+      return
+    }
+
     const keyOf = (segments) => segments.join('\u001f')
 
     // Seed the path -> id map with folders that already exist.
@@ -331,21 +427,37 @@ const VaultView = ({ isDark, vault }) => {
     setAddingUnder(null)
   }
 
+  const cancelAddFolder = () => { setAddingUnder(null); setNewFolderName('') }
+
   // Inline "new folder" input, shown under a parent (or at root).
   const folderInput = (parentId, depth) => (
-    <div className='flex gap-1 mt-1' style={{ paddingLeft: `${depth * 14}px` }}>
+    <div className='flex gap-1 mt-1 items-center' style={{ paddingLeft: `${depth * 14}px` }}>
       <input
-        className={inputClass(isDark)}
+        className={`${inputClass(isDark)} min-w-0`}
         placeholder='Folder name'
+        autoComplete='off'
         value={newFolderName}
         onChange={(e) => setNewFolderName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') handleAddFolder(parentId)
-          if (e.key === 'Escape') { setAddingUnder(null); setNewFolderName('') }
+          if (e.key === 'Escape') cancelAddFolder()
         }}
         autoFocus
       />
-      <button className={primaryBtn(isDark)} onClick={() => handleAddFolder(parentId)}>✓</button>
+      <button
+        title='Create folder'
+        className={`${primaryBtn(isDark)} !px-2 flex-shrink-0`}
+        onClick={() => handleAddFolder(parentId)}
+      >
+        ✓
+      </button>
+      <button
+        title='Cancel (Esc)'
+        onClick={cancelAddFolder}
+        className={`px-2 py-2 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
+      >
+        ✕
+      </button>
     </div>
   )
 
@@ -453,7 +565,8 @@ const VaultView = ({ isDark, vault }) => {
     setMoving(true)
     setMoveError(null)
     try {
-      await vault.moveItems(ids, folderId)
+      if (activeShared) await vault.moveSharedItems(activeShared, ids, folderId)
+      else await vault.moveItems(ids, folderId)
       clearSelection()
     } catch (err) {
       setMoveError(err.message || 'Failed to move entries')
@@ -477,7 +590,14 @@ const VaultView = ({ isDark, vault }) => {
       {/* Toolbar */}
       <div className='flex flex-wrap gap-2 mb-6 justify-between items-center'>
         <div className='flex flex-wrap gap-2'>
-          <button className={primaryBtn(isDark)} onClick={() => setSelected({})}>+ New Entry</button>
+          <button
+            className={primaryBtn(isDark)}
+            onClick={() => setSelected({})}
+            disabled={isSharedView && !canEditShared}
+            title={isSharedView && !canEditShared ? 'You have view-only access to this folder' : undefined}
+          >
+            + New Entry
+          </button>
           <button
             className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
             onClick={() => setImportOpen(true)}
@@ -567,7 +687,19 @@ const VaultView = ({ isDark, vault }) => {
                             className={`flex-1 min-w-0 text-left px-2 py-2 text-sm flex justify-between items-center ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent ? 'font-medium' : ''}`}
                           >
                             <span className='truncate'>{f.name}</span>
-                            <span className='text-xs opacity-60 ml-2 flex-shrink-0'>{items.filter((i) => i.folderId === f.id).length}</span>
+                            <span className='flex items-center gap-1 flex-shrink-0 ml-2'>
+                              {sharedFolderIds.has(f.id) && (
+                                <svg
+                                  xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'
+                                  className={`w-3.5 h-3.5 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
+                                >
+                                  <title>Shared with others</title>
+                                  <path d='M7.5 6.75a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0zM3 19.5a8.25 8.25 0 0116.5 0 .75.75 0 01-.75.75H3.75A.75.75 0 013 19.5z' />
+                                  <path d='M17.25 9.75a3 3 0 100-6 3 3 0 000 6zM21.75 20.25a.75.75 0 00.75-.75 6.75 6.75 0 00-4.5-6.364' />
+                                </svg>
+                              )}
+                              <span className='text-xs opacity-60'>{items.filter((i) => i.folderId === f.id).length}</span>
+                            </span>
                           </button>
                           <div className='relative flex-shrink-0'>
                             <button
@@ -583,6 +715,7 @@ const VaultView = ({ isDark, vault }) => {
                               <>
                                 <div className='fixed inset-0 z-40' onClick={() => setMenuOpenId(null)} />
                                 <div className={`absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg shadow-xl border py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+                                  <FolderMenuItem isDark={isDark} onClick={() => { setMenuOpenId(null); handleOpenShare(f) }}>Share…</FolderMenuItem>
                                   <FolderMenuItem isDark={isDark} onClick={() => { setMenuOpenId(null); startRename(f) }}>Rename</FolderMenuItem>
                                   <FolderMenuItem isDark={isDark} onClick={() => { setMenuOpenId(null); startAdding(f.id) }}>New subfolder</FolderMenuItem>
                                   <FolderMenuItem isDark={isDark} danger onClick={() => { setMenuOpenId(null); setConfirmDelete({ type: 'folder', id: f.id, name: f.name }) }}>Delete</FolderMenuItem>
@@ -607,6 +740,101 @@ const VaultView = ({ isDark, vault }) => {
                   + New Folder
                 </button>
                 )}
+
+            {/* Folders other people have shared with me */}
+            {(sharedFolders || []).length > 0 && (
+              <>
+                <div className={`my-2 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`} />
+                <p className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                  Shared with me
+                </p>
+                {sharedFolders.map((s) => {
+                  const key = `shared:${s.shareId}`
+                  const isCurrent = selectedFolder === key
+                  return (
+                    <div key={s.shareId}>
+                      <button
+                        onClick={() => handleSelectShared(s)}
+                        title={`${s.name} — shared by ${s.ownerEmail || 'someone'} (${s.permission === 'edit' ? 'can edit' : 'view only'})`}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent && !sharedSubfolderId ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
+                      >
+                        <span className='truncate'>{s.name}</span>
+                        <span className='flex items-center gap-2 flex-shrink-0'>
+                          {s.permission === 'view' && (
+                            <span className='text-[10px] opacity-60'>view</span>
+                          )}
+                          {isCurrent && (
+                            <span className='text-xs opacity-60'>
+                              {(sharedItems || []).filter((i) => i.folderId === s.folderId).length}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+
+                      {/* Subfolders of the open shared tree */}
+                      {isCurrent && sharedSubfolders.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => setSharedSubfolderId(f.id)}
+                          title={f.name}
+                          style={{ paddingLeft: `${12 + f.depth * 14}px` }}
+                          className={`w-full text-left pr-3 py-2 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${sharedSubfolderId === f.id ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
+                        >
+                          <span className='truncate'>{f.name}</span>
+                          <span className='text-xs opacity-60 flex-shrink-0'>
+                            {(sharedItems || []).filter((i) => i.folderId === f.id).length}
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* Add a subfolder inside the shared tree (edit access only) */}
+                      {isCurrent && canEditShared && (
+                        addingSharedFolder
+                          ? (
+                            <div className='flex gap-1 mt-1 items-center' style={{ paddingLeft: '14px' }}>
+                              <input
+                                className={`${inputClass(isDark)} min-w-0`}
+                                placeholder='Folder name'
+                                autoComplete='off'
+                                value={newSharedFolderName}
+                                onChange={(e) => setNewSharedFolderName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddSharedFolder()
+                                  if (e.key === 'Escape') cancelAddSharedFolder()
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                title='Create folder'
+                                className={`${primaryBtn(isDark)} !px-2 flex-shrink-0`}
+                                onClick={handleAddSharedFolder}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                title='Cancel (Esc)'
+                                onClick={cancelAddSharedFolder}
+                                className={`px-2 py-2 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            )
+                          : (
+                            <button
+                              onClick={() => { setNewSharedFolderName(''); setAddingSharedFolder(true) }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:bg-white/5' : 'text-theme-secondary-light hover:bg-black/5'}`}
+                              style={{ paddingLeft: '14px' }}
+                            >
+                              + New Folder
+                            </button>
+                            )
+                      )}
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </div>
         </div>
 
@@ -617,7 +845,7 @@ const VaultView = ({ isDark, vault }) => {
             <div className='flex-1 min-w-0'>
               {/* Current selection header */}
               <div className='flex items-center gap-2 mb-4 px-1'>
-                {visibleItems.length > 0 && (
+                {visibleItems.length > 0 && (!isSharedView || canEditShared) && (
                   <input
                     type='checkbox'
                     checked={allVisibleSelected}
@@ -632,12 +860,17 @@ const VaultView = ({ isDark, vault }) => {
                     : <path d='M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM1.5 10.146V6a3 3 0 013-3h5.379a2.25 2.25 0 011.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 013 3v1.146A4.483 4.483 0 0019.5 9h-15a4.483 4.483 0 00-3 1.146z' />}
                 </svg>
                 <h3
-                  title={selectedFolder === 'all' ? 'All Items' : selectedFolder === 'none' ? 'Unfiled' : folderPath(folders, selectedFolder)}
+                  title={activeShared ? activeShared.name : selectedFolder === 'all' ? 'All Items' : selectedFolder === 'none' ? 'Unfiled' : folderPath(folders, selectedFolder)}
                   className={`text-base font-semibold truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}
                 >
-                  {selectedFolder === 'all' ? 'All Items' : selectedFolder === 'none' ? 'Unfiled' : folderPath(folders, selectedFolder)}
+                  {activeShared ? activeShared.name : selectedFolder === 'all' ? 'All Items' : selectedFolder === 'none' ? 'Unfiled' : folderPath(folders, selectedFolder)}
                 </h3>
                 <span className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>({visibleItems.length})</span>
+                {activeShared && (
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full flex-shrink-0 ${isDark ? 'bg-white/10 text-theme-secondary-dark' : 'bg-black/10 text-theme-secondary-light'}`}>
+                    shared by {activeShared.ownerEmail || 'someone'} · {activeShared.permission === 'edit' ? 'can edit' : 'view only'}
+                  </span>
+                )}
               </div>
               {visibleItems.length === 0
                 ? (
@@ -658,24 +891,28 @@ const VaultView = ({ isDark, vault }) => {
                           className={`group flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 border ${isActive ? (isDark ? 'bg-white/10 border-white/30' : 'bg-black/5 border-black/30') : isChecked ? (isDark ? 'bg-white/5 border-white/20' : 'bg-black/5 border-black/20') : (isDark ? 'glass-dark hover:bg-white/10 border-white/10' : 'glass-light hover:bg-black/5 border-black/10')}`}
                           onClick={() => setSelected(item)}
                         >
-                          <input
-                            type='checkbox'
-                            checked={isChecked}
-                            onChange={() => toggleItemSelected(item.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className='flex-shrink-0 w-4 h-4 cursor-pointer'
-                          />
+                          {(!isSharedView || canEditShared) && (
+                            <input
+                              type='checkbox'
+                              checked={isChecked}
+                              onChange={() => toggleItemSelected(item.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className='flex-shrink-0 w-4 h-4 cursor-pointer'
+                            />
+                          )}
                           <div className='min-w-0 flex-1'>
                             <p className={`font-medium truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{item.title || '(untitled)'}</p>
                             <p className={`text-xs truncate ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{item.username || item.url || ''}</p>
                           </div>
-                          <button
-                            title='Delete entry'
-                            onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'item', id: item.id, name: item.title }) }}
-                            className='opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 px-2 flex-shrink-0'
-                          >
-                            Delete
-                          </button>
+                          {!isSharedView && (
+                            <button
+                              title='Delete entry'
+                              onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'item', id: item.id, name: item.title }) }}
+                              className='opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 px-2 flex-shrink-0'
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       )
                     })}
@@ -690,7 +927,10 @@ const VaultView = ({ isDark, vault }) => {
                 isDark={isDark}
                 entry={selected.id ? selected : null}
                 folders={allFolders}
-                defaultFolderId={selectedFolder !== 'all' && selectedFolder !== 'none' ? selectedFolder : null}
+                readOnly={isSharedView && !canEditShared}
+                hideDelete={isSharedView}
+                hideFolder={isSharedView}
+                defaultFolderId={!isSharedView && selectedFolder !== 'all' && selectedFolder !== 'none' ? selectedFolder : null}
                 onSave={handleSaveEntry}
                 onDelete={(entry) => setConfirmDelete({ type: 'item', id: entry.id, name: entry.title })}
                 onClose={() => setSelected(null)}
@@ -704,6 +944,16 @@ const VaultView = ({ isDark, vault }) => {
         open={importOpen}
         onImport={handleImportKeepass}
         onClose={() => setImportOpen(false)}
+      />
+
+      <ShareFolderModal
+        open={shareTarget !== null}
+        isDark={isDark}
+        folder={shareTarget}
+        shares={(myShares || []).filter((s) => shareTarget && s.folderId === shareTarget.id)}
+        onShare={handleShare}
+        onRevoke={handleRevoke}
+        onClose={() => setShareTarget(null)}
       />
 
       <ConfirmModal
@@ -727,7 +977,7 @@ const VaultView = ({ isDark, vault }) => {
               isDark={isDark}
               value=''
               placeholder='Move to…'
-              options={moveOptions}
+              options={activeShared ? sharedMoveOptions : moveOptions}
               dropUp
               disabled={moving}
               className='flex-1 min-w-0'

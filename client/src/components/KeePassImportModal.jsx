@@ -189,11 +189,17 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
             <div>
               <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Master password for this file</label>
               <input
-                className={inputClass}
-                type='password'
+                className={`${inputClass} mask-text`}
+                type='text'
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && file && (password || keyFile)) handleParse() }}
+                autoComplete='off'
+                autoCorrect='off'
+                autoCapitalize='off'
+                spellCheck='false'
+                data-1p-ignore
+                data-lpignore='true'
               />
             </div>
             <div>

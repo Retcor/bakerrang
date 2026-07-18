@@ -12,6 +12,15 @@
   scroll-behavior: smooth;
 }
 
+/* Masks a field without using type="password". Browsers only offer "Save
+   password?" for real password inputs, so vault entries and the KeePass file
+   password use this instead — that also keeps them out of the browser's own
+   password manager. */
+.mask-text {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
 /* Native controls (checkboxes, selects, scrollbars) follow the app theme. */
 html {
   color-scheme: light;

@@ -26,6 +26,7 @@ A KeePass-style password manager at `/passwords` where **the server never sees p
 - Master-detail: entry list + a responsive **side panel** (slides in on desktop, full-screen overlay with a ← Back button on mobile) — replaces the old modal.
 - Folders: nested tree with expand/collapse chevrons, drag-and-drop reorder/re-parent (Pointer Events, works on touch via a grip handle), rename, and a **⋮ kebab menu** per folder (Rename / New subfolder / Delete). Deleting a folder cascades to subfolders and moves their entries to Unfiled (no passwords deleted).
 - Entries: Username / Password (show-hide eye icon, copy, generate) / URL / Notes; **multi-select checkboxes** + a floating bottom **bulk-move bar**.
+- **No `type="password"` inputs for vault data.** Browsers only offer "Save password?" for real password inputs — which was both annoying and would have put vault entries into the *browser's* password manager. The entry password and the KeePass file password use `type="text"` + the `.mask-text` class (`-webkit-text-security: disc`, in `index.css`) instead, plus `autoComplete='off'` / `data-1p-ignore` / `data-lpignore`. The show/hide eye just toggles that class. The master-password fields (create/unlock) deliberately stay real `type="password"` so a password manager can still fill them.
 - Folder dropdowns use a **custom `FolderSelect` component** (`client/src/components/FolderSelect.jsx`), NOT a native `<select>`. Native selects render their **option popup as an OS-drawn window** that can't be reliably themed for dark mode (it kept rendering white) — so both the closed control and the open list are plain themed DOM here. Used in the entry panel and the bulk-move bar (`dropUp` for the bottom bar). `color-scheme` still follows the theme (`index.css`, keyed on `html.dark`) for other native controls (checkboxes). Don't reintroduce a native `<select>` for themed dropdowns.
 
 ### Backend Security Hardening ✅
@@ -38,7 +39,22 @@ The backend had **zero encryption** and several gaps before this work. Fixed:
 
 **⚠️ Operational follow-ups the user must still do by hand:** rotate every key that was in the committed `server/.env` (OpenAI, ElevenLabs, Google OAuth secret, Deepgram, Blizzard) and scrub git history — they remain retrievable from history.
 
-**Phase 2 (not built): password sharing** between Gmail users with an owner who grants/revokes. Data model (per-item keys) is forward-compatible; needs per-user keypairs + a `vault_shares` collection + invite flow.
+### Phase 2: Folder Sharing ✅ (built)
+Share a **whole folder** with another Google user, still zero-knowledge — the server never sees the folder key or any plaintext.
+
+**Crypto:** every vault has an **RSA-OAEP keypair** (`createKeyPair` in `crypto.js`): public key stored plaintext, private key AES-GCM-wrapped by the vault key. Vaults created before Phase 2 **auto-migrate** (keypair generated + saved on next unlock, `ensureKeypair` in `VaultProvider`). Sharing a folder mints a random **folder key**, wrapped to the owner (vault key → `folder.wrappedFolderKey`) and to each recipient (their public key → `share.wrappedFolderKey`). Each entry's content key is re-wrapped to the folder key (`folderWrappedItemKey`), and the folder name is re-encrypted with the folder key (`folder.sharedName`) so recipients can read it.
+
+**Storage/authz:** top-level `vault_shares` collection `{ownerId, folderId, recipientUserId, recipientEmail, permission, wrappedFolderKey}`. Shared entries stay under the **owner's** vault; cross-user endpoints (`/vault/shared/...`) are the *only* place a user touches another user's data, and **every one is gated on a matching share record** (`requireShare`), with `edit` required for writes. Entries a recipient adds have no vault-key copy, so the owner decrypts those via the folder key (handled in `loadEntries`).
+
+**Decisions made:** folder-level (not per-entry) sharing; recipient **must already have a vault** (else a clear "they need to set up their vault" error); **simple revoke** (drops the share — no key rotation, so warn the user to change the password); **edit + view-only** permissions enforced server-side.
+
+**UI:** folder kebab → **Share…** (`ShareFolderModal.jsx`) to add by email with edit/view and revoke; a **"Shared with me"** section in the sidebar; view-only hides Save and disables New Entry; recipients can't delete or re-file shared entries.
+
+**Sharing is recursive (subtree).** Sharing a parent shares **every descendant folder and entry**, present and future — one folder key covers the whole subtree, so a move *within* it needs no re-wrap. The server resolves access by walking `parentId` (`folderSubtreeIds` + `requireShareForFolder`), so a share on a parent authorizes anything beneath it.
+
+Both sides can restructure the shared tree: recipients (with `edit`) can create subfolders, add/edit entries, bulk-move, and **KeePass-import** into it (`/vault/shared/:ownerId/...`); the owner sees all of it. Because recipient-created folders/entries have no vault-key copy, the owner's `loadEntries` falls back to the subtree folder key (`subtreeKeyForFolder`) — folders decrypt via `sharedName`, entries via `folderWrappedItemKey`. Moving entries **into** a shared subtree re-wraps their keys; moving **out** clears the stale key (`moveItems` `folderKeys` map).
+
+Owners see a **people icon** in the sidebar on folders they've shared.
 
 ## Recent Major Updates (2025-09-14)
 
