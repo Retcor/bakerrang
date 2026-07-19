@@ -62,8 +62,8 @@ router.get('/shared', handle((req) => vault.listSharedWithMe(req.user.id)))
 // The whole shared subtree (descendant folders + all their entries).
 router.get('/shared/:ownerId/tree/:rootId',
   handle((req) => vault.listSharedTree(req.user.id, req.params.ownerId, req.params.rootId)))
-router.post('/shared/:ownerId/folders',
-  handle((req) => vault.createSharedFolder(req.user.id, req.params.ownerId, req.body && req.body.parentId, req.body)))
+// (No shared folder-creation route: recipients cannot create folders — the
+// owner manages the folder structure. Recipients add/edit/move entries only.)
 router.post('/shared/:ownerId/folders/:folderId/items',
   handle((req) => vault.createSharedItem(req.user.id, req.params.ownerId, req.params.folderId, req.body)))
 // Declared before '/items/:id' so they aren't captured as an id.

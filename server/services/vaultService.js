@@ -621,23 +621,9 @@ export const bulkCreateSharedItems = async (userId, ownerId, items) => {
   return created
 }
 
-// Create a subfolder inside a shared subtree (requires 'edit'). The name is
-// encrypted with the folder key, so both the owner and other recipients read it.
-export const createSharedFolder = async (userId, ownerId, parentId, folder = {}) => {
-  await requireShareForFolder(userId, ownerId, parentId, true)
-  assert(isCipher(folder.sharedName), 'Invalid sharedName')
-  const id = randomUUID()
-  const now = Date.now()
-  const record = {
-    parentId,
-    sharedName: folder.sharedName,
-    position: typeof folder.position === 'number' ? folder.position : null,
-    createdAt: now,
-    updatedAt: now
-  }
-  await foldersRef(ownerId).doc(id).set(record)
-  return { id, ...record }
-}
+// NOTE: recipients deliberately cannot create folders in a shared subtree — only
+// the owner manages the folder structure. Recipients may add/edit entries (with
+// 'edit') and move them between existing folders.
 
 // Move entries within a shared subtree (requires 'edit'). Callers pass the
 // re-wrapped folder key copy for each item so it stays readable.

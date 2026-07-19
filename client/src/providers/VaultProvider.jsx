@@ -552,20 +552,6 @@ export const VaultProvider = ({ children }) => {
     return { items: decItems, folders: decFolders }
   }, [])
 
-  // Create a subfolder inside a shared subtree (needs 'edit'). The name is
-  // encrypted with the folder key so the owner and other recipients can read it.
-  const createSharedFolder = useCallback(async (shared, parentId, name) => {
-    const folderKey = sharedKeysRef.current.get(shared.folderId)
-    if (!folderKey) throw new Error('Missing folder key for this shared folder')
-    const sharedName = await encryptFolderName(folderKey, name)
-    const saved = await request(`${VAULT_URL}/shared/${shared.ownerId}/folders`, 'POST',
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ parentId: parentId || shared.folderId, sharedName })).then(jsonOrThrow)
-    const created = { id: saved.id, parentId: saved.parentId, position: saved.position, name }
-    setSharedTreeFolders((prev) => [...prev, created])
-    return created
-  }, [])
-
   // Move entries between folders inside a shared subtree (needs 'edit'). The
   // folder key is the same throughout, so the wrapped key doesn't change.
   const moveSharedItems = useCallback(async (shared, ids, folderId) => {
@@ -730,7 +716,6 @@ export const VaultProvider = ({ children }) => {
     loadSharedWithMe,
     openSharedFolder,
     saveSharedItem,
-    createSharedFolder,
     moveSharedItems,
     importSharedItems
   }

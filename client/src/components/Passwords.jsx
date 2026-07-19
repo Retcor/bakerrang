@@ -237,8 +237,6 @@ const VaultView = ({ isDark, vault }) => {
   const [menuOpenId, setMenuOpenId] = useState(null) // folder id whose action menu is open
   const [shareTarget, setShareTarget] = useState(null) // folder being shared
   const [sharedSubfolderId, setSharedSubfolderId] = useState(null) // subfolder within the open shared tree
-  const [addingSharedFolder, setAddingSharedFolder] = useState(false)
-  const [newSharedFolderName, setNewSharedFolderName] = useState('')
   const [selectedIds, setSelectedIds] = useState(() => new Set()) // entries selected for bulk actions
   const [moveError, setMoveError] = useState(null)
   const [moving, setMoving] = useState(false)
@@ -318,16 +316,6 @@ const VaultView = ({ isDark, vault }) => {
     await vault.openSharedFolder(s)
   }
 
-  const cancelAddSharedFolder = () => { setAddingSharedFolder(false); setNewSharedFolderName('') }
-
-  const handleAddSharedFolder = async () => {
-    const name = newSharedFolderName.trim()
-    if (!name || !activeShared) return
-    await vault.createSharedFolder(activeShared, sharedTarget, name)
-    setNewSharedFolderName('')
-    setAddingSharedFolder(false)
-  }
-
   const handleSaveEntry = async (entry) => {
     const saved = activeShared
       ? await vault.saveSharedItem(activeShared, entry, sharedTarget)
@@ -341,32 +329,13 @@ const VaultView = ({ isDark, vault }) => {
   // folders that already exist at the same path, then bulk-import the selected
   // entries into the matching (leaf) folder.
   const handleImportKeepass = async (selected) => {
-    // Importing while a shared folder is open: rebuild the KeePass groups as
-    // subfolders of the shared tree and bulk-add the entries there, so the owner
-    // and every other recipient see them too.
+    // Importing while a shared folder is open: entries land in the selected
+    // shared folder. Recipients can't create folders, so KeePass groups are
+    // flattened rather than rebuilt as subfolders.
     if (activeShared) {
-      const idByPath = new Map()
-      const ensureSharedFolder = async (segments) => {
-        let parentId = sharedTarget
-        const cum = []
-        for (const name of segments) {
-          cum.push(name)
-          const k = cum.join('|')
-          if (!idByPath.has(k)) {
-            const created = await vault.createSharedFolder(activeShared, parentId, name)
-            idByPath.set(k, created.id)
-          }
-          parentId = idByPath.get(k)
-        }
-        return parentId
-      }
-      const sharedEntries = []
-      for (const e of selected) {
-        const segments = e.groupPath || []
-        const folderId = segments.length ? await ensureSharedFolder(segments) : sharedTarget
-        sharedEntries.push({ title: e.title, username: e.username, password: e.password, url: e.url, notes: e.notes, folderId })
-      }
-      await vault.importSharedItems(activeShared, sharedEntries)
+      await vault.importSharedItems(activeShared, selected.map((e) => ({
+        title: e.title, username: e.username, password: e.password, url: e.url, notes: e.notes, folderId: sharedTarget
+      })))
       return
     }
 
@@ -614,8 +583,11 @@ const VaultView = ({ isDark, vault }) => {
       </div>
 
       <div className='flex flex-col lg:flex-row gap-6'>
-        {/* Folder sidebar */}
-        <div className={`${cardClass(isDark)} lg:w-60 lg:shrink-0 h-fit`}>
+        {/* Folder sidebar. `relative z-20` lifts it above the entry list: the
+            glass classes use backdrop-filter, which creates a stacking context,
+            so without this the folder ⋮ menu is trapped inside the sidebar and
+            renders behind the entries when they stack below it on small screens. */}
+        <div className={`${cardClass(isDark)} lg:w-60 lg:shrink-0 h-fit relative z-20`}>
           <div className='space-y-1'>
             {folderTab('all', 'All Items', items.length)}
             {folderTab('none', 'Unfiled', items.filter((i) => !i.folderId).length)}
@@ -787,49 +759,6 @@ const VaultView = ({ isDark, vault }) => {
                         </button>
                       ))}
 
-                      {/* Add a subfolder inside the shared tree (edit access only) */}
-                      {isCurrent && canEditShared && (
-                        addingSharedFolder
-                          ? (
-                            <div className='flex gap-1 mt-1 items-center' style={{ paddingLeft: '14px' }}>
-                              <input
-                                className={`${inputClass(isDark)} min-w-0`}
-                                placeholder='Folder name'
-                                autoComplete='off'
-                                value={newSharedFolderName}
-                                onChange={(e) => setNewSharedFolderName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleAddSharedFolder()
-                                  if (e.key === 'Escape') cancelAddSharedFolder()
-                                }}
-                                autoFocus
-                              />
-                              <button
-                                title='Create folder'
-                                className={`${primaryBtn(isDark)} !px-2 flex-shrink-0`}
-                                onClick={handleAddSharedFolder}
-                              >
-                                ✓
-                              </button>
-                              <button
-                                title='Cancel (Esc)'
-                                onClick={cancelAddSharedFolder}
-                                className={`px-2 py-2 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            )
-                          : (
-                            <button
-                              onClick={() => { setNewSharedFolderName(''); setAddingSharedFolder(true) }}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:bg-white/5' : 'text-theme-secondary-light hover:bg-black/5'}`}
-                              style={{ paddingLeft: '14px' }}
-                            >
-                              + New Folder
-                            </button>
-                            )
-                      )}
                     </div>
                   )
                 })}
