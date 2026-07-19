@@ -366,6 +366,7 @@ const VaultView = ({ isDark, vault }) => {
         const k = keyOf(cum)
         if (!idByPathKey.has(k)) {
           const created = await vault.saveFolder({ name, parentId })
+          if (!created || !created.id) throw new Error(`Could not create folder "${name}" during import`)
           idByPathKey.set(k, created.id)
         }
         parentId = idByPathKey.get(k)

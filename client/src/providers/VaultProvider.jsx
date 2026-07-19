@@ -421,30 +421,31 @@ export const VaultProvider = ({ children }) => {
       ? await request(`${VAULT_URL}/folders/${folder.id}`, 'PUT', headers, body).then(jsonOrThrow)
       : await request(`${VAULT_URL}/folders`, 'POST', headers, body).then(jsonOrThrow)
 
-    let result
+    // Build the merged record BEFORE touching state. Callers (the KeePass
+    // import) need the new id back synchronously, and a value captured inside a
+    // setState updater isn't available yet when this function returns.
+    const prevRaw = rawFoldersRef.current.find((r) => r.id === saved.id) || {}
+    // Preserve ordering: the rename response doesn't echo position.
+    const position = typeof saved.position === 'number'
+      ? saved.position
+      : (typeof prevRaw.position === 'number' ? prevRaw.position : null)
+    const merged = { id: saved.id, parentId: saved.parentId || null, position, name }
+
     setFolders((prev) => {
-      const existing = prev.find((f) => f.id === saved.id)
-      // Preserve ordering: the rename response doesn't echo position.
-      const position = typeof saved.position === 'number'
-        ? saved.position
-        : (existing ? existing.position : null)
-      const merged = { id: saved.id, parentId: saved.parentId || null, position, name: folder.name || '' }
-      result = merged
       const idx = prev.findIndex((f) => f.id === merged.id)
       if (idx >= 0) { const copy = [...prev]; copy[idx] = merged; return copy }
       return [...prev, merged]
     })
     // Mirror the raw record (keeps the shared-subtree walk correct).
-    const prevRaw = rawFoldersRef.current.find((r) => r.id === saved.id) || {}
     upsertRawFolder({
       ...prevRaw,
-      id: saved.id,
-      parentId: saved.parentId || null,
-      position: typeof saved.position === 'number' ? saved.position : (prevRaw.position ?? null),
+      id: merged.id,
+      parentId: merged.parentId,
+      position: merged.position,
       ...encrypted,
       ...(sharedName ? { sharedName } : {})
     })
-    return result
+    return merged
   }, [subtreeKeyForFolder])
 
   const reorderFolders = useCallback(async (updates) => {
