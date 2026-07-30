@@ -30,6 +30,52 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Height of the app nav bar (MainContent.jsx). The vault page fills the space
+   below it exactly, so the number lives here instead of being re-derived.
+   NOTE: components/Home.jsx still hard-codes 73px in its own min-height —
+   unify if you touch that file. */
+:root {
+  --nav-h: 73px;
+}
+
+/* A slim, low-contrast scrollbar for panes that scroll inside a card (the vault's
+   folder tree). The default chunky bar reads as a page scrollbar and fights the
+   card's rounded edge. Track stays transparent so the card shows through. */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+html.dark .thin-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+html.dark .thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html.dark .thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
 .hash-span {
   margin-top: -100px;
   padding-bottom: 100px;
@@ -225,14 +271,18 @@ html.dark {
   transition: all 0.3s ease;
 }
 
+/* `dvh`, not `vh`: on mobile `100vh` is the LARGEST viewport (address bar
+   collapsed), so a `100vh` floor here would exceed nav + the vault shell's
+   `100dvh - var(--nav-h)` and hand a non-scrolling page back ~60-90px of scroll.
+   Identical to `vh` on desktop. */
 .light-theme-bg {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #cbd5e1 75%, #94a3b8 100%);
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .dark-theme-bg {
   background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Glassmorphism styles */

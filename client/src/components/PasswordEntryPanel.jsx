@@ -13,9 +13,10 @@ const generatePassword = (length = 20) => {
 }
 
 // A responsive detail panel for viewing/editing an entry. On large screens it
-// sits as a column beside the entry list; on small screens it slides over the
-// list as a full overlay with a Back control. Parent should remount it (via a
-// `key`) when the selected entry changes so the form resets cleanly.
+// sits as a column beside the entry list, filling the app shell's height so it
+// never moves while the list scrolls; on small screens it slides over the list as
+// a full overlay with a Back control. Parent should remount it (via a `key`) when
+// the selected entry changes so the form resets cleanly.
 const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = null, readOnly = false, hideDelete = false, hideFolder = false, onSave, onDelete, onClose }) => {
   const isNew = !(entry && entry.id)
   const [form, setForm] = useState(() => (isNew ? { ...EMPTY, folderId: defaultFolderId } : { ...EMPTY, ...entry }))
@@ -60,7 +61,13 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} lg:static lg:z-auto lg:inset-auto lg:p-0 lg:bg-transparent lg:w-[440px] lg:shrink-0 transition-all duration-300 ${shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
+      // `position: fixed` is unprefixed (the mobile overlay), so an explicit
+      // `lg:static` is mandatory — not just dropping a previous `lg:sticky`. No
+      // `lg:self-start`, so the parent row's `align-items: stretch` sizes the panel
+      // to the shell, giving the unprefixed `overflow-y-auto` a definite height to
+      // scroll against on short windows; when the form fits there's no overflow at
+      // all and nothing is clipped.
+      className={`fixed inset-0 z-50 overflow-y-auto p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} lg:static lg:z-auto lg:inset-auto lg:max-h-full lg:p-0 lg:bg-transparent lg:w-[440px] lg:shrink-0 transition-all duration-300 ${shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
     >
       <div className={`rounded-2xl p-6 min-h-full lg:min-h-0 lg:border ${isDark ? 'lg:glass-card-dark lg:border-white/10' : 'lg:glass-card-light lg:border-black/10'}`}>
         <div className='flex items-center justify-between mb-4'>

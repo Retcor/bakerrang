@@ -605,7 +605,12 @@ export const VaultProvider = ({ children }) => {
     const encrypted = await encryptItemForFolder(null, folderKey, content)
     const body = JSON.stringify({ ciphertext: encrypted.ciphertext, folderWrappedItemKey: encrypted.folderWrappedItemKey })
     const headers = { 'Content-Type': 'application/json' }
-    const targetFolder = targetFolderId || item.folderId || shared.folderId
+    // The shared PUT response carries no folderId, so `merged` below falls back to
+    // this. An existing entry must keep its OWN folder — vault search spans the
+    // whole shared subtree, so an edited entry can come from any subfolder and
+    // preferring the caller's target would silently re-file it in local state.
+    // New entries have no folderId yet, so they still land on the caller's target.
+    const targetFolder = (item.id && item.folderId) || targetFolderId || shared.folderId
     const saved = item.id
       ? await request(`${VAULT_URL}/shared/${shared.ownerId}/items/${item.id}`, 'PUT', headers, body).then(jsonOrThrow)
       : await request(`${VAULT_URL}/shared/${shared.ownerId}/folders/${targetFolder}/items`, 'POST', headers, body).then(jsonOrThrow)
@@ -682,10 +687,14 @@ export const VaultProvider = ({ children }) => {
       lockTimerRef.current = setTimeout(lock, AUTO_LOCK_MS)
     }
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
-    events.forEach((e) => window.addEventListener(e, resetTimer))
+    // Capture phase: `scroll` doesn't bubble from an element, so without it
+    // scrolling the entry list or folder tree (both inner scroll containers)
+    // wouldn't count as activity and the vault could lock while you're actively
+    // browsing it. Both add/remove must pass `true` or the listener leaks.
+    events.forEach((e) => window.addEventListener(e, resetTimer, true))
     resetTimer()
     return () => {
-      events.forEach((e) => window.removeEventListener(e, resetTimer))
+      events.forEach((e) => window.removeEventListener(e, resetTimer, true))
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
     }
   }, [status, lock])
