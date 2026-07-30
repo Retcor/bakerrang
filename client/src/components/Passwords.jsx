@@ -19,21 +19,30 @@ const Passwords = () => {
     )
   }
 
-  // While unlocked the page is a fixed-height app shell: the document never
-  // scrolls, so the nav, toolbar, folder tree, search bar, A-Z rail and detail
-  // panel all stay put and the entry list is the only thing that moves. The
-  // create/unlock cards are `max-w-md` and want normal flow, hence the condition.
+  // While unlocked the page is an app shell whose children scroll individually —
+  // the nav, toolbar, folder tree, search bar, A-Z rail and detail panel stay put
+  // and the entry list is the only part that moves.
   //
-  // `overflow-hidden` is a clamp, not a scroller: with the flex chain below
-  // resolving there is nothing to overflow. It cannot clip or capture the `fixed`
-  // folder menu / bulk bar / drag chip / modals, because overflow alone creates
-  // neither a containing block for fixed descendants nor a stacking context.
+  // The height is `h` AND `min-h` together: `min-height` wins over `height` only
+  // when it's the larger value, so
+  //   - tall enough viewport → `h` = viewport − nav (a DEFINITE height, which is
+  //     what lets every `flex-1` child get a bounded height and scroll internally
+  //     instead of growing); the page itself doesn't scroll.
+  //   - viewport shorter than the floor → `min-h` wins, the shell is a fixed floor
+  //     taller than the viewport, so the PAGE scrolls to reveal the toolbar / folder
+  //     list / entries instead of squeezing the entry list to nothing. The children
+  //     still divide a definite height (the floor), so they keep scrolling
+  //     internally. `overflow-hidden` stays: it clamps the shell's own box (inert,
+  //     since the flex sums exactly) and never blocks the page from scrolling the
+  //     shell into view.
+  // The create/unlock cards are `max-w-md` and want normal flow, hence the condition.
+  //
   // DO NOT add transform / translate / scale / filter / backdrop-blur /
   // will-change / contain / a z-index to this element or to any wrapper down to
-  // the entry list — any one of those traps all of those fixed layers inside the
-  // shell and drops the modals behind the nav's z-40.
+  // the entry list — any one of those would trap the `fixed` folder menu / bulk
+  // bar / drag chip / modals inside the shell and drop the modals behind the nav.
   const shell = vault.status === 'unlocked'
-    ? 'h-[calc(100dvh-var(--nav-h))] flex flex-col overflow-hidden'
+    ? 'h-[calc(100dvh-var(--nav-h))] min-h-[32rem] flex flex-col overflow-hidden'
     : ''
 
   return (
@@ -826,11 +835,13 @@ const VaultView = ({ isDark, vault }) => {
     // which pins it to its content height and silently makes the entry list grow
     // instead of scroll.
     <div className='flex-1 min-h-0 flex flex-col'>
-      {/* Toolbar */}
+      {/* Toolbar. Buttons are compact below `sm` (smaller text + padding, restored
+          at sm+) so all three fit one row on a phone rather than wrapping Lock onto
+          its own line. */}
       <div className='flex flex-wrap gap-2 mb-6 justify-between items-center flex-shrink-0'>
         <div className='flex flex-wrap gap-2'>
           <button
-            className={primaryBtn(isDark)}
+            className={`${primaryBtn(isDark)} text-sm sm:text-base !px-3 sm:!px-4`}
             onClick={() => setSelected({})}
             disabled={isSharedView && !canEditShared}
             title={isSharedView && !canEditShared ? 'You have view-only access to this folder' : undefined}
@@ -838,17 +849,20 @@ const VaultView = ({ isDark, vault }) => {
             + New Entry
           </button>
           <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
             onClick={() => setImportOpen(true)}
           >
             Import KeePass
           </button>
         </div>
         <button
-          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+          title='Lock vault'
+          className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
           onClick={() => vault.lock()}
         >
-          🔒 Lock
+          {/* Icon-only below `sm` so the toolbar doesn't wrap Lock onto its own
+              line on a narrow phone. */}
+          🔒<span className='hidden sm:inline'> Lock</span>
         </button>
       </div>
 
