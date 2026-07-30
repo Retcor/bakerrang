@@ -24,7 +24,7 @@ const FolderSelect = ({ isDark, value, options, placeholder, onChange, dropUp, d
         type='button'
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm border transition-all duration-200 disabled:opacity-50 ${isDark ? 'bg-white/5 text-theme-dark border-white/10 hover:border-white/30' : 'bg-white text-theme-light border-black/15 hover:border-black/40'}`}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 lg:py-1.5 rounded-lg text-sm border transition-all duration-200 disabled:opacity-50 ${isDark ? 'bg-white/5 text-theme-dark border-white/10 hover:border-white/30' : 'bg-white text-theme-light border-black/15 hover:border-black/40'}`}
       >
         <span className={`truncate ${!selected ? (isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light') : ''}`}>
           {selected ? selected.label : (placeholder || 'Select…')}

@@ -55,8 +55,11 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
     setIsSaving(false)
   }
 
-  const fieldClass = `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
-  const labelClass = `block text-xs font-semibold mb-1 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`
+  // `lg:py-1` (not `lg:text-sm`) makes the fields compact on desktop while keeping
+  // 16px text — sub-16px inputs trigger iOS Safari auto-zoom-on-focus, and iPads
+  // are past the 960px `lg:` breakpoint.
+  const fieldClass = `w-full px-3 py-2 lg:py-1 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
+  const labelClass = `block text-xs font-semibold mb-1 lg:mb-0.5 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`
   const folderOptions = [{ value: '', label: 'No folder', depth: 0 }, ...folders.map((f) => ({ value: f.id, label: f.name, depth: f.depth || 0 }))]
 
   return (
@@ -69,8 +72,15 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
       // all and nothing is clipped.
       className={`fixed inset-0 z-50 overflow-y-auto p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} lg:static lg:z-auto lg:inset-auto lg:max-h-full lg:p-0 lg:bg-transparent lg:w-[440px] lg:shrink-0 transition-all duration-300 ${shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
     >
-      <div className={`rounded-2xl p-6 min-h-full lg:min-h-0 lg:border ${isDark ? 'lg:glass-card-dark lg:border-white/10' : 'lg:glass-card-light lg:border-black/10'}`}>
-        <div className='flex items-center justify-between mb-4'>
+      {/* Desktop: `lg:h-full` caps the card at the panel column so the flex column
+          below divides it exactly and Notes shrinks to fit — without it the card
+          would grow to Notes' comfortable size and the panel would scroll on
+          windows that could otherwise fit. On a very short window content exceeds
+          the cap and the panel's `overflow-y-auto` scrolls the few extra px, with
+          everything still reachable. Mobile keeps `min-h-full` (unprefixed) so the
+          card fills the full-screen overlay. */}
+      <div className={`rounded-2xl p-6 min-h-full lg:h-full lg:p-4 lg:flex lg:flex-col lg:border ${isDark ? 'lg:glass-card-dark lg:border-white/10' : 'lg:glass-card-light lg:border-black/10'}`}>
+        <div className='flex items-center justify-between mb-4 lg:mb-2 lg:shrink-0'>
           <button
             onClick={onClose}
             title='Back to list'
@@ -85,13 +95,15 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
           <span className='w-5' />
         </div>
 
-        <div className='space-y-3'>
-          <div>
+        {/* On desktop this becomes the flex column that fills the card, so Notes
+            can absorb the leftover height and the panel never needs a scrollbar. */}
+        <div className='space-y-3 lg:space-y-2 lg:flex lg:flex-col lg:flex-1 lg:min-h-0'>
+          <div className='lg:shrink-0'>
             <label className={labelClass}>Title</label>
             <input className={fieldClass} value={form.title} onChange={update('title')} placeholder='e.g. Gmail' autoComplete='off' autoFocus />
           </div>
 
-          <div>
+          <div className='lg:shrink-0'>
             <label className={labelClass}>Username</label>
             <div className='flex gap-2'>
               <input
@@ -107,7 +119,7 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             </div>
           </div>
 
-          <div>
+          <div className='lg:shrink-0'>
             <label className={labelClass}>Password</label>
             <div className='flex gap-2'>
               <input
@@ -143,13 +155,13 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             </div>
           </div>
 
-          <div>
+          <div className='lg:shrink-0'>
             <label className={labelClass}>URL</label>
             <input className={fieldClass} value={form.url} onChange={update('url')} placeholder='https://…' autoComplete='off' />
           </div>
 
           {!hideFolder && (
-            <div>
+            <div className='lg:shrink-0'>
               <label className={labelClass}>Folder</label>
               <FolderSelect
                 isDark={isDark}
@@ -160,21 +172,26 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             </div>
           )}
 
-          <div>
+          {/* Notes absorbs the leftover height on desktop. `lg:min-h-[3.625rem]`
+              (= two 24px lines) on the textarea AND `lg:min-h-0` on this wrapper are
+              both required: without them the `rows`-derived `min-height: auto` floors
+              the textarea at 4 rows and `flex-1` can't shrink it. `lg:resize-none`
+              only — at `lg` the drag handle is dead against `flex-basis: 0`. */}
+          <div className='lg:flex-1 lg:min-h-0 lg:flex lg:flex-col'>
             <label className={labelClass}>Notes</label>
-            <textarea className={fieldClass} rows={4} value={form.notes} onChange={update('notes')} placeholder='Optional notes' />
+            <textarea className={`${fieldClass} lg:flex-1 lg:min-h-[3.625rem] lg:resize-none`} rows={4} value={form.notes} onChange={update('notes')} placeholder='Optional notes' />
           </div>
         </div>
 
-        {saveError && <p className='text-sm text-red-400 mt-3'>{saveError}</p>}
+        {saveError && <p className='text-sm text-red-400 mt-3 lg:mt-2 lg:shrink-0'>{saveError}</p>}
 
         {readOnly && (
-          <p className={`text-xs mt-3 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+          <p className={`text-xs mt-3 lg:mt-2 lg:shrink-0 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
             You have view-only access to this shared folder.
           </p>
         )}
 
-        <div className='flex justify-between items-center mt-5'>
+        <div className='flex justify-between items-center mt-5 lg:mt-3 lg:shrink-0'>
           {!isNew && !hideDelete
             ? (
               <button

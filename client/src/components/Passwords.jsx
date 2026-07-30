@@ -164,6 +164,20 @@ const groupLetter = (title) => {
 // Below this many entries the rail is more clutter than help.
 const JUMP_RAIL_MIN = 20
 
+// Per-level indent of the folder tree, in px. Shared by the folder rows, the
+// inline "new folder" input under a row, and the shared-subtree rows so they all
+// line up under their parents.
+const INDENT_PX = 12
+
+// The CSS px width of Tailwind's `lg:` in THIS app — 960, not the stock 1024.
+// tailwind.config.cjs wraps the config in Material Tailwind's `withMT`, which
+// replaces `theme.screens` (see
+// node_modules/@material-tailwind/react/theme/base/breakpoints.js:
+// sm 540 · md 720 · lg 960 · xl 1140 · 2xl 1320). Every `lg:` class in this file
+// and PasswordEntryPanel.jsx flips at 960, so JS that mirrors the layout must use
+// this query or the sidebar state describes a layout that isn't on screen.
+const DESKTOP_MQ = '(min-width: 960px)'
+
 const cardClass = (isDark) => `rounded-2xl p-6 ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`
 const inputClass = (isDark) => `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
 const primaryBtn = (isDark) => `px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`
@@ -280,7 +294,7 @@ const VaultView = ({ isDark, vault }) => {
   const [renderLimit, setRenderLimit] = useState(PAGE_SIZE) // entry rows currently mounted
   // The folder tree starts collapsed below `lg` (it renders above the entry list
   // there, so a long tree buries the entries) and expanded on desktop.
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 1024px)').matches)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia(DESKTOP_MQ).matches)
 
   const NO_COLLAPSE = useMemo(() => new Set(), [])
   // Every folder (for the assign-folder dropdown) vs. only folders visible given
@@ -511,10 +525,11 @@ const VaultView = ({ isDark, vault }) => {
 
   // Re-apply the per-breakpoint sidebar default when the viewport crosses `lg`.
   // Only a *crossing* fires, so an explicit collapse/expand sticks until the
-  // layout genuinely changes. matchMedia (not innerWidth) is the same predicate
-  // Tailwind's `lg:` compiles to, so JS state can't drift from the CSS.
+  // layout genuinely changes. matchMedia against DESKTOP_MQ is the exact query
+  // Tailwind's `lg:` compiles to here (see DESKTOP_MQ), so the JS state can't
+  // drift from the CSS.
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
+    const mq = window.matchMedia(DESKTOP_MQ)
     const onChange = (e) => setSidebarOpen(e.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
@@ -539,7 +554,7 @@ const VaultView = ({ isDark, vault }) => {
   const chooseFolder = (key) => {
     setSelectedFolder(key)
     setQuery('')
-    if (!window.matchMedia('(min-width: 1024px)').matches) setSidebarOpen(false)
+    if (!window.matchMedia(DESKTOP_MQ).matches) setSidebarOpen(false)
   }
 
   // Sharing
@@ -559,7 +574,7 @@ const VaultView = ({ isDark, vault }) => {
   const chooseSharedSubfolder = (id) => {
     setSharedSubfolderId(id)
     setQuery('')
-    if (!window.matchMedia('(min-width: 1024px)').matches) setSidebarOpen(false)
+    if (!window.matchMedia(DESKTOP_MQ).matches) setSidebarOpen(false)
   }
 
   const handleSaveEntry = async (entry) => {
@@ -647,9 +662,9 @@ const VaultView = ({ isDark, vault }) => {
 
   // Inline "new folder" input, shown under a parent (or at root).
   const folderInput = (parentId, depth) => (
-    <div className='flex gap-1 mt-1 items-center' style={{ paddingLeft: `${depth * 14}px` }}>
+    <div className='flex gap-1 mt-1 items-center' style={{ paddingLeft: `${depth * INDENT_PX}px` }}>
       <input
-        className={`${inputClass(isDark)} min-w-0`}
+        className={`${inputClass(isDark)} min-w-0 !py-1.5`}
         placeholder='Folder name'
         autoComplete='off'
         value={newFolderName}
@@ -662,7 +677,7 @@ const VaultView = ({ isDark, vault }) => {
       />
       <button
         title='Create folder'
-        className={`${primaryBtn(isDark)} !px-2 flex-shrink-0`}
+        className={`${primaryBtn(isDark)} !px-2 !py-1.5 flex-shrink-0`}
         onClick={() => handleAddFolder(parentId)}
       >
         ✓
@@ -670,7 +685,7 @@ const VaultView = ({ isDark, vault }) => {
       <button
         title='Cancel (Esc)'
         onClick={cancelAddFolder}
-        className={`px-2 py-2 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
+        className={`px-2 py-1.5 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
       >
         ✕
       </button>
@@ -798,7 +813,7 @@ const VaultView = ({ isDark, vault }) => {
     <button
       key={key}
       onClick={() => chooseFolder(key)}
-      className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${selectedFolder === key ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
+      className={`w-full text-left px-2 py-1.5 rounded-lg text-sm flex justify-between items-center transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${selectedFolder === key ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
     >
       <span className='truncate'>{label}</span>
       <span className='text-xs opacity-60'>{count}</span>
@@ -853,7 +868,7 @@ const VaultView = ({ isDark, vault }) => {
             content height) and `max-h-[55%]` bounds the tree when expanded rather
             than letting it push the list away — expanding is transient there
             anyway, since picking a folder auto-collapses it. */}
-        <div className={`${cardClass(isDark)} relative z-20 flex-shrink-0 lg:shrink-0 ${sidebarOpen ? 'flex flex-col min-h-0 max-h-[55%] lg:max-h-none lg:w-60 lg:h-full' : '!p-3 lg:w-auto lg:self-start'}`}>
+        <div className={`${cardClass(isDark)} relative z-20 flex-shrink-0 lg:shrink-0 !p-3 ${sidebarOpen ? 'flex flex-col min-h-0 max-h-[55%] lg:max-h-none lg:w-60 lg:h-full' : 'lg:w-auto lg:self-start'}`}>
           <button
             onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? 'Hide folders' : 'Show folders'}
@@ -892,7 +907,7 @@ const VaultView = ({ isDark, vault }) => {
                     <div
                       data-folder-id={f.id}
                       className={`group flex items-center rounded-lg transition-all duration-200 ${dragId === f.id ? 'opacity-40' : ''} ${isCurrent ? (isDark ? 'bg-white/10' : 'bg-black/10') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')} ${dropClass}`}
-                      style={{ paddingLeft: `${f.depth * 14}px` }}
+                      style={{ paddingLeft: `${f.depth * INDENT_PX}px` }}
                     >
                       {renamingId !== f.id && (
                         <button
@@ -924,7 +939,11 @@ const VaultView = ({ isDark, vault }) => {
                       {renamingId === f.id
                         ? (
                           <input
-                            className={`${inputClass(isDark)} my-1`}
+                            // `flex-1 min-w-0` or the input's intrinsic width
+                            // overflows the tightened row and gets clipped; `!py-1`
+                            // keeps it the row's height. 16px font (unprefixed) so
+                            // the rename never triggers iOS zoom.
+                            className={`${inputClass(isDark)} flex-1 min-w-0 !py-1 my-0.5`}
                             value={renameValue}
                             onChange={(e) => setRenameValue(e.target.value)}
                             onKeyDown={(e) => {
@@ -941,10 +960,10 @@ const VaultView = ({ isDark, vault }) => {
                               onClick={() => chooseFolder(f.id)}
                               onDoubleClick={() => startRename(f)}
                               title={f.name}
-                              className={`flex-1 min-w-0 text-left px-2 py-2 text-sm flex justify-between items-center ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent ? 'font-medium' : ''}`}
+                              className={`flex-1 min-w-0 text-left px-1 py-1.5 text-sm flex justify-between items-center ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent ? 'font-medium' : ''}`}
                             >
                               <span className='truncate'>{f.name}</span>
-                              <span className='flex items-center gap-1 flex-shrink-0 ml-2'>
+                              <span className='flex items-center gap-1 flex-shrink-0 ml-1'>
                                 {sharedFolderIds.has(f.id) && (
                                   <svg
                                     xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'
@@ -968,7 +987,7 @@ const VaultView = ({ isDark, vault }) => {
                                     ? null
                                     : { folder: f, rect: e.currentTarget.getBoundingClientRect() }
                                 )}
-                                className={`px-1.5 py-2 rounded transition-opacity duration-200 ${folderMenu && folderMenu.folder.id === f.id ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'} ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
+                                className={`px-1 py-2 rounded transition-opacity duration-200 ${folderMenu && folderMenu.folder.id === f.id ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'} ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
                               >
                                 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-4 h-4'>
                                   <path d='M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 11.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 17a1.5 1.5 0 110-3 1.5 1.5 0 010 3z' />
@@ -987,7 +1006,7 @@ const VaultView = ({ isDark, vault }) => {
                 : (
                   <button
                     onClick={() => startAdding('root')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm mt-2 transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:bg-white/5' : 'text-theme-secondary-light hover:bg-black/5'}`}
+                    className={`w-full text-left px-2 py-1.5 rounded-lg text-sm mt-2 transition-all duration-200 ${isDark ? 'text-theme-secondary-dark hover:bg-white/5' : 'text-theme-secondary-light hover:bg-black/5'}`}
                   >
                     + New Folder
                   </button>
@@ -997,7 +1016,7 @@ const VaultView = ({ isDark, vault }) => {
               {(sharedFolders || []).length > 0 && (
                 <>
                   <div className={`my-2 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`} />
-                  <p className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                  <p className={`px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
                     Shared with me
                   </p>
                   {sharedFolders.map((s) => {
@@ -1008,7 +1027,7 @@ const VaultView = ({ isDark, vault }) => {
                         <button
                           onClick={() => handleSelectShared(s)}
                           title={`${s.name} — shared by ${s.ownerEmail || 'someone'} (${s.permission === 'edit' ? 'can edit' : 'view only'})`}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent && !sharedSubfolderId ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
+                          className={`w-full text-left px-2 py-1.5 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${isCurrent && !sharedSubfolderId ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
                         >
                           <span className='truncate'>{s.name}</span>
                           <span className='flex items-center gap-2 flex-shrink-0'>
@@ -1029,8 +1048,8 @@ const VaultView = ({ isDark, vault }) => {
                             key={f.id}
                             onClick={() => chooseSharedSubfolder(f.id)}
                             title={f.name}
-                            style={{ paddingLeft: `${12 + f.depth * 14}px` }}
-                            className={`w-full text-left pr-3 py-2 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${sharedSubfolderId === f.id ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
+                            style={{ paddingLeft: `${8 + f.depth * INDENT_PX}px` }}
+                            className={`w-full text-left pr-2 py-1.5 rounded-lg text-sm flex justify-between items-center gap-2 transition-all duration-200 ${isDark ? 'text-theme-dark' : 'text-theme-light'} ${sharedSubfolderId === f.id ? (isDark ? 'bg-white/10 font-medium' : 'bg-black/10 font-medium') : (isDark ? 'hover:bg-white/5' : 'hover:bg-black/5')}`}
                           >
                             <span className='truncate'>{f.name}</span>
                             <span className='text-xs opacity-60 flex-shrink-0'>
