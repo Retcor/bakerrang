@@ -56,6 +56,58 @@ Share a **whole folder** with another Google user, still zero-knowledge — the 
 
 Owners see a **people icon** in the sidebar on folders they've shared.
 
+## Browser Extension — Vault Autofill (2026-08)
+
+A Chrome/Edge **Manifest V3** extension in the top-level `extension/` folder that
+autofills logins from the vault, matched to the current tab's URL. **v1 scope: autofill
+only (read), personal vault only** (no saving new logins, no password generation, no
+shared-folder entries, no Firefox — those are the documented phase-2 list).
+
+**Zero-knowledge preserved.** All decryption happens locally in the extension's service
+worker, reusing the web app's **real** crypto module via a Vite alias
+`@vault-crypto` → `client/src/utils/crypto.js` (single source of truth, **not** a copy —
+`vite.config.js`). The read path needs only the already-exported `unlockVault()` +
+`decryptItem()`, so **`crypto.js` is unchanged**. Master password is never stored;
+`chrome.storage.session` holds only the raw vault key (base64) + still-encrypted records,
+wiped on browser close, with a 15-min auto-lock (`chrome.alarms`) mirroring the app.
+
+**Auth needs no server change.** The three read endpoints (`GET /vault`, `/vault/items`,
+`/vault/folders`) are all GET (no CSRF). The MV3 **service-worker** `fetch` with the
+`host_permissions` entry for `api.bakerrang.com` sends the httpOnly `connect.sid` session
+cookie automatically and bypasses page CORS — **verified working** (returns 200). So the
+extension is authenticated as whoever is logged into the web app in that browser.
+
+**Architecture:** `src/background.js` (service worker — API + crypto + unlock state +
+auto-lock + message handlers `status`/`unlock`/`matchesForTab`/`fill`/`lock`),
+`src/lib/{api,session,match}.js`, `src/content.js` (field detection + fill), `src/popup/*`
+(the only place the master password is typed). Build: **Vite 4 + `@crxjs/vite-plugin`**;
+install needs `npm install --legacy-peer-deps` (crxjs 1.x declares a stale Vite peer
+range). MV3 CSP includes `'wasm-unsafe-eval'` for Argon2id (hash-wasm).
+
+**Cross-origin iframe logins** (e.g. Barclays embeds `www.barclaycardus.com` in
+`cards.barclaycardus.com`): the content script uses **`all_frames: true`** so it injects
+into every frame. The `fill` message is broadcast to all frames and a frame **responds
+only if it actually filled**, so the empty top frame doesn't win the response race and
+falsely report "No login fields found." Filling uses the native value setter +
+focus + a full keydown/input/keyup/change event sequence so React/Angular-controlled
+inputs register the change, plus a **corrective 150 ms second pass** that re-applies
+the value only where it didn't stick — needed for autofill-hardened bank fields (e.g.
+Citi's `#userId`, `autocomplete="one-time-code"`) that blank the value by re-syncing
+from their framework model right after the first programmatic set. Note the
+isolated-world caveat: a fill that works in a DevTools/page-world test can still fail
+in the content script, so test with the actual loaded extension.
+
+**Field-detection still-open cases (phase 2):** shadow-DOM forms (querySelector doesn't
+pierce shadow roots), reveal-on-click forms (fields don't exist until a button is
+clicked), and separate-origin popup **windows** (a distinct tab, not an iframe).
+
+**Loading / reloading (also in `extension/README.md`):** `npm run build` writes `dist`;
+load it once via `chrome://extensions` → Developer mode → **Load unpacked** → pick
+`extension/dist`. After any change you need **two reloads**: (1) ↻ the extension card
+(mandatory for `manifest.config.js` changes like permissions/`all_frames`), then (2)
+**refresh the target web page** (content scripts only inject at page load — forgetting
+this is the #1 "my fix didn't work" cause).
+
 ## Recent Major Updates (2025-09-14)
 
 ### Theme System Implementation ✅
