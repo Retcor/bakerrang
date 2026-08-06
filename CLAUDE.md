@@ -108,6 +108,32 @@ load it once via `chrome://extensions` → Developer mode → **Load unpacked** 
 **refresh the target web page** (content scripts only inject at page load — forgetting
 this is the #1 "my fix didn't work" cause).
 
+### Round 2 enhancements (2026-08)
+- **Server-synced vault settings.** Plaintext `settings` map `{ autoLockMs, inlineAutofill }`
+  on the `vaults/{userId}` doc (non-secret prefs; the first server-readable plaintext there).
+  `getVault` returns it; new `updateSettings` service fn + **`PUT /vault/settings`** route
+  (auth + CSRF gated). Shared defaults/options live in `client/src/utils/vaultSettings.js`
+  (`DEFAULT_SETTINGS` = 8h / inline on; `AUTO_LOCK_OPTIONS`). The extension mirrors the same
+  defaults in `extension/src/lib/session.js`.
+- **Configurable auto-lock (default 8h).** `VaultProvider` no longer hard-codes 15 min — it
+  reads `autoLockMs` from `settings` (state), `null` = never lock (effect early-returns).
+  `settings` + `updateSettings` are exposed on the vault context. Edited on the **Account
+  page** (new "Password Vault" section: `FolderSelect` dropdown + a toggle switch). Extension
+  auto-lock is driven by `isIdleExpired(state)` off the same setting. Changes apply on next
+  vault load/unlock per context (not live-pushed).
+- **Clickable entry URL.** `PasswordEntryPanel` URL field gained an open-in-new-tab
+  `IconButton` (disabled when empty). `openUrl()` prepends `https://` when schemeless and
+  **only** opens `http(s)` (blocks `javascript:` etc.) with `noopener,noreferrer` — the app's
+  only external-link opener.
+- **Inline autofill (extension, opt-in via `inlineAutofill`).** On focus of a login field the
+  content script asks `background.inlineMatches` (metadata only, does **not** reset the idle
+  timer) and, if matches, shows a small key icon over the field; click fills (or shows a
+  chooser for multiples) via `background.fillHere`, which decrypts in the SW and sends `fill`
+  back to **that exact frame** (`sender.frameId`) — no broadcast, works in iframes. The popup
+  Fill path is unchanged. No new manifest permissions.
+- **Eye icon** on the popup master-password field (`popup.js` `renderLocked`) toggles
+  `input.type` password/text.
+
 ## Recent Major Updates (2025-09-14)
 
 ### Theme System Implementation ✅

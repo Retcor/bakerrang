@@ -1,5 +1,8 @@
 const app = document.getElementById('app')
 
+const EYE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>'
+const EYE_OFF_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+
 const send = (type, payload) => chrome.runtime.sendMessage({ type, payload })
 
 const getActiveTab = async () => {
@@ -21,14 +24,24 @@ const renderLocked = (error) => {
   const input = h('input', {
     type: 'password',
     placeholder: 'Master password',
-    className: 'field',
+    className: 'field field-with-icon',
     autocomplete: 'current-password'
   })
+  const eye = h('button', { type: 'button', className: 'eye-toggle', title: 'Show password' })
+  eye.innerHTML = EYE_SVG
+  eye.addEventListener('click', () => {
+    const reveal = input.type === 'password'
+    input.type = reveal ? 'text' : 'password'
+    eye.innerHTML = reveal ? EYE_OFF_SVG : EYE_SVG
+    eye.title = reveal ? 'Hide password' : 'Show password'
+    input.focus()
+  })
+  const pwWrap = h('div', { className: 'pw-wrap' }, input, eye)
   const btn = h('button', { type: 'submit', textContent: 'Unlock', className: 'btn' })
   const msg = h('p', { className: 'error', textContent: error || '' })
   const form = h('form', { className: 'unlock' },
     h('h1', { textContent: 'Unlock Vault', className: 'brand' }),
-    input, btn, msg
+    pwWrap, btn, msg
   )
 
   form.addEventListener('submit', async (e) => {

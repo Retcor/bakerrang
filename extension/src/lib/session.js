@@ -6,9 +6,23 @@
 
 const KEY = 'vaultState'
 
-export const AUTO_LOCK_MS = 15 * 60 * 1000 // mirrors the web app's 15-min idle lock
+// Fallback preferences, mirroring client/src/utils/vaultSettings.js. The real
+// values come from the server (GET /vault → settings) at unlock; these apply
+// only until then / when the server omits a field.
+export const DEFAULT_SETTINGS = {
+  autoLockMs: 8 * 60 * 60 * 1000, // 8 hours
+  inlineAutofill: true
+}
 
-// state shape: { vaultKeyRaw: base64, items: encryptedRecord[], lastActive: number }
+// True when the unlocked session has been idle past its auto-lock duration.
+// `autoLockMs === null` means never lock.
+export const isIdleExpired = (state) => {
+  const ms = state && state.settings ? state.settings.autoLockMs : DEFAULT_SETTINGS.autoLockMs
+  if (ms === null) return false
+  return Date.now() - state.lastActive > ms
+}
+
+// state shape: { vaultKeyRaw: base64, items: encryptedRecord[], settings, lastActive: number }
 export const saveSession = (state) => chrome.storage.session.set({ [KEY]: state })
 
 export const loadSession = async () => {

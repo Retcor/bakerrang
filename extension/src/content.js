@@ -81,3 +81,146 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   return false
 })
+
+// ---------- Inline autofill (a key icon inside login fields, click to fill) ----------
+// Opt-in via the server-synced `inlineAutofill` setting. On focus of a login
+// field the background is asked for matches (metadata only); if any, a small key
+// icon is shown over the field. Clicking it fills (or shows a chooser for
+// multiples) via `fillHere`, which sends the credential back to this exact frame.
+
+const ICON_SIZE = 22
+const KEY_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M13.5 11.5L22 3"/><path d="M17 7l3 3"/></svg>'
+
+let overlay = null // the key icon button
+let chooser = null // dropdown of matches (when > 1)
+let anchorEl = null // the field the icon is attached to
+let currentMatches = []
+let focusToken = 0 // guards against focus moving while we await matches
+
+const removeChooser = () => { if (chooser) { chooser.remove(); chooser = null } }
+
+const removeOverlay = () => {
+  if (overlay) { overlay.remove(); overlay = null }
+  removeChooser()
+  anchorEl = null
+  currentMatches = []
+  window.removeEventListener('scroll', reposition, true)
+  window.removeEventListener('resize', reposition, true)
+}
+
+const positionChooser = (rect) => {
+  if (!chooser) return
+  chooser.style.top = `${window.scrollY + rect.bottom + 4}px`
+  chooser.style.left = `${window.scrollX + Math.max(8, rect.right - 260)}px`
+}
+
+const reposition = () => {
+  if (!overlay || !anchorEl) return
+  if (!anchorEl.isConnected) { removeOverlay(); return }
+  const r = anchorEl.getBoundingClientRect()
+  if (r.width === 0 && r.height === 0) { removeOverlay(); return }
+  overlay.style.top = `${window.scrollY + r.top + (r.height - ICON_SIZE) / 2}px`
+  overlay.style.left = `${window.scrollX + r.right - ICON_SIZE - 6}px`
+  positionChooser(r)
+}
+
+const chooseMatch = async (m) => {
+  removeOverlay()
+  try { await chrome.runtime.sendMessage({ type: 'fillHere', payload: { id: m.id } }) } catch {}
+}
+
+const showChooser = () => {
+  removeChooser()
+  if (!anchorEl || currentMatches.length <= 1) return
+  chooser = document.createElement('div')
+  Object.assign(chooser.style, {
+    position: 'absolute', zIndex: 2147483647, minWidth: '200px', maxWidth: '260px',
+    background: '#ffffff', color: '#1a1a2e', border: '1px solid #e5e7eb',
+    borderRadius: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.18)', padding: '4px', overflow: 'hidden'
+  })
+  currentMatches.forEach((m) => {
+    const row = document.createElement('button')
+    row.type = 'button'
+    Object.assign(row.style, {
+      display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px',
+      border: 'none', background: 'transparent', borderRadius: '6px', cursor: 'pointer', font: '13px system-ui, sans-serif'
+    })
+    row.onmouseenter = () => { row.style.background = '#f1f1f7' }
+    row.onmouseleave = () => { row.style.background = 'transparent' }
+    const title = document.createElement('div')
+    title.textContent = m.title || '(untitled)'
+    title.style.fontWeight = '600'
+    const sub = document.createElement('div')
+    sub.textContent = m.username || ''
+    Object.assign(sub.style, { fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })
+    row.append(title, sub)
+    // mousedown (not click) so it fires before the field's blur tears us down.
+    row.addEventListener('mousedown', (e) => { e.preventDefault(); chooseMatch(m) })
+    chooser.appendChild(row)
+  })
+  document.body.appendChild(chooser)
+  positionChooser(anchorEl.getBoundingClientRect())
+}
+
+const onIconClick = (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  if (currentMatches.length === 1) chooseMatch(currentMatches[0])
+  else showChooser()
+}
+
+const showOverlayFor = (el, matches) => {
+  if (!document.body) return
+  removeOverlay()
+  anchorEl = el
+  currentMatches = matches
+  overlay = document.createElement('button')
+  overlay.type = 'button'
+  overlay.title = 'Fill from Bakerrang Vault'
+  overlay.innerHTML = KEY_SVG
+  Object.assign(overlay.style, {
+    position: 'absolute', width: `${ICON_SIZE}px`, height: `${ICON_SIZE}px`, padding: '0',
+    border: 'none', borderRadius: '5px', cursor: 'pointer', background: '#4f46e5', color: '#fff',
+    zIndex: 2147483646, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+  })
+  overlay.addEventListener('mousedown', (e) => e.preventDefault()) // keep field focus
+  overlay.addEventListener('click', onIconClick)
+  document.body.appendChild(overlay)
+  window.addEventListener('scroll', reposition, true)
+  window.addEventListener('resize', reposition, true)
+  reposition()
+}
+
+const isEligibleField = (el) => {
+  if (!el || el.tagName !== 'INPUT') return false
+  const type = (el.type || 'text').toLowerCase()
+  if (type === 'password') return true
+  if (!['text', 'email', 'tel'].includes(type)) return false
+  // Only text-ish fields that are the detected username field or clearly
+  // username-like — otherwise every text box would sprout an icon.
+  const { user } = findFields()
+  return el === user || looksLikeUsername(el)
+}
+
+document.addEventListener('focusin', async (e) => {
+  const el = e.target
+  if (!isEligibleField(el)) return
+  const token = ++focusToken
+  let res
+  try { res = await chrome.runtime.sendMessage({ type: 'inlineMatches', payload: { url: location.href } }) } catch { return }
+  if (token !== focusToken || document.activeElement !== el) return // focus moved while awaiting
+  if (!res || !res.enabled || !res.matches || !res.matches.length) return
+  showOverlayFor(el, res.matches)
+}, true)
+
+document.addEventListener('focusout', () => {
+  // Delay so a click on the icon/chooser lands before we tear down.
+  setTimeout(() => {
+    const a = document.activeElement
+    if (a === overlay || a === anchorEl || (chooser && chooser.contains(a))) return
+    removeOverlay()
+  }, 150)
+}, true)
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') removeOverlay() }, true)

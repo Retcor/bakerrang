@@ -28,6 +28,9 @@ router.get('/', handle(async (req) => {
 router.post('/', handle((req) => vault.initVault(req.user.id, req.body)))
 router.put('/key', handle((req) => vault.rotateVaultKey(req.user.id, req.body)))
 
+// Non-secret vault preferences (auto-lock duration, inline-autofill toggle).
+router.put('/settings', handle((req) => vault.updateSettings(req.user.id, req.body && req.body.settings)))
+
 // Sharing keypair: set on an existing vault (migration), and look up a
 // recipient's public key by email.
 router.post('/keys', handle((req) => vault.setVaultKeys(req.user.id, req.body)))

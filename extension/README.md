@@ -75,14 +75,30 @@ reload — but you still refresh the target page for content-script changes.
 ## Using it
 
 1. Log into the Bakerrang web app so a session exists in this browser.
-2. Click the extension icon, enter your **master password**, and unlock.
-3. On any site with a saved login, open the popup and click **Fill**.
+2. Click the extension icon, enter your **master password** (the eye icon reveals
+   it), and unlock.
+3. On any site with a saved login, either:
+   - **Inline:** focus a login field and click the small key icon that appears
+     (click-to-fill; a chooser appears if more than one entry matches), or
+   - **Popup:** open the extension and click **Fill**.
+
+## Settings (synced from the web app)
+
+Auto-lock duration and the inline-autofill toggle are configured on the web app's
+**Account → Password Vault** section and stored on your vault (server-synced). The
+extension reads them at unlock:
+
+- **Auto-lock** — 15 min / 1 hour / 8 hours / Never (default 8 hours).
+- **Inline autofill** — the in-field key icon (default on). With it off, only the
+  popup Fill path is available.
+
+Changing a setting takes effect the next time the extension unlocks.
 
 ## Scope (v1)
 
-Autofill only — read access to your **personal** vault. Not yet included: saving
-new logins, generating passwords, entries from folders shared with you, and
-Firefox support. See the plan for the phase-2 list.
+Read access to your **personal** vault (autofill + inline autofill). Not yet
+included: saving new logins, generating passwords, entries from folders shared with
+you, and Firefox support. See the plan for the phase-2 list.
 
 ## Authentication (verified working)
 

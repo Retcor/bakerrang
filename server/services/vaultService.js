@@ -39,8 +39,41 @@ export const getVault = async (userId) => {
     protectedVaultKey: data.protectedVaultKey,
     publicKey: data.publicKey || null,
     protectedPrivateKey: data.protectedPrivateKey || null,
+    // Plaintext, non-secret preferences (auto-lock duration, inline-autofill
+    // toggle). Deliberately readable without unlocking so the browser extension
+    // and the web app can honor them; never holds anything derived from a secret.
+    settings: data.settings || {},
     createdAt: data.createdAt
   }
+}
+
+// Persists non-secret vault preferences. Partial updates merge into the existing
+// settings map. autoLockMs is null (never lock) or a duration in ms bounded to a
+// sane range; inlineAutofill is a boolean.
+export const updateSettings = async (userId, settings = {}) => {
+  assert(settings && typeof settings === 'object', 'Invalid settings')
+  const clean = {}
+
+  if ('autoLockMs' in settings) {
+    const v = settings.autoLockMs
+    assert(
+      v === null || (typeof v === 'number' && Number.isFinite(v) && v >= 60000 && v <= 604800000),
+      'Invalid autoLockMs'
+    )
+    clean.autoLockMs = v
+  }
+  if ('inlineAutofill' in settings) {
+    assert(typeof settings.inlineAutofill === 'boolean', 'Invalid inlineAutofill')
+    clean.inlineAutofill = settings.inlineAutofill
+  }
+
+  const ref = vaultRef(userId)
+  const existing = await ref.get()
+  if (!existing.exists) throw httpError(404, 'Vault not found')
+
+  const merged = { ...(existing.data().settings || {}), ...clean }
+  await ref.set({ settings: merged, updatedAt: Date.now() }, { merge: true })
+  return merged
 }
 
 export const initVault = async (userId, body = {}) => {

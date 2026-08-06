@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react'
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
+import { DEFAULT_SETTINGS, withSettingDefaults } from '../utils/vaultSettings.js'
 import {
   createVault as cryptoCreateVault,
   unlockVault,
@@ -27,8 +28,6 @@ import {
 
 const VaultContext = createContext()
 
-const AUTO_LOCK_MS = 15 * 60 * 1000 // lock after 15 minutes of inactivity
-
 // status: 'loading' | 'uninitialized' | 'locked' | 'unlocked'
 export const VaultProvider = ({ children }) => {
   // Computed inside the component (not at module scope) to avoid a temporal
@@ -39,6 +38,9 @@ export const VaultProvider = ({ children }) => {
   const [items, setItems] = useState([])
   const [folders, setFolders] = useState([])
   const [error, setError] = useState(null)
+  // Server-synced, non-secret vault preferences (auto-lock duration, inline
+  // autofill). Falls back to defaults until meta loads.
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   // Sharing (Phase 2)
   const [sharedFolders, setSharedFolders] = useState([]) // folders shared WITH me
   const [sharedItems, setSharedItems] = useState([]) // entries in the open shared subtree
@@ -108,8 +110,24 @@ export const VaultProvider = ({ children }) => {
       return
     }
     metaRef.current = await jsonOrThrow(res)
+    setSettings(withSettingDefaults(metaRef.current.settings))
     setStatus('locked')
   }, [])
+
+  // Persist a partial settings change to the server and reflect it locally so the
+  // auto-lock timer (and any consumer) updates immediately.
+  const updateSettings = useCallback(async (partial) => {
+    const res = await request(
+      `${VAULT_URL}/settings`, 'PUT',
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ settings: partial })
+    )
+    const saved = await jsonOrThrow(res)
+    const merged = withSettingDefaults(saved)
+    if (metaRef.current) metaRef.current.settings = saved
+    setSettings(merged)
+    return merged
+  }, [VAULT_URL])
 
   useEffect(() => {
     refreshMeta().catch((err) => setError(err.message))
@@ -679,12 +697,13 @@ export const VaultProvider = ({ children }) => {
     setMyShares((prev) => prev.filter((s) => s.id !== shareId))
   }, [])
 
-  // Inactivity auto-lock while unlocked.
+  // Inactivity auto-lock while unlocked. `autoLockMs === null` means never lock,
+  // so we don't arm any timer or listeners in that case.
   useEffect(() => {
-    if (status !== 'unlocked') return
+    if (status !== 'unlocked' || settings.autoLockMs === null) return
     const resetTimer = () => {
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
-      lockTimerRef.current = setTimeout(lock, AUTO_LOCK_MS)
+      lockTimerRef.current = setTimeout(lock, settings.autoLockMs)
     }
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
     // Capture phase: `scroll` doesn't bubble from an element, so without it
@@ -697,7 +716,7 @@ export const VaultProvider = ({ children }) => {
       events.forEach((e) => window.removeEventListener(e, resetTimer, true))
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
     }
-  }, [status, lock])
+  }, [status, lock, settings.autoLockMs])
 
   const value = {
     status,
@@ -715,6 +734,9 @@ export const VaultProvider = ({ children }) => {
     reorderFolders,
     importItems,
     changeMasterPassword,
+    // Settings (server-synced, non-secret)
+    settings,
+    updateSettings,
     // Sharing
     sharedFolders,
     sharedItems,

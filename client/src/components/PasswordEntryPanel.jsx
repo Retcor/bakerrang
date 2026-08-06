@@ -12,6 +12,19 @@ const generatePassword = (length = 20) => {
   return out
 }
 
+// Opens a free-text entry URL in a new tab. Prepends https:// when there's no
+// scheme, and refuses anything that isn't http(s) (e.g. a javascript: URL). This
+// is the app's only external-link opener, so the guard lives here.
+const openUrl = (raw) => {
+  const trimmed = (raw || '').trim()
+  if (!trimmed) return
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`
+  let url
+  try { url = new URL(withScheme) } catch { return }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+  window.open(url.href, '_blank', 'noopener,noreferrer')
+}
+
 // A responsive detail panel for viewing/editing an entry. On large screens it
 // sits as a column beside the entry list, filling the app shell's height so it
 // never moves while the list scrolls; on small screens it slides over the list as
@@ -157,7 +170,14 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
 
           <div className='lg:shrink-0'>
             <label className={labelClass}>URL</label>
-            <input className={fieldClass} value={form.url} onChange={update('url')} placeholder='https://…' autoComplete='off' />
+            <div className='flex gap-2'>
+              <input className={fieldClass} value={form.url} onChange={update('url')} placeholder='https://…' autoComplete='off' />
+              <IconButton isDark={isDark} title='Open in new tab' disabled={!form.url.trim()} onClick={() => openUrl(form.url)}>
+                <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth='1.5'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25' />
+                </svg>
+              </IconButton>
+            </div>
           </div>
 
           {!hideFolder && (
@@ -219,12 +239,13 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
   )
 }
 
-const IconButton = ({ isDark, title, onClick, children }) => (
+const IconButton = ({ isDark, title, onClick, children, disabled }) => (
   <button
     type='button'
     title={title}
     onClick={onClick}
-    className={`px-3 rounded-lg flex-shrink-0 flex items-center justify-center font-medium shadow-lg transition-all duration-200 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+    disabled={disabled}
+    className={`px-3 rounded-lg flex-shrink-0 flex items-center justify-center font-medium shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
   >
     {children}
   </button>

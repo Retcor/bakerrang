@@ -55,6 +55,23 @@ body {
 }
 .field:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
 
+.pw-wrap { position: relative; display: flex; align-items: center; }
+.field-with-icon { padding-right: 40px; }
+.eye-toggle {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.eye-toggle:hover { color: var(--fg); }
+
 .btn {
   padding: 10px 12px;
   border: none;

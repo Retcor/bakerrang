@@ -6,7 +6,7 @@
 import { unlockVault, decryptItem } from '@vault-crypto'
 import { getVaultMeta, getItems } from './lib/api.js'
 import {
-  loadSession, saveSession, clearSession, AUTO_LOCK_MS, bytesToB64, b64ToBytes
+  loadSession, saveSession, clearSession, DEFAULT_SETTINGS, isIdleExpired, bytesToB64, b64ToBytes
 } from './lib/session.js'
 import { normalizeHost, entriesForTab } from './lib/match.js'
 
@@ -17,14 +17,14 @@ chrome.alarms.create(ALARM, { periodInMinutes: 1 })
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM) return
   const state = await loadSession()
-  if (state && Date.now() - state.lastActive > AUTO_LOCK_MS) await clearSession()
+  if (state && isIdleExpired(state)) await clearSession()
 })
 
 // Returns the live session if unlocked and not idle-expired, else null (locking).
 const getUnlocked = async () => {
   const state = await loadSession()
   if (!state) return null
-  if (Date.now() - state.lastActive > AUTO_LOCK_MS) {
+  if (isIdleExpired(state)) {
     await clearSession()
     return null
   }
@@ -76,7 +76,10 @@ const handlers = {
 
     const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', vaultKey))
     const items = await getItems()
-    const state = { vaultKeyRaw: bytesToB64(rawKey), items: items || [], lastActive: Date.now() }
+    // Merge server settings over defaults so autoLockMs/inlineAutofill are always
+    // concrete (autoLockMs may still be null = never lock).
+    const settings = { ...DEFAULT_SETTINGS, ...(meta.settings || {}) }
+    const state = { vaultKeyRaw: bytesToB64(rawKey), items: items || [], settings, lastActive: Date.now() }
     await saveSession(state)
     return { ok: true, itemCount: state.items.length }
   },
@@ -130,6 +133,60 @@ const handlers = {
       return { ok: true }
     } catch {
       return { ok: false, error: 'No login fields found on this page. Reload it and try again.' }
+    }
+  },
+
+  // Inline autofill: the content script asks (on field focus) which entries match
+  // this frame's URL. Metadata only — no passwords leave the SW here. Deliberately
+  // does not reset the idle timer, so a page can't keep the vault alive by
+  // programmatically focusing fields.
+  async inlineMatches ({ url }) {
+    const state = await getUnlocked()
+    if (!state || !state.settings || !state.settings.inlineAutofill) return { enabled: false, matches: [] }
+    const host = normalizeHost(url)
+    if (!host) return { enabled: true, matches: [] }
+    const vaultKey = await importVaultKey(state.vaultKeyRaw)
+    const decrypted = await decryptAll(vaultKey, state.items)
+    const matches = entriesForTab(host, decrypted).map((e) => ({
+      id: e.id,
+      title: e.title || '',
+      username: e.username || ''
+    }))
+    return { enabled: true, matches }
+  },
+
+  // Inline autofill: fill the chosen entry into the exact frame that asked (the
+  // content-script sender). Decryption stays in the SW; the credential goes only
+  // to that one frame via frameId — no broadcast, works inside iframes.
+  async fillHere ({ id }, sender) {
+    const state = await getUnlocked()
+    if (!state) return { ok: false, error: 'Vault is locked.' }
+    if (!state.settings || !state.settings.inlineAutofill) return { ok: false, error: 'Inline autofill is disabled.' }
+
+    const rec = state.items.find((r) => r.id === id)
+    if (!rec) return { ok: false, error: 'Entry not found.' }
+
+    const vaultKey = await importVaultKey(state.vaultKeyRaw)
+    let item
+    try {
+      item = await decryptItem(vaultKey, rec)
+    } catch {
+      return { ok: false, error: 'Could not decrypt this entry.' }
+    }
+    await touch(state)
+
+    const tabId = sender && sender.tab && sender.tab.id
+    if (tabId == null) return { ok: false, error: 'No tab context.' }
+    const frameId = sender && sender.frameId
+    const opts = typeof frameId === 'number' ? { frameId } : undefined
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, {
+        type: 'fill',
+        payload: { username: item.username || '', password: item.password || '' }
+      }, opts)
+      return res && res.ok ? { ok: true } : { ok: false, error: 'No login fields found.' }
+    } catch {
+      return { ok: false, error: 'Could not reach the page.' }
     }
   },
 
