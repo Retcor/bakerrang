@@ -5,6 +5,7 @@ import { AppProvider } from '../providers/AppProvider.jsx'
 import { VaultProvider } from '../providers/VaultProvider.jsx'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import AppGrid from './AppGrid.jsx'
+import logo from '../assets/bakerrang-logo.png'
 
 const MainContent = () => {
   const [openMenu, setOpenMenu] = useState(null) // 'appgrid' | 'profile' | null
@@ -48,8 +49,7 @@ const MainContent = () => {
               {/* Left: Logo */}
               <div className='flex items-center'>
                 <Link to='/' className='flex items-center'>
-                  <span className={`text-xl font-bold tracking-tight ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>BakerRang</span>
-                  <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-md ${isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-white'}`}>AI</span>
+                  <img src={logo} alt='BakerRang' className='h-12 w-12' />
                 </Link>
               </div>
 

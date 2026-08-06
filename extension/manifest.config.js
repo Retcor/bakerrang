@@ -15,6 +15,15 @@ export default defineManifest({
   // cookie and is exempt from page CORS.
   host_permissions: ['https://api.bakerrang.com/*'],
 
+  // Store / chrome://extensions / installed-extension icon. Paths are relative to
+  // the extension root; crxjs copies them into dist and rewrites the manifest.
+  icons: {
+    16: 'icons/icon-16.png',
+    32: 'icons/icon-32.png',
+    48: 'icons/icon-48.png',
+    128: 'icons/icon-128.png'
+  },
+
   background: {
     service_worker: 'src/background.js',
     type: 'module'
@@ -22,7 +31,11 @@ export default defineManifest({
 
   action: {
     default_popup: 'src/popup/popup.html',
-    default_title: 'Bakerrang Vault'
+    default_title: 'Bakerrang Vault',
+    default_icon: {
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png'
+    }
   },
 
   content_scripts: [

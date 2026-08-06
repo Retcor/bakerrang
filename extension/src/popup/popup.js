@@ -1,3 +1,5 @@
+import logoUrl from '../../icons/icon-48.png'
+
 const app = document.getElementById('app')
 
 const EYE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>'
@@ -40,7 +42,10 @@ const renderLocked = (error) => {
   const btn = h('button', { type: 'submit', textContent: 'Unlock', className: 'btn' })
   const msg = h('p', { className: 'error', textContent: error || '' })
   const form = h('form', { className: 'unlock' },
-    h('h1', { textContent: 'Unlock Vault', className: 'brand' }),
+    h('div', { className: 'brand-block' },
+      h('img', { src: logoUrl, alt: '', className: 'brand-logo-lg' }),
+      h('h1', { textContent: 'Unlock Vault', className: 'brand' })
+    ),
     pwWrap, btn, msg
   )
 
@@ -72,7 +77,10 @@ const renderUnlocked = async () => {
   const lockBtn = h('button', { textContent: 'Lock', className: 'link' })
   lockBtn.addEventListener('click', async () => { await send('lock'); render() })
   app.append(h('div', { className: 'header' },
-    h('span', { textContent: 'Bakerrang Vault', className: 'brand small' }),
+    h('div', { className: 'brand-wrap' },
+      h('img', { src: logoUrl, alt: '', className: 'brand-logo' }),
+      h('span', { textContent: 'Bakerrang Vault', className: 'brand small' })
+    ),
     lockBtn
   ))
 

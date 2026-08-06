@@ -134,6 +134,23 @@ this is the #1 "my fix didn't work" cause).
 - **Eye icon** on the popup master-password field (`popup.js` `renderLocked`) toggles
   `input.type` password/text.
 
+## Branding / Logos (2026-08)
+
+The app logo is a circular **"BR" badge** (yellow-on-dark, transparent PNG). Assets:
+- **In-app logo** (bundled, imported): `client/src/assets/bakerrang-logo.png` — used in the
+  header (`MainContent.jsx`, **logo only**, `h-12`; the old "BakerRang" text + "AI" pill were
+  removed) and the login page (`Login.jsx`, a large `h-28` badge above the tagline, no
+  wordmark). Import it, don't hardcode.
+- **Favicons / PWA** (served at web root from `client/public/`): `favicon.ico`,
+  `favicon-16/32x32.png`, `apple-touch-icon.png`, `android-chrome-192/512x512.png`, and
+  `site.webmanifest`. Linked in `client/index.html`; tab `<title>` is "BakerRang".
+- **Extension icons**: `extension/icons/icon-{16,32,48,128}.png`, wired via the manifest
+  `icons` map + `action.default_icon` (`manifest.config.js`); the popup (`popup.js`) shows
+  `icon-48.png` in its locked/unlocked headers.
+
+Source package the assets came from: `~/Downloads/bakerrang-logo-package`. Browser favicon
+and extension-toolbar icons cache hard — hard-refresh / reload to see updates.
+
 ## Recent Major Updates (2025-09-14)
 
 ### Theme System Implementation ✅

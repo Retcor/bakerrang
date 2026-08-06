@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import LoadingSpinner from './icons/LoadingSpinner.jsx'
 import GoogleLogin from './GoogleLogin.jsx'
+import logo from '../assets/bakerrang-logo.png'
 
 const Login = () => {
   const { isDark } = useTheme()
@@ -21,21 +22,15 @@ const Login = () => {
 
         {/* Logo/Brand section */}
         <div className="mb-12">
-          <h1 className={`text-4xl font-black tracking-tight mb-2 ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>BakerRang</h1>
-          <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-            Building AI tools that bring people together
-          </p>
+          <img src={logo} alt="BakerRang" className="h-44 w-44 mx-auto" />
         </div>
 
         {/* Content section */}
         <div className="space-y-6">
           <div>
-            <h2 className={`text-2xl font-semibold mb-2 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
+            <h2 className={`text-2xl font-semibold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
               Welcome back
             </h2>
-            <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-              Sign in to continue your language learning journey
-            </p>
           </div>
 
           {loggingIn ? (
