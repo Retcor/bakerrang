@@ -35,7 +35,7 @@ const FolderSelect = ({ isDark, value, options, placeholder, onChange, dropUp, d
       </button>
 
       {open && (
-        <div className={`absolute left-0 w-full z-50 max-h-60 overflow-auto rounded-lg border shadow-xl py-1 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} ${isDark ? 'bg-gray-800 border-white/10' : 'bg-white border-black/10'}`}>
+        <div className={`absolute left-0 w-full z-50 max-h-60 overflow-auto rounded-lg border shadow-xl py-1 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-black/10'}`}>
           {options.map((o) => (
             <button
               key={o.value}

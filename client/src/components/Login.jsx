@@ -12,27 +12,21 @@ const Login = () => {
     <div className={`min-h-screen flex items-center justify-center theme-bg ${isDark ? 'dark-theme-bg' : 'light-theme-bg'} relative overflow-hidden`}>
       {/* Background decorative elements */}
       <div className="absolute inset-0">
-        <div className={`absolute top-1/4 left-1/4 w-72 h-72 rounded-full opacity-20 blur-3xl ${isDark ? 'bg-blue-500' : 'bg-purple-300'}`}></div>
-        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl ${isDark ? 'bg-purple-500' : 'bg-blue-300'}`}></div>
-        <div className={`absolute top-1/2 left-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl ${isDark ? 'bg-green-400' : 'bg-pink-300'} transform -translate-x-1/2 -translate-y-1/2`}></div>
+        <div className={`absolute top-1/4 left-1/4 w-72 h-72 rounded-full opacity-20 blur-3xl ${isDark ? 'bg-amber-500' : 'bg-amber-200'}`}></div>
+        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl ${isDark ? 'bg-yellow-600' : 'bg-yellow-200'}`}></div>
+        <div className={`absolute top-1/2 left-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl ${isDark ? 'bg-orange-400' : 'bg-orange-200'} transform -translate-x-1/2 -translate-y-1/2`}></div>
       </div>
 
       {/* Main login card */}
       <div className={`relative z-10 w-full max-w-md mx-4 px-8 py-12 rounded-2xl text-center transition-all duration-300 backdrop-blur-xl ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
 
         {/* Logo/Brand section */}
-        <div className="mb-12">
+        <div className="mb-6">
           <img src={logo} alt="BakerRang" className="h-44 w-44 mx-auto" />
         </div>
 
         {/* Content section */}
         <div className="space-y-6">
-          <div>
-            <h2 className={`text-2xl font-semibold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
-              Welcome back
-            </h2>
-          </div>
-
           {loggingIn ? (
             <div className="flex flex-col items-center justify-center py-8">
               <LoadingSpinner />
@@ -58,11 +52,6 @@ const Login = () => {
           )}
         </div>
       </div>
-
-      {/* Floating elements for visual interest */}
-      <div className={`absolute top-20 left-20 w-2 h-2 rounded-full opacity-60 animate-pulse ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}></div>
-      <div className="absolute bottom-32 left-1/3 w-1 h-1 bg-blue-400 rounded-full opacity-40 animate-pulse" style={{animationDelay: '1s'}}></div>
-      <div className="absolute top-1/3 right-20 w-3 h-3 bg-purple-400 rounded-full opacity-50 animate-pulse" style={{animationDelay: '2s'}}></div>
     </div>
   )
 }

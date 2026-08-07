@@ -82,7 +82,7 @@ const Account = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -145,7 +145,7 @@ const Account = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5zM6 9a1 1 0 112 0v6H6V9zm6 0a1 1 0 112 0v6h-2V9z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -199,7 +199,7 @@ const Account = () => {
           <div className={`px-8 py-6 border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
             <div className="flex items-center space-x-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
               </div>

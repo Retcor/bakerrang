@@ -116,7 +116,7 @@ const WoWChat = ({ character, savedState }) => {
   const inputBg = isDark ? 'bg-black/30 border-white/10 text-white placeholder-white/30' : 'bg-white/60 border-black/10 text-gray-900 placeholder-gray-400'
   const sendBtnClass = isStreaming
     ? 'bg-gray-500 cursor-not-allowed text-white'
-    : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'
+    : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'
 
   return (
     <div className={`rounded-2xl ${cardClass} ${textClass} flex flex-col h-full`} style={{ minHeight: 520 }}>
@@ -140,7 +140,7 @@ const WoWChat = ({ character, savedState }) => {
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? isDark ? 'bg-accent-dark text-gray-900 rounded-br-sm' : 'bg-accent-light text-white rounded-br-sm'
+                  ? isDark ? 'bg-accent-dark text-gray-900 rounded-br-sm' : 'bg-accent-light text-gray-900 rounded-br-sm'
                   : isDark ? 'bg-white/10 text-white rounded-bl-sm' : 'bg-white/80 text-gray-900 rounded-bl-sm'
               }`}
             >
@@ -171,7 +171,7 @@ const WoWChat = ({ character, savedState }) => {
             onKeyDown={handleKeyDown}
             placeholder='Ask about your character...'
             disabled={isStreaming}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-sm border outline-none transition-colors resize-none ${inputBg} ${isDark ? 'focus:border-[#D4ED31]/50' : 'focus:border-[#1e40af]/50'}`}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm border outline-none transition-colors resize-none ${inputBg} ${isDark ? 'focus:border-[#FFD500]/50' : 'focus:border-[#FFD500]/50'}`}
           />
           <button
             onClick={sendMessage}

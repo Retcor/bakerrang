@@ -83,7 +83,7 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
       // to the shell, giving the unprefixed `overflow-y-auto` a definite height to
       // scroll against on short windows; when the form fits there's no overflow at
       // all and nothing is clipped.
-      className={`fixed inset-0 z-50 overflow-y-auto p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} lg:static lg:z-auto lg:inset-auto lg:max-h-full lg:p-0 lg:bg-transparent lg:w-[440px] lg:shrink-0 transition-all duration-300 ${shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
+      className={`fixed inset-0 z-50 overflow-y-auto p-4 ${isDark ? 'bg-neutral-900' : 'bg-white'} lg:static lg:z-auto lg:inset-auto lg:max-h-full lg:p-0 lg:bg-transparent lg:w-[440px] lg:shrink-0 transition-all duration-300 ${shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
     >
       {/* Desktop: `lg:h-full` caps the card at the panel column so the flex column
           below divides it exactly and Notes shrinks to fit — without it the card

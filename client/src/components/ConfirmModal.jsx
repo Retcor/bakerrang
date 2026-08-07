@@ -33,14 +33,14 @@ const ConfirmModal = ({ message, title, open, cancelFunc, confirmFunc }) => {
       {open && (
         <div className='fixed inset-0 z-50 flex justify-center items-start pt-[20vh] p-4' style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
           <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' />
-          <div className={`w-full max-w-md p-6 rounded-xl shadow-2xl relative z-10 transition-all duration-300 ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}>
+          <div className={`w-full max-w-md p-6 rounded-xl shadow-2xl relative z-10 transition-all duration-300 ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}>
             <h2 className={`text-xl font-medium mb-4 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{title}</h2>
             <p className={`mb-4 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
               {message}
             </p>
             <div className='flex justify-end space-x-3'>
               <button
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-gray-800 border border-gray-600' : 'text-theme-light hover:bg-gray-100 border border-gray-300'}`}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-white/10 border border-white/15' : 'text-theme-light hover:bg-gray-100 border border-gray-300'}`}
                 onClick={cancelFunc}
               >
                 Cancel

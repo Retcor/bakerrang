@@ -167,7 +167,7 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
     <div className='fixed inset-0 z-50' style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}>
       <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' onClick={onClose} />
       <div
-        className={`absolute left-1/2 -translate-x-1/2 w-full max-w-2xl p-6 rounded-xl shadow-2xl z-10 max-h-[85vh] overflow-y-auto ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}
+        className={`absolute left-1/2 -translate-x-1/2 w-full max-w-2xl p-6 rounded-xl shadow-2xl z-10 max-h-[85vh] overflow-y-auto ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}
         style={{ top: '8vh' }}
       >
         <h2 className={`text-xl font-medium mb-1 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Import from KeePass</h2>

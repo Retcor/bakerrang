@@ -47,7 +47,7 @@ const ProductCounter = ({ product, incrementer, decrementer }) => {
         </div>
 
         {product.count > 0 && (
-          <div className={`px-2 py-1 rounded-md text-xs font-medium ${isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-white'}`}>
+          <div className={`px-2 py-1 rounded-md text-xs font-medium ${isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-gray-900'}`}>
             Added
           </div>
         )}

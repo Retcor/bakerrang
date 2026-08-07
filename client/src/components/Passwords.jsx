@@ -910,11 +910,11 @@ const VaultView = ({ isDark, vault }) => {
                 const isCurrent = selectedFolder === f.id
                 const drop = dropTarget && dropTarget.id === f.id ? dropTarget.mode : null
                 const dropClass = drop === 'before'
-                  ? 'shadow-[inset_0_2px_0_0_#60a5fa]'
+                  ? 'shadow-[inset_0_2px_0_0_#FFD500]'
                   : drop === 'after'
-                    ? 'shadow-[inset_0_-2px_0_0_#60a5fa]'
+                    ? 'shadow-[inset_0_-2px_0_0_#FFD500]'
                     : drop === 'inside'
-                      ? 'ring-2 ring-inset ring-blue-400'
+                      ? 'ring-2 ring-inset ring-amber-400'
                       : ''
                 return (
                   <div key={f.id}>
@@ -1342,7 +1342,7 @@ const VaultView = ({ isDark, vault }) => {
         <>
           <div className='fixed inset-0 z-[60]' onClick={() => setFolderMenu(null)} />
           <div
-            className={`fixed z-[61] min-w-[160px] rounded-lg shadow-xl border py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}
+            className={`fixed z-[61] min-w-[160px] rounded-lg shadow-xl border py-1 ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-gray-200'}`}
             style={{
               top: Math.min(folderMenu.rect.bottom + 4, window.innerHeight - 160),
               left: Math.min(folderMenu.rect.right - 160, window.innerWidth - 168)
@@ -1361,7 +1361,7 @@ const VaultView = ({ isDark, vault }) => {
       {selectedIds.size > 0 && (
         <div className='fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-md'>
           {moveError && <div className='mb-2 text-center text-xs text-red-400'>{moveError}</div>}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl shadow-2xl border backdrop-blur ${isDark ? 'bg-gray-900/95 border-white/5' : 'bg-white/95 border-black/10'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl shadow-2xl border backdrop-blur ${isDark ? 'bg-neutral-800/95 border-white/10' : 'bg-white/95 border-black/10'}`}>
             <span className={`text-sm font-medium whitespace-nowrap flex-shrink-0 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{selectedIds.size} selected</span>
             <FolderSelect
               isDark={isDark}
@@ -1386,7 +1386,7 @@ const VaultView = ({ isDark, vault }) => {
       {/* Floating chip following the pointer while dragging a folder */}
       {dragId && dragPos && (
         <div
-          className={`fixed z-50 pointer-events-none px-3 py-1.5 rounded-lg text-sm shadow-xl border ${isDark ? 'bg-gray-800 text-theme-dark border-white/20' : 'bg-white text-theme-light border-black/20'}`}
+          className={`fixed z-50 pointer-events-none px-3 py-1.5 rounded-lg text-sm shadow-xl border ${isDark ? 'bg-neutral-800 text-theme-dark border-white/20' : 'bg-white text-theme-light border-black/20'}`}
           style={{ left: dragPos.x + 12, top: dragPos.y + 12 }}
         >
           {(folders.find((f) => f.id === dragId) || {}).name || 'Folder'}

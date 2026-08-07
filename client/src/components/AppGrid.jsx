@@ -95,7 +95,7 @@ const AppGrid = ({ onNavigate }) => {
           onClick={() => handleClick(app.route)}
           className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 hover:scale-105 group ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/8'}`}
         >
-          <div className={`mb-2 transition-colors duration-200 ${isDark ? 'text-brand-dark group-hover:text-white' : 'text-brand-light group-hover:text-blue-700'}`}>
+          <div className={`mb-2 transition-colors duration-200 ${isDark ? 'text-brand-dark group-hover:text-white' : 'text-yellow-500 group-hover:text-yellow-600'}`}>
             {app.icon}
           </div>
           <span className={`text-xs font-medium text-center leading-tight ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>

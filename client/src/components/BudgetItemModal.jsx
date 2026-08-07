@@ -100,7 +100,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
 
       {/* Modal */}
       <div className={`relative z-10 w-full max-w-md mx-4 rounded-2xl shadow-2xl overflow-hidden
-        ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}
+        ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}
       >
         {/* Header */}
         <div className='px-6 py-4 flex items-center justify-between' style={{ borderBottom: `2px solid ${accentColor}30` }}>
@@ -141,7 +141,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
                 <label className={labelClass}>Frequency</label>
                 <select value={frequency} onChange={e => setFrequency(e.target.value)} className={selectClass}>
                   {FREQUENCY_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value} className={isDark ? 'bg-gray-800' : 'bg-white'}>{o.label}</option>
+                    <option key={o.value} value={o.value} className={isDark ? 'bg-neutral-800' : 'bg-white'}>{o.label}</option>
                   ))}
                 </select>
               </div>
@@ -152,7 +152,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
                       <label className={labelClass}>Day Type</label>
                       <select value={dayType} onChange={e => setDayType(e.target.value)} className={selectClass}>
                         {DAY_TYPE_OPTIONS.map(o => (
-                          <option key={o.value} value={o.value} className={isDark ? 'bg-gray-800' : 'bg-white'}>{o.label}</option>
+                          <option key={o.value} value={o.value} className={isDark ? 'bg-neutral-800' : 'bg-white'}>{o.label}</option>
                         ))}
                       </select>
                     </div>
@@ -180,7 +180,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
                 <label className={labelClass}>Day Type</label>
                 <select value={dayType} onChange={e => setDayType(e.target.value)} className={selectClass}>
                   {DAY_TYPE_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value} className={isDark ? 'bg-gray-800' : 'bg-white'}>{o.label}</option>
+                    <option key={o.value} value={o.value} className={isDark ? 'bg-neutral-800' : 'bg-white'}>{o.label}</option>
                   ))}
                 </select>
               </div>
@@ -229,9 +229,9 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
                 <div>
                   <label className={labelClass}>Associate with Payday (optional)</label>
                   <select value={paydayId} onChange={e => setPaydayId(e.target.value)} className={selectClass}>
-                    <option value='' className={isDark ? 'bg-gray-800' : 'bg-white'}>(auto-assign)</option>
+                    <option value='' className={isDark ? 'bg-neutral-800' : 'bg-white'}>(auto-assign)</option>
                     {paydays.map(pd => (
-                      <option key={pd.id} value={pd.id} className={isDark ? 'bg-gray-800' : 'bg-white'}>{pd.name}</option>
+                      <option key={pd.id} value={pd.id} className={isDark ? 'bg-neutral-800' : 'bg-white'}>{pd.name}</option>
                     ))}
                   </select>
                 </div>
@@ -274,7 +274,7 @@ const BudgetItemModal = ({ entry, onClose, onSave, onDelete, paydays = [] }) => 
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
                 ${(!name.trim() || !amount)
                   ? 'opacity-40 cursor-not-allowed'
-                  : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'}`}
+                  : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'}`}
             >
               Save
             </button>

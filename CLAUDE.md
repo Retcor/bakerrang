@@ -136,20 +136,65 @@ this is the #1 "my fix didn't work" cause).
 
 ## Branding / Logos (2026-08)
 
-The app logo is a circular **"BR" badge** (yellow-on-dark, transparent PNG). Assets:
+The app logo is a blocky pixel **"B" monogram** — **golden-yellow `#FFC018` + neutral
+charcoal `#303030`/`#181818`** (sampled from the art), transparent PNG. It replaced an
+earlier circular "BR" badge; the logo went through several iterations before this one.
+Assets:
 - **In-app logo** (bundled, imported): `client/src/assets/bakerrang-logo.png` — used in the
   header (`MainContent.jsx`, **logo only**, `h-12`; the old "BakerRang" text + "AI" pill were
-  removed) and the login page (`Login.jsx`, a large `h-28` badge above the tagline, no
+  removed) and the login page (`Login.jsx`, a large `h-44` badge above the tagline, no
   wordmark). Import it, don't hardcode.
-- **Favicons / PWA** (served at web root from `client/public/`): `favicon.ico`,
-  `favicon-16/32x32.png`, `apple-touch-icon.png`, `android-chrome-192/512x512.png`, and
-  `site.webmanifest`. Linked in `client/index.html`; tab `<title>` is "BakerRang".
+- **Favicons / PWA** (served at web root from `client/public/`): `favicon.ico` (a 32px
+  PNG-embedded ICO), `favicon-16/32x32.png`, `apple-touch-icon.png`,
+  `android-chrome-192/512x512.png`, and `site.webmanifest`. Linked in `client/index.html`;
+  tab `<title>` is "BakerRang". `site.webmanifest` is brand-tuned (`theme_color: #FFD500`,
+  `background_color: #1a1a1a`) — keep it; don't overwrite with a generic package manifest.
 - **Extension icons**: `extension/icons/icon-{16,32,48,128}.png`, wired via the manifest
   `icons` map + `action.default_icon` (`manifest.config.js`); the popup (`popup.js`) shows
-  `icon-48.png` in its locked/unlocked headers.
+  `icon-48.png`. **Rebuild the extension (`npm run build`) after changing icons** so `dist`
+  updates, then reload the extension card.
 
-Source package the assets came from: `~/Downloads/bakerrang-logo-package`. Browser favicon
-and extension-toolbar icons cache hard — hard-refresh / reload to see updates.
+Source package: `~/Downloads/bakerrang-logo-assets` (1680px `-master.png`).
+
+**⚠️ Logo packages have shipped with ~84% transparent padding** (mark ~16% of each frame →
+renders as a tiny dot everywhere, favicons included). Every asset above was **auto-trimmed
+from the master and regenerated tightly** (mark ~90% fill) — done with the running browser's
+`<canvas>` (no ImageMagick/sharp installed): draw the master, compute the alpha bounding box,
+redraw cropped+centered at each target size, `toDataURL` → write bytes. If you swap logos
+again, **check the alpha fill first** and re-trim if it's padded.
+
+Browser favicon and extension-toolbar icons cache hard — hard-refresh / reload to see updates.
+
+## Color Scheme / Palette (2026-08)
+
+The palette is **gold accent + neutral charcoal**, matched to the logo. It replaced the
+original split accent (lime `#D4ED31` in dark / blue `#1e40af` in light — both **retired**).
+
+- **Single source of truth: CSS vars in `:root`** (`client/src/index.css`):
+  `--brand-gold: #FFD500` (primary accent, both modes), `--brand-gold-hover: #F0C400`,
+  `--brand-gold-deep: #9A6B00` (accent **text/SVG on light bg**, where bright gold would be
+  illegible), `--brand-ink: #1f2937` (dark text placed **on** gold fills). Mirrored as a
+  `brand` token in `tailwind.config.cjs` (`bg-brand`/`text-brand`) for new markup.
+- **Accent classes** (all reference the vars): `.text-brand-{light,dark}`,
+  `.text-accent-{light,dark}`, `.btn-primary-{light,dark}`, `.bg-accent-{light,dark}`,
+  `.fill-accent-{light,dark}`. Buttons/fills are bright gold with `--brand-ink` text in both
+  modes; only accent **text** differs (deep amber on light, bright gold on dark).
+- **Surfaces:** dark mode is a **solid neutral charcoal `#1a1a1a`** (`.dark-theme-bg`, was a
+  warm brown-black gradient); light mode is a **neutral light-gray gradient** (`.light-theme-bg`,
+  was warm cream). Dark glass borders carry a faint gold tint `rgba(255,213,0,0.14)`.
+- **Dropdowns/modals:** dark dropdowns (`.glass-dropdown-dark`, plus `FolderSelect`'s list =
+  `bg-neutral-800`) are **neutral charcoal**, not pure black / blue-slate. Modal panels use
+  dedicated **`.glass-modal-{light,dark}`** (`~0.97` opaque) instead of the translucent
+  `.glass-card-*` — a 60%-opaque card goes muddy-gray over the `bg-black/50` backdrop. All 5
+  modals (Confirm/AddVoice/BudgetItem/ShareFolder/KeePassImport) use these.
+- **⚠️ Text-on-accent gotcha:** anything on `bg-accent-*` must use **dark** text
+  (`text-gray-900` / `var(--brand-ink)`), **never white** — the old blue-accent used white
+  text, which is illegible on gold. This was fixed across ~15 components; keep it dark if you
+  add new accent surfaces.
+- The WoW inline focus-borders (`WoWChat.jsx`, `WoWAdvisor.jsx`) and the Passwords folder
+  drag-drop indicator (`Passwords.jsx`) use the gold hex directly (`#FFD500`) — keep in sync
+  with `--brand-gold` if it changes. Domain colors (WoW class colors, Budget category colors,
+  SignLanguage canvas) are intentionally **not** themed.
 
 ## Recent Major Updates (2025-09-14)
 

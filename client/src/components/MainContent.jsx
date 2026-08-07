@@ -69,7 +69,7 @@ const MainContent = () => {
                     </button>
 
                     {openMenu === 'appgrid' && (
-                      <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-3 rounded-xl z-50 border shadow-xl w-[340px] max-w-[90vw] ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+                      <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-3 rounded-xl z-50 border shadow-xl w-[340px] max-w-[90vw] ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-gray-200'}`}>
                         <AppGrid onNavigate={closeMenu} />
                       </div>
                     )}
@@ -98,15 +98,15 @@ const MainContent = () => {
                       className={`w-8 h-8 rounded-lg items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}
                       style={{ display: auth && auth.user && auth.user.photo ? 'none' : 'flex' }}
                     >
-                      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-5 h-5 ${isDark ? 'text-gray-900' : 'text-white'}`}>
+                      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-5 h-5 ${isDark ? 'text-gray-900' : 'text-gray-900'}`}>
                         <path strokeLinecap='round' strokeLinejoin='round' d='M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z' />
                       </svg>
                     </div>
                   </button>
                   {openMenu === 'profile' && (
-                    <div className={`z-50 origin-top absolute right-0 mt-3 w-52 rounded-xl transition-all duration-200 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border shadow-xl`} role='menu' aria-orientation='vertical' aria-labelledby='user-menu'>
+                    <div className={`z-50 origin-top absolute right-0 mt-3 w-52 rounded-xl transition-all duration-200 ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-gray-200'} border shadow-xl`} role='menu' aria-orientation='vertical' aria-labelledby='user-menu'>
                       <div className='px-2 py-2' role='none'>
-                        <Link to='/account' onClick={closeMenu} className={`flex items-center px-3 py-3 text-sm w-full text-left transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-gray-800' : 'text-theme-light hover:bg-gray-100'} rounded-lg`}>
+                        <Link to='/account' onClick={closeMenu} className={`flex items-center px-3 py-3 text-sm w-full text-left transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-white/10' : 'text-theme-light hover:bg-gray-100'} rounded-lg`}>
                           <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className='w-4 h-4 mr-3'>
                             <path strokeLinecap='round' strokeLinejoin='round' d='M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z' />
                           </svg>
@@ -117,7 +117,7 @@ const MainContent = () => {
                             toggleTheme()
                             closeMenu()
                           }}
-                          className={`flex items-center justify-between px-3 py-3 text-sm w-full text-left transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-gray-800' : 'text-theme-light hover:bg-gray-100'} rounded-lg`}
+                          className={`flex items-center justify-between px-3 py-3 text-sm w-full text-left transition-all duration-200 ${isDark ? 'text-theme-dark hover:bg-white/10' : 'text-theme-light hover:bg-gray-100'} rounded-lg`}
                           role='menuitem'
                         >
                           <div className='flex items-center'>
@@ -135,7 +135,7 @@ const MainContent = () => {
                             <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
                           </div>
                         </button>
-                        <div className={`my-2 mx-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
+                        <div className={`my-2 mx-2 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`} />
                         <button
                           onClick={() => logout()}
                           className='flex items-center px-3 py-3 text-sm w-full text-left transition-all duration-200 text-red-400 hover:bg-red-500/10 rounded-lg'

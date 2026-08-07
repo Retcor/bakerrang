@@ -258,7 +258,7 @@ const StoryBook = () => {
         >
           <div className='flex items-center space-x-3'>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-4 h-4 ${isDark ? 'text-gray-900' : 'text-white'}`}>
+              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-4 h-4 ${isDark ? 'text-gray-900' : 'text-gray-900'}`}>
                 <path strokeLinecap='round' strokeLinejoin='round' d='M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25' />
               </svg>
             </div>
@@ -310,7 +310,7 @@ const StoryBook = () => {
                         <div className='flex items-center gap-1'>
                           <button
                             onClick={() => handleOpenStory(story)}
-                            className={`flex-1 py-1 rounded-md text-xs font-medium transition-all duration-200 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'}`}
+                            className={`flex-1 py-1 rounded-md text-xs font-medium transition-all duration-200 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'}`}
                           >
                             Open
                           </button>
@@ -349,7 +349,7 @@ const StoryBook = () => {
         <div className={`rounded-2xl p-8 mb-8 transition-all duration-300 ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           <div className='flex items-center space-x-4 mb-6'>
             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-white'}`}>
+              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-gray-900'}`}>
                 <path strokeLinecap='round' strokeLinejoin='round' d='M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25' />
               </svg>
             </div>
@@ -414,12 +414,12 @@ const StoryBook = () => {
       {/* Save modal */}
       {saveModalOpen && (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4' style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}>
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}>
             <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Save Story</h3>
             <InputWrapper label='Story Name' value={saveTitle} setValue={setSaveTitle} onKeyDown={(e) => { if (e.key === 'Enter' && saveTitle.trim()) handleSaveStory() }} />
             <div className='flex justify-end space-x-3 mt-5'>
               <button onClick={() => setSaveModalOpen(false)} className={btnGlass}>Cancel</button>
-              <button onClick={handleSaveStory} disabled={!saveTitle.trim() || isSaving} className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-40 flex items-center space-x-2 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'}`}>
+              <button onClick={handleSaveStory} disabled={!saveTitle.trim() || isSaving} className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-40 flex items-center space-x-2 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'}`}>
                 {isSaving ? <><LoadingSpinner svgClassName='!h-4 !w-4' /><span>Saving...</span></> : <span>Save</span>}
               </button>
             </div>
@@ -430,12 +430,12 @@ const StoryBook = () => {
       {/* Rename modal */}
       {renameTarget && (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4' style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}>
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}>
             <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Rename Story</h3>
             <InputWrapper label='Story Name' value={renameTitle} setValue={setRenameTitle} onKeyDown={(e) => { if (e.key === 'Enter' && renameTitle.trim()) handleRenameStory() }} />
             <div className='flex justify-end space-x-3 mt-5'>
               <button onClick={() => setRenameTarget(null)} className={btnGlass}>Cancel</button>
-              <button onClick={handleRenameStory} disabled={!renameTitle.trim() || isRenaming} className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-40 flex items-center space-x-2 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'}`}>
+              <button onClick={handleRenameStory} disabled={!renameTitle.trim() || isRenaming} className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-40 flex items-center space-x-2 ${isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'}`}>
                 {isRenaming ? <><LoadingSpinner svgClassName='!h-4 !w-4' /><span>Saving...</span></> : <span>Rename</span>}
               </button>
             </div>
@@ -448,7 +448,7 @@ const StoryBook = () => {
         <div className={`rounded-2xl p-8 mb-8 transition-all duration-300 ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'} shadow-2xl`}>
           <div className='flex items-center space-x-4 mb-6'>
             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'} shadow-lg`}>
-              <LoadingSpinner svgClassName={`!h-8 !w-8 ${isDark ? '!text-gray-900' : '!text-white'}`} />
+              <LoadingSpinner svgClassName={`!h-8 !w-8 ${isDark ? '!text-gray-900' : '!text-gray-900'}`} />
             </div>
             <div>
               <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{loadingDescription}</h3>
@@ -458,7 +458,7 @@ const StoryBook = () => {
           <div className='space-y-3'>
             <div className='flex justify-between items-center'>
               <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Progress</span>
-              <span className={`text-lg font-bold px-3 py-1 rounded-lg ${isDark ? 'text-gray-900 bg-accent-dark' : 'text-white bg-accent-light'}`}>{percentage}%</span>
+              <span className={`text-lg font-bold px-3 py-1 rounded-lg ${isDark ? 'text-gray-900 bg-accent-dark' : 'text-gray-900 bg-accent-light'}`}>{percentage}%</span>
             </div>
             <div className={`w-full rounded-full h-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} shadow-inner`}>
               <div className={`h-4 rounded-full transition-all duration-500 shadow-sm ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`} style={{ width: `${percentage}%` }} />
@@ -475,7 +475,7 @@ const StoryBook = () => {
             <div className='flex items-center justify-between flex-wrap gap-4'>
               <div className='flex items-center space-x-4'>
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-white'}`} fill='currentColor' viewBox='0 0 20 20'>
+                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill='currentColor' viewBox='0 0 20 20'>
                     <path fillRule='evenodd' d='M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z' clipRule='evenodd' />
                   </svg>
                 </div>
