@@ -33,7 +33,15 @@ const app = express()
 // TLS termination (used by the 'auto' secure-cookie setting below).
 app.set('trust proxy', 1)
 
-app.use(helmet())
+// The client is served from a different origin than this API (a separate port
+// in dev, CLIENT_DOMAIN vs SERVER_DOMAIN in prod). Helmet defaults
+// Cross-Origin-Resource-Policy to 'same-origin', which blocks the browser from
+// loading cross-origin no-cors subresources like <audio src> / <img src>
+// (fetch() is unaffected — it's governed by CORS instead). Relax CORP to
+// 'cross-origin' so TTS audio and similar media load in the client.
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}))
 
 const allowedOrigins = [process.env.CLIENT_DOMAIN, process.env.CHATBOT_ORIGIN].filter(Boolean)
 app.use(cors({
