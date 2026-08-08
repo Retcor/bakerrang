@@ -7,36 +7,47 @@ Fill in the sections with as much detail as possible — the more context, the b
 
 ## Summary
 
-Dan Baker is a senior full-stack software developer with over a decade of professional experience building
-production-grade systems across fintech, legal tech, music software, and health tech industries. He has
-strong expertise in React, TypeScript, Kotlin, Node.js, and Google Cloud Platform, with hands-on experience
-leading teams, architecting microservices, and shipping meaningful products. He is currently open to new
-opportunities and is especially interested in roles where he can make a measurable impact.
+Dan Baker is a senior full-stack software developer and AI engineer with over a decade (14+ years) of
+professional experience building production-grade systems across fintech, legal tech, music software, and
+health tech industries. He has strong expertise in React, TypeScript, Kotlin, Node.js, and Google Cloud
+Platform, and now works on a dedicated AI team building production AI/RAG features and internal AI tooling.
+He has hands-on experience leading teams, architecting microservices, and shipping meaningful products. He is
+currently open to new opportunities and is especially interested in roles where he can make a measurable impact.
 
 ---
 
 ## Current Role and Status
 
-Dan is currently a Senior Developer at Equivant, a company focused on building software for the legal/court system industry. 
-He is not actively looking for any new opportunities but always open to chat or work on a contract basis.
+Dan is currently a Senior Developer / AI Engineer at Equivant, a company focused on building software for the
+legal/court system industry. He returned to Equivant in Dec 2023 to work on their Integration software and has
+since moved to a newly created AI team, where he builds greenfield AI projects, organization-wide AI skills and
+tooling, and in-app RAG solutions. He is not actively looking for any new opportunities but is always open to
+chat or work on a contract basis.
 
 ---
 
 ## Work Experience
 
-### Equivant — Senior Developer (Jan 2024 - Present)
+### Equivant — Senior Developer / AI Engineer (Dec 2023 - Present)
 
 Equivant builds software for the legal/court system industry — case management and risk assessment tools
 used by courts across the United States.
 
-**Technologies used:** Java, JavaScript, React, SQL, various CMS platforms, Tomcat, Docker, Claude, Flyway
+**Technologies used:** Java, JavaScript, React, SQL, various CMS platforms, Tomcat, Docker, Flyway,
+Anthropic Claude, RAG / vector search
 
 **Key contributions and accomplishments:**
+- Returned to Equivant to work on their Integration software, implementing dozens of interfaces that integrate
+  customer systems into Equivant's CMS products — work that regularly required customer-facing coordination and testing.
+- Helped lead a company-wide AI initiative, delivering initial validation and POC documentation that outlined
+  both the benefits and the pitfalls of adopting AI across the organization.
+- Moved to the newly created AI team to build greenfield projects, organization-wide AI skills and tools, and
+  in-app RAG (Retrieval Augmented Generation) solutions.
+- Redesigned many Integration-related applications to feel more modern, improving customers' willingness to engage with them.
 - Developed an internal library to handle all things related to uploading and downloading documents.
-- Added support to do Case eFilings to multiple CMS products
-- Added support to do Case eCitations to multiple CMS products
-- Upgraded 2 major products to use Flyway to track and version control database migrations
-- Participated in a team to POC usage of AI within the company
+- Added support to do Case eFilings to multiple CMS products.
+- Added support to do Case eCitations to multiple CMS products.
+- Upgraded 2 major products to use Flyway to track and version control database migrations.
 
 **Team size:** Back as a individual contributor in a company of about 75 people with about 6 other dev teams.
 **Why the return to Equivant?:** Equivant was needing additional help and they offered a similar salary
@@ -48,7 +59,7 @@ with a CMS to save and create Case data within the CMS.
 
 ---
 
-### tZERO — Senior Developer (Dec 2021 - Jan 2024)
+### tZERO — Senior Developer (Dec 2021 - Dec 2023)
 
 tZERO is a fintech company building regulated digital securities trading infrastructure. Dan works across
 a complex microservices architecture.
@@ -161,11 +172,12 @@ in his career.
 - **Vector search** — Firestore vector embeddings for AI applications
 
 ### AI / Emerging Tech
+- **Anthropic Claude** — used professionally on Equivant's AI team for RAG solutions, AI tooling, and organization-wide AI skills
 - **OpenAI API** — GPT-4o, GPT-4o-mini, DALL-E 3, Whisper, embeddings
 - **ElevenLabs** — voice cloning and text-to-speech
 - **Deepgram** — real-time speech-to-text
-- **RAG (Retrieval Augmented Generation)** — vector search + LLM pipelines
-- Building AI-powered applications as a strong personal interest
+- **RAG (Retrieval Augmented Generation)** — vector search + LLM pipelines, built both at work and in personal projects
+- Building AI-powered applications both professionally and as a strong personal interest
 
 ### Tools & Practices
 - **Git** — daily use, branching strategies, code review
@@ -181,10 +193,17 @@ in his career.
 Dan actively builds and maintains a personal full-stack learning platform at bakerrang.com that showcases
 his interest in AI integration:
 
+- **Password Manager / Vault** — a full credential manager with folder organization, secure folder sharing,
+  KeePass import, and a companion browser extension (autofill for username/password fields, adjustable
+  auto-lock, and quick-launch of entries). Dan's most active recent project.
+- **World of Warcraft AI Advisor** — an AI advisor and chat that answers character build/gear questions using
+  RAG over game data (e.g. tier-set knowledge), including a character panel for contextual advice.
+- **ASL Sign Language Recognizer** — real-time American Sign Language fingerspelling detection in the browser
+  using the webcam, MediaPipe hand tracking, and fingerpose gesture estimation (including dynamic-stroke letters like J and Z).
 - **Polyglot Instant** — real-time voice translation using Deepgram STT, GPT-4o-mini translation, and
   ElevenLabs voice cloning. Translates spoken words into another language and plays it back in Dan's cloned voice.
 - **StoryBook** — AI story generator using GPT-4o for text, DALL-E 3 for images, and ElevenLabs for narration.
-  Stories are saved to Firestore.
+  Generated stories can be saved and managed, backed by Firestore.
 - **Budget Tracker** — personal budget management with calendar view, Firestore backend, and income/expense tracking.
 - **SuperMarket** — smart shopping list manager for Supermarket Simulator with license-based product management.
 - This chatbot itself — RAG-based AI chatbot using Firestore vector search and OpenAI embeddings.
@@ -241,7 +260,18 @@ Stack: React, Vite, Tailwind, Express, Firestore, GCP, Docker, Kubernetes
 
 - Location: I'm located in Eagle Mountain on the border of Saratoga Springs, Utah
 - Remote work preferred but willing to do hybrid
-- Availability: Not looking for anything immediate but open for side work or 
+- Availability: Not looking for anything immediate but open for side work or contract engagements.
+
+---
+
+## Contact & Links
+
+- **Email:** bakerz2009@gmail.com
+- **Portfolio:** bakerrang.com
+- **LinkedIn:** https://www.linkedin.com/in/daniel-baker-0646535a/
+- **GitHub:** https://github.com/Retcor
+
+The best way for an employer to reach Dan is by email at bakerz2009@gmail.com.
 
 ---
 
