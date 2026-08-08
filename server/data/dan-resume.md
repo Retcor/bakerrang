@@ -121,17 +121,6 @@ for their court technology products. This led to a full-time offer from Equivant
 
 ---
 
-### Ilio — Junior Developer (May 2013 - Feb 2014)
-
-Ilio was a music software company building a vendor portfolio management platform for the music software
-industry.
-
-**Technologies used:** Java, Spring, Tomcat, Maven, Git, Javascript
-**Key contributions:** Developed features for the portfolio management platform that musicians and vendors
-used to manage software products.
-
----
-
 ### USANA Health Sciences — Junior Developer (Nov 2012 - Jan 2015)
 
 USANA is a health and nutrition products company. Dan worked on their software development team early
@@ -142,6 +131,38 @@ in his career.
 - Worked on payment systems and automation tooling.
 - This was Dan's first professional software development role and where he built his foundational skills
   in Java and enterprise software development.
+
+---
+
+## Side Gigs & Contract Work
+
+Dan is **always open to side gigs and contract work** — he genuinely loves having extra side work
+alongside his day job, whether that's a contract, a nightly gig, or building something for a local
+client. On top of a full-time role he is typically available for an **extra 15–20 hours per week**.
+These engagements are also one of his favorite ways to pick up new tech stacks and work on a variety
+of projects, so if you have side or contract work, he'd love to hear about it.
+
+### Cratermus.com — Senior Developer (Jul 2026 - Present)
+
+Designed and built Cratermus.com, a marketing site for a local music producer, with ongoing work to
+add and update features as needed to support their marketing efforts.
+
+**Technologies used:** Next.js, React, TypeScript
+
+### Keyhole / 1898 and Co — Senior Developer (Nov 2023 - Feb 2024)
+
+A nightly side position focused on improving and extending existing APIs. Dan enjoyed getting
+hands-on with a different stack — Python and Django.
+
+**Technologies used:** Python, Django, REST APIs
+
+### Ilio — Junior Developer (May 2013 - Feb 2014)
+
+An early-career night position taken for extra experience. Ilio was a music software company; Dan
+maintained and built new features for its vendor portfolio management platform used by musicians and
+software vendors.
+
+**Technologies used:** Java, Spring, Tomcat, Maven, Git, JavaScript
 
 ---
 
@@ -260,7 +281,8 @@ Stack: React, Vite, Tailwind, Express, Firestore, GCP, Docker, Kubernetes
 
 - Location: I'm located in Eagle Mountain on the border of Saratoga Springs, Utah
 - Remote work preferred but willing to do hybrid
-- Availability: Not looking for anything immediate but open for side work or contract engagements.
+- Availability: Not looking for anything immediate full-time, but always open to side gigs and
+  contract work — typically an extra 15–20 hours per week on top of a full-time role.
 
 ---
 
