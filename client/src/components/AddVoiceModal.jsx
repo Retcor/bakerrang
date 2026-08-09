@@ -174,7 +174,7 @@ const AddVoiceModal = ({ open, success, cancel }) => {
         <div className='fixed inset-0 z-50' style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
           <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' />
           <div
-            className={`absolute w-full max-w-lg p-6 rounded-xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto cursor-move ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}
+            className={`absolute w-full max-w-lg p-6 rounded-xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto cursor-move ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}
             style={{
               left: `calc(50% + ${position.x}px)`,
               top: `calc(15vh + ${position.y}px)`,

@@ -12,7 +12,7 @@ const GoogleLogin = ({ onClick }) => {
       className={`group relative w-full flex items-center justify-center font-semibold py-4 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 ${isDark ? 'glass-dark text-theme-dark hover:glass-hover-dark focus:ring-offset-gray-800' : 'glass-light text-theme-light hover:glass-hover-light focus:ring-offset-white'} shadow-lg hover:shadow-xl`}
       onClick={() => onClick()}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       <img
         src={google}
         alt='Google Logo'

@@ -1,6 +1,19 @@
 import { SERVER_PREFIX } from '../App.jsx'
 
-export const request = (url, method, headers, body) => {
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+let csrfToken = null
+
+const fetchCsrfToken = async () => {
+  const res = await fetch(`${SERVER_PREFIX}/auth/csrf`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Failed to obtain CSRF token')
+  const data = await res.json()
+  csrfToken = data.csrfToken
+  return csrfToken
+}
+
+export const request = async (url, method = 'GET', headers, body) => {
+  const verb = (method || 'GET').toUpperCase()
   const options = {
     credentials: 'include',
     method
@@ -14,7 +27,26 @@ export const request = (url, method, headers, body) => {
     options.body = body
   }
 
-  return fetch(url, options)
+  const isMutating = MUTATING_METHODS.has(verb)
+  if (isMutating) {
+    if (!csrfToken) await fetchCsrfToken()
+    options.headers = { ...(options.headers || {}), 'x-csrf-token': csrfToken }
+  }
+
+  let res = await fetch(url, options)
+
+  // A rotated/expired CSRF token surfaces as a 403; refresh once and retry.
+  if (isMutating && res.status === 403) {
+    try {
+      await fetchCsrfToken()
+      options.headers = { ...(options.headers || {}), 'x-csrf-token': csrfToken }
+      res = await fetch(url, options)
+    } catch (err) {
+      // Keep the original 403 response if we couldn't refresh the token.
+    }
+  }
+
+  return res
 }
 
 export const debounce = (func, delay) => {
@@ -28,8 +60,8 @@ export const debounce = (func, delay) => {
 }
 
 export const blobToBase64 = (blob) => {
-  return new Promise((resolve, _) => {
-    const reader = new FileReader()
+  return new Promise((resolve) => {
+    const reader = new window.FileReader()
     reader.onloadend = () => resolve(reader.result)
     reader.readAsDataURL(blob)
   })

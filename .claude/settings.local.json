@@ -46,7 +46,9 @@
       "WebFetch(domain:t2.gstatic.com)",
       "Bash(findstr /n \"Slash\\\\|slash\\\\|SLASH\\\\|bakergpt\\\\|zones\\\\|tiersets\\\\|cmd\\\\|Cmd\\\\|CMD\")",
       "WebFetch(domain:www.icy-veins.com)",
-      "WebFetch(domain:developers.openai.com)"
+      "WebFetch(domain:developers.openai.com)",
+      "Bash(find /c/Users/jakey/IdeaProjects/bakerrang/client/src -type f -name *[Gg]esture* -o -type f -name *[Ss]ign*)",
+      "WebFetch(domain:dev.to)"
     ]
   }
 }

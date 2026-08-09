@@ -28,7 +28,7 @@ router.get('/v1/languages', async (req, res, next) => {
 router.get('/v1/convert/:voiceId', async (req, res, next) => {
   const canModify = await userCanAccess(req.user.id, req.params.voiceId, 'voices')
   if (!canModify) {
-    res.status(403).json({ error: 'Not authorized to access this voice record.' })
+    return res.status(403).json({ error: 'Not authorized to access this voice record.' })
   }
 
   try {
@@ -54,7 +54,7 @@ router.post('/v1/voice', multipart.array('files', 3), async (req, res, next) => 
   if (req.body.id) {
     const canModify = await userCanAccess(req.user.id, req.body.id, 'voices')
     if (!canModify) {
-      res.status(403).json({ error: 'Not authorized to access this voice record.' })
+      return res.status(403).json({ error: 'Not authorized to access this voice record.' })
     }
   }
 
@@ -110,7 +110,7 @@ const processVoiceUpdate = async (userId, voice) => {
 router.delete('/v1/voice/:voiceId', multipart.array('files'), async (req, res, next) => {
   const canModify = await userCanAccess(req.user.id, req.params.voiceId, 'voices')
   if (!canModify) {
-    res.status(403).json({ error: 'Not authorized to access this voice record.' })
+    return res.status(403).json({ error: 'Not authorized to access this voice record.' })
   }
 
   try {

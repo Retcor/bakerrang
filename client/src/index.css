@@ -10,7 +10,77 @@
   box-sizing: border-box;
   font-family: "Poppins", sans-serif;
   scroll-behavior: smooth;
+}
+
+/* Masks a field without using type="password". Browsers only offer "Save
+   password?" for real password inputs, so vault entries and the KeePass file
+   password use this instead — that also keeps them out of the browser's own
+   password manager. */
+.mask-text {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+/* Native controls (checkboxes, selects, scrollbars) follow the app theme. */
+html {
+  color-scheme: light;
+}
+
+html.dark {
   color-scheme: dark;
+}
+
+/* Height of the app nav bar (MainContent.jsx). The vault page fills the space
+   below it exactly, so the number lives here instead of being re-derived.
+   NOTE: components/Home.jsx still hard-codes 73px in its own min-height —
+   unify if you touch that file. */
+:root {
+  --nav-h: 73px;
+
+  /* Brand palette — matches the gold "BR" logo badge. Single source of truth;
+     the accent classes below reference these instead of hardcoding hex. */
+  --brand-gold: #FFD500;        /* primary accent: buttons + dark-mode text/fills */
+  --brand-gold-hover: #F0C400;  /* button/hover shade */
+  --brand-gold-deep: #9A6B00;   /* deep amber: accent text/fills on light backgrounds */
+  --brand-ink: #1f2937;         /* dark text placed on top of gold fills */
+}
+
+/* A slim, low-contrast scrollbar for panes that scroll inside a card (the vault's
+   folder tree). The default chunky bar reads as a page scrollbar and fights the
+   card's rounded edge. Track stays transparent so the card shows through. */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+html.dark .thin-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+html.dark .thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html.dark .thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.35);
 }
 
 .hash-span {
@@ -208,14 +278,18 @@
   transition: all 0.3s ease;
 }
 
+/* `dvh`, not `vh`: on mobile `100vh` is the LARGEST viewport (address bar
+   collapsed), so a `100vh` floor here would exceed nav + the vault shell's
+   `100dvh - var(--nav-h)` and hand a non-scrolling page back ~60-90px of scroll.
+   Identical to `vh` on desktop. */
 .light-theme-bg {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #cbd5e1 75%, #94a3b8 100%);
-  min-height: 100vh;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f1 25%, #e3e3e6 75%, #cdced3 100%);
+  min-height: 100dvh;
 }
 
 .dark-theme-bg {
-  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-  min-height: 100vh;
+  background: #1a1a1a;
+  min-height: 100dvh;
 }
 
 /* Glassmorphism styles */
@@ -231,7 +305,7 @@
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 213, 0, 0.14);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
@@ -240,14 +314,14 @@
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.2);
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
 }
 
 .glass-nav-dark {
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 213, 0, 0.14);
   box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -263,7 +337,7 @@
   background: rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 213, 0, 0.14);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -272,15 +346,31 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
 }
 
 .glass-dropdown-dark {
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(38, 38, 38, 0.97); /* neutral charcoal, matches the logo/dark scheme */
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Modal panels — more opaque than cards so they read cleanly over the dark
+   `bg-black/50` backdrop (a translucent glass card goes muddy-gray in light mode). */
+.glass-modal-light {
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.15);
+}
+
+.glass-modal-dark {
+  background: rgba(30, 30, 30, 0.97); /* neutral charcoal */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
 /* Hover effects for glass elements */
@@ -313,48 +403,61 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Brand color that adapts to theme */
+/* Brand color that adapts to theme — gold in both modes (logo badge).
+   Light mode uses the deeper amber so accent TEXT stays legible on pale
+   backgrounds; dark mode uses the bright gold. */
 .text-brand-light {
-  color: #1e40af; /* Modern blue for light mode */
+  color: var(--brand-gold-deep);
 }
 
 .text-brand-dark {
-  color: #D4ED31; /* Original yellow for dark mode */
+  color: var(--brand-gold);
 }
 
-/* Button styles that adapt to theme */
+/* Accent color for text that adapts to theme (used by e.g. Budget.jsx). */
+.text-accent-light {
+  color: var(--brand-gold-deep);
+}
+
+.text-accent-dark {
+  color: var(--brand-gold);
+}
+
+/* Button styles — bright gold fill with dark ink text in both modes
+   (readable on the gold in either theme). */
 .btn-primary-light {
-  background-color: #1e40af;
-  color: white;
+  background-color: var(--brand-gold);
+  color: var(--brand-ink);
 }
 
 .btn-primary-light:hover {
-  background-color: #1d4ed8;
+  background-color: var(--brand-gold-hover);
 }
 
 .btn-primary-dark {
-  background-color: #D4ED31;
-  color: #1f2937;
+  background-color: var(--brand-gold);
+  color: var(--brand-ink);
 }
 
 .btn-primary-dark:hover {
-  background-color: #c4d929;
+  background-color: var(--brand-gold-hover);
 }
 
-/* Accent color for backgrounds and decorative elements */
+/* Accent color for backgrounds and decorative elements — gold in both modes.
+   NOTE: place var(--brand-ink) (dark) text on these, never white. */
 .bg-accent-light {
-  background-color: #1e40af;
+  background-color: var(--brand-gold);
 }
 
 .bg-accent-dark {
-  background-color: #D4ED31;
+  background-color: var(--brand-gold);
 }
 
-/* Fill color for SVGs */
+/* Fill color for SVGs — deep amber on light, bright gold on dark. */
 .fill-accent-light {
-  fill: #1e40af;
+  fill: var(--brand-gold-deep);
 }
 
 .fill-accent-dark {
-  fill: #D4ED31;
+  fill: var(--brand-gold);
 }

@@ -242,7 +242,7 @@ const SelectInput = ({ value, onChange, options, isDark }) => (
         : 'bg-black/5 border-black/15 text-gray-900 focus:border-black/30'}`}
   >
     {options.map(o => (
-      <option key={o.value} value={o.value} className={isDark ? 'bg-gray-800' : 'bg-white'}>
+      <option key={o.value} value={o.value} className={isDark ? 'bg-neutral-800' : 'bg-white'}>
         {o.label}
       </option>
     ))}
@@ -425,9 +425,9 @@ const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
                     ? 'bg-white/10 border-white/20 text-white focus:border-white/40'
                     : 'bg-black/5 border-black/15 text-gray-900 focus:border-black/30'}`}
               >
-                <option value='' className={isDark ? 'bg-gray-800' : 'bg-white'}>(auto-assign)</option>
+                <option value='' className={isDark ? 'bg-neutral-800' : 'bg-white'}>(auto-assign)</option>
                 {paydays.map(pd => (
-                  <option key={pd.id} value={pd.id} className={isDark ? 'bg-gray-800' : 'bg-white'}>{pd.name}</option>
+                  <option key={pd.id} value={pd.id} className={isDark ? 'bg-neutral-800' : 'bg-white'}>{pd.name}</option>
                 ))}
               </select>
             </FormField>
@@ -464,7 +464,7 @@ const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
               : 'bg-black/8 text-black/30 cursor-not-allowed border border-black/10'
             : isDark
               ? 'bg-accent-dark text-gray-900 hover:opacity-90'
-              : 'bg-accent-light text-white hover:opacity-90'}`}
+              : 'bg-accent-light text-gray-900 hover:opacity-90'}`}
       >
         {initial ? 'Update' : 'Add'} {isPayday ? 'Payday' : category.charAt(0).toUpperCase() + category.slice(1)}
       </button>
@@ -519,7 +519,7 @@ const CalendarCell = ({ day, entries, isDark, onEntryClick, col }) => {
                   {hovered === i && (
                     <div className={`absolute top-full mt-1 z-[100] w-44 rounded-lg p-2 shadow-xl border text-xs pointer-events-none
                       ${col >= 5 ? 'right-0' : 'left-0'}
-                      ${isDark ? 'bg-gray-900 border-white/10 text-white' : 'bg-white border-black/10 text-gray-900'}`}
+                      ${isDark ? 'bg-neutral-800 border-white/10 text-white' : 'bg-white border-black/10 text-gray-900'}`}
                     >
                       <p className='font-semibold truncate'>{entry.name}</p>
                       <p className='mt-0.5'>${parseFloat(entry.amount).toFixed(2)}</p>
@@ -666,7 +666,7 @@ const Budget = () => {
   const card = `rounded-2xl transition-all duration-300 ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`
   const tabClass = (t) => `px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer border
     ${activeTab === t
-      ? (isDark ? 'bg-accent-dark text-gray-900 border-transparent' : 'bg-accent-light text-white border-transparent')
+      ? (isDark ? 'bg-accent-dark text-gray-900 border-transparent' : 'bg-accent-light text-gray-900 border-transparent')
       : (isDark ? 'text-theme-secondary-dark bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20' : 'text-theme-secondary-light bg-black/5 border-black/10 hover:bg-black/10 hover:border-black/20')}`
 
   const totalIncome = summary.groups.reduce((s, g) => s + g.payday.amount, 0)
@@ -680,7 +680,7 @@ const Budget = () => {
         <div className='flex items-center justify-between flex-wrap gap-4'>
           <div className='flex items-center space-x-4'>
             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-white'}`}>
+              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-gray-900'}`}>
                 <path strokeLinecap='round' strokeLinejoin='round' d='M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
               </svg>
             </div>

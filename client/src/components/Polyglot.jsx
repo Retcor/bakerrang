@@ -44,7 +44,7 @@ const Polyglot = () => {
       <div className={`rounded-2xl p-8 mb-8 transition-all duration-300 ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
         <div className='flex items-center space-x-4 mb-6'>
           <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-white'}`}>
+            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className={`w-8 h-8 ${isDark ? 'text-gray-900' : 'text-gray-900'}`}>
               <path strokeLinecap='round' strokeLinejoin='round' d='M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802' />
             </svg>
           </div>
@@ -135,7 +135,7 @@ const Polyglot = () => {
               onClick={handleTranslate}
               disabled={translationLoading || !speechToText.trim()}
               className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
-                isDark ? 'bg-accent-dark text-gray-900 hover:bg-accent-dark/90 shadow-accent-dark/20' : 'bg-accent-light text-white hover:bg-accent-light/90 shadow-accent-light/20'
+                isDark ? 'bg-accent-dark text-gray-900 hover:bg-accent-dark/90 shadow-accent-dark/20' : 'bg-accent-light text-gray-900 hover:bg-accent-light/90 shadow-accent-light/20'
               }`}
             >
               {translationLoading ? (

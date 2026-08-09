@@ -56,8 +56,8 @@ const WoWAdvisor = () => {
 
   const cardClass = isDark ? 'glass-card-dark text-white' : 'glass-card-light text-gray-900'
   const inputClass = isDark
-    ? 'bg-black/30 border-white/10 text-white placeholder-white/30 focus:border-[#D4ED31]/50'
-    : 'bg-white/60 border-black/10 text-gray-900 placeholder-gray-400 focus:border-[#1e40af]/50'
+    ? 'bg-black/30 border-white/10 text-white placeholder-white/30 focus:border-[#FFD500]/50'
+    : 'bg-white/60 border-black/10 text-gray-900 placeholder-gray-400 focus:border-[#FFD500]/50'
   const labelClass = isDark ? 'text-white/70' : 'text-gray-600'
   const selectClass = isDark
     ? 'bg-black/30 border-white/10 text-white'
@@ -225,7 +225,7 @@ const WoWAdvisor = () => {
                 title='Paste addon data copied by the /wowadvisor in-game command'
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 ${
                   addonData
-                    ? isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-white'
+                    ? isDark ? 'bg-accent-dark text-gray-900' : 'bg-accent-light text-gray-900'
                     : isDark ? 'bg-white/10 hover:bg-white/20 text-white/70' : 'bg-black/10 hover:bg-black/20 text-gray-600'
                 }`}
               >
@@ -322,7 +322,7 @@ const WoWAdvisor = () => {
               className={`w-full rounded-xl py-3 text-sm font-semibold transition-colors mt-1 ${
                 state === 'loading' || !name.trim() || !realm.trim()
                   ? 'bg-gray-500 cursor-not-allowed text-white'
-                  : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-white hover:opacity-90'
+                  : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'
               }`}
             >
               {state === 'loading' ? (

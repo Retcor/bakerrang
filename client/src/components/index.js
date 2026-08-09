@@ -22,6 +22,7 @@ import SuperMarket from './SuperMarket.jsx'
 import Budget from './Budget.jsx'
 import SignLanguage from './SignLanguage.jsx'
 import WoWAdvisor from './WoW/WoWAdvisor.jsx'
+import Passwords from './Passwords.jsx'
 
 export {
   MainContent,
@@ -47,5 +48,6 @@ export {
   SuperMarket,
   Budget,
   SignLanguage,
-  WoWAdvisor
+  WoWAdvisor,
+  Passwords
 }
