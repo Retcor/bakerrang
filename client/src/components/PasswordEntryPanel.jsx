@@ -224,13 +224,18 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             : <span />}
           {!readOnly && (
             <button
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+              className={`relative px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
               onClick={handleSave}
               disabled={isSaving || !form.title.trim()}
             >
-              {isSaving
-                ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
-                : 'Save'}
+              {/* Label reserves the button's width; the spinner overlays it so the
+                  button doesn't shrink while saving. */}
+              <span className={isSaving ? 'invisible' : ''}>Save</span>
+              {isSaving && (
+                <span className='absolute inset-0 flex items-center justify-center'>
+                  <LoadingSpinner svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                </span>
+              )}
             </button>
           )}
         </div>

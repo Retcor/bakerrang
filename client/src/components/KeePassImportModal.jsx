@@ -1,35 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import * as kdbxwebModule from 'kdbxweb'
-import { argon2d, argon2id } from 'hash-wasm'
 import { LoadingSpinner } from './index.js'
 import { useTheme } from '../providers/ThemeProvider.jsx'
+import { getKdbxweb, ensureArgon2 } from '../utils/kdbx.js'
 
-// kdbxweb ships a webpack UMD bundle; depending on the bundler's CJS interop
-// the full API lands on either the default export or the namespace itself.
-// Normalise so kdbxweb.CryptoEngine/Kdbx/Credentials are always present.
-const kdbxweb = kdbxwebModule.default || kdbxwebModule
-
-// KDBX4 files use Argon2 for key derivation, which kdbxweb does not bundle.
-// Wire hash-wasm's implementation in. kdbxweb passes memory already in KiB,
-// type 0 = Argon2d, type 2 = Argon2id.
-let argon2Registered = false
-const registerArgon2 = () => {
-  if (argon2Registered) return
-  kdbxweb.CryptoEngine.setArgon2Impl(async (password, salt, memory, iterations, length, parallelism, type) => {
-    const fn = type === kdbxweb.CryptoEngine.Argon2TypeArgon2id ? argon2id : argon2d
-    const hash = await fn({
-      password: new Uint8Array(password),
-      salt: new Uint8Array(salt),
-      parallelism,
-      iterations,
-      memorySize: memory,
-      hashLength: length,
-      outputType: 'binary'
-    })
-    return hash.buffer
-  })
-  argon2Registered = true
-}
+// Shared source of truth for the kdbxweb interop + Argon2 wiring (see utils/kdbx.js).
+const kdbxweb = getKdbxweb()
 
 const fieldText = (value) => {
   if (value == null) return ''
@@ -107,7 +82,7 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
     setLoading(true)
     setError(null)
     try {
-      registerArgon2()
+      ensureArgon2()
       const buffer = await file.arrayBuffer()
       const keyFileBuffer = keyFile ? await keyFile.arrayBuffer() : null
       const pwd = password ? kdbxweb.ProtectedValue.fromString(password) : null
@@ -214,13 +189,16 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
             <div className='flex justify-end gap-2 pt-2'>
               <button className={`px-4 py-2 rounded-lg ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`} onClick={onClose}>Cancel</button>
               <button
-                className={`px-4 py-2 rounded-lg font-medium shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+                className={`relative px-4 py-2 rounded-lg font-medium shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
                 onClick={handleParse}
                 disabled={!file || (!password && !keyFile) || loading}
               >
-                {loading
-                  ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
-                  : 'Open File'}
+                <span className={loading ? 'invisible' : ''}>Open File</span>
+                {loading && (
+                  <span className='absolute inset-0 flex items-center justify-center'>
+                    <LoadingSpinner svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -276,13 +254,16 @@ const KeePassImportModal = ({ open, onImport, onClose }) => {
             <div className='flex justify-end gap-2 mt-4'>
               <button className={`px-4 py-2 rounded-lg ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`} onClick={onClose}>Cancel</button>
               <button
-                className={`px-4 py-2 rounded-lg font-medium shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+                className={`relative px-4 py-2 rounded-lg font-medium shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
                 onClick={handleImport}
                 disabled={selectedCount === 0 || importing}
               >
-                {importing
-                  ? <LoadingSpinner className='flex justify-center' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
-                  : `Import ${selectedCount} entr${selectedCount === 1 ? 'y' : 'ies'}`}
+                <span className={importing ? 'invisible' : ''}>{`Import ${selectedCount} entr${selectedCount === 1 ? 'y' : 'ies'}`}</span>
+                {importing && (
+                  <span className='absolute inset-0 flex items-center justify-center'>
+                    <LoadingSpinner svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-800 !text-gray-800/40' : '!fill-white !text-white/40'}`} />
+                  </span>
+                )}
               </button>
             </div>
           </div>

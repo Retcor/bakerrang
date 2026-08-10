@@ -45,6 +45,9 @@ export const VaultProvider = ({ children }) => {
   const [sharedFolders, setSharedFolders] = useState([]) // folders shared WITH me
   const [sharedItems, setSharedItems] = useState([]) // entries in the open shared subtree
   const [sharedTreeFolders, setSharedTreeFolders] = useState([]) // its descendant folders
+  // Full decrypted subtree per share { [shareId]: { items, folders } }, prefetched
+  // at unlock so the sidebar can show counts/subfolders/carets without a click.
+  const [sharedTrees, setSharedTrees] = useState({})
   const [myShares, setMyShares] = useState([]) // shares I have granted
 
   // The live vault key is kept in a ref, never in React state, so it is never
@@ -57,6 +60,7 @@ export const VaultProvider = ({ children }) => {
   const rawFoldersRef = useRef([]) // raw folder records (to find shared-subtree keys)
   const folderKeysRef = useRef(new Map()) // folderId -> CryptoKey (owner side)
   const sharedKeysRef = useRef(new Map()) // folderId -> CryptoKey (shared with me)
+  const sharedTreesRef = useRef({}) // mirrors sharedTrees so openSharedFolder reads the latest
 
   const jsonOrThrow = async (res) => {
     if (!res.ok) {
@@ -313,6 +317,49 @@ export const VaultProvider = ({ children }) => {
     return out
   }, [])
 
+  // Fetch + decrypt a shared folder's WHOLE subtree: every descendant folder and
+  // every entry inside it, at any depth. One folder key opens all of it. Pure —
+  // returns the decrypted tree without touching state, so it can back both the
+  // up-front prefetch and the on-click open.
+  const fetchSharedTree = useCallback(async (shared) => {
+    const folderKey = sharedKeysRef.current.get(shared.folderId)
+    if (!folderKey) throw new Error('Missing folder key for this shared folder')
+    const tree = await request(`${VAULT_URL}/shared/${shared.ownerId}/tree/${shared.folderId}`, 'GET').then(jsonOrThrow)
+
+    const decItems = await Promise.all((tree.items || []).map(async (r) => {
+      const base = { id: r.id, folderId: r.folderId, updatedAt: r.updatedAt }
+      try {
+        return { ...base, ...(await decryptItemWithFolderKey(folderKey, r)) }
+      } catch (err) {
+        return { ...base, title: '(unreadable entry)', username: '', password: '', url: '', notes: '' }
+      }
+    }))
+    const decFolders = await Promise.all((tree.folders || []).map(async (r) => {
+      let name = 'Folder'
+      try {
+        if (r.sharedName) name = (await decryptFolderName(folderKey, r.sharedName)).name
+      } catch (err) { /* keep placeholder */ }
+      return { id: r.id, parentId: r.parentId || null, position: r.position, name }
+    }))
+    return { items: decItems, folders: decFolders }
+  }, [])
+
+  // Prefetch every share's subtree so the sidebar can render counts/subfolders/
+  // carets up front. Non-blocking at unlock; failures per-share are skipped.
+  const loadSharedTrees = useCallback(async (shares) => {
+    const list = shares || []
+    const entries = await Promise.all(list.map(async (s) => {
+      try {
+        return [s.shareId, await fetchSharedTree(s)]
+      } catch (err) { return null }
+    }))
+    const map = {}
+    for (const e of entries) { if (e) map[e[0]] = e[1] }
+    sharedTreesRef.current = map
+    setSharedTrees(map)
+    return map
+  }, [fetchSharedTree])
+
   const createVault = useCallback(async (masterPassword) => {
     const { kdf, protectedVaultKey, vaultKey, publicKey, protectedPrivateKey } = await cryptoCreateVault(masterPassword)
     await request(VAULT_URL, 'POST', { 'Content-Type': 'application/json' },
@@ -335,9 +382,11 @@ export const VaultProvider = ({ children }) => {
     setStatus('unlocked')
     // Sharing data is non-critical to unlocking — don't block or fail the unlock.
     loadMyShares().catch(() => {})
-    loadSharedWithMe().catch(() => {})
+    // Load the shared-folder names, then prefetch each subtree so the sidebar can
+    // show counts/subfolders/carets without a click.
+    loadSharedWithMe().then((shares) => loadSharedTrees(shares)).catch(() => {})
     repairSharedSubtrees(vaultKey).catch(() => {})
-  }, [refreshMeta, loadEntries, ensureKeypair, loadMyShares, loadSharedWithMe, repairSharedSubtrees])
+  }, [refreshMeta, loadEntries, ensureKeypair, loadMyShares, loadSharedWithMe, loadSharedTrees, repairSharedSubtrees])
 
   // Raw (still-encrypted) records mirror what the server holds. Sharing re-wraps
   // content keys from these, so every create/update/delete must keep them in
@@ -391,6 +440,23 @@ export const VaultProvider = ({ children }) => {
     await request(`${VAULT_URL}/items/${id}`, 'DELETE').then(jsonOrThrow)
     setItems((prev) => prev.filter((i) => i.id !== id))
     rawItemsRef.current = rawItemsRef.current.filter((r) => r.id !== id)
+  }, [])
+
+  // Bulk delete: reuse the vetted per-item DELETE endpoint (no new server route,
+  // no change to the authorization path), then prune state once. Only ids the
+  // server actually deleted are removed, so a partial failure leaves the rest
+  // intact and surfaces as a thrown error.
+  const deleteItems = useCallback(async (ids) => {
+    const results = await Promise.allSettled(
+      ids.map((id) => request(`${VAULT_URL}/items/${id}`, 'DELETE').then(jsonOrThrow))
+    )
+    const deleted = new Set(ids.filter((_, i) => results[i].status === 'fulfilled'))
+    if (deleted.size) {
+      setItems((prev) => prev.filter((i) => !deleted.has(i.id)))
+      rawItemsRef.current = rawItemsRef.current.filter((r) => !deleted.has(r.id))
+    }
+    const failed = results.find((r) => r.status === 'rejected')
+    if (failed) throw (failed.reason || new Error('Failed to delete some entries'))
   }, [])
 
   const moveItems = useCallback(async (ids, folderId) => {
@@ -543,33 +609,36 @@ export const VaultProvider = ({ children }) => {
 
   // ---- Sharing (Phase 2) ----
 
-  // Load + decrypt a shared folder's WHOLE subtree: every descendant folder and
-  // every entry inside it, at any depth. One folder key opens all of it.
-  const openSharedFolder = useCallback(async (shared) => {
-    const folderKey = sharedKeysRef.current.get(shared.folderId)
-    if (!folderKey) throw new Error('Missing folder key for this shared folder')
-    const tree = await request(`${VAULT_URL}/shared/${shared.ownerId}/tree/${shared.folderId}`, 'GET').then(jsonOrThrow)
-
-    const decItems = await Promise.all((tree.items || []).map(async (r) => {
-      const base = { id: r.id, folderId: r.folderId, updatedAt: r.updatedAt }
-      try {
-        return { ...base, ...(await decryptItemWithFolderKey(folderKey, r)) }
-      } catch (err) {
-        return { ...base, title: '(unreadable entry)', username: '', password: '', url: '', notes: '' }
-      }
-    }))
-    const decFolders = await Promise.all((tree.folders || []).map(async (r) => {
-      let name = 'Folder'
-      try {
-        if (r.sharedName) name = (await decryptFolderName(folderKey, r.sharedName)).name
-      } catch (err) { /* keep placeholder */ }
-      return { id: r.id, parentId: r.parentId || null, position: r.position, name }
-    }))
-
-    setSharedItems(decItems)
-    setSharedTreeFolders(decFolders)
-    return { items: decItems, folders: decFolders }
+  // Keep a share's prefetched subtree (used for the sidebar counts) in lockstep
+  // with the open-subtree edits below, so counts never go stale after a
+  // recipient adds/moves/imports an entry.
+  const patchSharedTreeItems = useCallback((shareId, updater) => {
+    setSharedTrees((prev) => {
+      const cur = prev[shareId]
+      if (!cur) return prev
+      const next = { ...prev, [shareId]: { ...cur, items: updater(cur.items) } }
+      sharedTreesRef.current = next
+      return next
+    })
   }, [])
+
+  // Select a shared folder for the main content pane. Reuses the prefetched tree
+  // when available (no re-fetch) and falls back to a fresh fetch otherwise,
+  // refreshing the cache so the sidebar reflects the latest.
+  const openSharedFolder = useCallback(async (shared) => {
+    const cached = sharedTreesRef.current[shared.shareId]
+    const tree = cached || await fetchSharedTree(shared)
+    if (!cached) {
+      setSharedTrees((prev) => {
+        const next = { ...prev, [shared.shareId]: tree }
+        sharedTreesRef.current = next
+        return next
+      })
+    }
+    setSharedItems(tree.items)
+    setSharedTreeFolders(tree.folders)
+    return tree
+  }, [fetchSharedTree])
 
   // Move entries between folders inside a shared subtree (needs 'edit'). The
   // folder key is the same throughout, so the wrapped key doesn't change.
@@ -577,8 +646,10 @@ export const VaultProvider = ({ children }) => {
     const updates = ids.map((id) => ({ id, folderId }))
     await request(`${VAULT_URL}/shared/${shared.ownerId}/items/move`, 'PUT',
       { 'Content-Type': 'application/json' }, JSON.stringify({ updates })).then(jsonOrThrow)
-    setSharedItems((prev) => prev.map((i) => (ids.includes(i.id) ? { ...i, folderId } : i)))
-  }, [])
+    const apply = (items) => items.map((i) => (ids.includes(i.id) ? { ...i, folderId } : i))
+    setSharedItems(apply)
+    patchSharedTreeItems(shared.shareId, apply)
+  }, [patchSharedTreeItems])
 
   // Bulk-import entries into a shared subtree (KeePass import by a recipient).
   const importSharedItems = useCallback(async (shared, entries) => {
@@ -604,8 +675,9 @@ export const VaultProvider = ({ children }) => {
       id: saved.id, folderId: saved.folderId, updatedAt: saved.updatedAt, ...contents[idx]
     }))
     setSharedItems((prev) => [...prev, ...newItems])
+    patchSharedTreeItems(shared.shareId, (items) => [...items, ...newItems])
     return newItems
-  }, [])
+  }, [patchSharedTreeItems])
 
   // Create/update an entry inside a folder shared with me (needs 'edit').
   // `targetFolderId` lets it land in a subfolder of the shared subtree.
@@ -634,13 +706,15 @@ export const VaultProvider = ({ children }) => {
       : await request(`${VAULT_URL}/shared/${shared.ownerId}/folders/${targetFolder}/items`, 'POST', headers, body).then(jsonOrThrow)
 
     const merged = { id: saved.id, folderId: saved.folderId || targetFolder, updatedAt: saved.updatedAt, ...content }
-    setSharedItems((prev) => {
-      const idx = prev.findIndex((i) => i.id === merged.id)
-      if (idx >= 0) { const copy = [...prev]; copy[idx] = merged; return copy }
-      return [...prev, merged]
-    })
+    const upsert = (items) => {
+      const idx = items.findIndex((i) => i.id === merged.id)
+      if (idx >= 0) { const copy = [...items]; copy[idx] = merged; return copy }
+      return [...items, merged]
+    }
+    setSharedItems(upsert)
+    patchSharedTreeItems(shared.shareId, upsert)
     return merged
-  }, [])
+  }, [patchSharedTreeItems])
 
   // Share one of my folders with another user by email.
   const shareFolder = useCallback(async (folderId, recipientEmail, permission) => {
@@ -728,6 +802,7 @@ export const VaultProvider = ({ children }) => {
     lock,
     saveItem,
     deleteItem,
+    deleteItems,
     moveItems,
     saveFolder,
     deleteFolder,
@@ -741,6 +816,7 @@ export const VaultProvider = ({ children }) => {
     sharedFolders,
     sharedItems,
     sharedTreeFolders,
+    sharedTrees,
     myShares,
     shareFolder,
     revokeShare,
