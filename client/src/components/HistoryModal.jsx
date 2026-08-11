@@ -235,149 +235,162 @@ const HistoryModal = ({ open, isDark, mode = 'global', target = null, shared = n
     <div className='fixed inset-0 z-[70]' style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}>
       <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' onClick={onClose} />
       <div
-        className={`absolute left-1/2 -translate-x-1/2 w-full max-w-xl p-6 rounded-xl shadow-2xl z-10 max-h-[85vh] overflow-y-auto ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}
+        // Rounded card with a NON-scrolling header (so the X is always reachable)
+        // and a scrollable body. `overflow-hidden` keeps the corners rounded even
+        // when the body scrolls (the scrollbar no longer squares them off).
+        className={`absolute left-1/2 -translate-x-1/2 w-full max-w-xl rounded-xl shadow-2xl z-10 max-h-[85vh] flex flex-col overflow-hidden ${isDark ? 'glass-modal-dark border border-white/10' : 'glass-modal-light border border-black/10'}`}
         style={{ top: '8vh' }}
       >
-        <h2 className={`text-xl font-medium ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{heading}</h2>
-        <p className={`text-xs mb-4 truncate ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{subheading}</p>
-
-        {/* Search is Activity-only — the per-entry / per-folder views are already scoped. */}
-        {mode === 'global' && !loading && !error && records.length > 0 && (
-          <div className='mb-4'>
-            <input
-              className={inputClass}
-              type='text'
-              placeholder='Search by entry, folder, person, or action…'
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              autoComplete='off'
-              data-1p-ignore
-              data-lpignore='true'
-            />
+        <div className='flex-shrink-0 px-6 pt-5 pb-4'>
+          <div className='flex items-start justify-between gap-3'>
+            <div className='min-w-0'>
+              <h2 className={`text-xl font-medium ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{heading}</h2>
+              <p className={`text-xs truncate ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{subheading}</p>
+            </div>
+            <button
+              type='button'
+              onClick={onClose}
+              aria-label='Close'
+              title='Close'
+              className={`-mr-1 -mt-1 p-1 rounded-lg flex-shrink-0 transition-colors ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark hover:bg-white/10' : 'text-theme-secondary-light hover:text-theme-light hover:bg-black/5'}`}
+            >
+              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor' className='w-5 h-5'>
+                <path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+              </svg>
+            </button>
           </div>
-        )}
 
-        {loading && (
-          <div className='py-10'>
-            <LoadingSpinner className='flex justify-center' />
-          </div>
-        )}
+          {/* Search is Activity-only — the per-entry / per-folder views are already scoped. */}
+          {mode === 'global' && !loading && !error && records.length > 0 && (
+            <div className='mt-4'>
+              <input
+                className={inputClass}
+                type='text'
+                placeholder='Search by entry, folder, person, or action…'
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                autoComplete='off'
+                data-1p-ignore
+                data-lpignore='true'
+              />
+            </div>
+          )}
+        </div>
 
-        {error && !loading && <p className='text-sm text-red-400 py-4'>{error}</p>}
+        <div className='flex-1 min-h-0 overflow-y-auto px-6 pb-6'>
+          {loading && (
+            <div className='py-10'>
+              <LoadingSpinner className='flex justify-center' />
+            </div>
+          )}
 
-        {!loading && !error && records.length === 0 && (
-          <p className={`text-sm py-6 text-center ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-            No history recorded yet.
-          </p>
-        )}
+          {error && !loading && <p className='text-sm text-red-400 py-4'>{error}</p>}
 
-        {!loading && !error && records.length > 0 && (
-          <div className='space-y-1'>
-            {visibleRecords.length === 0 && (
-              <p className={`text-sm py-6 text-center ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                {(loadingMore || hasMore) ? 'Searching earlier history…' : 'No matches found.'}
-              </p>
-            )}
-            {visibleRecords.map((r, idx) => {
-              const meta = ACTION_META[r.action] || { label: r.action, dot: 'bg-gray-400' }
-              const fields = decrypted[r.id]
-              const isItem = r.targetType === 'item'
-              const canExpand = isItem && !!fields
-              const expanded = expandedId === r.id
-              const prev = expanded ? prevSnapshotFields(idx) : null
-              return (
-                <div key={r.id} className={`rounded-lg ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+          {!loading && !error && records.length === 0 && (
+            <p className={`text-sm py-6 text-center ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+              No history recorded yet.
+            </p>
+          )}
+
+          {!loading && !error && records.length > 0 && (
+            <div className='space-y-1'>
+              {visibleRecords.length === 0 && (
+                <p className={`text-sm py-6 text-center ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                  {(loadingMore || hasMore) ? 'Searching earlier history…' : 'No matches found.'}
+                </p>
+              )}
+              {visibleRecords.map((r, idx) => {
+                const meta = ACTION_META[r.action] || { label: r.action, dot: 'bg-gray-400' }
+                const fields = decrypted[r.id]
+                const isItem = r.targetType === 'item'
+                const canExpand = isItem && !!fields
+                const expanded = expandedId === r.id
+                const prev = expanded ? prevSnapshotFields(idx) : null
+                return (
+                  <div key={r.id} className={`rounded-lg ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                    <button
+                      type='button'
+                      className={`w-full flex items-start gap-3 px-3 py-2 text-left ${canExpand ? 'cursor-pointer' : 'cursor-default'}`}
+                      onClick={() => canExpand && setExpandedId(expanded ? null : r.id)}
+                    >
+                      <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${meta.dot}`} />
+                      <div className='min-w-0 flex-1'>
+                        <p className={`text-sm font-medium truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
+                          {summaryFor(r)}
+                          {mode !== 'item' && (
+                            <span className={`font-normal ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}> · {targetLabel(r)}</span>
+                          )}
+                        </p>
+                        <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                          by {actorLabel(r)}{canExpand ? (expanded ? ' · hide details' : ' · show details') : ''}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs flex-shrink-0 self-center ml-2 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
+                        title={new Date(r.createdAt).toLocaleString()}
+                      >
+                        {rel(r.createdAt)}
+                      </span>
+                    </button>
+
+                    {expanded && fields && (
+                      <div className={`px-3 pb-3 pt-1 ml-5 space-y-1 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+                        {FIELDS.map(([key, label]) => {
+                          const val = fields[key]
+                          const changed = prev && (prev[key] || '') !== (val || '')
+                          if (!val && !changed) return null
+                          const isPw = key === 'password'
+                          return (
+                            <div key={key} className='flex items-baseline gap-2 pt-1'>
+                              <span className={`text-[11px] w-16 flex-shrink-0 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{label}</span>
+                              <span
+                                className={`text-xs break-all ${isPw && !revealed[r.id] ? 'mask-text' : ''} ${changed ? (isDark ? 'text-amber-300' : 'text-amber-700') : (isDark ? 'text-theme-dark' : 'text-theme-light')}`}
+                              >
+                                {val || <span className='italic opacity-60'>(empty)</span>}
+                              </span>
+                              {isPw && val && (
+                                <button
+                                  type='button'
+                                  className={`text-[11px] flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
+                                  onClick={() => setRevealed((s) => ({ ...s, [r.id]: !s[r.id] }))}
+                                >
+                                  {revealed[r.id] ? 'hide' : 'show'}
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {prev && (
+                          <p className={`text-[11px] pt-1 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                            Highlighted fields changed from the previous version.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* While searching, older pages auto-load (see the effect above), so
+                show progress instead of a manual button. */}
+              {search.trim()
+                ? ((loadingMore || hasMore) && (
+                  <p className={`w-full mt-2 py-2 text-center text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+                    Searching earlier history…
+                  </p>
+                  ))
+                : (hasMore && (
                   <button
                     type='button'
-                    className={`w-full flex items-start gap-3 px-3 py-2 text-left ${canExpand ? 'cursor-pointer' : 'cursor-default'}`}
-                    onClick={() => canExpand && setExpandedId(expanded ? null : r.id)}
+                    className={`w-full mt-2 px-3 py-2 rounded-lg text-sm disabled:opacity-50 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+                    onClick={loadMore}
+                    disabled={loadingMore}
                   >
-                    <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${meta.dot}`} />
-                    <div className='min-w-0 flex-1'>
-                      <p className={`text-sm font-medium truncate ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
-                        {summaryFor(r)}
-                        {mode !== 'item' && (
-                          <span className={`font-normal ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}> · {targetLabel(r)}</span>
-                        )}
-                      </p>
-                      <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                        by {actorLabel(r)}{canExpand ? (expanded ? ' · hide details' : ' · show details') : ''}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs flex-shrink-0 self-center ml-2 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}
-                      title={new Date(r.createdAt).toLocaleString()}
-                    >
-                      {rel(r.createdAt)}
-                    </span>
+                    {loadingMore ? 'Loading…' : 'Load more'}
                   </button>
-
-                  {expanded && fields && (
-                    <div className={`px-3 pb-3 pt-1 ml-5 space-y-1 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-                      {FIELDS.map(([key, label]) => {
-                        const val = fields[key]
-                        const changed = prev && (prev[key] || '') !== (val || '')
-                        if (!val && !changed) return null
-                        const isPw = key === 'password'
-                        return (
-                          <div key={key} className='flex items-baseline gap-2 pt-1'>
-                            <span className={`text-[11px] w-16 flex-shrink-0 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{label}</span>
-                            <span
-                              className={`text-xs break-all ${isPw && !revealed[r.id] ? 'mask-text' : ''} ${changed ? (isDark ? 'text-amber-300' : 'text-amber-700') : (isDark ? 'text-theme-dark' : 'text-theme-light')}`}
-                            >
-                              {val || <span className='italic opacity-60'>(empty)</span>}
-                            </span>
-                            {isPw && val && (
-                              <button
-                                type='button'
-                                className={`text-[11px] flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
-                                onClick={() => setRevealed((s) => ({ ...s, [r.id]: !s[r.id] }))}
-                              >
-                                {revealed[r.id] ? 'hide' : 'show'}
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                      {prev && (
-                        <p className={`text-[11px] pt-1 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                          Highlighted fields changed from the previous version.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* While searching, older pages auto-load (see the effect above), so
-                show progress instead of a manual button. */}
-            {search.trim()
-              ? ((loadingMore || hasMore) && (
-                <p className={`w-full mt-2 py-2 text-center text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                  Searching earlier history…
-                </p>
-                ))
-              : (hasMore && (
-                <button
-                  type='button'
-                  className={`w-full mt-2 px-3 py-2 rounded-lg text-sm disabled:opacity-50 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? 'Loading…' : 'Load more'}
-                </button>
-                ))}
-          </div>
-        )}
-
-        <div className='flex justify-end mt-5'>
-          <button
-            className={`px-4 py-2 rounded-lg ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
-            onClick={onClose}
-          >
-            Close
-          </button>
+                  ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -193,6 +193,9 @@ const cardClass = (isDark) => `rounded-2xl p-6 ${isDark ? 'glass-card-dark' : 'g
 const inputClass = (isDark) => `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
 const primaryBtn = (isDark) => `px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`
 
+// Square icon-only toolbar button (Import / Export / Activity / Lock).
+const toolbarIconBtn = (isDark) => `p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`
+
 // Master-password input with a show/hide eye. Stays a real type='password'
 // (toggled to text) so a password manager can still offer to fill it; the eye
 // only flips input.type. Used on both the create and unlock cards.
@@ -956,40 +959,53 @@ const VaultView = ({ isDark, vault }) => {
           >
             + New Entry
           </button>
+          {/* Import — upload a KeePass file into the vault. */}
           <button
-            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+            className={toolbarIconBtn(isDark)}
             onClick={() => setImportOpen(true)}
+            title='Import a KeePass .kdbx file'
+            aria-label='Import'
           >
-            Import
+            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.8' stroke='currentColor' className='w-5 h-5'>
+              <path strokeLinecap='round' strokeLinejoin='round' d='M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5' />
+            </svg>
           </button>
+          {/* Export — download the vault as a KeePass file. */}
           <button
-            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 disabled:opacity-50 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+            className={`${toolbarIconBtn(isDark)} disabled:opacity-50`}
             onClick={() => setExportOpen(true)}
             disabled={items.length === 0}
             title={items.length === 0 ? 'No entries to export' : 'Export your vault to a KeePass .kdbx file'}
+            aria-label='Export'
           >
-            Export
+            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.8' stroke='currentColor' className='w-5 h-5'>
+              <path strokeLinecap='round' strokeLinejoin='round' d='M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3' />
+            </svg>
           </button>
-          {/* Version history is owner-only — not shown when viewing a folder
-              shared WITH me. */}
+          {/* Activity (version history, vault-wide) is owner-only — not shown when
+              viewing a folder shared WITH me. */}
           {!isSharedView && (
             <button
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+              className={toolbarIconBtn(isDark)}
               onClick={() => setHistoryTarget({ mode: 'global', target: null })}
-              title='See recent changes across your vault'
+              title='Activity — recent changes across your vault'
+              aria-label='Activity'
             >
-              Activity
+              <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.8' stroke='currentColor' className='w-5 h-5'>
+                <path strokeLinecap='round' strokeLinejoin='round' d='M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z' />
+              </svg>
             </button>
           )}
         </div>
         <button
           title='Lock vault'
-          className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+          aria-label='Lock vault'
+          className={toolbarIconBtn(isDark)}
           onClick={() => vault.lock()}
         >
-          {/* Icon-only below `sm` so the toolbar doesn't wrap Lock onto its own
-              line on a narrow phone. */}
-          🔒<span className='hidden sm:inline'> Lock</span>
+          <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.8' stroke='currentColor' className='w-5 h-5'>
+            <path strokeLinecap='round' strokeLinejoin='round' d='M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z' />
+          </svg>
         </button>
       </div>
 
@@ -1591,10 +1607,13 @@ const VaultView = ({ isDark, vault }) => {
         <>
           <div className='fixed inset-0 z-[60]' onClick={() => setFolderMenu(null)} />
           <div
-            className={`fixed z-[61] min-w-[160px] rounded-lg shadow-xl border py-1 ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-gray-200'}`}
+            className={`fixed z-[61] w-[150px] rounded-lg shadow-xl border py-1 ${isDark ? 'bg-neutral-800 border-white/10' : 'bg-white border-gray-200'}`}
+            // Explicit width + left-anchor so the right edge lines up with the ⋮
+            // button. (A right-anchored auto-width block stretches leftward instead
+            // of shrinking, so we pin the left instead.)
             style={{
               top: Math.min(folderMenu.rect.bottom + 4, window.innerHeight - 160),
-              left: Math.min(folderMenu.rect.right - 160, window.innerWidth - 168)
+              left: Math.max(8, Math.min(folderMenu.rect.right - 150, window.innerWidth - 158))
             }}
           >
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); handleOpenShare(f) }}>Share…</FolderMenuItem>
