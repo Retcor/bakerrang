@@ -223,6 +223,27 @@ export const decryptItemWithFolderKey = async (folderKey, record) => {
   return decryptJson(itemKey, record.ciphertext)
 }
 
+// Re-encrypt an item's content under its EXISTING content key — recovered from
+// whichever wrapped copy we can open (the vault key or the folder key) — leaving
+// BOTH wrapped copies untouched. Used when editing an entry in a shared subtree
+// whose folder key can't be re-derived: keeping the same content key means the
+// existing folderWrappedItemKey still matches the new ciphertext, so recipients
+// keep access instead of the edit silently locking them out. Throws if neither
+// wrapped copy can be opened.
+export const reencryptItemKeepingKey = async ({ vaultKey, folderKey, record }, item) => {
+  let itemKeyRaw
+  if (vaultKey && record.wrappedItemKey) itemKeyRaw = await decryptBytes(vaultKey, record.wrappedItemKey)
+  else if (folderKey && record.folderWrappedItemKey) itemKeyRaw = await decryptBytes(folderKey, record.folderWrappedItemKey)
+  else throw new Error('No content key available to re-encrypt')
+  const itemKey = await importAesKey(itemKeyRaw)
+  const ciphertext = await encryptJson(itemKey, item)
+  return {
+    ciphertext,
+    wrappedItemKey: record.wrappedItemKey || null,
+    folderWrappedItemKey: record.folderWrappedItemKey || null
+  }
+}
+
 // Re-encrypt just the content (keeps the same content key) — used when editing a
 // shared item; returns the new ciphertext given the item's content key raw bytes.
 export const encryptFolderName = (folderKey, name) => encryptJson(folderKey, { name })

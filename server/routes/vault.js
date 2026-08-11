@@ -56,6 +56,9 @@ router.delete('/items/:id', handle(async (req) => {
 
 router.post('/shares', handle((req) => vault.createShare(req.user.id, req.body)))
 router.get('/shares', handle((req) => vault.listMyShares(req.user.id)))
+// Change counters for every share I participate in — clients poll this to detect
+// shared-folder updates. Non-secret integers only (no plaintext).
+router.get('/revisions', handle((req) => vault.getShareRevisions(req.user.id)))
 router.get('/shares/folder/:folderId', handle((req) => vault.listSharesForFolder(req.user.id, req.params.folderId)))
 router.delete('/shares/:id', handle((req) => vault.deleteShare(req.user.id, req.params.id)))
 

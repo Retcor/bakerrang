@@ -22,11 +22,30 @@ import {
   rewrapItemKeyForFolder,
   encryptItemForFolder,
   decryptItemWithFolderKey,
+  reencryptItemKeepingKey,
   encryptFolderName,
   decryptFolderName
 } from '../utils/crypto.js'
 
 const VaultContext = createContext()
+
+// The topmost ancestor-or-self folder record (in a byId map of raw folder records)
+// that carries a wrappedFolderKey — i.e. the OUTERMOST shared root above a folder.
+// Sharing is one-key-per-subtree, so this is the canonical key for anything inside
+// it. Using the outermost (not the nearest) key means a subfolder that was once
+// shared separately and kept a stale, different key can't shadow the real subtree
+// key and lock the top-level share's recipients out of edited entries.
+const outermostSharedRecord = (byId, folderId) => {
+  let cur = byId.get(folderId)
+  const guard = new Set()
+  let outer = null
+  while (cur && !guard.has(cur.id)) {
+    guard.add(cur.id)
+    if (cur.wrappedFolderKey) outer = cur
+    cur = cur.parentId ? byId.get(cur.parentId) : null
+  }
+  return outer
+}
 
 // status: 'loading' | 'uninitialized' | 'locked' | 'unlocked'
 export const VaultProvider = ({ children }) => {
@@ -49,6 +68,13 @@ export const VaultProvider = ({ children }) => {
   // at unlock so the sidebar can show counts/subfolders/carets without a click.
   const [sharedTrees, setSharedTrees] = useState({})
   const [myShares, setMyShares] = useState([]) // shares I have granted
+  // Real-time sync: another participant changed a shared folder (detected by
+  // polling GET /vault/revisions). The UI decides whether to auto-apply or show a
+  // "Refresh" banner. `revsRef` is the last-seen counter map; `changedRef` holds
+  // the shareIds pending a re-fetch.
+  const [updatesAvailable, setUpdatesAvailable] = useState(false)
+  const revsRef = useRef({ received: {}, owned: {} })
+  const changedRef = useRef({ received: new Set(), owned: new Set() })
 
   // The live vault key is kept in a ref, never in React state, so it is never
   // serialized into the component tree or persisted anywhere.
@@ -83,6 +109,10 @@ export const VaultProvider = ({ children }) => {
     setSharedTreeFolders([])
     setMyShares([])
     setError(null)
+    // Reset the real-time sync baseline so a re-unlock starts fresh.
+    revsRef.current = { received: {}, owned: {} }
+    changedRef.current = { received: new Set(), owned: new Set() }
+    setUpdatesAvailable(false)
     setStatus((prev) => (prev === 'uninitialized' || prev === 'loading' ? prev : 'locked'))
   }, [])
 
@@ -158,17 +188,11 @@ export const VaultProvider = ({ children }) => {
     rawFoldersRef.current = rawFolders
 
     const rawById = new Map(rawFolders.map((r) => [r.id, r]))
-    // The folder key covering a folder = the key on its nearest shared ancestor
-    // (one key covers a whole shared subtree).
+    // The folder key covering a folder = the key on its OUTERMOST shared ancestor
+    // (one key covers a whole shared subtree; see outermostSharedRecord).
     const subtreeKey = async (folderId) => {
-      let cur = rawById.get(folderId)
-      const guard = new Set()
-      while (cur && !guard.has(cur.id)) {
-        guard.add(cur.id)
-        if (cur.wrappedFolderKey) return ownerFolderKey(vaultKey, cur)
-        cur = cur.parentId ? rawById.get(cur.parentId) : null
-      }
-      return null
+      const outer = outermostSharedRecord(rawById, folderId)
+      return outer ? ownerFolderKey(vaultKey, outer) : null
     }
 
     // Folders a recipient created inside my shared subtree have no vault-key
@@ -218,14 +242,8 @@ export const VaultProvider = ({ children }) => {
     const vaultKey = vaultKeyRef.current
     if (!vaultKey || !folderId) return null
     const byId = new Map(rawFoldersRef.current.map((r) => [r.id, r]))
-    let cur = byId.get(folderId)
-    const guard = new Set()
-    while (cur && !guard.has(cur.id)) {
-      guard.add(cur.id)
-      if (cur.wrappedFolderKey) return ownerFolderKey(vaultKey, cur)
-      cur = cur.parentId ? byId.get(cur.parentId) : null
-    }
-    return null
+    const outer = outermostSharedRecord(byId, folderId)
+    return outer ? ownerFolderKey(vaultKey, outer) : null
   }, [ownerFolderKey])
 
   // Everything a shared subtree needs so recipients can read it: a folder-key
@@ -276,7 +294,14 @@ export const VaultProvider = ({ children }) => {
   // heals shares made before recursive sharing, and picks up folders/entries I
   // added to a shared folder since. Best-effort; never blocks unlocking.
   const repairSharedSubtrees = useCallback(async (vaultKey) => {
-    const roots = rawFoldersRef.current.filter((r) => r.wrappedFolderKey)
+    // Only heal from the OUTERMOST shared roots. A subfolder that carries a stale
+    // wrappedFolderKey (from a since-revoked separate share) must NOT be treated as
+    // its own root, or repair would re-wrap its entries with that stale key and
+    // lock the top-level share's recipients out.
+    const byId = new Map(rawFoldersRef.current.map((r) => [r.id, r]))
+    const roots = rawFoldersRef.current.filter(
+      (r) => r.wrappedFolderKey && outermostSharedRecord(byId, r.id).id === r.id
+    )
     for (const root of roots) {
       try {
         const folderKey = await ownerFolderKey(vaultKey, root)
@@ -360,6 +385,24 @@ export const VaultProvider = ({ children }) => {
     return map
   }, [fetchSharedTree])
 
+  // Re-fetch the shared data that another participant changed (drains changedRef).
+  // Received-side changes → refresh the shared-with-me folders + their subtrees;
+  // owned-side changes (a recipient edited a folder I own) → reload my own tree.
+  const applyUpdates = useCallback(async () => {
+    const changed = changedRef.current
+    const hasReceived = changed.received.size > 0
+    const hasOwned = changed.owned.size > 0
+    changedRef.current = { received: new Set(), owned: new Set() }
+    setUpdatesAvailable(false)
+    try {
+      if (hasReceived) {
+        const shares = await loadSharedWithMe()
+        await loadSharedTrees(shares)
+      }
+      if (hasOwned && vaultKeyRef.current) await loadEntries(vaultKeyRef.current)
+    } catch (err) { /* leave it; the next poll will re-flag */ }
+  }, [loadSharedWithMe, loadSharedTrees, loadEntries])
+
   const createVault = useCallback(async (masterPassword) => {
     const { kdf, protectedVaultKey, vaultKey, publicKey, protectedPrivateKey } = await cryptoCreateVault(masterPassword)
     await request(VAULT_URL, 'POST', { 'Content-Type': 'application/json' },
@@ -415,9 +458,24 @@ export const VaultProvider = ({ children }) => {
     // If the entry lives anywhere inside a subtree I've shared, also wrap its
     // content key to that folder key so recipients keep access after an edit.
     const folderKey = await subtreeKeyForFolder(item.folderId)
-    const encrypted = folderKey
-      ? await encryptItemForFolder(vaultKey, folderKey, content)
-      : await encryptItem(vaultKey, content)
+    let encrypted
+    if (folderKey) {
+      encrypted = await encryptItemForFolder(vaultKey, folderKey, content)
+    } else {
+      // No resolvable folder key. If this is an EXISTING entry that already has a
+      // folder-key copy (i.e. it's shared), keep its content key so that copy stays
+      // valid — otherwise a new vault-only key would silently lock recipients out.
+      const existingRaw = item.id ? rawItemsRef.current.find((r) => r.id === item.id) : null
+      if (existingRaw && existingRaw.folderWrappedItemKey) {
+        try {
+          encrypted = await reencryptItemKeepingKey({ vaultKey, record: existingRaw }, content)
+        } catch (err) {
+          encrypted = await encryptItem(vaultKey, content)
+        }
+      } else {
+        encrypted = await encryptItem(vaultKey, content)
+      }
+    }
     const body = JSON.stringify({ folderId: item.folderId || null, ...encrypted })
     const headers = { 'Content-Type': 'application/json' }
     const saved = item.id
@@ -727,15 +785,19 @@ export const VaultProvider = ({ children }) => {
       `${VAULT_URL}/pubkey?email=${encodeURIComponent(recipientEmail)}`, 'GET').then(jsonOrThrow)
     const recipientKey = await importPublicKey(publicKey)
 
-    // Sharing is recursive: prepare the WHOLE subtree (every descendant folder's
-    // name and every entry's content key) against one folder key.
-    const folderKeyRaw = folder.wrappedFolderKey
-      ? await unwrapFolderKeyFromVault(vaultKey, folder.wrappedFolderKey)
+    // Sharing is recursive with ONE key per subtree. If this folder is already
+    // inside a shared subtree, reuse that subtree's (outermost) key rather than
+    // minting a new one — a second, different key on a nested folder is exactly
+    // what locks the parent share's recipients out of entries here.
+    const byId = new Map(rawFoldersRef.current.map((r) => [r.id, r]))
+    const outerRec = outermostSharedRecord(byId, folderId)
+    const folderKeyRaw = outerRec
+      ? await unwrapFolderKeyFromVault(vaultKey, outerRec.wrappedFolderKey)
       : generateFolderKeyRaw()
     const folderKey = await importFolderKey(folderKeyRaw)
     folderKeysRef.current.set(folderId, folderKey)
 
-    const wrappedFolderKey = folder.wrappedFolderKey || await wrapFolderKeyForVault(vaultKey, folderKeyRaw)
+    const wrappedFolderKey = (outerRec && outerRec.wrappedFolderKey) || await wrapFolderKeyForVault(vaultKey, folderKeyRaw)
     const { folderNames, itemKeys } = await buildSubtreeSetup(vaultKey, folderKey, folderId)
     const folderSetup = {
       wrappedFolderKey,
@@ -771,6 +833,29 @@ export const VaultProvider = ({ children }) => {
     setMyShares((prev) => prev.filter((s) => s.id !== shareId))
   }, [])
 
+  // Re-wrap a shared folder's ENTIRE subtree (every folder name + every entry's
+  // content key) to the correct outermost-subtree key, then persist it. Heals
+  // entries left unreadable to recipients by a past key conflict (e.g. a subfolder
+  // that was once shared separately). Force mode (not onlyMissing) so it fixes
+  // entries that already have a stale folder-key copy.
+  const repairFolderSharing = useCallback(async (folderId) => {
+    const vaultKey = requireKey()
+    const byId = new Map(rawFoldersRef.current.map((r) => [r.id, r]))
+    const outerRec = outermostSharedRecord(byId, folderId)
+    if (!outerRec) throw new Error('This folder is not shared')
+    const folderKey = await ownerFolderKey(vaultKey, outerRec)
+    if (!folderKey) throw new Error('Could not load this folder’s key')
+    const setup = await buildSubtreeSetup(vaultKey, folderKey, outerRec.id, false)
+    await request(`${VAULT_URL}/folders/${outerRec.id}/share-setup`, 'PUT',
+      { 'Content-Type': 'application/json' }, JSON.stringify(setup)).then(jsonOrThrow)
+    // Keep raw records in sync so later edits/shares re-wrap from the correct key.
+    const keyById = new Map(setup.itemKeys.map((k) => [k.id, k.folderWrappedItemKey]))
+    rawItemsRef.current = rawItemsRef.current.map((r) => (
+      keyById.has(r.id) ? { ...r, folderWrappedItemKey: keyById.get(r.id) } : r
+    ))
+    return { folders: setup.folderNames.length, items: setup.itemKeys.length }
+  }, [ownerFolderKey, buildSubtreeSetup])
+
   // Inactivity auto-lock while unlocked. `autoLockMs === null` means never lock,
   // so we don't arm any timer or listeners in that case.
   useEffect(() => {
@@ -791,6 +876,65 @@ export const VaultProvider = ({ children }) => {
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
     }
   }, [status, lock, settings.autoLockMs])
+
+  // Poll the shared-folder change counters while unlocked. Detects edits made by
+  // other participants — and a share newly granted TO the user mid-session — and
+  // flags them for the UI (auto-apply or a "Refresh" banner). Paused while the tab
+  // is hidden; the first tick just seeds the baseline (no false positives). The
+  // request is tiny (ids -> integers) and a no-op for users with no shares.
+  useEffect(() => {
+    if (status !== 'unlocked') return
+    let cancelled = false
+    let seeded = false
+
+    // /revisions returns { [shareId]: { rev, mine } }; the baseline stores just the
+    // rev numbers. `mine` = the latest change was made by me, so it never flags —
+    // that's how you avoid getting notified of your own edits.
+    const toRevMap = (m = {}) => Object.fromEntries(Object.entries(m).map(([id, v]) => [id, v.rev]))
+    // `flagStructural` = flag shares that newly appeared or disappeared. True only
+    // for the received side: a received share appearing/vanishing is the OWNER
+    // sharing with me / revoking my access. On the owned side those are MY own
+    // share/revoke actions, so they must not notify me. Content-rev changes are
+    // always compared (a recipient editing my shared folder still notifies me).
+    const diff = (nextMap = {}, baseMap = {}, set, flagStructural) => {
+      for (const [id, { rev, mine }] of Object.entries(nextMap)) {
+        if (mine) continue // my own change — never notify me
+        const prev = baseMap[id]
+        if (prev === undefined) { if (flagStructural) set.add(id) } else if (rev !== prev) set.add(id)
+      }
+      if (flagStructural) {
+        for (const id of Object.keys(baseMap)) { if (nextMap[id] === undefined) set.add(id) }
+      }
+    }
+
+    const poll = async () => {
+      if (document.hidden) return
+      let revs
+      try {
+        revs = await request(`${VAULT_URL}/revisions`, 'GET').then(jsonOrThrow)
+      } catch (err) { return }
+      if (cancelled) return
+      const next = { received: toRevMap(revs.received), owned: toRevMap(revs.owned) }
+      if (!seeded) { revsRef.current = next; seeded = true; return }
+      const base = revsRef.current
+      diff(revs.received, base.received, changedRef.current.received, true)
+      diff(revs.owned, base.owned, changedRef.current.owned, false)
+      revsRef.current = next
+      if (changedRef.current.received.size > 0 || changedRef.current.owned.size > 0) {
+        setUpdatesAvailable(true)
+      }
+    }
+
+    poll() // seed baseline immediately
+    const interval = setInterval(poll, 12000)
+    const onVisible = () => { if (!document.hidden) poll() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [status, VAULT_URL])
 
   const value = {
     status,
@@ -820,12 +964,17 @@ export const VaultProvider = ({ children }) => {
     myShares,
     shareFolder,
     revokeShare,
+    repairFolderSharing,
     loadMyShares,
     loadSharedWithMe,
+    loadSharedTrees,
     openSharedFolder,
     saveSharedItem,
     moveSharedItems,
-    importSharedItems
+    importSharedItems,
+    // Real-time sync
+    updatesAvailable,
+    applyUpdates
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

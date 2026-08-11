@@ -323,6 +323,7 @@ const VaultView = ({ isDark, vault }) => {
   // 'all' | 'none' | folderId | `shared:<shareId>` (a folder shared WITH me)
   const [selectedFolder, setSelectedFolder] = useState('all')
   const [selected, setSelected] = useState(null) // entry object (edit), {} (new), or null (closed)
+  const [panelNonce, setPanelNonce] = useState(0) // bumps to remount the panel when an open entry is refreshed
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // { type, id, name } | { type: 'bulk', ids, count }
@@ -334,6 +335,7 @@ const VaultView = ({ isDark, vault }) => {
   const [folderMenu, setFolderMenu] = useState(null) // { folder, rect } of the open ⋮ menu
   const [shareHover, setShareHover] = useState(null) // { folderId, rect } for the shared-with hover card
   const [shareTarget, setShareTarget] = useState(null) // folder being shared
+  const [repairStatus, setRepairStatus] = useState(null) // { state: 'running'|'done'|'error', message }
   const [sharedSubfolderId, setSharedSubfolderId] = useState(null) // subfolder within the open shared tree
   const [selectedIds, setSelectedIds] = useState(() => new Set()) // entries selected for bulk actions
   const [moveError, setMoveError] = useState(null)
@@ -879,6 +881,49 @@ const VaultView = ({ isDark, vault }) => {
     setMoving(false)
   }
 
+  // ---- Real-time sync: another participant changed a shared folder ----
+  const handleApplyUpdates = async () => {
+    await vault.applyUpdates()
+    // Refresh the open shared pane from the just-updated cache (shareId/ownerId
+    // are stable, so the pre-refresh `activeShared` object is fine here).
+    if (activeShared) vault.openSharedFolder(activeShared).catch(() => {})
+  }
+  // Auto-apply when it's safe (no entry open/being edited). If an entry IS open, a
+  // banner is shown instead (below); closing the panel re-runs this and applies.
+  useEffect(() => {
+    if (vault.updatesAvailable && selected === null) handleApplyUpdates()
+  }, [vault.updatesAvailable, selected])
+
+  // Keep an open entry panel in sync with its underlying data. When a Refresh pulls
+  // another user's edit, the list gets a fresh copy (newer updatedAt) but `selected`
+  // still points at the stale object; re-seed it and bump the nonce so the panel
+  // remounts with the latest. A no-op after your own save (updatedAt already matches).
+  // If the entry is gone (deleted by another user), close the panel.
+  useEffect(() => {
+    if (!selected || !selected.id) return
+    const source = activeShared ? sharedItems : items
+    const fresh = source.find((i) => i.id === selected.id)
+    if (!fresh) {
+      setSelected(null)
+    } else if (fresh.updatedAt !== selected.updatedAt) {
+      setSelected(fresh)
+      setPanelNonce((n) => n + 1)
+    }
+  }, [items, sharedItems, activeShared, selected])
+
+  // Re-wrap a shared folder's whole subtree to the correct key so recipients can
+  // read every entry (fixes access broken by a past key conflict).
+  const handleRepairSharing = async (folder) => {
+    setRepairStatus({ state: 'running', message: `Repairing sharing for “${folder.name}”…` })
+    try {
+      const res = await vault.repairFolderSharing(folder.id)
+      setRepairStatus({ state: 'done', message: `Sharing repaired — ${res.items} entr${res.items === 1 ? 'y' : 'ies'} re-encrypted for recipients.` })
+      setTimeout(() => setRepairStatus(null), 6000)
+    } catch (err) {
+      setRepairStatus({ state: 'error', message: err.message || 'Repair failed' })
+    }
+  }
+
   const folderTab = (key, label, count) => (
     <button
       key={key}
@@ -934,6 +979,44 @@ const VaultView = ({ isDark, vault }) => {
           🔒<span className='hidden sm:inline'> Lock</span>
         </button>
       </div>
+
+      {/* Shown only when an entry is open/being edited — otherwise updates apply
+          automatically. Lets the user pull another participant's changes without
+          losing their unsaved edits. */}
+      {vault.updatesAvailable && selected !== null && (
+        <div className={`flex items-center justify-between gap-3 mb-4 px-3 py-2 rounded-lg flex-shrink-0 border ${isDark ? 'bg-amber-400/10 border-amber-400/30 text-theme-dark' : 'bg-amber-500/10 border-amber-500/30 text-theme-light'}`}>
+          <span className='text-sm flex items-center gap-2'>
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4 flex-shrink-0'>
+              <path fillRule='evenodd' d='M4.755 10.059a7.5 7.5 0 0112.548-3.364l1.903 1.903h-3.183a.75.75 0 100 1.5h4.992a.75.75 0 00.75-.75V4.356a.75.75 0 00-1.5 0v3.18l-1.9-1.9A9 9 0 003.306 9.67a.75.75 0 101.45.388zm15.408 3.352a.75.75 0 00-.919.53 7.5 7.5 0 01-12.548 3.364l-1.902-1.903h3.183a.75.75 0 000-1.5H2.984a.75.75 0 00-.75.75v4.992a.75.75 0 001.5 0v-3.18l1.9 1.9a9 9 0 0015.059-4.035.75.75 0 00-.53-.918z' clipRule='evenodd' />
+            </svg>
+            Updates available from another user.
+          </span>
+          <button
+            onClick={handleApplyUpdates}
+            className={`text-sm font-medium px-3 py-1 rounded-lg flex-shrink-0 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
+          >
+            Refresh
+          </button>
+        </div>
+      )}
+
+      {/* Repair-sharing status. */}
+      {repairStatus && (
+        <div className={`flex items-center justify-between gap-3 mb-4 px-3 py-2 rounded-lg flex-shrink-0 border ${repairStatus.state === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' : (isDark ? 'bg-white/5 border-white/10 text-theme-dark' : 'bg-black/5 border-black/10 text-theme-light')}`}>
+          <span className='text-sm flex items-center gap-2'>
+            {repairStatus.state === 'running' && <LoadingSpinner className='flex' svgClassName={`!h-4 !w-4 ${isDark ? '!fill-gray-300 !text-gray-300/30' : '!fill-gray-600 !text-gray-600/30'}`} />}
+            {repairStatus.message}
+          </span>
+          {repairStatus.state !== 'running' && (
+            <button
+              onClick={() => setRepairStatus(null)}
+              className={`text-sm px-2 py-1 rounded-lg flex-shrink-0 ${isDark ? 'text-theme-secondary-dark hover:bg-white/10' : 'text-theme-secondary-light hover:bg-black/5'}`}
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
 
       <div className='flex flex-col lg:flex-row gap-6 flex-1 min-h-0'>
         {/* Folder sidebar. `relative z-20` lifts it above the entry list: the
@@ -1414,7 +1497,7 @@ const VaultView = ({ isDark, vault }) => {
                 entry defaults to no folder rather than a misleading one. */}
             {selected !== null && (
               <PasswordEntryPanel
-                key={selected.id || 'new'}
+                key={`${selected.id || 'new'}:${panelNonce}`}
                 isDark={isDark}
                 entry={selected.id ? selected : null}
                 folders={allFolders}
@@ -1486,6 +1569,9 @@ const VaultView = ({ isDark, vault }) => {
             }}
           >
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); handleOpenShare(f) }}>Share…</FolderMenuItem>
+            {sharedFolderIds.has(folderMenu.folder.id) && (
+              <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); handleRepairSharing(f) }}>Repair sharing</FolderMenuItem>
+            )}
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); startRename(f) }}>Rename</FolderMenuItem>
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); startAdding(f.id) }}>New subfolder</FolderMenuItem>
             <FolderMenuItem isDark={isDark} danger onClick={() => { const f = folderMenu.folder; setFolderMenu(null); setConfirmDelete({ type: 'folder', id: f.id, name: f.name }) }}>Delete</FolderMenuItem>

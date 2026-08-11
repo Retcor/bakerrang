@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { db } from '../client/firestoreClient.js'
+import { db, FieldValue } from '../client/firestoreClient.js'
 
 // Zero-knowledge vault storage. The server only ever stores opaque ciphertext
 // produced client-side; it never sees plaintext passwords or the master
@@ -176,6 +176,7 @@ export const createItem = async (userId, item) => {
   const id = item.id || randomUUID()
   const record = itemRecord(item, { withCreatedAt: true })
   await itemsRef(userId).doc(id).set(record)
+  bumpShareRevs(userId, [record.folderId], userId).catch(() => {})
   return { id, ...record }
 }
 
@@ -186,11 +187,17 @@ export const updateItem = async (userId, id, item) => {
   if (!existing.exists) throw httpError(404, 'Item not found')
   const record = itemRecord(item)
   await ref.update(record)
+  // Old + new folder: an edit may also re-file the entry across a shared boundary.
+  bumpShareRevs(userId, [existing.data().folderId, record.folderId], userId).catch(() => {})
   return { id, ...record }
 }
 
 export const deleteItem = async (userId, id) => {
+  // Read the folder before deleting so participants of its shared subtree get notified.
+  const doc = await itemsRef(userId).doc(id).get()
+  const folderId = doc.exists ? doc.data().folderId : null
   await itemsRef(userId).doc(id).delete()
+  bumpShareRevs(userId, [folderId], userId).catch(() => {})
 }
 
 // Bulk-moves items to a folder (or to no folder when folderId is null). Only the
@@ -207,6 +214,11 @@ export const moveItems = async (userId, ids, folderId, folderKeys = null) => {
     Object.values(folderKeys).forEach((c) => assert(isCipher(c), 'Invalid folderWrappedItemKey'))
   }
 
+  // Capture the source folders before the move so a move OUT of a shared subtree
+  // notifies that subtree's participants too (not just the destination's).
+  const sourceDocs = await db.getAll(...ids.map((id) => itemsRef(userId).doc(id)))
+  const sourceFolderIds = sourceDocs.map((d) => (d.exists ? d.data().folderId : null))
+
   const now = Date.now()
   for (let i = 0; i < ids.length; i += 400) {
     const batch = db.batch()
@@ -220,6 +232,7 @@ export const moveItems = async (userId, ids, folderId, folderKeys = null) => {
     }
     await batch.commit()
   }
+  bumpShareRevs(userId, [folderId, ...sourceFolderIds], userId).catch(() => {})
   return { success: true }
 }
 
@@ -241,6 +254,7 @@ export const bulkCreateItems = async (userId, items) => {
     }
     await batch.commit()
   }
+  bumpShareRevs(userId, created.map((c) => c.folderId), userId).catch(() => {})
   return created
 }
 
@@ -274,6 +288,8 @@ export const createFolder = async (userId, folder) => {
     record.sharedName = folder.sharedName
   }
   await foldersRef(userId).doc(id).set(record)
+  // New subfolder under a shared folder → recipients should see it appear.
+  bumpShareRevs(userId, [id, record.parentId], userId).catch(() => {})
   return { id, ...record }
 }
 
@@ -300,6 +316,8 @@ export const reorderFolders = async (userId, updates) => {
     }
     await batch.commit()
   }
+  const touched = updates.flatMap((u) => [u.id, u.parentId])
+  bumpShareRevs(userId, touched, userId).catch(() => {})
   return { success: true }
 }
 
@@ -314,6 +332,8 @@ export const updateFolder = async (userId, id, folder) => {
     record.sharedName = folder.sharedName
   }
   await ref.update(record)
+  // Rename or re-parent: notify shares on the folder itself and on its old + new parent.
+  bumpShareRevs(userId, [id, existing.data().parentId, record.parentId], userId).catch(() => {})
   return { id, ...record }
 }
 
@@ -339,6 +359,11 @@ export const deleteFolder = async (userId, id) => {
     subtree.add(cur)
     for (const child of (childrenByParent.get(cur) || [])) stack.push(child)
   }
+
+  // Notify BEFORE deleting, while the folder tree still contains the subtree —
+  // afterward bumpShareRevs couldn't resolve shares rooted inside it. Awaited
+  // (unlike the other, fire-and-forget bumps) for exactly that ordering.
+  await bumpShareRevs(userId, [...subtree], userId).catch(() => {})
 
   const itemsSnap = await itemsRef(userId).get()
   const ops = []
@@ -375,6 +400,71 @@ const commitOps = async (ops) => {
   }
 }
 
+// Real-time sync signal. When anything inside a shared subtree changes, bump the
+// `contentRev` counter on every share whose subtree contains one of the changed
+// folders, and stamp `lastWriterId` with the user who made the change. Participants'
+// clients poll these (GET /vault/revisions) and re-fetch when a counter moves for a
+// change they didn't make — the counter/id are non-secret, so this leaks no
+// plaintext. Best-effort: callers do NOT await it and it must never throw into a
+// mutation (wrap the call in `.catch(() => {})`). NOTE: for a folder DELETE, call
+// this BEFORE deleting (and pass the whole deleted subtree) so the folder tree it
+// walks still contains those folders. `actorId` is whoever made the change (the
+// owner for owner ops, the recipient for shared-side ops).
+export const bumpShareRevs = async (ownerId, folderIds, actorId) => {
+  const changed = new Set((Array.isArray(folderIds) ? folderIds : [folderIds]).filter(Boolean))
+  if (changed.size === 0) return
+  const sharesSnap = await sharesRef().where('ownerId', '==', ownerId).get()
+  if (sharesSnap.empty) return
+
+  // Build the owner's folder tree once, then test each share's subtree for an
+  // intersection with the changed folders without re-reading folders per share.
+  const foldersSnap = await foldersRef(ownerId).get()
+  const childrenByParent = new Map()
+  foldersSnap.docs.forEach((d) => {
+    const pid = d.data().parentId || null
+    if (!childrenByParent.has(pid)) childrenByParent.set(pid, [])
+    childrenByParent.get(pid).push(d.id)
+  })
+  const subtreeHitsChanged = (rootId) => {
+    const stack = [rootId]
+    const seen = new Set()
+    while (stack.length) {
+      const cur = stack.pop()
+      if (seen.has(cur)) continue
+      seen.add(cur)
+      if (changed.has(cur)) return true
+      for (const c of (childrenByParent.get(cur) || [])) stack.push(c)
+    }
+    return false
+  }
+
+  const batch = db.batch()
+  let n = 0
+  sharesSnap.docs.forEach((d) => {
+    if (subtreeHitsChanged(d.data().folderId)) {
+      batch.update(d.ref, { contentRev: FieldValue.increment(1), lastWriterId: actorId || null })
+      n++
+    }
+  })
+  if (n) await batch.commit()
+}
+
+// The current change-counter for every share I participate in (as recipient or
+// owner), plus whether the latest change was MINE (so my own edits don't notify
+// me). Cheap: a handful of share docs. Contains no plaintext.
+export const getShareRevisions = async (userId) => {
+  const [recvSnap, ownSnap] = await Promise.all([
+    sharesRef().where('recipientUserId', '==', userId).get(),
+    sharesRef().where('ownerId', '==', userId).get()
+  ])
+  const project = (d) => ({ rev: d.data().contentRev || 0, mine: d.data().lastWriterId === userId })
+  const received = {}
+  const owned = {}
+  recvSnap.docs.forEach((d) => { received[d.id] = project(d) })
+  ownSnap.docs.forEach((d) => { owned[d.id] = project(d) })
+  return { received, owned }
+}
+
 // Sharing is recursive, so EVERY folder in the subtree needs a folder-key
 // encrypted name (so recipients can read it) and every entry in the subtree
 // needs its content key wrapped to the folder key.
@@ -402,6 +492,7 @@ export const updateShareSetup = async (ownerId, folderId, body = {}) => {
   if (!folderDoc.exists) throw httpError(404, 'Folder not found')
   const ops = subtreeSetupOps(ownerId, body, Date.now())
   if (ops.length) await commitOps(ops)
+  bumpShareRevs(ownerId, [folderId], ownerId).catch(() => {})
   return { updated: ops.length }
 }
 
@@ -460,6 +551,7 @@ export const createShare = async (ownerId, body = {}) => {
     recipientEmail: recipient.email,
     permission,
     wrappedFolderKey,
+    contentRev: 0,
     createdAt: now
   }
   await sharesRef().doc(id).set(record)
@@ -602,6 +694,7 @@ export const updateSharedItem = async (userId, ownerId, itemId, body = {}) => {
     record.wrappedItemKey = null
   }
   await ref.update(record)
+  bumpShareRevs(ownerId, [doc.data().folderId], userId).catch(() => {})
   return { id: itemId, ...record }
 }
 
@@ -621,6 +714,7 @@ export const createSharedItem = async (userId, ownerId, folderId, item = {}) => 
     updatedAt: now
   }
   await itemsRef(ownerId).doc(id).set(record)
+  bumpShareRevs(ownerId, [folderId], userId).catch(() => {})
   return { id, ...record }
 }
 
@@ -651,6 +745,7 @@ export const bulkCreateSharedItems = async (userId, ownerId, items) => {
     created.push({ id, ...record })
   }
   await commitOps(ops)
+  bumpShareRevs(ownerId, folderIds, userId).catch(() => {})
   return created
 }
 
@@ -668,6 +763,7 @@ export const moveSharedItems = async (userId, ownerId, updates) => {
 
   const now = Date.now()
   const ops = []
+  const touched = [...folderIds] // destinations
   for (const u of updates) {
     assert(u && typeof u.id === 'string', 'Invalid item id')
     // The same folder key covers the whole subtree, so a move within it doesn't
@@ -679,10 +775,12 @@ export const moveSharedItems = async (userId, ownerId, updates) => {
     const doc = await itemsRef(ownerId).doc(u.id).get()
     if (!doc.exists) throw httpError(404, 'Item not found')
     await requireShareForFolder(userId, ownerId, doc.data().folderId, true)
+    touched.push(doc.data().folderId) // source
     const update = { folderId: u.folderId, updatedAt: now }
     if (u.folderWrappedItemKey != null) update.folderWrappedItemKey = u.folderWrappedItemKey
     ops.push((b) => b.update(itemsRef(ownerId).doc(u.id), update))
   }
   await commitOps(ops)
+  bumpShareRevs(ownerId, touched, userId).catch(() => {})
   return { success: true }
 }

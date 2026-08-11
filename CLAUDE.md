@@ -56,6 +56,84 @@ Share a **whole folder** with another Google user, still zero-knowledge — the 
 
 Owners see a **people icon** in the sidebar on folders they've shared.
 
+## Password Vault — Round 3: real-time sync + sharing fixes (2026-08)
+
+### Vault UX additions
+- **KDBX export** (`ExportVaultModal.jsx`): downloads a password-encrypted KeePass 2.x
+  `.kdbx` built **in-browser** from the already-decrypted `items`/`folders` — prompts for a
+  **separate export password** (not the master), never uploads plaintext. Uses `kdbxweb`
+  2.1.1 `Kdbx.create/createGroup/createEntry/save`. The kdbxweb interop shim + Argon2
+  registration were factored out of `KeePassImportModal.jsx` into **`client/src/utils/kdbx.js`**
+  (`getKdbxweb`/`ensureArgon2`) so import and export share one source. **Export** button sits
+  beside **Import** in the toolbar (was "Import KeePass", now just "Import").
+- **Delete All** in the bulk-move bar: a red trash button between the folder dropdown and
+  Clear, **owned views only** (hidden when `isSharedView`), confirmed via the existing
+  `ConfirmModal` (`confirmDelete.type === 'bulk'`). Backed by `vault.deleteItems(ids)` which
+  loops the vetted per-item DELETE (no new endpoint).
+- **Shared indicator**: the people icon moved off the entry count to a leading position on
+  owned shared folders; **hovering** shows a hoisted card listing each recipient's email +
+  edit/view (from `myShares`), **clicking** opens the share manager (touch has no hover).
+- **Shared folders populated up front**: recipient's "Shared with me" folders now show entry
+  counts, subfolders, and expand carets **without clicking** — `VaultProvider` prefetches
+  each share's subtree at unlock into `sharedTrees` (`{ [shareId]: { items, folders } }`,
+  mirrored in `sharedTreesRef`) via `fetchSharedTree`/`loadSharedTrees`, reusing the existing
+  `GET /vault/shared/:ownerId/tree/:rootId` endpoint. `openSharedFolder` reads that cache.
+- **Eye toggle** on the create + unlock master-password fields via a shared
+  `MasterPasswordInput` (toggles `type` password/text — stays a real password input so
+  managers can fill it).
+- **Loading buttons keep their size**: Save/Export/Import buttons render the label
+  invisibly with the spinner overlaid (`relative` + `absolute inset-0`) instead of shrinking.
+- **Shared-folder header** shows just a compact `can edit`/`view only` **pill**; the owner
+  email is in its tooltip (keeps the breadcrumb room when the entry panel is open).
+
+### Real-time sync (polling model — NOT websockets)
+Shared-folder changes propagate to other logged-in participants **without a refresh**, still
+zero-knowledge (server signals only a non-secret counter; clients re-fetch + decrypt locally).
+Chosen over SSE/WebSocket because the app runs on **GKE (multi-pod) with no message bus** —
+a push connection would need cross-pod fan-out. Polling a counter needs zero new infra.
+
+- **Server** (`vaultService.js` + `routes/vault.js`): each `vault_shares` doc gains
+  `contentRev` (int) + `lastWriterId`. **`bumpShareRevs(ownerId, folderIds, actorId)`** —
+  fire-and-forget, called from **every** mutation (owner + shared side) — increments
+  `contentRev` on every share whose subtree contains a changed folder, stamping the actor.
+  A few mutations pre-read the folder id (`deleteItem`, owner `moveItems` source via `getAll`,
+  `updateItem`/`updateFolder` old values); `deleteFolder` bumps **before** deleting (awaited)
+  so the tree still contains the subtree. **`GET /vault/revisions`** returns
+  `{ received: {shareId:{rev,mine}}, owned: {...} }` — `mine` = the last writer was me.
+- **Client** (`VaultProvider.jsx`): a 12s poll (paused when tab hidden) while `unlocked`
+  diffs the counters vs a baseline (`revsRef`), skipping any change flagged **`mine`** (so you
+  never notify yourself). **Structural** flags (a share newly appearing / disappearing) fire
+  **only on the received side** — an owned-share add/revoke is your own action, so revoking a
+  user no longer notifies the owner. Detected changes set `updatesAvailable`; `applyUpdates()`
+  re-fetches the affected shared trees / owned entries.
+- **UI** (`Passwords.jsx`): if no entry panel is open, changes **auto-apply**; if one is open,
+  a **"Updates available — Refresh"** banner shows instead (protects unsaved edits), applying
+  on close or click. An effect keyed on the open entry's `updatedAt` **re-seeds the panel**
+  (via a `panelNonce` in its `key`) when a Refresh pulls an edit, and **closes it** if the
+  entry was deleted by someone else — a no-op after your own save.
+
+### ⚠️ Sharing key rule: ONE key per subtree, resolve to the OUTERMOST shared ancestor
+Sharing a **subfolder** of an already-shared folder used to mint a **second, different**
+folder key and stamp it on the subfolder, which then shadowed the parent share's key —
+owner edits got wrapped with the wrong key and recipients saw **"(unreadable entry)"**.
+Fixed in `VaultProvider.jsx` with `outermostSharedRecord(byId, folderId)` (the topmost
+ancestor-or-self with a `wrappedFolderKey`), used by `subtreeKeyForFolder`, `loadEntries`'
+`subtreeKey`, and `repairSharedSubtrees` (only heals from topmost roots). **`shareFolder`
+now reuses the outermost ancestor's key** for a nested share instead of generating one.
+Keep this invariant: never resolve a folder's key to the *nearest* shared ancestor — always
+the outermost.
+
+- **`saveItem` fallback** (`reencryptItemKeepingKey` in `crypto.js`): if the folder key can't
+  be resolved when editing an existing shared entry, re-encrypt under the entry's **existing
+  content key** so its `folderWrappedItemKey` stays valid (recipients keep access) instead of
+  minting a vault-only key that silently locks them out.
+- **Repair sharing** action (folder kebab, shown for shared folders): re-wraps a shared
+  folder's whole subtree to the correct key via `repairFolderSharing` →
+  `buildSubtreeSetup(...,false)` → `PUT /vault/folders/:id/share-setup` (force, not
+  onlyMissing). Heals entries broken by a past key conflict; only re-wraps **owner-owned**
+  entries (recipient-created ones must be re-saved by the recipient). Shows an inline status
+  banner; recipients auto-refresh via the rev bump.
+
 ## Browser Extension — Vault Autofill (2026-08)
 
 A Chrome/Edge **Manifest V3** extension in the top-level `extension/` folder that
