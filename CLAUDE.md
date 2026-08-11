@@ -134,6 +134,50 @@ the outermost.
   entries (recipient-created ones must be re-saved by the recipient). Shows an inline status
   banner; recipients auto-refresh via the rev bump.
 
+## Password Vault — Version History / audit log (2026-08)
+
+An **owner-only** version history for the vault: every create / update / delete /
+move of an entry or folder you **own** is recorded, so you can see *what* changed on
+an entry, *when*, and *who* did it (yourself vs. a share-recipient), and find a
+recently-deleted entry. **Never shown for folders/entries shared WITH you.** Still
+zero-knowledge — records store ciphertext snapshots decrypted only in the browser.
+
+**Storage:** subcollection `vaults/{ownerId}/audit/{auditId}` (structural ownership,
+owner-only). Record = `{ action, targetType, targetId, folderId, actorId, actorEmail,
+createdAt, snapshot, meta }`. `action` ∈ `item.{create,update,delete,move}` /
+`folder.{create,update,delete,move}`. `snapshot` is the decryptable ciphertext state
+(item = `{ wrappedItemKey, ciphertext, folderWrappedItemKey, folderId }` →
+`decryptItem`; folder = `{ ciphertext, sharedName }` → `decryptFolder`); `null` for
+pure moves (which carry `meta.{fromFolderId,toFolderId}` instead). Bulk ops → one
+record per item/folder (per-entry history stays complete).
+
+**Server** (`vaultService.js` + `routes/vault.js`): `logAudit(ownerId, entries, actor)`
+— fire-and-forget, batched, best-effort (mirrors `bumpShareRevs`; callers `.catch()`
+and never await) — is called from **every owned-data mutation**, including the
+`/vault/shared/...` recipient paths (logged under the **owner's** vault with the
+**recipient** as `actor` — that's what attributes an edit to "user X"). Mutation
+service fns took an optional trailing `actor` = `{ id, email }`, threaded from routes
+via `actorOf(req)` (always from the session, never the body). Reader `listAudit(ownerId,
+{ targetId, folderId, limit, before })` backs three **owner-only GET** routes (no CSRF):
+`/vault/audit`, `/vault/audit/item/:id`, `/vault/audit/folder/:id`.
+
+**⚠️ Firestore composite index required:** the `item`/`folder` queries combine
+`where('targetId'|'folderId','==',…)` with `orderBy('createdAt','desc')` — Firestore
+errors on the first such call with a **one-click create link**. Create it, then retry.
+The global `/vault/audit` query is single-field (createdAt) and needs no composite index.
+
+**Client:** `VaultProvider` exposes `getAudit` / `getItemHistory` / `getFolderHistory`
+(inline `request().then(jsonOrThrow)`) + **`decryptSnapshot(record)`** (reuses
+`loadEntries`' key resolution: vault key first, `subtreeKeyForFolder` folder-key
+fallback). `HistoryModal.jsx` (modeled on `ShareFolderModal`, hoisted at `VaultView`
+root) renders a reverse-chron timeline in three modes — `item` (per-entry, with a
+field-level diff vs. the previous version + deleted-entry contents), `folder` (the
+folder's own events + entries within it), `global` (**Activity** — vault-wide, for
+finding deleted entries). "You" vs. actor email comes from `useAuth()`. Surfaced via a
+clock **IconButton** in `PasswordEntryPanel` header (`onHistory`, owned + non-new only),
+a **"Version history…"** folder ⋮ item, and an **Activity** toolbar button (owned view
+only). All owner-view-gated (`!isSharedView`).
+
 ## Browser Extension — Vault Autofill (2026-08)
 
 A Chrome/Edge **Manifest V3** extension in the top-level `extension/` folder that

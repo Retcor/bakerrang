@@ -30,7 +30,7 @@ const openUrl = (raw) => {
 // never moves while the list scrolls; on small screens it slides over the list as
 // a full overlay with a Back control. Parent should remount it (via a `key`) when
 // the selected entry changes so the form resets cleanly.
-const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = null, readOnly = false, hideDelete = false, hideFolder = false, onSave, onDelete, onClose }) => {
+const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = null, readOnly = false, hideDelete = false, hideFolder = false, onSave, onDelete, onClose, onHistory = null }) => {
   const isNew = !(entry && entry.id)
   const [form, setForm] = useState(() => (isNew ? { ...EMPTY, folderId: defaultFolderId } : { ...EMPTY, ...entry }))
   const [showPassword, setShowPassword] = useState(false)
@@ -105,7 +105,19 @@ const PasswordEntryPanel = ({ isDark, entry, folders = [], defaultFolderId = nul
             <span className='lg:hidden'>Back</span>
           </button>
           <h2 className={`text-lg font-medium ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>{isNew ? 'New Entry' : 'Edit Entry'}</h2>
-          <span className='w-5' />
+          {onHistory && !isNew
+            ? (
+              <button
+                onClick={onHistory}
+                title='Version history'
+                className={`flex items-center transition-colors ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
+              >
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.8' stroke='currentColor' className='w-5 h-5'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z' />
+                </svg>
+              </button>
+              )
+            : <span className='w-5' />}
         </div>
 
         {/* On desktop this becomes the flex column that fills the card, so Notes

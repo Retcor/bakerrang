@@ -7,6 +7,7 @@ import KeePassImportModal from './KeePassImportModal.jsx'
 import ExportVaultModal from './ExportVaultModal.jsx'
 import FolderSelect from './FolderSelect.jsx'
 import ShareFolderModal from './ShareFolderModal.jsx'
+import HistoryModal from './HistoryModal.jsx'
 
 const Passwords = () => {
   const { isDark } = useTheme()
@@ -335,6 +336,7 @@ const VaultView = ({ isDark, vault }) => {
   const [folderMenu, setFolderMenu] = useState(null) // { folder, rect } of the open ⋮ menu
   const [shareHover, setShareHover] = useState(null) // { folderId, rect } for the shared-with hover card
   const [shareTarget, setShareTarget] = useState(null) // folder being shared
+  const [historyTarget, setHistoryTarget] = useState(null) // { mode: 'item'|'folder'|'global', target } for version history
   const [repairStatus, setRepairStatus] = useState(null) // { state: 'running'|'done'|'error', message }
   const [sharedSubfolderId, setSharedSubfolderId] = useState(null) // subfolder within the open shared tree
   const [selectedIds, setSelectedIds] = useState(() => new Set()) // entries selected for bulk actions
@@ -968,6 +970,17 @@ const VaultView = ({ isDark, vault }) => {
           >
             Export
           </button>
+          {/* Version history is owner-only — not shown when viewing a folder
+              shared WITH me. */}
+          {!isSharedView && (
+            <button
+              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20' : 'glass-light text-theme-light hover:bg-black/20'}`}
+              onClick={() => setHistoryTarget({ mode: 'global', target: null })}
+              title='See recent changes across your vault'
+            >
+              Activity
+            </button>
+          )}
         </div>
         <button
           title='Lock vault'
@@ -1508,6 +1521,8 @@ const VaultView = ({ isDark, vault }) => {
                 onSave={handleSaveEntry}
                 onDelete={(entry) => setConfirmDelete({ type: 'item', id: entry.id, name: entry.title })}
                 onClose={() => setSelected(null)}
+                // History is owner-only; hide it for folders shared WITH me.
+                onHistory={!isSharedView && selected.id ? () => setHistoryTarget({ mode: 'item', target: selected }) : null}
               />
             )}
           </div>
@@ -1535,6 +1550,14 @@ const VaultView = ({ isDark, vault }) => {
         onShare={handleShare}
         onRevoke={handleRevoke}
         onClose={() => setShareTarget(null)}
+      />
+
+      <HistoryModal
+        open={historyTarget !== null}
+        isDark={isDark}
+        mode={historyTarget?.mode || 'global'}
+        target={historyTarget?.target || null}
+        onClose={() => setHistoryTarget(null)}
       />
 
       <ConfirmModal
@@ -1574,6 +1597,7 @@ const VaultView = ({ isDark, vault }) => {
             )}
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); startRename(f) }}>Rename</FolderMenuItem>
             <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); startAdding(f.id) }}>New subfolder</FolderMenuItem>
+            <FolderMenuItem isDark={isDark} onClick={() => { const f = folderMenu.folder; setFolderMenu(null); setHistoryTarget({ mode: 'folder', target: f }) }}>Version history…</FolderMenuItem>
             <FolderMenuItem isDark={isDark} danger onClick={() => { const f = folderMenu.folder; setFolderMenu(null); setConfirmDelete({ type: 'folder', id: f.id, name: f.name }) }}>Delete</FolderMenuItem>
           </div>
         </>

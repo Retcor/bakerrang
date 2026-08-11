@@ -936,6 +936,42 @@ export const VaultProvider = ({ children }) => {
     }
   }, [status, VAULT_URL])
 
+  // ---- Version history (audit log) ----
+  //
+  // Owner-only reads. Records hold only ciphertext snapshots + ids/actor/
+  // timestamp; the values are decrypted here, client-side. `q` is an optional
+  // query string (e.g. '?before=..&limit=..') for pagination.
+  const getAudit = useCallback((q = '') => request(`${VAULT_URL}/audit${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
+  const getItemHistory = useCallback((id, q = '') => request(`${VAULT_URL}/audit/item/${id}${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
+  const getFolderHistory = useCallback((id, q = '') => request(`${VAULT_URL}/audit/folder/${id}${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
+
+  // Decrypt one audit record's snapshot into readable fields, reusing the same
+  // key resolution as loadEntries (vault key first, folder key fallback for
+  // recipient-created data). Returns null when there is no snapshot (e.g. a pure
+  // move) or it can't be read.
+  const decryptSnapshot = useCallback(async (record) => {
+    const vaultKey = vaultKeyRef.current
+    if (!vaultKey || !record || !record.snapshot) return null
+    const snap = record.snapshot
+    try {
+      if (record.targetType === 'folder') {
+        if (snap.ciphertext) return await decryptFolder(vaultKey, snap)
+        const fk = await subtreeKeyForFolder(record.targetId)
+        if (fk && snap.sharedName) return await decryptFolderName(fk, snap.sharedName)
+        return null
+      }
+      // item
+      if (snap.wrappedItemKey) {
+        try { return await decryptItem(vaultKey, snap) } catch (err) { /* stale vault-key copy — try folder key */ }
+      }
+      if (snap.folderWrappedItemKey) {
+        const fk = await subtreeKeyForFolder(snap.folderId)
+        if (fk) return await decryptItemWithFolderKey(fk, snap)
+      }
+    } catch (err) { /* unreadable */ }
+    return null
+  }, [subtreeKeyForFolder])
+
   const value = {
     status,
     items,
@@ -974,7 +1010,12 @@ export const VaultProvider = ({ children }) => {
     importSharedItems,
     // Real-time sync
     updatesAvailable,
-    applyUpdates
+    applyUpdates,
+    // Version history (audit log)
+    getAudit,
+    getItemHistory,
+    getFolderHistory,
+    decryptSnapshot
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

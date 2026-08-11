@@ -28,6 +28,75 @@ const isCipher = (c) =>
   c.iv.length > 0 && c.iv.length <= 256 &&
   c.ct.length > 0 && c.ct.length <= 200000
 
+// ---- Audit log (version history) ----
+//
+// Every create/update/delete/move of an OWNED folder or entry is recorded under
+// vaults/{ownerId}/audit. Records hold only ciphertext snapshots plus ids /
+// actor / timestamp, so history stays zero-knowledge — the values are decrypted
+// client-side. Writes are best-effort: callers never await and wrap in
+// `.catch(() => {})` so an audit failure can never break the mutation itself.
+// `actor` = { id, email } of whoever made the change — the owner for owner ops,
+// the share-recipient for shared-side ops (that is what attributes an edit to
+// "user X" in the owner's history).
+const auditRef = (ownerId) => vaultRef(ownerId).collection('audit')
+
+// A decryptable snapshot of an item — exactly the fields decryptItem() needs
+// (wrappedItemKey + ciphertext), plus folderWrappedItemKey so the owner can fall
+// back to the folder key for recipient-created entries.
+const itemSnapshot = (record) => ({
+  wrappedItemKey: record.wrappedItemKey || null,
+  ciphertext: record.ciphertext,
+  folderWrappedItemKey: record.folderWrappedItemKey || null,
+  folderId: record.folderId || null
+})
+// Folder snapshot — the owner's vault-key-encrypted name (decryptFolder()).
+const folderSnapshot = (record) => ({
+  ciphertext: record.ciphertext,
+  sharedName: record.sharedName || null
+})
+
+const auditDoc = (entry, actor, now) => ({
+  action: entry.action,
+  targetType: entry.targetType,
+  targetId: entry.targetId,
+  folderId: entry.folderId != null ? entry.folderId : null,
+  snapshot: entry.snapshot != null ? entry.snapshot : null,
+  meta: entry.meta != null ? entry.meta : null,
+  actorId: (actor && actor.id) || null,
+  actorEmail: (actor && actor.email) || null,
+  createdAt: now
+})
+
+// Write one audit entry or an array of them. Batched (Firestore's 500-op cap →
+// chunk at 400). Best-effort — see the note above.
+export const logAudit = async (ownerId, entries, actor) => {
+  const list = Array.isArray(entries) ? entries : [entries]
+  if (!list.length) return
+  const now = Date.now()
+  for (let i = 0; i < list.length; i += 400) {
+    const batch = db.batch()
+    for (const e of list.slice(i, i + 400)) {
+      batch.set(auditRef(ownerId).doc(randomUUID()), auditDoc(e, actor, now))
+    }
+    await batch.commit()
+  }
+}
+
+// Reverse-chronological audit records, optionally scoped to one target (an item
+// or folder id) or one folder, with a `before` (createdAt ms) cursor for
+// pagination. Owner-only — callers pass their own id as ownerId.
+// NOTE: the targetId/folderId + orderBy(createdAt) combination needs a Firestore
+// composite index; the first such query errors with a one-click create link.
+export const listAudit = async (ownerId, { targetId, folderId, limit, before } = {}) => {
+  let q = auditRef(ownerId).orderBy('createdAt', 'desc')
+  if (targetId) q = q.where('targetId', '==', targetId)
+  else if (folderId) q = q.where('folderId', '==', folderId)
+  if (before) q = q.where('createdAt', '<', Number(before))
+  const capped = Math.min(Number(limit) || 50, 200)
+  const snap = await q.limit(capped).get()
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
 // ---- Vault metadata ----
 
 export const getVault = async (userId) => {
@@ -171,16 +240,17 @@ export const listItems = async (userId) => {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export const createItem = async (userId, item) => {
+export const createItem = async (userId, item, actor) => {
   validateItem(item)
   const id = item.id || randomUUID()
   const record = itemRecord(item, { withCreatedAt: true })
   await itemsRef(userId).doc(id).set(record)
   bumpShareRevs(userId, [record.folderId], userId).catch(() => {})
+  logAudit(userId, { action: 'item.create', targetType: 'item', targetId: id, folderId: record.folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
   return { id, ...record }
 }
 
-export const updateItem = async (userId, id, item) => {
+export const updateItem = async (userId, id, item, actor) => {
   validateItem(item)
   const ref = itemsRef(userId).doc(id)
   const existing = await ref.get()
@@ -189,22 +259,26 @@ export const updateItem = async (userId, id, item) => {
   await ref.update(record)
   // Old + new folder: an edit may also re-file the entry across a shared boundary.
   bumpShareRevs(userId, [existing.data().folderId, record.folderId], userId).catch(() => {})
+  logAudit(userId, { action: 'item.update', targetType: 'item', targetId: id, folderId: record.folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
   return { id, ...record }
 }
 
-export const deleteItem = async (userId, id) => {
+export const deleteItem = async (userId, id, actor) => {
   // Read the folder before deleting so participants of its shared subtree get notified.
   const doc = await itemsRef(userId).doc(id).get()
-  const folderId = doc.exists ? doc.data().folderId : null
+  const data = doc.exists ? doc.data() : null
+  const folderId = data ? data.folderId : null
   await itemsRef(userId).doc(id).delete()
   bumpShareRevs(userId, [folderId], userId).catch(() => {})
+  // Snapshot the last state so a deleted entry stays identifiable in history.
+  if (data) logAudit(userId, { action: 'item.delete', targetType: 'item', targetId: id, folderId, snapshot: itemSnapshot(data) }, actor).catch(() => {})
 }
 
 // Bulk-moves items to a folder (or to no folder when folderId is null). Only the
 // plaintext folderId is changed — the encrypted content is never touched.
 // `folderKeys` (optional) maps itemId -> folderWrappedItemKey. It is supplied
 // when moving entries INTO a shared folder so recipients can still read them.
-export const moveItems = async (userId, ids, folderId, folderKeys = null) => {
+export const moveItems = async (userId, ids, folderId, folderKeys = null, actor) => {
   assert(Array.isArray(ids) && ids.length > 0, 'Expected a non-empty array of item ids')
   assert(ids.length <= 2000, 'Too many items in one move')
   ids.forEach((id) => assert(typeof id === 'string', 'Invalid item id'))
@@ -233,11 +307,19 @@ export const moveItems = async (userId, ids, folderId, folderKeys = null) => {
     await batch.commit()
   }
   bumpShareRevs(userId, [folderId, ...sourceFolderIds], userId).catch(() => {})
+  // One move record per item so per-entry history stays complete.
+  logAudit(userId, ids.map((id, idx) => ({
+    action: 'item.move',
+    targetType: 'item',
+    targetId: id,
+    folderId: folderId || null,
+    meta: { fromFolderId: sourceFolderIds[idx] != null ? sourceFolderIds[idx] : null, toFolderId: folderId || null }
+  })), actor).catch(() => {})
   return { success: true }
 }
 
 // Bulk create for KeePass import. Firestore batches cap at 500 writes.
-export const bulkCreateItems = async (userId, items) => {
+export const bulkCreateItems = async (userId, items, actor) => {
   assert(Array.isArray(items) && items.length > 0, 'Expected a non-empty array of items')
   assert(items.length <= 2000, 'Too many items in one import (max 2000)')
   items.forEach(validateItem)
@@ -255,6 +337,9 @@ export const bulkCreateItems = async (userId, items) => {
     await batch.commit()
   }
   bumpShareRevs(userId, created.map((c) => c.folderId), userId).catch(() => {})
+  logAudit(userId, created.map((c) => ({
+    action: 'item.create', targetType: 'item', targetId: c.id, folderId: c.folderId, snapshot: itemSnapshot(c)
+  })), actor).catch(() => {})
   return created
 }
 
@@ -270,7 +355,7 @@ export const listFolders = async (userId) => {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export const createFolder = async (userId, folder) => {
+export const createFolder = async (userId, folder, actor) => {
   validateFolder(folder)
   const id = folder.id || randomUUID()
   const now = Date.now()
@@ -290,13 +375,14 @@ export const createFolder = async (userId, folder) => {
   await foldersRef(userId).doc(id).set(record)
   // New subfolder under a shared folder → recipients should see it appear.
   bumpShareRevs(userId, [id, record.parentId], userId).catch(() => {})
+  logAudit(userId, { action: 'folder.create', targetType: 'folder', targetId: id, folderId: id, snapshot: folderSnapshot(record) }, actor).catch(() => {})
   return { id, ...record }
 }
 
 // Batch-updates the parent and ordering of folders (used for drag-and-drop
 // reorder / re-parent). Only parentId + position are touched, so the encrypted
 // name is never rewritten.
-export const reorderFolders = async (userId, updates) => {
+export const reorderFolders = async (userId, updates, actor) => {
   assert(Array.isArray(updates) && updates.length > 0, 'Expected a non-empty array of folder updates')
   assert(updates.length <= 1000, 'Too many folder updates')
   updates.forEach((u) => {
@@ -318,10 +404,17 @@ export const reorderFolders = async (userId, updates) => {
   }
   const touched = updates.flatMap((u) => [u.id, u.parentId])
   bumpShareRevs(userId, touched, userId).catch(() => {})
+  logAudit(userId, updates.map((u) => ({
+    action: 'folder.move',
+    targetType: 'folder',
+    targetId: u.id,
+    folderId: u.id,
+    meta: { toParentId: u.parentId || null, position: u.position }
+  })), actor).catch(() => {})
   return { success: true }
 }
 
-export const updateFolder = async (userId, id, folder) => {
+export const updateFolder = async (userId, id, folder, actor) => {
   validateFolder(folder)
   const ref = foldersRef(userId).doc(id)
   const existing = await ref.get()
@@ -334,6 +427,7 @@ export const updateFolder = async (userId, id, folder) => {
   await ref.update(record)
   // Rename or re-parent: notify shares on the folder itself and on its old + new parent.
   bumpShareRevs(userId, [id, existing.data().parentId, record.parentId], userId).catch(() => {})
+  logAudit(userId, { action: 'folder.update', targetType: 'folder', targetId: id, folderId: id, snapshot: folderSnapshot(record) }, actor).catch(() => {})
   return { id, ...record }
 }
 
@@ -341,7 +435,7 @@ export const updateFolder = async (userId, id, folder) => {
 // of those folders are detached (moved to "no folder") rather than deleted, so
 // no passwords are lost. Writes are chunked to respect Firestore's 500-op batch
 // limit.
-export const deleteFolder = async (userId, id) => {
+export const deleteFolder = async (userId, id, actor) => {
   const foldersSnap = await foldersRef(userId).get()
   const childrenByParent = new Map()
   foldersSnap.docs.forEach((d) => {
@@ -367,9 +461,23 @@ export const deleteFolder = async (userId, id) => {
 
   const itemsSnap = await itemsRef(userId).get()
   const ops = []
+  const auditEntries = []
   itemsSnap.docs.forEach((d) => {
     if (subtree.has(d.data().folderId)) {
       ops.push((b) => b.update(d.ref, { folderId: null, updatedAt: Date.now() }))
+      // Entries aren't deleted — they're detached to "no folder". Record that move.
+      auditEntries.push({
+        action: 'item.move',
+        targetType: 'item',
+        targetId: d.id,
+        folderId: null,
+        meta: { fromFolderId: d.data().folderId, toFolderId: null }
+      })
+    }
+  })
+  foldersSnap.docs.forEach((d) => {
+    if (subtree.has(d.id)) {
+      auditEntries.push({ action: 'folder.delete', targetType: 'folder', targetId: d.id, folderId: d.id, snapshot: folderSnapshot(d.data()) })
     }
   })
   subtree.forEach((fid) => ops.push((b) => b.delete(foldersRef(userId).doc(fid))))
@@ -379,6 +487,7 @@ export const deleteFolder = async (userId, id) => {
     ops.slice(i, i + 400).forEach((op) => op(batch))
     await batch.commit()
   }
+  logAudit(userId, auditEntries, actor).catch(() => {})
 }
 
 // ---- Sharing (Phase 2) ----
@@ -677,7 +786,7 @@ export const listSharedTree = async (userId, ownerId, rootId) => {
 }
 
 // Edit an entry anywhere inside a shared subtree (requires 'edit').
-export const updateSharedItem = async (userId, ownerId, itemId, body = {}) => {
+export const updateSharedItem = async (userId, ownerId, itemId, body = {}, actor) => {
   const ref = itemsRef(ownerId).doc(itemId)
   const doc = await ref.get()
   if (!doc.exists) throw httpError(404, 'Item not found')
@@ -695,12 +804,14 @@ export const updateSharedItem = async (userId, ownerId, itemId, body = {}) => {
   }
   await ref.update(record)
   bumpShareRevs(ownerId, [doc.data().folderId], userId).catch(() => {})
+  // Recorded under the OWNER's vault, attributed to the recipient (actor).
+  logAudit(ownerId, { action: 'item.update', targetType: 'item', targetId: itemId, folderId: doc.data().folderId, snapshot: itemSnapshot({ ...doc.data(), ...record }) }, actor).catch(() => {})
   return { id: itemId, ...record }
 }
 
 // Add an entry anywhere inside a shared subtree (requires 'edit'). Stored under
 // the OWNER's vault, keyed to the folder key so the owner can read it too.
-export const createSharedItem = async (userId, ownerId, folderId, item = {}) => {
+export const createSharedItem = async (userId, ownerId, folderId, item = {}, actor) => {
   await requireShareForFolder(userId, ownerId, folderId, true)
   assert(isCipher(item.ciphertext), 'Invalid item ciphertext')
   assert(isCipher(item.folderWrappedItemKey), 'Invalid folderWrappedItemKey')
@@ -715,11 +826,12 @@ export const createSharedItem = async (userId, ownerId, folderId, item = {}) => 
   }
   await itemsRef(ownerId).doc(id).set(record)
   bumpShareRevs(ownerId, [folderId], userId).catch(() => {})
+  logAudit(ownerId, { action: 'item.create', targetType: 'item', targetId: id, folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
   return { id, ...record }
 }
 
 // Bulk-add entries to a shared subtree (KeePass import by a recipient).
-export const bulkCreateSharedItems = async (userId, ownerId, items) => {
+export const bulkCreateSharedItems = async (userId, ownerId, items, actor) => {
   assert(Array.isArray(items) && items.length > 0, 'Expected a non-empty array of items')
   assert(items.length <= 2000, 'Too many items in one import (max 2000)')
   // Every target folder must be inside a subtree I can edit.
@@ -746,6 +858,9 @@ export const bulkCreateSharedItems = async (userId, ownerId, items) => {
   }
   await commitOps(ops)
   bumpShareRevs(ownerId, folderIds, userId).catch(() => {})
+  logAudit(ownerId, created.map((c) => ({
+    action: 'item.create', targetType: 'item', targetId: c.id, folderId: c.folderId, snapshot: itemSnapshot(c)
+  })), actor).catch(() => {})
   return created
 }
 
@@ -755,7 +870,7 @@ export const bulkCreateSharedItems = async (userId, ownerId, items) => {
 
 // Move entries within a shared subtree (requires 'edit'). Callers pass the
 // re-wrapped folder key copy for each item so it stays readable.
-export const moveSharedItems = async (userId, ownerId, updates) => {
+export const moveSharedItems = async (userId, ownerId, updates, actor) => {
   assert(Array.isArray(updates) && updates.length > 0, 'Expected a non-empty array of moves')
   assert(updates.length <= 2000, 'Too many items in one move')
   const folderIds = [...new Set(updates.map((u) => u && u.folderId))]
@@ -764,6 +879,7 @@ export const moveSharedItems = async (userId, ownerId, updates) => {
   const now = Date.now()
   const ops = []
   const touched = [...folderIds] // destinations
+  const auditEntries = []
   for (const u of updates) {
     assert(u && typeof u.id === 'string', 'Invalid item id')
     // The same folder key covers the whole subtree, so a move within it doesn't
@@ -779,8 +895,16 @@ export const moveSharedItems = async (userId, ownerId, updates) => {
     const update = { folderId: u.folderId, updatedAt: now }
     if (u.folderWrappedItemKey != null) update.folderWrappedItemKey = u.folderWrappedItemKey
     ops.push((b) => b.update(itemsRef(ownerId).doc(u.id), update))
+    auditEntries.push({
+      action: 'item.move',
+      targetType: 'item',
+      targetId: u.id,
+      folderId: u.folderId,
+      meta: { fromFolderId: doc.data().folderId, toFolderId: u.folderId }
+    })
   }
   await commitOps(ops)
   bumpShareRevs(ownerId, touched, userId).catch(() => {})
+  logAudit(ownerId, auditEntries, actor).catch(() => {})
   return { success: true }
 }
