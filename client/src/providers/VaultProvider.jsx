@@ -944,6 +944,9 @@ export const VaultProvider = ({ children }) => {
   const getAudit = useCallback((q = '') => request(`${VAULT_URL}/audit${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
   const getItemHistory = useCallback((id, q = '') => request(`${VAULT_URL}/audit/item/${id}${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
   const getFolderHistory = useCallback((id, q = '') => request(`${VAULT_URL}/audit/folder/${id}${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
+  // Version history for an entry in a folder shared WITH me (owner-gated + redacted
+  // server-side). Snapshots come back as ciphertext I decrypt with the folder key.
+  const getSharedItemHistory = useCallback((ownerId, id, q = '') => request(`${VAULT_URL}/shared/${ownerId}/audit/item/${id}${q}`, 'GET').then(jsonOrThrow), [VAULT_URL])
 
   // Decrypt one audit record's snapshot into readable fields, reusing the same
   // key resolution as loadEntries (vault key first, folder key fallback for
@@ -971,6 +974,25 @@ export const VaultProvider = ({ children }) => {
     } catch (err) { /* unreadable */ }
     return null
   }, [subtreeKeyForFolder])
+
+  // Decrypt an audit snapshot for a folder shared WITH me, using the recipient's
+  // folder key (kept in sharedKeysRef, keyed by the share-root folderId). Only the
+  // folder-key copy of the snapshot is usable here — a snapshot from before the
+  // folder was shared has no folderWrappedItemKey and returns null (correct: not
+  // readable to the recipient).
+  const decryptSharedSnapshot = useCallback(async (record, rootFolderId) => {
+    const folderKey = sharedKeysRef.current.get(rootFolderId)
+    if (!folderKey || !record || !record.snapshot) return null
+    const snap = record.snapshot
+    try {
+      if (record.targetType === 'folder') {
+        if (snap.sharedName) return await decryptFolderName(folderKey, snap.sharedName)
+        return null
+      }
+      if (snap.folderWrappedItemKey) return await decryptItemWithFolderKey(folderKey, snap)
+    } catch (err) { /* unreadable */ }
+    return null
+  }, [])
 
   const value = {
     status,
@@ -1015,7 +1037,9 @@ export const VaultProvider = ({ children }) => {
     getAudit,
     getItemHistory,
     getFolderHistory,
-    decryptSnapshot
+    getSharedItemHistory,
+    decryptSnapshot,
+    decryptSharedSnapshot
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

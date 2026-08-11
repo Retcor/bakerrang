@@ -46,7 +46,10 @@ const ACTION_META = {
   'folder.move': { label: 'Folder moved', dot: 'bg-sky-500' }
 }
 
-const HistoryModal = ({ open, isDark, mode = 'global', target = null, onClose }) => {
+// `shared` (when set) makes this the recipient's view of a shared entry's history:
+// { ownerId, ownerEmail, rootFolderId }. It swaps in the shared, redacted endpoint
+// and folder-key decryption, and labels actors without leaking co-recipients.
+const HistoryModal = ({ open, isDark, mode = 'global', target = null, shared = null, onClose }) => {
   const vault = useVault()
   const { auth } = useAuth()
   const meId = auth && auth.user ? auth.user.id : null
@@ -111,6 +114,7 @@ const HistoryModal = ({ open, isDark, mode = 'global', target = null, onClose })
 
   const fetchPage = (before) => {
     const q = `?limit=${PAGE}${before ? `&before=${before}` : ''}`
+    if (shared) return vault.getSharedItemHistory(shared.ownerId, target.id, q)
     if (mode === 'item') return vault.getItemHistory(target.id, q)
     if (mode === 'folder') return vault.getFolderHistory(target.id, q)
     return vault.getAudit(q)
@@ -118,7 +122,12 @@ const HistoryModal = ({ open, isDark, mode = 'global', target = null, onClose })
 
   const decryptRecords = async (recs) => {
     const pairs = await Promise.all(recs.map(async (r) => {
-      try { return [r.id, await vault.decryptSnapshot(r)] } catch (err) { return [r.id, null] }
+      try {
+        const fields = shared
+          ? await vault.decryptSharedSnapshot(r, shared.rootFolderId)
+          : await vault.decryptSnapshot(r)
+        return [r.id, fields]
+      } catch (err) { return [r.id, null] }
     }))
     return Object.fromEntries(pairs)
   }
@@ -181,7 +190,15 @@ const HistoryModal = ({ open, isDark, mode = 'global', target = null, onClose })
     ? (target && target.title) || 'Entry'
     : mode === 'folder' ? (target && target.name) || 'Folder' : 'Every change across your vault'
 
-  const actorLabel = (r) => (r.actorId && r.actorId === meId ? 'You' : (r.actorEmail || 'Someone'))
+  const actorLabel = (r) => {
+    if (r.actorId && r.actorId === meId) return 'You'
+    if (shared) {
+      // Server redacts co-recipients (actorId/email nulled); owner + self survive.
+      if (r.actorId && r.actorId === shared.ownerId) return shared.ownerEmail || 'Owner'
+      return r.actorEmail || 'Another collaborator'
+    }
+    return r.actorEmail || 'Someone'
+  }
 
   const inputClass = `w-full px-3 py-2 rounded-lg outline-none transition-all duration-200 ${isDark ? 'bg-white/5 text-theme-dark placeholder:text-theme-secondary-dark border border-white/10 focus:border-white/30' : 'bg-white text-theme-light placeholder:text-theme-secondary-light border border-black/15 focus:border-black/40'}`
 

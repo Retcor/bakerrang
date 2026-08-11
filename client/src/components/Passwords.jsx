@@ -1521,8 +1521,13 @@ const VaultView = ({ isDark, vault }) => {
                 onSave={handleSaveEntry}
                 onDelete={(entry) => setConfirmDelete({ type: 'item', id: entry.id, name: entry.title })}
                 onClose={() => setSelected(null)}
-                // History is owner-only; hide it for folders shared WITH me.
-                onHistory={!isSharedView && selected.id ? () => setHistoryTarget({ mode: 'item', target: selected }) : null}
+                // Entry history: owned entries use the owner audit log; shared
+                // entries use the recipient-scoped, redacted shared endpoint.
+                onHistory={selected.id
+                  ? () => setHistoryTarget(isSharedView
+                      ? { mode: 'item', target: selected, shared: { ownerId: activeShared.ownerId, ownerEmail: activeShared.ownerEmail, rootFolderId: activeShared.folderId } }
+                      : { mode: 'item', target: selected })
+                  : null}
               />
             )}
           </div>
@@ -1557,6 +1562,7 @@ const VaultView = ({ isDark, vault }) => {
         isDark={isDark}
         mode={historyTarget?.mode || 'global'}
         target={historyTarget?.target || null}
+        shared={historyTarget?.shared || null}
         onClose={() => setHistoryTarget(null)}
       />
 

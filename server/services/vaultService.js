@@ -908,3 +908,25 @@ export const moveSharedItems = async (userId, ownerId, updates, actor) => {
   logAudit(ownerId, auditEntries, actor).catch(() => {})
   return { success: true }
 }
+
+// Version history for a single entry inside a folder shared WITH me. Owner-only
+// history stays private; this is the recipient's scoped view of ONE entry they
+// already have access to. Three guardrails keep it from leaking anything else:
+//   1. Authorization reuses requireShareForFolder (view access is enough).
+//   2. Records are filtered to the shared subtree, so history from when the entry
+//      lived in one of the owner's PRIVATE folders is never returned.
+//   3. Any actor who is neither the recipient nor the owner (i.e. a co-recipient)
+//      is stripped of id + email, so a recipient can't discover who else the
+//      folder is shared with.
+export const listSharedItemAudit = async (userId, ownerId, itemId, opts = {}) => {
+  const doc = await itemsRef(ownerId).doc(itemId).get()
+  if (!doc.exists) throw httpError(404, 'Item not found')
+  const share = await requireShareForFolder(userId, ownerId, doc.data().folderId, false)
+  const subtree = await folderSubtreeIds(ownerId, share.folderId)
+  const records = await listAudit(ownerId, { ...opts, targetId: itemId })
+  return records
+    .filter((r) => r.folderId != null && subtree.has(r.folderId))
+    .map((r) => (r.actorId === userId || r.actorId === ownerId)
+      ? r
+      : { ...r, actorId: null, actorEmail: null })
+}

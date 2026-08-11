@@ -89,6 +89,10 @@ router.put('/shared/:ownerId/items/move',
   handle((req) => vault.moveSharedItems(req.user.id, req.params.ownerId, req.body && req.body.updates, actorOf(req))))
 router.put('/shared/:ownerId/items/:id',
   handle((req) => vault.updateSharedItem(req.user.id, req.params.ownerId, req.params.id, req.body, actorOf(req))))
+// Version history for one entry in a folder shared WITH me (owner-gated by share,
+// subtree-scoped, co-recipients redacted — all inside the service). GET, no CSRF.
+router.get('/shared/:ownerId/audit/item/:id',
+  handle((req) => vault.listSharedItemAudit(req.user.id, req.params.ownerId, req.params.id, req.query || {})))
 
 // ---- Folders ----
 

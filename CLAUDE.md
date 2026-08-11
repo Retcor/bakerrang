@@ -174,9 +174,22 @@ root) renders a reverse-chron timeline in three modes — `item` (per-entry, wit
 field-level diff vs. the previous version + deleted-entry contents), `folder` (the
 folder's own events + entries within it), `global` (**Activity** — vault-wide, for
 finding deleted entries). "You" vs. actor email comes from `useAuth()`. Surfaced via a
-clock **IconButton** in `PasswordEntryPanel` header (`onHistory`, owned + non-new only),
+clock **IconButton** in `PasswordEntryPanel` header (`onHistory`, non-new entries),
 a **"Version history…"** folder ⋮ item, and an **Activity** toolbar button (owned view
-only). All owner-view-gated (`!isSharedView`).
+only).
+
+**Shared entries (recipient view).** An entry in a folder shared WITH you also shows the
+clock button (view-only shares included) — **entries only**, no folder/global history for
+recipients, no new sidebar UI. Reads go through **`GET /vault/shared/:ownerId/audit/item/:id`**
+→ `listSharedItemAudit`, which: (1) authorizes via the existing `requireShareForFolder`
+(view is enough), (2) **filters records to the shared subtree** (`folderSubtreeIds`) so an
+entry's history from when it lived in the owner's *private* folders is never returned, and
+(3) **redacts co-recipients server-side** — any actor who isn't the requester or the owner
+has `actorId` + `actorEmail` stripped, so a recipient can't discover who else the folder is
+shared with. Client decrypts snapshots with the **folder key** via `decryptSharedSnapshot`
+(not the vault key); `HistoryModal`'s `shared` prop swaps in the endpoint + decryptor and
+labels actors **You / owner email / "Another collaborator"**. Same composite index as owner
+item history — no new index.
 
 ## Browser Extension — Vault Autofill (2026-08)
 
