@@ -1,8 +1,14 @@
 import Firestore from '@google-cloud/firestore'
+import { resolveFirestoreProject } from '../config/firestoreConfig.js'
 
+const projectId = resolveFirestoreProject()
 export const db = new Firestore({
-  projectId: 'avian-cable-379805'
+  projectId
 })
+
+console.log(`Firestore configuration:
+  project: ${projectId}
+  database: (default)`)
 
 // Sentinel factory for atomic field ops (e.g. FieldValue.increment(1)).
 export const FieldValue = Firestore.FieldValue

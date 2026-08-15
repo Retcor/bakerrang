@@ -1,0 +1,21 @@
+{
+  "name": "@bakerrang/site-components",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bakerrang/site-schema": "*",
+    "@bakerrang/ui": "*"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.0 <20.0.0"
+  }
+}

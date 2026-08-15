@@ -1,23 +1,22 @@
 import { db } from '../client/firestoreClient.js'
 
-export const checkAndStoreUser = async user => {
-  const collection = db.collection('users')
+export const checkAndStoreUser = async (user, firestore = db) => {
+  const collection = firestore.collection('users')
   // Normalized email for reliable case-insensitive lookup (used by vault sharing).
-  const record = { ...user, emailLower: (user.email || '').trim().toLowerCase() }
+  // Only Google-managed profile fields belong in this sync. Privileged/internal
+  // fields such as platformRole must never be accepted from the profile or
+  // erased when a user signs in.
+  const record = {
+    id: user.id,
+    displayName: user.displayName,
+    email: user.email,
+    emailLower: (user.email || '').trim().toLowerCase(),
+    photo: user.photo
+  }
 
   try {
-    // Check if the record already exists
-    const existingDoc = await collection.doc(user.id).get()
-
-    if (existingDoc.exists) {
-      // Update the existing record
-      await collection.doc(user.id).update(record)
-      console.log(`User record with ID ${user.id} already exists. Updating with any new details.`)
-    } else {
-      // Store a new record
-      await collection.doc(user.id).set(record)
-      console.log(`New user record with ID ${user.id} stored successfully.`)
-    }
+    await collection.doc(user.id).set(record, { merge: true })
+    console.log(`User record with ID ${user.id} synchronized successfully.`)
   } catch (error) {
     console.error('Error checking or storing user record:', error)
   }

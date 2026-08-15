@@ -6,7 +6,9 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
-import { csrfProtection, authLimiter, vaultLimiter, chatbotLimiter } from './middleware/security.js'
+import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter } from './middleware/security.js'
+import { buildAllowedOrigins, isOriginAllowed } from './config/origins.js'
+import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 
 import authRouter, { isAuthenticated } from './routes/auth.js'
 import chatgptRouter from './routes/chatgpt.js'
@@ -18,6 +20,9 @@ import chatbotRouter from './routes/chatbot.js'
 import signLanguageRouter from './routes/signLanguage.js'
 import wowRouter from './routes/wow.js'
 import vaultRouter from './routes/vault.js'
+import tenantRouter from './routes/tenants.js'
+import publicSiteRouter from './routes/publicSites.js'
+import publicLeadRouter from './routes/publicLeads.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -43,17 +48,23 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }))
 
-const allowedOrigins = [process.env.CLIENT_DOMAIN, process.env.CHATBOT_ORIGIN].filter(Boolean)
+const allowedOrigins = buildAllowedOrigins()
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (server-to-server, curl, etc.)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true)
+    if (isOriginAllowed(origin, allowedOrigins)) return callback(null, true)
     callback(new Error(`CORS: origin ${origin} not allowed`))
   },
   credentials: true
 }))
 app.use(logger('dev'))
-app.use(express.json({ limit: '10mb' }))
+const generalJsonParser = express.json({ limit: '10mb' })
+app.use((req, res, next) => {
+  const publicLeadPost = req.method === 'POST' &&
+    /^\/public\/sites\/[^/]+\/leads\/?$/.test(req.path)
+  if (publicLeadPost) return next()
+  return generalJsonParser(req, res, next)
+})
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
@@ -88,11 +99,7 @@ app.use(csrfProtection)
 passport.serializeUser((user, done) => done(null, user))
 passport.deserializeUser((user, done) => done(null, user))
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_OAUTH_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-  callbackURL: `${process.env.SERVER_DOMAIN}/auth/google/callback`
-}, (token, tokenSecret, profile, done) => {
+passport.use(new GoogleStrategy(buildGoogleStrategyOptions(), (token, tokenSecret, profile, done) => {
   const authUser = {
     id: profile.id,
     displayName: profile.displayName,
@@ -103,6 +110,8 @@ passport.use(new GoogleStrategy({
 }))
 
 app.use('/chatbot', chatbotLimiter, chatbotRouter)
+app.use('/public', publicLeadRouter)
+app.use('/public', publicSiteRouter)
 app.use('/auth', authLimiter, authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
@@ -112,6 +121,7 @@ app.use('/storybook', isAuthenticated, storybookRouter)
 app.use('/sign-language', isAuthenticated, signLanguageRouter)
 app.use('/wow', isAuthenticated, wowRouter)
 app.use('/vault', vaultLimiter, isAuthenticated, vaultRouter)
+app.use('/tenants', tenantLimiter, isAuthenticated, tenantRouter)
 
 app.get('/health', (req, res) => {
   res.status(200).send('Healthy')

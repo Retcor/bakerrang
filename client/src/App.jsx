@@ -17,7 +17,7 @@ import {
   Passwords
 } from './components'
 
-export const SERVER_PREFIX = 'https://api.bakerrang.com'
+export const SERVER_PREFIX = 'http://localhost:8080'
 
 const App = () => {
   return (

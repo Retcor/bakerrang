@@ -1,0 +1,10 @@
+@theme {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #d9e0e8;
+  --color-fg: #172033;
+  --color-fg-muted: #617087;
+  --color-accent: #425b76;
+  --color-accent-fg: #ffffff;
+  --radius-md: 0.5rem;
+}

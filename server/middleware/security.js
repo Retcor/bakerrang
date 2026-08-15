@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import { doubleCsrf } from 'csrf-csrf'
 
 // Local dev runs over plain http where Secure/__Host- cookies won't stick, so
@@ -40,4 +40,13 @@ const limiter = (max) => rateLimit({
 
 export const authLimiter = limiter(100)
 export const vaultLimiter = limiter(300)
+export const tenantLimiter = limiter(300)
 export const chatbotLimiter = limiter(60)
+
+export const publicLeadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.params.tenantId}:${ipKeyGenerator(req.ip)}`
+})

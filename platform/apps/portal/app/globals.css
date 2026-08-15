@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@bakerrang/ui/tokens.css";
+@source "../../../packages/ui/src";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: Arial, Helvetica, sans-serif;
+}
