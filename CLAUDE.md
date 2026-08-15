@@ -200,6 +200,22 @@ be added as the plan develops.
   type (no value input). FakeDb-compatible (`doc(uuid).set`, no `.add`). Tests: lead validation/eligibility/
   persistence + working-leadForm-but-published-non-leadForm denial + preview-doesn't-enable-writes. Sets up a future
   authed Leads Inbox (Step 1.15) with no public-contract change. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.15 — Leads Inbox + Lead Detail Implementation Plan](docs/marketing-site/Step1.15-LeadsInbox-ImplementationPlan.md)
+  — Codex-ready plan for the **first authenticated reader of the Lead domain**: a **read-only** portal Leads
+  inbox + Lead detail over new `GET /tenants/:id/leads` and `GET /tenants/:id/leads/:leadId`
+  (`requireTenantRole(OWNER/ADMIN/STAFF)` + PLATFORM_ADMIN bypass — STAFF included). No mutations. Extends
+  `leadService.js` (`listTenantLeads`/`getTenantLead`; keeps `createPublicLead`). **Bounded query**
+  `orderBy('createdAt','desc').limit(51)` → 50 summaries + `hasMore` (single-field auto-index, no composite;
+  future `nextCursor`-ready). ⚠️ **FakeDb has zero query support** → add a minimal faithful `FakeQuery`
+  (`orderBy`+`limit`); **do not** degrade production to fetch-all-sort-in-Node. `LeadSummary` **excludes
+  `message`** (PII → detail only); responses built **field-by-field** (never raw-spread; malformed docs
+  sanitized, not skipped/fatal). **Tenant-existence check on list** so a PLATFORM_ADMIN hitting a missing
+  tenant gets 404, not a masquerading empty inbox; detail missing → `404 'Lead not found'`. `Cache-Control:
+  no-store` on both (via a small `noStore` middleware, not global). Portal: new `lib/leads.ts` (not
+  `lib/site.ts`) + lazy per-row `BusinessLeads.tsx` (Leads button → GET on click, **no N+1, no count badge**),
+  inline detail with Back (no modal/drawer/route). Public API stays **write-only** (no `GET /public/.../leads`).
+  Sets up Step 1.16 workflow (`PATCH` status; enum/optimistic-concurrency/notes decided **then**). Verdict:
+  **READY FOR IMPLEMENTATION**.
 
 ## Password Vault + Security Hardening (2026-07)
 

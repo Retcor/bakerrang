@@ -1,5 +1,6 @@
 import type { Business } from '../../lib/businesses'
 import { BusinessWebsite } from './BusinessWebsite'
+import { BusinessLeads } from './BusinessLeads'
 
 export interface BusinessListProps {
   businesses: Business[]
@@ -36,6 +37,7 @@ export function BusinessList ({ businesses }: BusinessListProps) {
               {business.status}
             </span>
             <BusinessWebsite tenantId={business.id} />
+            <BusinessLeads tenantId={business.id} />
           </div>
         </li>
       ))}

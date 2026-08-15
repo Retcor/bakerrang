@@ -1,6 +1,7 @@
 import express from 'express'
 import * as tenantService from '../services/tenantService.js'
 import * as siteService from '../services/siteService.js'
+import * as leadService from '../services/leadService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -18,9 +19,15 @@ const handle = (fn, successStatus = 200) => async (req, res) => {
   }
 }
 
+const noStore = (req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+}
+
 export const createTenantRouter = (deps = {}) => {
   const service = deps.tenantService || tenantService
   const sites = deps.siteService || siteService
+  const leads = deps.leadService || leadService
   const platformAdmin = deps.requirePlatformAdmin || requirePlatformAdmin
   const tenantRole = deps.requireTenantRole || requireTenantRole
   const router = express.Router()
@@ -59,6 +66,14 @@ export const createTenantRouter = (deps = {}) => {
 
   router.get('/:tenantId/site', tenantRole(allTenantRoles), handle(
     (req) => sites.getSite(req.params.tenantId)
+  ))
+
+  router.get('/:tenantId/leads', tenantRole(allTenantRoles), noStore, handle(
+    (req) => leads.listTenantLeads(req.params.tenantId)
+  ))
+
+  router.get('/:tenantId/leads/:leadId', tenantRole(allTenantRoles), noStore, handle(
+    (req) => leads.getTenantLead(req.params.tenantId, req.params.leadId)
   ))
 
   router.get('/:tenantId', tenantRole(allTenantRoles), handle(

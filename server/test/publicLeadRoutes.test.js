@@ -67,6 +67,11 @@ test('public lead route preserves validation and eligibility statuses', async ()
   assert.deepEqual(await missing.json(), { error: 'Site not found' })
 })
 
+test('public lead router remains write-only', async () => {
+  const response = await fetch(`${baseUrl}/public/sites/tenant-1/leads`)
+  assert.equal(response.status, 404)
+})
+
 test('public lead route bounds anonymous JSON bodies at 16 KB', async () => {
   const callsBefore = serviceCalls.length
   const response = await post('tenant-1', { message: 'x'.repeat(17 * 1024) })

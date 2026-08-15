@@ -19,6 +19,60 @@ const httpError = (status, message) => {
   return error
 }
 
+const nonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0
+const finiteNumber = (value) => typeof value === 'number' && Number.isFinite(value)
+
+const requireTenantExists = async (tenantId) => {
+  const snapshot = await firestore.collection(TENANTS).doc(tenantId).get()
+  if (!snapshot.exists) throw httpError(404, 'Tenant not found')
+}
+
+const summaryFrom = (snapshot) => {
+  const value = snapshot.data()
+  if (
+    !nonEmptyString(value.name) ||
+    !nonEmptyString(value.status) ||
+    !nonEmptyString(value.source) ||
+    !finiteNumber(value.createdAt) ||
+    !finiteNumber(value.updatedAt)
+  ) return null
+
+  return {
+    id: snapshot.id,
+    name: value.name,
+    ...(nonEmptyString(value.email) ? { email: value.email } : {}),
+    ...(nonEmptyString(value.phone) ? { phone: value.phone } : {}),
+    status: value.status,
+    source: value.source,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt
+  }
+}
+
+const detailFrom = (snapshot) => {
+  const value = snapshot.data()
+  if (
+    !nonEmptyString(value.name) ||
+    !nonEmptyString(value.message) ||
+    !nonEmptyString(value.status) ||
+    !nonEmptyString(value.source) ||
+    !finiteNumber(value.createdAt) ||
+    !finiteNumber(value.updatedAt)
+  ) throw httpError(500, 'Lead data invalid')
+
+  return {
+    id: snapshot.id,
+    name: value.name,
+    ...(nonEmptyString(value.email) ? { email: value.email } : {}),
+    ...(nonEmptyString(value.phone) ? { phone: value.phone } : {}),
+    message: value.message,
+    status: value.status,
+    source: value.source,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt
+  }
+}
+
 const requirePublishedLeadForm = async (tenantId) => {
   let site
   try {
@@ -106,4 +160,24 @@ export const createPublicLead = async (tenantId, input) => {
   })
 
   return { success: true }
+}
+
+export const listTenantLeads = async (tenantId) => {
+  await requireTenantExists(tenantId)
+  const snapshot = await firestore.collection(TENANTS).doc(tenantId)
+    .collection('leads')
+    .orderBy('createdAt', 'desc')
+    .limit(51)
+    .get()
+  const hasMore = snapshot.docs.length > 50
+  const leads = snapshot.docs.slice(0, 50).map(summaryFrom).filter(Boolean)
+  return { leads, hasMore }
+}
+
+export const getTenantLead = async (tenantId, leadId) => {
+  await requireTenantExists(tenantId)
+  const snapshot = await firestore.collection(TENANTS).doc(tenantId)
+    .collection('leads').doc(leadId).get()
+  if (!snapshot.exists) throw httpError(404, 'Lead not found')
+  return detailFrom(snapshot)
 }

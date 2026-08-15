@@ -15,7 +15,8 @@ const platformRoles = new Map([['platform', 'PLATFORM_ADMIN']])
 const memberships = new Map([
   ['tenant-1/staff', { userId: 'staff', role: 'STAFF' }],
   ['tenant-1/admin', { userId: 'admin', role: 'ADMIN' }],
-  ['tenant-1/owner', { userId: 'owner', role: 'OWNER' }]
+  ['tenant-1/owner', { userId: 'owner', role: 'OWNER' }],
+  ['tenant-2/other-member', { userId: 'other-member', role: 'STAFF' }]
 ])
 
 const authDeps = {
@@ -75,6 +76,30 @@ const sites = {
   }
 }
 
+const leadSummary = {
+  id: 'lead-1',
+  name: 'Visitor',
+  status: 'NEW',
+  source: 'WEBSITE',
+  createdAt: 10,
+  updatedAt: 10
+}
+const leads = {
+  listTenantLeads: async (tenantId) => {
+    calls.push({ operation: 'listTenantLeads', tenantId })
+    if (tenantId === 'missing') throw notFound()
+    return { leads: [leadSummary], hasMore: false }
+  },
+  getTenantLead: async (tenantId, leadId) => {
+    calls.push({ operation: 'getTenantLead', tenantId, leadId })
+    if (tenantId === 'missing') throw notFound()
+    if (leadId === 'missing') {
+      throw Object.assign(new Error('Lead not found'), { status: 404 })
+    }
+    return { ...leadSummary, message: 'Hello' }
+  }
+}
+
 before(async () => {
   const app = express()
   app.use(express.json())
@@ -87,6 +112,7 @@ before(async () => {
   app.use('/tenants', isAuthenticated, createTenantRouter({
     tenantService: service,
     siteService: sites,
+    leadService: leads,
     requirePlatformAdmin: createRequirePlatformAdmin(authDeps),
     requireTenantRole: (roles) => requireTenantRole(roles, authDeps)
   }))
@@ -279,4 +305,41 @@ test('only PLATFORM_ADMIN can PUT Contact and the route forwards tenantId and bo
   assert.deepEqual(calls.at(-1), {
     operation: 'upsertHomeContact', tenantId: 'tenant-1', body
   })
+})
+
+test('lead list and detail allow every tenant read role and PLATFORM_ADMIN', async () => {
+  for (const userId of ['staff', 'admin', 'owner', 'platform']) {
+    const list = await request('/tenants/tenant-1/leads', { userId })
+    assert.equal(list.status, 200)
+    assert.deepEqual(await list.json(), { leads: [leadSummary], hasMore: false })
+    assert.equal(list.headers.get('cache-control'), 'no-store')
+
+    const detail = await request('/tenants/tenant-1/leads/lead-1', { userId })
+    assert.equal(detail.status, 200)
+    assert.deepEqual(await detail.json(), { ...leadSummary, message: 'Hello' })
+  }
+})
+
+test('lead reads reject unauthenticated, non-member, and cross-tenant users', async () => {
+  for (const path of ['/tenants/tenant-1/leads', '/tenants/tenant-1/leads/lead-1']) {
+    assert.equal((await request(path)).status, 401)
+    assert.equal((await request(path, { userId: 'ordinary' })).status, 403)
+    assert.equal((await request(path, { userId: 'other-member' })).status, 403)
+  }
+})
+
+test('lead routes preserve tenant and lead not-found distinctions after authorization', async () => {
+  const missingList = await request('/tenants/missing/leads', { userId: 'platform' })
+  assert.equal(missingList.status, 404)
+  assert.deepEqual(await missingList.json(), { error: 'Tenant not found' })
+
+  const missingTenantDetail = await request('/tenants/missing/leads/some-lead', { userId: 'platform' })
+  assert.equal(missingTenantDetail.status, 404)
+  assert.deepEqual(await missingTenantDetail.json(), { error: 'Tenant not found' })
+
+  const missingLead = await request('/tenants/tenant-1/leads/missing', { userId: 'platform' })
+  assert.equal(missingLead.status, 404)
+  assert.deepEqual(await missingLead.json(), { error: 'Lead not found' })
+
+  assert.equal((await request('/tenants/missing/leads', { userId: 'ordinary' })).status, 403)
 })
