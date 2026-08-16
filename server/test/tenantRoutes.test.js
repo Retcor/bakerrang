@@ -29,6 +29,7 @@ const notFound = () => Object.assign(new Error('Tenant not found'), { status: 40
 const calls = []
 const siteDefinition = {
   status: 'DRAFT',
+  branding: { siteName: 'Tenant', primaryColor: '#334155', accentColor: '#0f766e' },
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [] }]
 }
 const service = {
@@ -62,6 +63,14 @@ const sites = {
     calls.push({ operation: 'unpublishSite', tenantId, actorId })
     return siteDefinition
   },
+  updateSiteBranding: async (tenantId, body) => {
+    calls.push({ operation: 'updateSiteBranding', tenantId, body })
+    return siteDefinition
+  },
+  updateBusinessProfile: async (tenantId, body) => {
+    calls.push({ operation: 'updateBusinessProfile', tenantId, body })
+    return siteDefinition
+  },
   updateHomeHero: async (tenantId, body) => {
     calls.push({ operation: 'updateHomeHero', tenantId, body })
     return siteDefinition
@@ -73,6 +82,43 @@ const sites = {
   upsertHomeContact: async (tenantId, body) => {
     calls.push({ operation: 'upsertHomeContact', tenantId, body })
     return siteDefinition
+  },
+  upsertHomeGallery: async (tenantId, body) => {
+    calls.push({ operation: 'upsertHomeGallery', tenantId, body })
+    return siteDefinition
+  },
+  upsertHomeTestimonials: async (tenantId, body) => {
+    calls.push({ operation: 'upsertHomeTestimonials', tenantId, body })
+    return siteDefinition
+  },
+  composeHomeSections: async (tenantId, body) => {
+    calls.push({ operation: 'composeHomeSections', tenantId, body })
+    return siteDefinition
+  }
+}
+
+const media = {
+  listMedia: async (tenantId) => {
+    calls.push({ operation: 'listMedia', tenantId })
+    return { media: [], hasMore: false }
+  },
+  createMedia: async (tenantId, file, actorUserId) => {
+    calls.push({
+      operation: 'createMedia',
+      tenantId,
+      actorUserId,
+      file: { originalname: file.originalname, mimetype: file.mimetype, size: file.size }
+    })
+    return {
+      id: 'media-1',
+      originalFilename: file.originalname,
+      contentType: file.mimetype,
+      sizeBytes: file.size,
+      width: 2,
+      height: 3,
+      createdAt: 20,
+      src: 'https://media.test/media-1'
+    }
   }
 }
 
@@ -97,6 +143,30 @@ const leads = {
       throw Object.assign(new Error('Lead not found'), { status: 404 })
     }
     return { ...leadSummary, message: 'Hello' }
+  },
+  updateLeadStatus: async (tenantId, leadId, body) => {
+    calls.push({ operation: 'updateLeadStatus', tenantId, leadId, body })
+    if (tenantId === 'missing') throw notFound()
+    if (leadId === 'missing') {
+      throw Object.assign(new Error('Lead not found'), { status: 404 })
+    }
+    return { ...leadSummary, message: 'Hello', status: body.status, updatedAt: 11 }
+  },
+  listLeadNotes: async (tenantId, leadId) => {
+    calls.push({ operation: 'listLeadNotes', tenantId, leadId })
+    if (tenantId === 'missing') throw notFound()
+    if (leadId === 'missing') {
+      throw Object.assign(new Error('Lead not found'), { status: 404 })
+    }
+    return { notes: [], hasMore: false }
+  },
+  createLeadNote: async (tenantId, leadId, body, actorUserId) => {
+    calls.push({ operation: 'createLeadNote', tenantId, leadId, body, actorUserId })
+    if (tenantId === 'missing') throw notFound()
+    if (leadId === 'missing') {
+      throw Object.assign(new Error('Lead not found'), { status: 404 })
+    }
+    return { id: 'note-1', text: body.text, createdAt: 20, createdByUserId: actorUserId }
   }
 }
 
@@ -113,6 +183,7 @@ before(async () => {
     tenantService: service,
     siteService: sites,
     leadService: leads,
+    mediaService: media,
     requirePlatformAdmin: createRequirePlatformAdmin(authDeps),
     requireTenantRole: (roles) => requireTenantRole(roles, authDeps)
   }))
@@ -127,13 +198,14 @@ after(async () => {
 
 const request = async (path, { userId, method = 'GET', body, sessionRole } = {}) => {
   const headers = {}
+  const multipart = body instanceof FormData
   if (userId) headers['x-test-user'] = userId
   if (sessionRole) headers['x-session-role'] = sessionRole
-  if (body) headers['content-type'] = 'application/json'
+  if (body && !multipart) headers['content-type'] = 'application/json'
   return fetch(`${baseUrl}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: multipart ? body : body ? JSON.stringify(body) : undefined
   })
 }
 
@@ -273,6 +345,30 @@ test('only PLATFORM_ADMIN can edit the Home Hero and the route forwards tenantId
   })
 })
 
+test('only PLATFORM_ADMIN can PUT branding and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/branding'
+  const body = { siteName: 'Site', primaryColor: '#112233', accentColor: '#445566' }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'updateSiteBranding', tenantId: 'tenant-1', body })
+})
+
+test('only PLATFORM_ADMIN can PUT Business Profile and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/profile'
+  const body = { description: 'Public description', serviceAreas: ['Denver'] }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'updateBusinessProfile', tenantId: 'tenant-1', body })
+})
+
 test('only PLATFORM_ADMIN can PUT Services and the route forwards tenantId and body', async () => {
   const path = '/tenants/tenant-1/site/pages/home/sections/services'
   const body = { title: 'Services', items: [{ name: 'One' }] }
@@ -305,6 +401,89 @@ test('only PLATFORM_ADMIN can PUT Contact and the route forwards tenantId and bo
   assert.deepEqual(calls.at(-1), {
     operation: 'upsertHomeContact', tenantId: 'tenant-1', body
   })
+})
+
+test('only PLATFORM_ADMIN can PUT Gallery and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/pages/home/sections/gallery'
+  const body = { title: 'Gallery', items: [{ mediaId: 'media-1', altText: 'Project' }] }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeGallery', tenantId: 'tenant-1', body })
+})
+
+test('only PLATFORM_ADMIN can PUT Testimonials and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/pages/home/sections/testimonials'
+  const body = { title: 'Testimonials', items: [{ customerName: 'Jane', quote: 'Excellent work.' }] }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), {
+    operation: 'upsertHomeTestimonials', tenantId: 'tenant-1', body
+  })
+})
+
+test('only PLATFORM_ADMIN can PUT Home composition and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/pages/home/composition'
+  const body = { sectionIds: ['hero', 'testimonials', 'contact'] }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'composeHomeSections', tenantId: 'tenant-1', body })
+})
+
+test('only PLATFORM_ADMIN can list and upload tenant Media with no-store', async () => {
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request('/tenants/tenant-1/media', { userId })).status, 403)
+    const deniedForm = new FormData()
+    deniedForm.append('file', new Blob(['image'], { type: 'image/png' }), 'image.png')
+    assert.equal((await request('/tenants/tenant-1/media', {
+      userId, method: 'POST', body: deniedForm
+    })).status, 403)
+  }
+
+  const listed = await request('/tenants/tenant-1/media', { userId: 'platform' })
+  assert.equal(listed.status, 200)
+  assert.equal(listed.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await listed.json(), { media: [], hasMore: false })
+
+  const form = new FormData()
+  form.append('file', new Blob(['image'], { type: 'image/png' }), 'image.png')
+  const uploaded = await request('/tenants/tenant-1/media', {
+    userId: 'platform', method: 'POST', body: form
+  })
+  assert.equal(uploaded.status, 201)
+  assert.equal(uploaded.headers.get('cache-control'), 'no-store')
+  assert.equal((await uploaded.json()).id, 'media-1')
+  assert.deepEqual(calls.at(-1), {
+    operation: 'createMedia',
+    tenantId: 'tenant-1',
+    actorUserId: 'platform',
+    file: { originalname: 'image.png', mimetype: 'image/png', size: 5 }
+  })
+})
+
+test('Media upload rejects files over 10 MB with 413 before the service', async () => {
+  const callsBefore = calls.length
+  const form = new FormData()
+  form.append('file', new Blob([new Uint8Array(10 * 1024 * 1024 + 1)], {
+    type: 'image/png'
+  }), 'large.png')
+  const response = await request('/tenants/tenant-1/media', {
+    userId: 'platform', method: 'POST', body: form
+  })
+  assert.equal(response.status, 413)
+  assert.deepEqual(await response.json(), { error: 'Image must be 10 MB or smaller' })
+  assert.equal(calls.length, callsBefore)
 })
 
 test('lead list and detail allow every tenant read role and PLATFORM_ADMIN', async () => {
@@ -342,4 +521,88 @@ test('lead routes preserve tenant and lead not-found distinctions after authoriz
   assert.deepEqual(await missingLead.json(), { error: 'Lead not found' })
 
   assert.equal((await request('/tenants/missing/leads', { userId: 'ordinary' })).status, 403)
+})
+
+test('lead status PATCH allows every tenant role and PLATFORM_ADMIN with no-store', async () => {
+  const body = { status: 'CONTACTED', expectedUpdatedAt: 10, ignored: true }
+  for (const userId of ['staff', 'admin', 'owner', 'platform']) {
+    const response = await request('/tenants/tenant-1/leads/lead-1', {
+      userId, method: 'PATCH', body
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.equal((await response.json()).status, 'CONTACTED')
+    assert.deepEqual(calls.at(-1), {
+      operation: 'updateLeadStatus', tenantId: 'tenant-1', leadId: 'lead-1', body
+    })
+  }
+})
+
+test('lead status PATCH rejects unauthenticated, non-member, and cross-tenant users', async () => {
+  const options = { method: 'PATCH', body: { status: 'CONTACTED', expectedUpdatedAt: 10 } }
+  assert.equal((await request('/tenants/tenant-1/leads/lead-1', options)).status, 401)
+  for (const userId of ['ordinary', 'other-member']) {
+    assert.equal((await request('/tenants/tenant-1/leads/lead-1', {
+      ...options, userId
+    })).status, 403)
+  }
+})
+
+test('lead status PATCH preserves tenant and lead not-found distinctions', async () => {
+  const options = {
+    userId: 'platform', method: 'PATCH', body: { status: 'CONTACTED', expectedUpdatedAt: 10 }
+  }
+  const missingTenant = await request('/tenants/missing/leads/lead-1', options)
+  assert.equal(missingTenant.status, 404)
+  assert.deepEqual(await missingTenant.json(), { error: 'Tenant not found' })
+
+  const missingLead = await request('/tenants/tenant-1/leads/missing', options)
+  assert.equal(missingLead.status, 404)
+  assert.deepEqual(await missingLead.json(), { error: 'Lead not found' })
+})
+
+test('lead Note GET and POST allow every tenant role and PLATFORM_ADMIN', async () => {
+  for (const userId of ['staff', 'admin', 'owner', 'platform']) {
+    const list = await request('/tenants/tenant-1/leads/lead-1/notes', { userId })
+    assert.equal(list.status, 200)
+    assert.equal(list.headers.get('cache-control'), 'no-store')
+    assert.deepEqual(await list.json(), { notes: [], hasMore: false })
+
+    const body = { text: 'Called customer.', createdByUserId: 'spoofed' }
+    const created = await request('/tenants/tenant-1/leads/lead-1/notes', {
+      userId, method: 'POST', body
+    })
+    assert.equal(created.status, 201)
+    assert.equal(created.headers.get('cache-control'), 'no-store')
+    assert.equal((await created.json()).createdByUserId, userId)
+    assert.deepEqual(calls.at(-1), {
+      operation: 'createLeadNote', tenantId: 'tenant-1', leadId: 'lead-1', body, actorUserId: userId
+    })
+  }
+})
+
+test('lead Note routes reject unauthenticated, non-member, and cross-tenant users', async () => {
+  for (const method of ['GET', 'POST']) {
+    const options = { method, body: method === 'POST' ? { text: 'Note' } : undefined }
+    const path = '/tenants/tenant-1/leads/lead-1/notes'
+    assert.equal((await request(path, options)).status, 401)
+    for (const userId of ['ordinary', 'other-member']) {
+      assert.equal((await request(path, { ...options, userId })).status, 403)
+    }
+  }
+})
+
+test('lead Note routes preserve tenant and lead not-found distinctions', async () => {
+  for (const method of ['GET', 'POST']) {
+    const options = {
+      userId: 'platform', method, body: method === 'POST' ? { text: 'Note' } : undefined
+    }
+    const missingTenant = await request('/tenants/missing/leads/lead-1/notes', options)
+    assert.equal(missingTenant.status, 404)
+    assert.deepEqual(await missingTenant.json(), { error: 'Tenant not found' })
+
+    const missingLead = await request('/tenants/tenant-1/leads/missing/notes', options)
+    assert.equal(missingLead.status, 404)
+    assert.deepEqual(await missingLead.json(), { error: 'Lead not found' })
+  }
 })

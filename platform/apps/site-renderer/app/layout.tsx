@@ -3,8 +3,7 @@ import type { ReactNode } from 'react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Demo Marketing Site',
-  description: 'Shared marketing-site component scaffold.'
+  title: 'Website'
 }
 
 export default function RootLayout ({ children }: Readonly<{ children: ReactNode }>) {

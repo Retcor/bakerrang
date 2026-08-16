@@ -97,6 +97,7 @@ test('listTenantLeads mirrors Firestore orderBy exclusion and skips malformed ro
   fakeDb.seed(leadPath('missing-created'), missingCreatedAt)
   fakeDb.seed(leadPath('bad-name'), validLead({ name: '', createdAt: 30 }))
   fakeDb.seed(leadPath('bad-status'), validLead({ status: null, createdAt: 20 }))
+  fakeDb.seed(leadPath('unsupported-status'), validLead({ status: 'UNKNOWN', createdAt: 15 }))
   fakeDb.seed(leadPath('valid'), validLead({ email: undefined, phone: undefined, createdAt: 10 }))
   const result = await listTenantLeads('tenant-1')
   assert.deepEqual(result, {
@@ -171,6 +172,7 @@ test('getTenantLead fails controlled when required persisted data is malformed',
     { name: '' },
     { message: null },
     { status: '' },
+    { status: 'UNKNOWN' },
     { source: 1 },
     { createdAt: null },
     { updatedAt: Number.NaN }

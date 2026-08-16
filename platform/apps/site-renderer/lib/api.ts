@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import type { SiteDefinition } from '@bakerrang/site-schema'
 
 function baseUrl (): string {
@@ -8,7 +9,7 @@ function baseUrl (): string {
   return value.replace(/\/$/, '')
 }
 
-export async function getPublicSite (tenantId: string): Promise<SiteDefinition | null> {
+export const getPublicSite = cache(async (tenantId: string): Promise<SiteDefinition | null> => {
   const encodedTenantId = encodeURIComponent(tenantId)
   let response: Response
 
@@ -28,4 +29,4 @@ export async function getPublicSite (tenantId: string): Promise<SiteDefinition |
   } catch {
     throw new Error('Unable to load public site')
   }
-}
+})

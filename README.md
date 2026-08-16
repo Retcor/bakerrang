@@ -24,6 +24,21 @@ account setup. The Firestore library will look for the Google credentials once l
    This will add the application_default_credentials.json credentials file to be used to authenticate calls to Firestore:
    ```bash
    gcloud auth application-default login
+   
+### Setting up GCS Bucket for Marketing
+
+1. Create the bucket. Change the project and bucket name as needed.
+    ```bash
+    gcloud storage buckets create "gs://bakerrang-dev-media-marketing" --project=bakerrang-dev --location=us-west1 --uniform-bucket-level-access
+   ```
+    ```bash
+    gcloud storage buckets update "gs://bakerrang-dev-media-marketing" --no-public-access-prevention
+2. Give GET access only to the bucket
+    ```bash
+   gcloud storage buckets add-iam-policy-binding "gs://bakerrang-dev-media-marketing" --member="allUsers" --role="roles/storage.legacyObjectReader"
+3. Give create / delete access to the account
+    ```bash
+   gcloud storage buckets add-iam-policy-binding "gs://bakerrang-dev-media-marketing" --member="user:<email on account>" --role="roles/storage.objectUser"
 
 ## Chatbot Vector Database (dan-baker-info)
 

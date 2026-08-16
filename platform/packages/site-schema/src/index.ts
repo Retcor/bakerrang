@@ -46,7 +46,45 @@ export interface ContactSection {
   content: ContactContent
 }
 
-export type SiteSection = HeroSection | ServicesSection | ContactSection
+export interface GalleryItem {
+  id: string
+  mediaId: string
+  altText: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  src?: string
+  width?: number
+  height?: number
+}
+
+export interface GalleryContent {
+  title: string
+  items: GalleryItem[]
+}
+
+export interface GallerySection {
+  id: string
+  type: 'gallery'
+  content: GalleryContent
+}
+
+export interface TestimonialItem {
+  id: string
+  customerName: string
+  quote: string
+}
+
+export interface TestimonialsContent {
+  title: string
+  items: TestimonialItem[]
+}
+
+export interface TestimonialsSection {
+  id: string
+  type: 'testimonials'
+  content: TestimonialsContent
+}
+
+export type SiteSection = HeroSection | ServicesSection | GallerySection | TestimonialsSection | ContactSection
 
 export interface SitePage {
   id: string
@@ -57,8 +95,43 @@ export interface SitePage {
 
 export type SiteStatus = 'DRAFT' | 'PUBLISHED'
 
+export interface SiteBranding {
+  siteName: string
+  primaryColor: string
+  accentColor: string
+  logoMediaId?: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  logoSrc?: string
+  logoWidth?: number
+  logoHeight?: number
+}
+
+export interface PostalAddress {
+  line1?: string
+  line2?: string
+  city: string
+  region?: string
+  postalCode?: string
+  country?: string
+}
+
+export interface BusinessProfile {
+  description?: string
+  phone?: string
+  email?: string
+  address?: PostalAddress
+  serviceAreas?: string[]
+  socialImageMediaId?: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  socialImageSrc?: string
+  socialImageWidth?: number
+  socialImageHeight?: number
+}
+
 export interface SiteDefinition {
   status: SiteStatus
+  branding: SiteBranding
+  businessProfile?: BusinessProfile
   pages: SitePage[]
 }
 
@@ -70,6 +143,12 @@ export const isServicesSection = (section: SiteSection): section is ServicesSect
 
 export const isContactSection = (section: SiteSection): section is ContactSection =>
   section.id === 'contact' && section.type === 'contact'
+
+export const isGallerySection = (section: SiteSection): section is GallerySection =>
+  section.id === 'gallery' && section.type === 'gallery'
+
+export const isTestimonialsSection = (section: SiteSection): section is TestimonialsSection =>
+  section.id === 'testimonials' && section.type === 'testimonials'
 
 export const findHomePage = (site: SiteDefinition): SitePage | undefined =>
   site.pages.find((page) => page.slug === '/')

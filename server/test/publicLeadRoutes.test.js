@@ -72,6 +72,22 @@ test('public lead router remains write-only', async () => {
   assert.equal(response.status, 404)
 })
 
+test('public Lead Notes routes do not exist', async () => {
+  const path = `${baseUrl}/public/sites/tenant-1/leads/lead-1/notes`
+  assert.equal((await fetch(path)).status, 404)
+  assert.equal((await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text: 'Private note' })
+  })).status, 404)
+})
+
+test('public media management routes do not exist', async () => {
+  const path = `${baseUrl}/public/sites/tenant-1/media`
+  assert.equal((await fetch(path)).status, 404)
+  assert.equal((await fetch(path, { method: 'POST' })).status, 404)
+})
+
 test('public lead route bounds anonymous JSON bodies at 16 KB', async () => {
   const callsBefore = serviceCalls.length
   const response = await post('tenant-1', { message: 'x'.repeat(17 * 1024) })

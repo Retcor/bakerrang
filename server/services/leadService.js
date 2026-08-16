@@ -5,6 +5,7 @@ import {
   isValidEmail,
   isValidPhone
 } from '../validation/contactMethods.js'
+import { isLeadStatus } from '../domain/leadStatus.js'
 
 const TENANTS = 'tenants'
 let firestore = db
@@ -31,7 +32,7 @@ const summaryFrom = (snapshot) => {
   const value = snapshot.data()
   if (
     !nonEmptyString(value.name) ||
-    !nonEmptyString(value.status) ||
+    !isLeadStatus(value.status) ||
     !nonEmptyString(value.source) ||
     !finiteNumber(value.createdAt) ||
     !finiteNumber(value.updatedAt)
@@ -54,7 +55,7 @@ const detailFrom = (snapshot) => {
   if (
     !nonEmptyString(value.name) ||
     !nonEmptyString(value.message) ||
-    !nonEmptyString(value.status) ||
+    !isLeadStatus(value.status) ||
     !nonEmptyString(value.source) ||
     !finiteNumber(value.createdAt) ||
     !finiteNumber(value.updatedAt)
@@ -70,6 +71,23 @@ const detailFrom = (snapshot) => {
     source: value.source,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt
+  }
+}
+
+const noteFrom = (snapshot) => {
+  const value = snapshot.data()
+  if (
+    !nonEmptyString(value.text) ||
+    !Number.isSafeInteger(value.createdAt) ||
+    value.createdAt < 0 ||
+    !nonEmptyString(value.createdByUserId)
+  ) return null
+
+  return {
+    id: snapshot.id,
+    text: value.text,
+    createdAt: value.createdAt,
+    createdByUserId: value.createdByUserId
   }
 }
 
@@ -141,6 +159,18 @@ const validateLead = (input) => {
   }
 }
 
+const validateNote = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (typeof body.text !== 'string' || !body.text.trim()) {
+    throw httpError(400, 'Lead note is required')
+  }
+  const text = body.text.trim()
+  if (text.length > 2000) {
+    throw httpError(400, 'Lead note must be 2000 characters or fewer')
+  }
+  return text
+}
+
 export const createPublicLead = async (tenantId, input) => {
   await requirePublishedLeadForm(tenantId)
 
@@ -180,4 +210,85 @@ export const getTenantLead = async (tenantId, leadId) => {
     .collection('leads').doc(leadId).get()
   if (!snapshot.exists) throw httpError(404, 'Lead not found')
   return detailFrom(snapshot)
+}
+
+const validateStatusUpdate = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (typeof body.status !== 'string') throw httpError(400, 'Lead status is required')
+  if (!isLeadStatus(body.status)) throw httpError(400, 'Lead status is not supported')
+  if (!Object.prototype.hasOwnProperty.call(body, 'expectedUpdatedAt')) {
+    throw httpError(400, 'expectedUpdatedAt is required')
+  }
+  if (!Number.isSafeInteger(body.expectedUpdatedAt) || body.expectedUpdatedAt < 0) {
+    throw httpError(400, 'expectedUpdatedAt must be a non-negative safe integer')
+  }
+  return { status: body.status, expectedUpdatedAt: body.expectedUpdatedAt }
+}
+
+export const updateLeadStatus = async (tenantId, leadId, input) => {
+  const update = validateStatusUpdate(input)
+  const tenantRef = firestore.collection(TENANTS).doc(tenantId)
+  const leadRef = tenantRef.collection('leads').doc(leadId)
+
+  return firestore.runTransaction(async (transaction) => {
+    const [tenantSnapshot, leadSnapshot] = await Promise.all([
+      transaction.get(tenantRef),
+      transaction.get(leadRef)
+    ])
+
+    if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
+
+    const current = detailFrom(leadSnapshot)
+    if (current.updatedAt !== update.expectedUpdatedAt) {
+      throw httpError(409, 'Lead has changed. Refresh and try again.')
+    }
+    if (current.status === update.status) return current
+
+    const updatedAt = Math.max(Date.now(), current.updatedAt + 1)
+    transaction.set(leadRef, { status: update.status, updatedAt }, { merge: true })
+    return { ...current, status: update.status, updatedAt }
+  })
+}
+
+export const createLeadNote = async (tenantId, leadId, input, actorUserId) => {
+  const text = validateNote(input)
+  const noteId = randomUUID()
+  const createdAt = Date.now()
+  const note = { text, createdAt, createdByUserId: actorUserId }
+  const tenantRef = firestore.collection(TENANTS).doc(tenantId)
+  const leadRef = tenantRef.collection('leads').doc(leadId)
+  const noteRef = leadRef.collection('notes').doc(noteId)
+
+  await firestore.runTransaction(async (transaction) => {
+    const [tenantSnapshot, leadSnapshot] = await Promise.all([
+      transaction.get(tenantRef),
+      transaction.get(leadRef)
+    ])
+
+    if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
+    transaction.set(noteRef, note)
+  })
+
+  return { id: noteId, text, createdAt, createdByUserId: actorUserId }
+}
+
+export const listLeadNotes = async (tenantId, leadId) => {
+  const tenantRef = firestore.collection(TENANTS).doc(tenantId)
+  const leadRef = tenantRef.collection('leads').doc(leadId)
+  const [tenantSnapshot, leadSnapshot] = await Promise.all([
+    tenantRef.get(),
+    leadRef.get()
+  ])
+  if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+  if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
+
+  const snapshot = await leadRef.collection('notes')
+    .orderBy('createdAt', 'desc')
+    .limit(51)
+    .get()
+  const hasMore = snapshot.docs.length > 50
+  const notes = snapshot.docs.slice(0, 50).map(noteFrom).filter(Boolean)
+  return { notes, hasMore }
 }

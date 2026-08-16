@@ -1,3 +1,8 @@
 export { Hero, type HeroProps } from './Hero'
 export { Services, type ServicesProps } from './Services'
 export { Contact, contactHref, type ContactProps } from './Contact'
+export { Gallery, type GalleryProps } from './Gallery'
+export { Testimonials, type TestimonialsProps } from './Testimonials'
+export { SiteContainer, SiteSection, SectionHeading } from './SitePrimitives'
+export { SiteShell } from './SiteShell'
+export { contrastColor } from './branding'

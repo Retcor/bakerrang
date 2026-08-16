@@ -98,3 +98,25 @@ export async function apiSend<T> (
   const refreshedToken = await getCsrfToken(true)
   return send<T>(method, path, body, refreshedToken)
 }
+
+async function upload<T> (path: string, formData: FormData, token: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'x-csrf-token': token },
+    body: formData
+  })
+  return responseData<T>(response)
+}
+
+export async function apiUpload<T> (path: string, formData: FormData): Promise<T> {
+  const token = await getCsrfToken()
+  try {
+    return await upload<T>(path, formData, token)
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 403) throw error
+  }
+
+  csrfToken = null
+  return upload<T>(path, formData, await getCsrfToken(true))
+}

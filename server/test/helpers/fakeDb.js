@@ -104,6 +104,10 @@ export class FakeDb {
     return new FakeCollectionReference(this, name)
   }
 
+  async getAll (...refs) {
+    return Promise.all(refs.map((ref) => ref.get()))
+  }
+
   seed (path, value) {
     this.records.set(path, clone(value))
     return this

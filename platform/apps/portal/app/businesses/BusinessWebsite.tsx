@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { findHomePage, isContactSection, isServicesSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { findHomePage, isContactSection, isGallerySection, isServicesSection, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import {
@@ -13,6 +13,11 @@ import {
 import { HeroEditor } from './HeroEditor'
 import { ServicesEditor } from './ServicesEditor'
 import { ContactEditor } from './ContactEditor'
+import { GalleryEditor } from './GalleryEditor'
+import { TestimonialsEditor } from './TestimonialsEditor'
+import { SectionCompositionEditor } from './SectionCompositionEditor'
+import { BrandingEditor } from './BrandingEditor'
+import { BusinessProfileEditor } from './BusinessProfileEditor'
 
 export interface BusinessWebsiteProps {
   tenantId: string
@@ -20,7 +25,7 @@ export interface BusinessWebsiteProps {
 
 type View = 'initial' | 'missing' | 'site'
 type Operation = 'manage' | 'initialize' | 'publish' | 'unpublish'
-type EditorMode = 'hero' | 'services' | 'contact' | null
+type EditorMode = 'branding' | 'profile' | 'hero' | 'services' | 'gallery' | 'testimonials' | 'contact' | 'composition' | null
 
 export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
   const [view, setView] = useState<View>('initial')
@@ -126,6 +131,8 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
   const home = site ? findHomePage(site) : undefined
   const services = home?.sections.find(isServicesSection)
   const contact = home?.sections.find(isContactSection)
+  const gallery = home?.sections.find(isGallerySection)
+  const testimonials = home?.sections.find(isTestimonialsSection)
   const handleEditorSaved = (definition: SiteDefinition) => {
     setSite(definition)
     setEditor(null)
@@ -139,7 +146,11 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
       <span className="w-fit rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-fg-muted">
         Website: {site?.status}
       </span>
-      {editor === 'hero' && site ? (
+      {editor === 'branding' && site ? (
+        <BrandingEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'profile' && site ? (
+        <BusinessProfileEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'hero' && site ? (
         <HeroEditor
           onCancel={() => setEditor(null)}
           onSaved={handleEditorSaved}
@@ -160,8 +171,42 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
           site={site}
           tenantId={tenantId}
         />
+      ) : editor === 'gallery' && site ? (
+        <GalleryEditor
+          onCancel={() => setEditor(null)}
+          onSaved={handleEditorSaved}
+          site={site}
+          tenantId={tenantId}
+        />
+      ) : editor === 'testimonials' && site ? (
+        <TestimonialsEditor
+          onCancel={() => setEditor(null)}
+          onSaved={handleEditorSaved}
+          site={site}
+          tenantId={tenantId}
+        />
+      ) : editor === 'composition' && site ? (
+        <SectionCompositionEditor
+          onCancel={() => setEditor(null)}
+          onSaved={handleEditorSaved}
+          site={site}
+          tenantId={tenantId}
+        />
       ) : (
         <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={Boolean(pending)} onClick={() => { setEditor('branding'); setError(null); setFeedback(null) }}>Edit Branding</Button>
+          <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={Boolean(pending)} onClick={() => { setEditor('profile'); setError(null); setFeedback(null) }}>Business Profile</Button>
+          <Button
+            className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
+            disabled={Boolean(pending)}
+            onClick={() => {
+              setEditor('composition')
+              setError(null)
+              setFeedback(null)
+            }}
+          >
+            Manage Sections
+          </Button>
           <Button
             className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
             disabled={Boolean(pending)}
@@ -183,6 +228,28 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
             }}
           >
             {services ? 'Edit Services' : 'Add Services'}
+          </Button>
+          <Button
+            className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
+            disabled={Boolean(pending)}
+            onClick={() => {
+              setEditor('gallery')
+              setError(null)
+              setFeedback(null)
+            }}
+          >
+            {gallery ? 'Edit Gallery' : 'Add Gallery'}
+          </Button>
+          <Button
+            className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
+            disabled={Boolean(pending)}
+            onClick={() => {
+              setEditor('testimonials')
+              setError(null)
+              setFeedback(null)
+            }}
+          >
+            {testimonials ? 'Edit Testimonials' : 'Add Testimonials'}
           </Button>
           <Button
             className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"

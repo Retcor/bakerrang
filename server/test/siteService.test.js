@@ -40,6 +40,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
   const home = fakeDb.data('tenants/tenant-1/site/config/pages/home')
 
   assert.deepEqual(Object.keys(config).sort(), [
+    'branding',
     'createdAt',
     'createdByUserId',
     'status',
@@ -48,6 +49,11 @@ test('initializeSite atomically creates the exact config and home page shapes', 
   assert.equal(config.status, 'DRAFT')
   assert.equal(config.createdByUserId, 'platform-admin')
   assert.equal(config.createdAt, config.updatedAt)
+  assert.deepEqual(config.branding, {
+    siteName: 'Baker Street Cafe',
+    primaryColor: '#334155',
+    accentColor: '#0f766e'
+  })
 
   assert.deepEqual(Object.keys(home).sort(), [
     'createdAt',
@@ -72,6 +78,11 @@ test('initializeSite atomically creates the exact config and home page shapes', 
 
   assert.deepEqual(site, {
     status: 'DRAFT',
+    branding: {
+      siteName: 'Baker Street Cafe',
+      primaryColor: '#334155',
+      accentColor: '#0f766e'
+    },
     pages: [{
       id: 'home',
       slug: '/',
@@ -147,7 +158,7 @@ test('publish creates a sanitized snapshot and persists publication audit metada
     'siteDefinition'
   ])
   assert.deepEqual(snapshot.siteDefinition, published)
-  assert.deepEqual(Object.keys(published), ['status', 'pages'])
+  assert.deepEqual(Object.keys(published), ['status', 'pages', 'branding'])
   assert.deepEqual(Object.keys(published.pages[0]).sort(), ['id', 'sections', 'slug', 'title'])
   assert.equal(published.status, 'PUBLISHED')
   assert.equal(snapshot.publishedByUserId, 'publisher')

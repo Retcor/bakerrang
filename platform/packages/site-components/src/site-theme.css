@@ -1,0 +1,36 @@
+@theme inline {
+  --color-site-bg: var(--site-bg);
+  --color-site-surface: var(--site-surface);
+  --color-site-border: var(--site-border);
+  --color-site-fg: var(--site-fg);
+  --color-site-muted: var(--site-muted);
+  --color-site-primary: var(--site-primary);
+  --color-site-primary-fg: var(--site-primary-fg);
+  --color-site-accent: var(--site-accent);
+  --color-site-accent-fg: var(--site-accent-fg);
+  --color-site-footer: var(--site-footer);
+  --color-site-footer-fg: var(--site-footer-fg);
+}
+
+.site-shell {
+  --site-bg: #f8fafc;
+  --site-surface: #ffffff;
+  --site-border: #d9e0e8;
+  --site-fg: #172033;
+  --site-muted: #617087;
+  --site-primary: #334155;
+  --site-primary-fg: #ffffff;
+  --site-accent: #0f766e;
+  --site-accent-fg: #ffffff;
+  --site-footer: #111827;
+  --site-footer-fg: #f8fafc;
+  --color-bg: var(--site-bg);
+  --color-surface: var(--site-surface);
+  --color-border: var(--site-border);
+  --color-fg: var(--site-fg);
+  --color-fg-muted: var(--site-muted);
+  --color-accent: var(--site-primary);
+  --color-accent-fg: var(--site-primary-fg);
+  background: var(--site-bg);
+  color: var(--site-fg);
+}

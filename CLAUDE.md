@@ -216,6 +216,83 @@ be added as the plan develops.
   inline detail with Back (no modal/drawer/route). Public API stays **write-only** (no `GET /public/.../leads`).
   Sets up Step 1.16 workflow (`PATCH` status; enum/optimistic-concurrency/notes decided **then**). Verdict:
   **READY FOR IMPLEMENTATION**.
+- [Step 1.16 — Lead Workflow Foundation Implementation Plan](docs/marketing-site/Step1.16-LeadWorkflow-ImplementationPlan.md)
+  — Codex-ready plan for the **first authenticated tenant business-data mutation**: **status-only** Lead
+  workflow via new `PATCH /tenants/:id/leads/:leadId` (`requireTenantRole(OWNER/ADMIN/STAFF)` — STAFF
+  respond to leads). **Notes deferred to 1.17** (append-only subcollection = different pattern; don't
+  bundle). Status enum `NEW|CONTACTED|QUOTED|WON|LOST` (local-service-tuned; `QUOTED` over generic
+  `QUALIFIED`) in new `server/domain/leadStatus.js` (server authoritative; portal `lib/leads.ts` mirrors —
+  drift only affects dropdown, not safety). **Unrestricted valid transitions** (WON/LOST reopenable, no
+  workflow engine). **Optimistic concurrency**: caller sends `expectedUpdatedAt`; transaction reads →
+  verifies `updatedAt===expected` → merge-writes → else **409 'Lead has changed…'** (no last-write-wins).
+  ⚠️ **Same-ms fix**: `updatedAt = Math.max(Date.now(), prev+1)` so the token is strictly monotonic per
+  lead. **FakeDb needs no change** — `runTransaction` already has `get`+merge-`set` (buffered writes; no
+  `update` needed). Store `updatedByUserId` from **session** (`req.user.id`, never body) — cheap
+  accountability + seeds future audit; expose optional in `LeadDetail`. Audit events **deferred**.
+  `createdAt` frozen; existing `status:'NEW'` docs already valid (no migration). Response = sanitized
+  `detailFrom` (no raw spread); unknown request fields ignored; only status is client-mutable. Portal:
+  Save-Status control + 409 Refresh-Lead UX + local list-row patch (no refetch). `no-store` maintained;
+  public Lead API untouched. Tests incl. STAFF-allowed, stale-token 409, two-mutations-distinct-version.
+  Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.17 — Lead Notes Implementation Plan](docs/marketing-site/Step1.17-LeadNotes-ImplementationPlan.md)
+  — Codex-ready plan for **internal, append-only Lead notes** (read + create only, no edit/delete): new
+  `GET`/`POST /tenants/:id/leads/:leadId/notes` (`requireTenantRole(OWNER/ADMIN/STAFF)` — STAFF add notes).
+  Notes stay in `leadService.js` (subresource reuses tenant/lead existence + `firestore`/`_setDb`; not
+  unwieldy — no separate service). Doc `tenants/{tid}/leads/{leadId}/notes/{noteId}` = `{text, createdAt,
+  createdByUserId}` (structural ownership, no redundant ids). Server `randomUUID` id; **`createdByUserId`
+  from session `req.user.id`, never body**. Validation: text 1..2000, unknown fields dropped. **Load-bearing
+  invariant: creating a note writes ONLY the note doc — never the Lead — so `Lead.updatedAt` (the 1.16 status
+  concurrency token) is untouched and an open status editor stays valid** (tested: note-create → lead
+  unchanged → status PATCH with old token still succeeds). **Transactional create** (read tenant+lead → 404s
+  → write note) mirrors 1.16, closes TOCTOU; lead need only *exist*, not be well-formed (don't block
+  note-taking on a corrupt lead). List: `orderBy('createdAt','desc').limit(51)` → 50 newest + `hasMore`;
+  **API newest-first, UI reverses to oldest→newest** (new note appends at bottom). `noteFrom` sanitizer skips
+  malformed rows. Author display = **"You" vs "Team member"** from `useAuth().user.id` (zero fetches, no N+1,
+  no raw id; `createdByUserId` preserved for a future Activity feed). `no-store` on both; **FakeDb needs no
+  change** (orderBy/limit + tx get/set already present). Portal: extend `lib/leads.ts` + new isolated
+  `LeadNotes.tsx` (parallel fetch on select, own error state — 1.16 status UI untouched). Public API: no note
+  route. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.18 — Media Foundation + Gallery Section Implementation Plan](docs/marketing-site/Step1.18-MediaFoundation-ImplementationPlan.md)
+  — Codex-ready plan for the **first tenant-owned binary media** + a Gallery section referencing it. **Upload
+  = API-streamed multipart** (portal → Express **multer**, already installed → GCS) — chosen over signed URLs
+  (server validates bytes; no `signBlob` IAM / browser→GCS CORS / finalize step). Add `@google-cloud/storage`
+  + `image-size` (not installed). **Public-read objects** in a private-but-public-read bucket (UBLA +
+  `allUsers:objectViewer`, **not listable**; opaque `tenants/{tid}/media/{uuid}` names, original filename
+  never in path). Media **immutable** (new upload = new mediaId; no overwrite), **no deletion in V1**. Firestore
+  `tenants/{tid}/media/{mediaId}` = `{originalFilename,objectName,contentType,sizeBytes,width,height,createdAt,
+  createdByUserId}`; no binary in Firestore. MIME allowlist jpeg/png/webp (reject svg/gif); validate **magic
+  bytes via `image-size`** (also yields w/h) + 10 MB multer cap. `MEDIA_BUCKET_NAME` **required everywhere,
+  fail-fast** (mirrors `resolveFirestoreProject`; new `config/mediaConfig.js`). Object-first→metadata→
+  cleanup-on-failure (bounded orphan, no janitor). Media + Gallery routes are **PLATFORM_ADMIN-only** (CMS not
+  broadened to STAFF). Gallery schema **provider-neutral**: persists `{id(server uuid),mediaId,altText?}`;
+  `src`/`width`/`height` are **public-only**, added by `getPublicSite` resolution (**batched `firestore.getAll`**,
+  read-time, internal metadata stripped) — so `publishSite`/`toSiteDefinition`/`mutateWorkingHome` stay
+  **section-agnostic** (Gallery snapshots verbatim). `upsertHomeGallery` PUT reuses `mutateWorkingHome` +
+  pre-validates media existence (safe outside the tx since media is immutable/non-deletable); reserved-identity
+  corruption scan; insert **before Contact / else append**; dup/foreign mediaId → 400. Shared `Gallery`
+  component = plain `<img>` responsive grid (no Next/Image → no `remotePatterns`; renders null on zero items).
+  **FakeDb gains `getAll`**; new `fakeStorage` `_setStorage` seam (no real GCS in tests). Mandatory
+  snapshot-isolation + cross-tenant + immutability tests. Manual GCP bucket/IAM setup documented as a **live-E2E
+  prerequisite** (not a build blocker). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.19 — Testimonials Section Implementation Plan](docs/marketing-site/Step1.19-Testimonials-ImplementationPlan.md)
+  — Codex-ready plan for a **manually-curated Testimonials** Home section — the **second multi-item text
+  section** (a Services twin). Recommends internal type **`testimonials`** (not "reviews" — avoids implying
+  verified third-party reviews; keeps a future provider-sourced `reviews` domain distinct), item =
+  **`{id, customerName, quote}`**, and **NO rating + NO media in V1** (a manual 5-star implies a fake review;
+  a name+quote is complete without a photo) — so it touches **zero media code** and Gallery/Media/Lead behavior
+  is provably unchanged. Mirrors the shipped Gallery/Services template: `validateTestimonialsInput` +
+  `upsertHomeTestimonials` via `mutateWorkingHome`; reserved-identity + stored-id corruption scans (→ `500 'Home
+  testimonials section invalid'`); full-state PUT `/tenants/:id/site/pages/home/sections/testimonials`
+  (`requirePlatformAdmin`); server `randomUUID` item ids (unknown/dup → 400); insert **before Contact / else
+  append** (lands after Gallery; add-order caveat → canonical ordering is 1.20). Because text sections pass
+  through `hydrateSiteMedia` verbatim, **no publish/media change**. Shared `Testimonials` component uses
+  `<figure><blockquote>…<figcaption>` (**not `<cite>`** for a person), renders null on zero valid items, skips
+  malformed items (read-time defense). Widen `SiteSection` + `isTestimonialsSection` (guards already used →
+  no narrowing breakage). Answer to §14/§40: **do NOT generalize the media hydrator** — a text section isn't a
+  media consumer, so no real duplication yet. **Appendix A** fully scopes an optional media/rating opt-in
+  (would justify renaming `requireGalleryMedia`→`requireTenantMedia`, generalizing `hydrateSiteMedia` to one
+  batched gallery+testimonial pass, and extracting a `MediaPicker`). Step 1.20 = section composition/ordering +
+  removal. Verdict: **READY FOR IMPLEMENTATION**.
 
 ## Password Vault + Security Hardening (2026-07)
 
