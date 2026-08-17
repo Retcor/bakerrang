@@ -236,11 +236,23 @@ export async function continueRun(confirm: (question: string) => Promise<boolean
   const { dir: runDir } = current;
   let state = await readState(runDir);
   if (state.state === 'WAITING_FOR_IMPLEMENTATION_APPROVAL') {
+    let corrections = 'Unavailable';
+    try {
+      const review = await readFile(path.join(runDir, 'codex-plan-review.md'), 'utf8');
+      corrections = extractSectionBefore(review, 'CORRECTIONS', 'FINAL_CODEX_IMPLEMENTATION_PROMPT') || 'None';
+    } catch { /* display-only artifact */ }
+    console.log(`\nGate 1 approval summary\nClaude plan verdict: ${state.verdicts.planner ?? 'Unavailable'}\nCodex review verdict: ${state.verdicts.planReview ?? 'Unavailable'}\nReviewer corrections: ${corrections}`);
+    console.log(`Claude plan: ${path.join(runDir, 'claude-plan.md')}\nCodex review: ${path.join(runDir, 'codex-plan-review.md')}\nImplementation prompt: ${path.join(runDir, 'codex-implementation-prompt.md')}`);
     if (!await confirm('Proceed with Codex implementation? [y/N] ')) return;
     await validateAuthForAiStages(repoRoot, path.join(runDir, 'logs'));
     return runImplementation(runDir, state);
   }
   if (state.state === 'WAITING_FOR_FINAL_APPROVAL') {
+    let diffStat = 'Unavailable';
+    let verification = 'Unavailable';
+    try { diffStat = (await readDiffStat(runDir)).trim() || 'Unavailable'; } catch { /* display-only artifact */ }
+    try { verification = (await readFile(path.join(runDir, 'verification.md'), 'utf8')).trim() || 'Unavailable'; } catch { /* display-only artifact */ }
+    console.log(`\nGate 2 approval summary\nMilestone: ${state.milestone}\nBranch: ${state.runBranch}\nBase commit: ${state.baseCommit}\nClaude plan verdict: ${state.verdicts.planner ?? 'Unavailable'}\nCodex review verdict: ${state.verdicts.planReview ?? 'Unavailable'}\nClaude diff-review verdict: ${state.verdicts.diffReview ?? 'Unavailable'}\n\nDiff stat:\n${diffStat}\n\nVerification:\n${verification}`);
     if (!await confirm('Accept the verified implementation? [y/N] ')) return;
     await writeState(runDir, { ...state, state: 'COMPLETED', stageError: null });
     console.log('Run marked COMPLETED. No commit, merge, push, deployment, or checkout was performed.');
