@@ -10,10 +10,22 @@ test('Claude read-only command uses plan mode and explicit write-tool denial', (
   assert.equal(claudeReadOnlyArgs().includes('--bare'), false);
 });
 
-test('Codex command uses explicit sandbox, no approval, cwd, and final-message output', () => {
-  assert.deepEqual(codexExecArgs('/repo', 'read-only', '/run/last.txt'), [
-    'exec', '--sandbox', 'read-only', '--ask-for-approval', 'never', '-C', '/repo', '-o', '/run/last.txt'
+test('Codex reviewer puts top-level approval before exec and uses read-only sandbox', () => {
+  const args = codexExecArgs('/repo', 'read-only', '/run/last.txt');
+  assert.deepEqual(args, [
+    '--ask-for-approval', 'never', 'exec', '--sandbox', 'read-only', '-C', '/repo', '-o', '/run/last.txt'
   ]);
+  assert.ok(args.indexOf('--ask-for-approval') < args.indexOf('exec'));
+  assert.equal(args.includes('danger-full-access'), false);
+});
+
+test('Codex implementer and corrector use workspace-write without danger-full-access', () => {
+  const args = codexExecArgs('/repo', 'workspace-write', '/run/last.txt');
+  assert.deepEqual(args, [
+    '--ask-for-approval', 'never', 'exec', '--sandbox', 'workspace-write', '-C', '/repo', '-o', '/run/last.txt'
+  ]);
+  assert.ok(args.indexOf('--ask-for-approval') < args.indexOf('exec'));
+  assert.equal(args.includes('danger-full-access'), false);
 });
 
 test('verification list is fixed and ordered', () => {

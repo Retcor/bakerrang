@@ -3,7 +3,7 @@ import { copyFile, readFile, stat } from 'node:fs/promises';
 import { assertNoApiKeys, runProcess } from './process.js';
 
 export function codexExecArgs(repoRoot: string, sandbox: 'read-only' | 'workspace-write', lastMessagePath: string): string[] {
-  return ['exec', '--sandbox', sandbox, '--ask-for-approval', 'never', '-C', repoRoot, '-o', lastMessagePath];
+  return ['--ask-for-approval', 'never', 'exec', '--sandbox', sandbox, '-C', repoRoot, '-o', lastMessagePath];
 }
 
 export async function runCodex(options: {
