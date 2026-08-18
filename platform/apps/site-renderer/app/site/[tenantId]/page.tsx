@@ -1,39 +1,44 @@
-import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
+import { notFound, permanentRedirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { findHomePage, isContactSection } from '@bakerrang/site-schema'
-import { SiteShell } from '@bakerrang/site-components'
-import { SectionRenderer } from '../../../components/SectionRenderer'
+import { findHomePage } from '@bakerrang/site-schema'
+import { PublicHome } from '../../../components/PublicHome'
 import { getPublicSite } from '../../../lib/api'
+import { getTenantDomain } from '../../../lib/domains'
 import { homeMetadata } from '../../../lib/seo'
-import { BusinessJsonLd } from '../../../components/BusinessJsonLd'
+import { requestMatchesSharedOrigin } from '../../../lib/requestHost'
+import { resolveSharedPublicOrigin, resolveSiteBaseUrl, sharedSiteRedirectTarget } from '../../../lib/siteUrl'
 
 export interface TenantSitePageProps {
   params: Promise<{ tenantId: string }>
 }
 
+const sharedHostAllowed = async () => requestMatchesSharedOrigin(
+  (await headers()).get('host'),
+  resolveSharedPublicOrigin()
+)
+
 export async function generateMetadata ({ params }: TenantSitePageProps): Promise<Metadata> {
+  if (!(await sharedHostAllowed())) return { title: 'Website', robots: { index: false, follow: false } }
   const { tenantId } = await params
-  const site = await getPublicSite(tenantId)
-  return site ? homeMetadata(site, tenantId) : { title: 'Website', robots: { index: false, follow: false } }
+  const [site, domain] = await Promise.all([getPublicSite(tenantId), getTenantDomain(tenantId)])
+  return site
+    ? homeMetadata(site, tenantId, process.env, domain.canonicalHost)
+    : { title: 'Website', robots: { index: false, follow: false } }
 }
 
 export default async function TenantSitePage ({ params }: TenantSitePageProps) {
+  if (!(await sharedHostAllowed())) notFound()
   const { tenantId } = await params
-  const site = await getPublicSite(tenantId)
-  if (!site) notFound()
-
-  const home = findHomePage(site)
-  if (!home) notFound()
-  const hasContact = home.sections.some(isContactSection)
-
+  const [site, domain] = await Promise.all([getPublicSite(tenantId), getTenantDomain(tenantId)])
+  if (!site || !findHomePage(site)) notFound()
+  const redirectTarget = sharedSiteRedirectTarget(site.status, domain.canonicalHost, '/')
+  if (redirectTarget) permanentRedirect(redirectTarget)
   return (
-    <SiteShell currentPage="home" site={site} tenantId={tenantId}>
-      <BusinessJsonLd site={site} tenantId={tenantId} />
-      <main>
-        {home.sections.map((section) => (
-          <SectionRenderer heroContactHref={hasContact ? '#contact' : undefined} key={section.id} section={section} tenantId={tenantId} />
-        ))}
-      </main>
-    </SiteShell>
+    <PublicHome
+      site={site}
+      siteBaseUrl={resolveSiteBaseUrl(tenantId)}
+      sitePath={`/site/${encodeURIComponent(tenantId)}`}
+    />
   )
 }

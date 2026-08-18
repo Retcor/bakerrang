@@ -133,11 +133,13 @@ export class FakeDb {
     const writes = []
     const transaction = {
       get: (ref) => ref.get(),
-      set: (ref, value, options) => writes.push({ ref, value, options })
+      set: (ref, value, options) => writes.push({ type: 'set', ref, value, options }),
+      delete: (ref) => writes.push({ type: 'delete', ref })
     }
     const result = await callback(transaction)
     for (const write of writes) {
-      this.write(write.ref.path, write.value, write.options)
+      if (write.type === 'delete') this.records.delete(write.ref.path)
+      else this.write(write.ref.path, write.value, write.options)
     }
     return result
   }

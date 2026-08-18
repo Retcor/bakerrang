@@ -3,11 +3,11 @@ import { Contact, Gallery, Hero, Services, Testimonials } from '@bakerrang/site-
 
 export interface SectionRendererProps {
   section: SiteSection
-  tenantId: string
+  sitePath: string
   heroContactHref?: string
 }
 
-export function SectionRenderer ({ heroContactHref, section, tenantId }: SectionRendererProps) {
+export function SectionRenderer ({ heroContactHref, section, sitePath }: SectionRendererProps) {
   switch (section.type) {
     case 'hero':
       return <Hero contactHref={heroContactHref} content={section.content} />
@@ -21,7 +21,7 @@ export function SectionRenderer ({ heroContactHref, section, tenantId }: Section
       return (
         <Contact
           content={section.content}
-          leadFormHref={`/site/${encodeURIComponent(tenantId)}/contact`}
+          leadFormHref={`${sitePath}/contact`}
         />
       )
     default:

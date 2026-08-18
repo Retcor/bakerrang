@@ -21,8 +21,21 @@ export function resolveSharedPublicOrigin (env: PublicSiteEnvironment = process.
 
 export function resolveSiteBaseUrl (
   tenantId: string,
-  env: PublicSiteEnvironment = process.env
+  env: PublicSiteEnvironment = process.env,
+  canonicalHost?: string | null
 ): string | null {
+  if (canonicalHost) {
+    const normalized = canonicalHost.toLowerCase()
+    if (
+      normalized.length <= 253 &&
+      normalized.includes('.') &&
+      normalized.split('.').every((label) => (
+        label.length >= 1 && label.length <= 63 && /^[a-z0-9-]+$/.test(label) &&
+        !label.startsWith('-') && !label.endsWith('-')
+      ))
+    ) return `https://${normalized}/`
+    return null
+  }
   const origin = resolveSharedPublicOrigin(env)
   if (!origin) return null
   return new URL(`/site/${encodeURIComponent(tenantId)}`, `${origin}/`).toString()
@@ -32,6 +45,21 @@ export function appendSitePath (siteBaseUrl: string, path: string): string {
   return new URL(path.replace(/^\/+/, ''), `${siteBaseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
+export function sharedSiteRedirectTarget (
+  siteStatus: string,
+  canonicalHost: string | null,
+  path: '/' | '/contact'
+): string | null {
+  if (siteStatus !== 'PUBLISHED' || !canonicalHost) return null
+  const base = resolveSiteBaseUrl('', {}, canonicalHost)
+  if (!base) return null
+  return new URL(path, `${base}/`).toString()
+}
+
+export function indexingEnvironmentEnabled (env: PublicSiteEnvironment = process.env): boolean {
+  return env.SITE_PUBLIC_INDEXING_ENABLED === 'true'
+}
+
 export function publicIndexingEnabled (env: PublicSiteEnvironment = process.env): boolean {
-  return env.SITE_PUBLIC_INDEXING_ENABLED === 'true' && resolveSharedPublicOrigin(env) !== null
+  return indexingEnvironmentEnabled(env) && resolveSharedPublicOrigin(env) !== null
 }

@@ -1,42 +1,50 @@
-import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
+import { notFound, permanentRedirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { SiteContainer, SiteShell } from '@bakerrang/site-components'
 import { findHomePage, isContactSection } from '@bakerrang/site-schema'
-import { LeadForm } from '../../../../components/LeadForm'
+import { PublicContact } from '../../../../components/PublicContact'
 import { getPublicSite } from '../../../../lib/api'
+import { getTenantDomain } from '../../../../lib/domains'
 import { contactMetadata } from '../../../../lib/seo'
+import { requestMatchesSharedOrigin } from '../../../../lib/requestHost'
+import { resolveSharedPublicOrigin, sharedSiteRedirectTarget } from '../../../../lib/siteUrl'
 
 export interface ContactPageProps {
   params: Promise<{ tenantId: string }>
 }
 
+const sharedHostAllowed = async () => requestMatchesSharedOrigin(
+  (await headers()).get('host'),
+  resolveSharedPublicOrigin()
+)
+
 export async function generateMetadata ({ params }: ContactPageProps): Promise<Metadata> {
+  if (!(await sharedHostAllowed())) return { title: 'Contact', robots: { index: false, follow: false } }
   const { tenantId } = await params
-  const site = await getPublicSite(tenantId)
-  return site ? contactMetadata(site, tenantId) : { title: 'Contact', robots: { index: false, follow: false } }
+  const [site, domain] = await Promise.all([getPublicSite(tenantId), getTenantDomain(tenantId)])
+  return site
+    ? contactMetadata(site, tenantId, process.env, domain.canonicalHost)
+    : { title: 'Contact', robots: { index: false, follow: false } }
 }
 
 export default async function ContactPage ({ params }: ContactPageProps) {
+  if (!(await sharedHostAllowed())) notFound()
   const { tenantId } = await params
-  const site = await getPublicSite(tenantId)
+  const [site, domain] = await Promise.all([getPublicSite(tenantId), getTenantDomain(tenantId)])
   if (!site) notFound()
+
+  const redirectTarget = sharedSiteRedirectTarget(site.status, domain.canonicalHost, '/contact')
+  if (redirectTarget) permanentRedirect(redirectTarget)
 
   const contact = findHomePage(site)?.sections.find(isContactSection)
   if (!contact || contact.content.action.type !== 'leadForm') notFound()
 
   return (
-    <SiteShell currentPage="contact" site={site} tenantId={tenantId}>
-      <main className="bg-site-bg py-16 sm:py-24">
-        <SiteContainer>
-          <div className="mx-auto max-w-2xl">
-            <h1 className="text-4xl font-semibold tracking-tight text-site-fg">{contact.content.title}</h1>
-            {contact.content.text && <p className="mt-4 text-lg leading-8 text-site-muted">{contact.content.text}</p>}
-            <div className="mt-8">
-              <LeadForm tenantId={tenantId} />
-            </div>
-          </div>
-        </SiteContainer>
-      </main>
-    </SiteShell>
+    <PublicContact
+      contact={contact}
+      site={site}
+      sitePath={`/site/${encodeURIComponent(tenantId)}`}
+      tenantId={tenantId}
+    />
   )
 }

@@ -18,6 +18,7 @@ import { TestimonialsEditor } from './TestimonialsEditor'
 import { SectionCompositionEditor } from './SectionCompositionEditor'
 import { BrandingEditor } from './BrandingEditor'
 import { BusinessProfileEditor } from './BusinessProfileEditor'
+import { CustomDomainEditor } from './CustomDomainEditor'
 
 export interface BusinessWebsiteProps {
   tenantId: string
@@ -25,7 +26,7 @@ export interface BusinessWebsiteProps {
 
 type View = 'initial' | 'missing' | 'site'
 type Operation = 'manage' | 'initialize' | 'publish' | 'unpublish'
-type EditorMode = 'branding' | 'profile' | 'hero' | 'services' | 'gallery' | 'testimonials' | 'contact' | 'composition' | null
+type EditorMode = 'branding' | 'profile' | 'domain' | 'hero' | 'services' | 'gallery' | 'testimonials' | 'contact' | 'composition' | null
 
 export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
   const [view, setView] = useState<View>('initial')
@@ -150,6 +151,8 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
         <BrandingEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'profile' && site ? (
         <BusinessProfileEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'domain' ? (
+        <CustomDomainEditor onCancel={() => setEditor(null)} tenantId={tenantId} />
       ) : editor === 'hero' && site ? (
         <HeroEditor
           onCancel={() => setEditor(null)}
@@ -196,6 +199,7 @@ export function BusinessWebsite ({ tenantId }: BusinessWebsiteProps) {
         <div className="flex flex-wrap gap-2 sm:justify-end">
           <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={Boolean(pending)} onClick={() => { setEditor('branding'); setError(null); setFeedback(null) }}>Edit Branding</Button>
           <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={Boolean(pending)} onClick={() => { setEditor('profile'); setError(null); setFeedback(null) }}>Business Profile</Button>
+          <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={Boolean(pending)} onClick={() => { setEditor('domain'); setError(null); setFeedback(null) }}>Custom Domain</Button>
           <Button
             className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
             disabled={Boolean(pending)}

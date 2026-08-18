@@ -4,6 +4,7 @@ import * as tenantService from '../services/tenantService.js'
 import * as siteService from '../services/siteService.js'
 import * as leadService from '../services/leadService.js'
 import * as mediaService from '../services/mediaService.js'
+import * as siteDomainService from '../services/siteDomainService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -46,6 +47,7 @@ export const createTenantRouter = (deps = {}) => {
   const sites = deps.siteService || siteService
   const leads = deps.leadService || leadService
   const media = deps.mediaService || mediaService
+  const domains = deps.siteDomainService || siteDomainService
   const platformAdmin = deps.requirePlatformAdmin || requirePlatformAdmin
   const tenantRole = deps.requireTenantRole || requireTenantRole
   const router = express.Router()
@@ -68,6 +70,30 @@ export const createTenantRouter = (deps = {}) => {
 
   router.post('/:tenantId/site/unpublish', platformAdmin, handle(
     (req) => sites.unpublishSite(req.params.tenantId, req.user.id)
+  ))
+
+  router.get('/:tenantId/site/domain', platformAdmin, noStore, handle(
+    (req) => domains.getSiteDomain(req.params.tenantId)
+  ))
+
+  router.put('/:tenantId/site/domain', platformAdmin, noStore, handle(
+    (req) => domains.registerSiteDomain(req.params.tenantId, req.body, req.user.id)
+  ))
+
+  router.post('/:tenantId/site/domain/verify', platformAdmin, noStore, handle(
+    (req) => domains.verifySiteDomain(req.params.tenantId, req.user.id)
+  ))
+
+  router.post('/:tenantId/site/domain/activate', platformAdmin, noStore, handle(
+    (req) => domains.activateSiteDomain(req.params.tenantId, req.user.id)
+  ))
+
+  router.post('/:tenantId/site/domain/disable', platformAdmin, noStore, handle(
+    (req) => domains.disableSiteDomain(req.params.tenantId, req.user.id)
+  ))
+
+  router.delete('/:tenantId/site/domain', platformAdmin, noStore, handle(
+    (req) => domains.removeSiteDomain(req.params.tenantId)
   ))
 
   router.put('/:tenantId/site/branding', platformAdmin, handle(

@@ -7,7 +7,7 @@ import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
 import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter } from './middleware/security.js'
-import { buildAllowedOrigins, isOriginAllowed } from './config/origins.js'
+import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 
 import authRouter, { isAuthenticated } from './routes/auth.js'
@@ -23,6 +23,7 @@ import vaultRouter from './routes/vault.js'
 import tenantRouter from './routes/tenants.js'
 import publicSiteRouter from './routes/publicSites.js'
 import publicLeadRouter from './routes/publicLeads.js'
+import { resolveActiveDomain } from './services/siteDomainService.js'
 import { fileURLToPath } from 'url'
 
 import passport from 'passport'
@@ -49,14 +50,7 @@ app.use(helmet({
 }))
 
 const allowedOrigins = buildAllowedOrigins()
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (server-to-server, curl, etc.)
-    if (isOriginAllowed(origin, allowedOrigins)) return callback(null, true)
-    callback(new Error(`CORS: origin ${origin} not allowed`))
-  },
-  credentials: true
-}))
+app.use(cors(createCorsOptionsDelegate({ allowedOrigins, resolveActiveDomain })))
 app.use(logger('dev'))
 const generalJsonParser = express.json({ limit: '10mb' })
 app.use((req, res, next) => {

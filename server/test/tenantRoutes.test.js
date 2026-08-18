@@ -122,6 +122,39 @@ const media = {
   }
 }
 
+const domainRecord = {
+  hostname: 'example.com',
+  tenantId: 'tenant-1',
+  status: 'PENDING_VERIFICATION',
+  verificationToken: 'token'
+}
+const domains = {
+  getSiteDomain: async (tenantId) => {
+    calls.push({ operation: 'getSiteDomain', tenantId })
+    return domainRecord
+  },
+  registerSiteDomain: async (tenantId, body, actorUserId) => {
+    calls.push({ operation: 'registerSiteDomain', tenantId, body, actorUserId })
+    return domainRecord
+  },
+  verifySiteDomain: async (tenantId, actorUserId) => {
+    calls.push({ operation: 'verifySiteDomain', tenantId, actorUserId })
+    return { ...domainRecord, status: 'VERIFIED' }
+  },
+  activateSiteDomain: async (tenantId, actorUserId) => {
+    calls.push({ operation: 'activateSiteDomain', tenantId, actorUserId })
+    return { ...domainRecord, status: 'ACTIVE' }
+  },
+  disableSiteDomain: async (tenantId, actorUserId) => {
+    calls.push({ operation: 'disableSiteDomain', tenantId, actorUserId })
+    return { ...domainRecord, status: 'DISABLED' }
+  },
+  removeSiteDomain: async (tenantId) => {
+    calls.push({ operation: 'removeSiteDomain', tenantId })
+    return { removed: true }
+  }
+}
+
 const leadSummary = {
   id: 'lead-1',
   name: 'Visitor',
@@ -184,6 +217,7 @@ before(async () => {
     siteService: sites,
     leadService: leads,
     mediaService: media,
+    siteDomainService: domains,
     requirePlatformAdmin: createRequirePlatformAdmin(authDeps),
     requireTenantRole: (roles) => requireTenantRole(roles, authDeps)
   }))
@@ -323,6 +357,39 @@ test('only PLATFORM_ADMIN can publish and unpublish a site', async () => {
       tenantId: 'tenant-1',
       actorId: 'platform'
     })
+  }
+})
+
+test('custom domain lifecycle is PLATFORM_ADMIN-only and forwards explicit commands', async () => {
+  const basePath = '/tenants/tenant-1/site/domain'
+  const operations = [
+    { method: 'GET', path: basePath, call: 'getSiteDomain' },
+    { method: 'PUT', path: basePath, body: { hostname: 'example.com' }, call: 'registerSiteDomain' },
+    { method: 'POST', path: `${basePath}/verify`, call: 'verifySiteDomain' },
+    { method: 'POST', path: `${basePath}/activate`, call: 'activateSiteDomain' },
+    { method: 'POST', path: `${basePath}/disable`, call: 'disableSiteDomain' },
+    { method: 'DELETE', path: basePath, call: 'removeSiteDomain' }
+  ]
+
+  for (const operation of operations) {
+    assert.equal((await request(operation.path, {
+      method: operation.method, body: operation.body
+    })).status, 401)
+    for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+      assert.equal((await request(operation.path, {
+        userId, method: operation.method, body: operation.body
+      })).status, 403)
+    }
+    const response = await request(operation.path, {
+      userId: 'platform', method: operation.method, body: operation.body
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.equal(calls.at(-1).operation, operation.call)
+    assert.equal(calls.at(-1).tenantId, 'tenant-1')
+    if (!['getSiteDomain', 'removeSiteDomain'].includes(operation.call)) {
+      assert.equal(calls.at(-1).actorUserId, 'platform')
+    }
   }
 })
 

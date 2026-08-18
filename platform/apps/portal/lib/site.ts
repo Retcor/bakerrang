@@ -73,11 +73,47 @@ export interface BusinessProfileInput {
   socialImageMediaId?: string
 }
 
+export type SiteDomainStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'ACTIVE' | 'DISABLED'
+
+export interface SiteDomain {
+  hostname: string
+  tenantId: string
+  status: SiteDomainStatus
+  verificationToken: string
+  createdAt: number
+  createdByUserId: string
+  updatedAt: number
+  verifiedAt?: number
+  verifiedByUserId?: string
+  activatedAt?: number
+  activatedByUserId?: string
+  disabledAt?: number
+  disabledByUserId?: string
+}
+
 export const initializeSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site`)
 
 export const getSite = (tenantId: string) =>
   apiGet<SiteDefinition>(`/tenants/${encodeURIComponent(tenantId)}/site`)
+
+export const getSiteDomain = (tenantId: string) =>
+  apiGet<SiteDomain | null>(`/tenants/${encodeURIComponent(tenantId)}/site/domain`)
+
+export const registerSiteDomain = (tenantId: string, hostname: string) =>
+  apiSend<SiteDomain>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/domain`, { hostname })
+
+export const verifySiteDomain = (tenantId: string) =>
+  apiSend<SiteDomain>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/domain/verify`)
+
+export const activateSiteDomain = (tenantId: string) =>
+  apiSend<SiteDomain>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/domain/activate`)
+
+export const disableSiteDomain = (tenantId: string) =>
+  apiSend<SiteDomain>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/domain/disable`)
+
+export const removeSiteDomain = (tenantId: string) =>
+  apiSend<{ removed: true }>('DELETE', `/tenants/${encodeURIComponent(tenantId)}/site/domain`)
 
 export const updateSiteBranding = (tenantId: string, input: BrandingInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/branding`, input)

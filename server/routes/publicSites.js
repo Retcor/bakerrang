@@ -1,5 +1,6 @@
 import express from 'express'
 import * as siteService from '../services/siteService.js'
+import * as siteDomainService from '../services/siteDomainService.js'
 
 const handle = (fn) => async (req, res) => {
   try {
@@ -15,7 +16,20 @@ const handle = (fn) => async (req, res) => {
 
 export const createPublicSiteRouter = (deps = {}) => {
   const service = deps.siteService || siteService
+  const domains = deps.siteDomainService || siteDomainService
   const router = express.Router()
+
+  router.get('/domains/:hostname', handle(
+    (req) => domains.resolveActiveDomain(req.params.hostname)
+  ))
+
+  router.get('/sites/:tenantId/domain', handle(
+    (req) => domains.getActiveDomainForTenant(req.params.tenantId)
+  ))
+
+  router.get('/sites/:tenantId/published', handle(
+    (req) => service.getPublishedSiteDefinition(req.params.tenantId)
+  ))
 
   router.get('/sites/:tenantId', handle(
     (req) => service.getPublicSite(req.params.tenantId)

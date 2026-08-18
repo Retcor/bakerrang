@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { BusinessProfile, SiteDefinition } from '@bakerrang/site-schema'
-import { appendSitePath, publicIndexingEnabled, resolveSiteBaseUrl, type PublicSiteEnvironment } from './siteUrl.ts'
+import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSiteBaseUrl, type PublicSiteEnvironment } from './siteUrl.ts'
 
 const socialImage = (profile: BusinessProfile | undefined) => {
   if (!profile?.socialImageMediaId || !profile.socialImageSrc) return undefined
@@ -14,13 +14,16 @@ const socialImage = (profile: BusinessProfile | undefined) => {
 export function homeMetadata (
   site: SiteDefinition,
   tenantId: string,
-  env: PublicSiteEnvironment = process.env
+  env: PublicSiteEnvironment = process.env,
+  canonicalHost?: string | null
 ): Metadata {
   const title = site.branding.siteName
   const description = site.businessProfile?.description
-  const baseUrl = resolveSiteBaseUrl(tenantId, env)
+  const baseUrl = resolveSiteBaseUrl(tenantId, env, canonicalHost)
   const image = socialImage(site.businessProfile)
-  const indexable = site.status !== 'DRAFT' && publicIndexingEnabled(env) && baseUrl !== null
+  const indexable = site.status !== 'DRAFT' && baseUrl !== null && (canonicalHost
+    ? indexingEnvironmentEnabled(env)
+    : publicIndexingEnabled(env))
   return {
     title,
     ...(description ? { description } : {}),
@@ -46,9 +49,10 @@ export function homeMetadata (
 export function contactMetadata (
   site: SiteDefinition,
   tenantId: string,
-  env: PublicSiteEnvironment = process.env
+  env: PublicSiteEnvironment = process.env,
+  canonicalHost?: string | null
 ): Metadata {
-  const baseUrl = resolveSiteBaseUrl(tenantId, env)
+  const baseUrl = resolveSiteBaseUrl(tenantId, env, canonicalHost)
   return {
     title: `Contact | ${site.branding.siteName}`,
     robots: { index: false, follow: site.status !== 'DRAFT' && baseUrl !== null },

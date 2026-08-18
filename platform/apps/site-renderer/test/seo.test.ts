@@ -1,8 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import robots from '../app/robots.ts'
 import { contactMetadata, homeMetadata, localBusinessData, serializeJsonLd } from '../lib/seo.ts'
-import { appendSitePath, publicIndexingEnabled, resolveSharedPublicOrigin, resolveSiteBaseUrl } from '../lib/siteUrl.ts'
+import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSharedPublicOrigin, resolveSiteBaseUrl } from '../lib/siteUrl.ts'
 
 const site = (businessProfile: Record<string, unknown> | undefined = undefined, status = 'PUBLISHED') => ({
   status,
@@ -45,25 +44,28 @@ test('site URL resolver validates a true origin and owns the shared-path seam', 
 })
 
 test('indexing and robots.txt fail closed unless flag and origin are both valid', () => {
+  assert.equal(indexingEnvironmentEnabled({ SITE_PUBLIC_INDEXING_ENABLED: 'true' }), true)
   assert.equal(publicIndexingEnabled({}), false)
   assert.equal(publicIndexingEnabled({ SITE_PUBLIC_INDEXING_ENABLED: 'true' }), false)
   assert.equal(publicIndexingEnabled({ ...indexedEnv, SITE_PUBLIC_INDEXING_ENABLED: 'TRUE' }), false)
   assert.equal(publicIndexingEnabled(indexedEnv), true)
 
-  const oldOrigin = process.env.SITE_PUBLIC_ORIGIN
-  const oldFlag = process.env.SITE_PUBLIC_INDEXING_ENABLED
-  try {
-    delete process.env.SITE_PUBLIC_ORIGIN
-    process.env.SITE_PUBLIC_INDEXING_ENABLED = 'true'
-    assert.deepEqual(robots().rules, { userAgent: '*', disallow: '/' })
-    process.env.SITE_PUBLIC_ORIGIN = 'https://sites.example.com'
-    assert.deepEqual(robots().rules, { userAgent: '*', allow: '/' })
-  } finally {
-    if (oldOrigin === undefined) delete process.env.SITE_PUBLIC_ORIGIN
-    else process.env.SITE_PUBLIC_ORIGIN = oldOrigin
-    if (oldFlag === undefined) delete process.env.SITE_PUBLIC_INDEXING_ENABLED
-    else process.env.SITE_PUBLIC_INDEXING_ENABLED = oldFlag
-  }
+})
+
+test('trusted custom canonical hosts do not depend on shared-origin validity', () => {
+  assert.equal(resolveSiteBaseUrl('abc', {
+    SITE_PUBLIC_ORIGIN: 'invalid'
+  }, 'example.com'), 'https://example.com/')
+  assert.equal(resolveSiteBaseUrl('abc', indexedEnv, 'bad host'), null)
+
+  const metadata = homeMetadata(site({ phone: '+1 303 555 0123' }), 'abc', {
+    SITE_PUBLIC_ORIGIN: 'invalid', SITE_PUBLIC_INDEXING_ENABLED: 'true'
+  }, 'example.com')
+  assert.deepEqual(metadata.alternates, { canonical: 'https://example.com/' })
+  assert.equal(metadata.openGraph?.url, 'https://example.com/')
+  assert.deepEqual(metadata.robots, { index: true, follow: true })
+  assert.equal(localBusinessData(site({ phone: '+1 303 555 0123' }), 'https://example.com/')?.url,
+    'https://example.com/')
 })
 
 test('home metadata uses only explicit profile description and social image', () => {

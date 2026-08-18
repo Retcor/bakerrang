@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   _setDb,
   getPublicSite,
+  getPublishedSiteDefinition,
   getSite,
   initializeSite,
   publishSite,
@@ -208,12 +209,20 @@ test('preview always returns current working content labeled DRAFT', async () =>
   assert.equal(preview.status, 'DRAFT')
   assert.equal(preview.pages[0].sections[0].content.title, 'Version B')
 
+  const strictPublished = await getPublishedSiteDefinition('tenant-1')
+  assert.equal(strictPublished.status, 'PUBLISHED')
+  assert.equal(strictPublished.pages[0].sections[0].content.title, 'Version A')
+
   const production = await getPublicSite('tenant-1', {
     NODE_ENV: 'production',
     ALLOW_DRAFT_PUBLIC_SITES: 'true'
   })
   assert.equal(production.status, 'PUBLISHED')
   assert.equal(production.pages[0].sections[0].content.title, 'Version A')
+
+  await publishSite('tenant-1', 'republisher')
+  assert.equal((await getPublishedSiteDefinition('tenant-1'))
+    .pages[0].sections[0].content.title, 'Version B')
 })
 
 test('normal public reads fail closed for missing or malformed snapshots', async () => {
@@ -223,6 +232,10 @@ test('normal public reads fail closed for missing or malformed snapshots', async
   fakeDb.seed('tenants/tenant-1/site/config', { ...config, status: 'PUBLISHED' })
 
   await assert.rejects(getPublicSite('tenant-1', normalPublicEnv), {
+    status: 404,
+    message: 'Site not found'
+  })
+  await assert.rejects(getPublishedSiteDefinition('tenant-1'), {
     status: 404,
     message: 'Site not found'
   })
