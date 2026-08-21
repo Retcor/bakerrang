@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react'
 import { findHomePage, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeTestimonials } from '../../lib/site'
 
@@ -79,7 +79,7 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onSaved }: Testi
   }
 
   return (
-    <form className="w-full max-w-xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor={`testimonials-title-${tenantId}`}>Section Title</label>
       <Input className="mt-2" disabled={saving} id={`testimonials-title-${tenantId}`} maxLength={100} onChange={(event) => setTitle(event.target.value)} value={title} />
 
@@ -90,21 +90,21 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onSaved }: Testi
             <label className="text-sm text-fg" htmlFor={`testimonial-name-${tenantId}-${row.key}`}>Customer Name</label>
             <Input className="mt-2" id={`testimonial-name-${tenantId}-${row.key}`} maxLength={120} onChange={(event) => updateRow(row.key, { customerName: event.target.value })} value={row.customerName} />
             <label className="mt-4 block text-sm text-fg" htmlFor={`testimonial-quote-${tenantId}-${row.key}`}>Quote</label>
-            <textarea className="mt-2 min-h-28 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" id={`testimonial-quote-${tenantId}-${row.key}`} maxLength={1000} onChange={(event) => updateRow(row.key, { quote: event.target.value })} value={row.quote} />
+            <Textarea className="mt-2" id={`testimonial-quote-${tenantId}-${row.key}`} maxLength={1000} onChange={(event) => updateRow(row.key, { quote: event.target.value })} value={row.quote} />
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={index === 0} onClick={() => moveRow(index, -1)} type="button">Move Up</Button>
-              <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} type="button">Move Down</Button>
-              <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} type="button">Remove</Button>
+              <Button disabled={index === 0} onClick={() => moveRow(index, -1)} size="sm" type="button" variant="secondary">Move Up</Button>
+              <Button disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} size="sm" type="button" variant="secondary">Move Down</Button>
+              <Button onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
             </div>
           </fieldset>
         ))}
       </div>
 
-      <Button className="mt-4 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || rows.length >= 10} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, customerName: '', quote: '' }])} type="button">Add Testimonial</Button>
+      <Button className="mt-4" disabled={saving || rows.length >= 10} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, customerName: '', quote: '' }])} size="sm" type="button" variant="secondary">Add Testimonial</Button>
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={onCancel} type="button">Cancel</Button>
-        <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving || !canSave} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
+        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
+        <Button disabled={saving || !canSave} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
       </div>
     </form>
   )

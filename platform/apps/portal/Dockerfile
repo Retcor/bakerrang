@@ -40,6 +40,7 @@ RUN groupadd --system --gid 1001 nodejs \
 
 COPY --from=builder /app/apps/portal/.next/standalone ./
 COPY --from=builder /app/apps/portal/.next/static ./apps/portal/.next/static
+COPY --from=builder /app/apps/portal/public ./apps/portal/public
 
 USER nextjs
 EXPOSE 8080

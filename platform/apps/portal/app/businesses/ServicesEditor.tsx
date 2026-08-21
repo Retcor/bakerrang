@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react'
 import { findHomePage, isServicesSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeServices } from '../../lib/site'
 
@@ -73,7 +73,7 @@ export function ServicesEditor ({ tenantId, site, onCancel, onSaved }: ServicesE
   }
 
   return (
-    <form className="w-full max-w-xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor={`services-title-${tenantId}`}>
         Section Heading
       </label>
@@ -86,17 +86,17 @@ export function ServicesEditor ({ tenantId, site, onCancel, onSaved }: ServicesE
             <label className="text-sm text-fg" htmlFor={`service-name-${tenantId}-${row.key}`}>Service Name</label>
             <Input className="mt-2" id={`service-name-${tenantId}-${row.key}`} maxLength={120} onChange={(event) => updateRow(row.key, { name: event.target.value })} value={row.name} />
             <label className="mt-4 block text-sm text-fg" htmlFor={`service-description-${tenantId}-${row.key}`}>Description</label>
-            <textarea className="mt-2 min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" id={`service-description-${tenantId}-${row.key}`} maxLength={500} onChange={(event) => updateRow(row.key, { description: event.target.value })} value={row.description} />
-            <Button className="mt-3 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} type="button">Remove</Button>
+            <Textarea className="mt-2 min-h-24" id={`service-description-${tenantId}-${row.key}`} maxLength={500} onChange={(event) => updateRow(row.key, { description: event.target.value })} value={row.description} />
+            <Button className="mt-3" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
           </fieldset>
         ))}
       </div>
 
-      <Button className="mt-4 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || rows.length >= 20} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, name: '', description: '' }])} type="button">Add Service</Button>
+      <Button className="mt-4" disabled={saving || rows.length >= 20} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, name: '', description: '' }])} size="sm" type="button" variant="secondary">Add Service</Button>
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={onCancel} type="button">Cancel</Button>
-        <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
+        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
+        <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
       </div>
     </form>
   )

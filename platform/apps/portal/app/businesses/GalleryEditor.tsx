@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { findHomePage, isGallerySection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, FileInput, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { upsertHomeGallery } from '../../lib/site'
@@ -157,14 +157,14 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
   }
 
   return (
-    <form className="w-full max-w-3xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void submit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor={`gallery-title-${tenantId}`}>Section Heading</label>
       <Input className="mt-2" disabled={saving} id={`gallery-title-${tenantId}`} maxLength={100} onChange={(event) => setTitle(event.target.value)} value={title} />
 
       <fieldset className="mt-5 rounded-md border border-border p-4" disabled={saving || uploadState === 'uploading'}>
         <legend className="px-1 text-sm font-semibold text-fg">Upload Image</legend>
-        <input accept="image/jpeg,image/png,image/webp" className="block w-full text-sm text-fg" onChange={(event) => { setSelectedFile(event.target.files?.[0] ?? null); setUploadState('idle'); setUploadMessage(null) }} ref={fileInput} type="file" />
-        <Button className="mt-3 min-h-9 px-3 py-1.5 text-xs" disabled={!selectedFile || uploadState === 'uploading'} onClick={() => void upload()} type="button">
+        <FileInput accept="image/jpeg,image/png,image/webp" fileName={selectedFile?.name} id={`gallery-upload-file-${tenantId}`} onChange={(event) => { setSelectedFile(event.target.files?.[0] ?? null); setUploadState('idle'); setUploadMessage(null) }} ref={fileInput} />
+        <Button className="mt-3" disabled={!selectedFile || uploadState === 'uploading'} onClick={() => void upload()} size="sm" type="button">
           {uploadState === 'uploading' ? 'Uploading…' : 'Upload Image'}
         </Button>
         {uploadMessage && <p className="mt-2 text-sm text-fg" role={uploadState === 'success' ? 'status' : 'alert'}>{uploadMessage}</p>}
@@ -173,18 +173,18 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
       <section className="mt-5" aria-labelledby={`gallery-library-${tenantId}`}>
         <h3 className="text-sm font-semibold text-fg" id={`gallery-library-${tenantId}`}>Recent Uploaded Images</h3>
         {libraryState === 'loading' && <p className="mt-2 text-sm text-fg-muted" role="status">Loading images…</p>}
-        {libraryState === 'error' && <div className="mt-2"><p className="text-sm text-fg" role="alert">Unable to load images.</p><Button className="mt-2 min-h-9 px-3 py-1.5 text-xs" onClick={() => void loadMedia()} type="button">Retry</Button></div>}
+        {libraryState === 'error' && <div className="mt-2"><p className="text-sm text-fg" role="alert">Unable to load images.</p><Button className="mt-2" onClick={() => void loadMedia()} size="sm" type="button">Retry</Button></div>}
         {libraryState === 'ready' && media.length === 0 && <p className="mt-2 text-sm text-fg-muted">No uploaded images yet.</p>}
         {libraryState === 'ready' && media.length > 0 && (
           <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {media.map((item) => {
               const selected = rows.some((row) => row.mediaId === item.id)
               return (
-                <li className="rounded-md border border-border bg-bg p-3" key={item.id}>
+                <li className="rounded-md border border-border bg-surface-muted p-3" key={item.id}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img alt="" className="aspect-video w-full rounded object-cover" height={item.height} loading="lazy" src={item.src} width={item.width} />
                   <p className="mt-2 truncate text-xs text-fg" title={item.originalFilename}>{item.originalFilename}</p>
-                  <Button className="mt-2 min-h-9 px-3 py-1.5 text-xs" disabled={selected || rows.length >= 20} onClick={() => addMedia(item)} type="button">{selected ? 'Selected' : 'Add to Gallery'}</Button>
+                  <Button className="mt-2" disabled={selected || rows.length >= 20} onClick={() => addMedia(item)} size="sm" type="button">{selected ? 'Selected' : 'Add to Gallery'}</Button>
                 </li>
               )
             })}
@@ -198,7 +198,7 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
         {rows.length === 0 && <p className="mt-2 text-sm text-fg-muted">Select at least one image.</p>}
         <ol className="mt-3 space-y-3">
           {rows.map((row, index) => (
-            <li className="grid gap-3 rounded-md border border-border bg-bg p-3 sm:grid-cols-[8rem_1fr]" key={row.key}>
+            <li className="grid gap-3 rounded-md border border-border bg-surface-muted p-3 sm:grid-cols-[8rem_1fr]" key={row.key}>
               {row.src && row.width && row.height
                 ? (
                   <>
@@ -211,9 +211,9 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
                 <label className="text-sm font-semibold text-fg" htmlFor={`gallery-alt-${tenantId}-${row.key}`}>Alt Text</label>
                 <Input className="mt-2" disabled={saving} id={`gallery-alt-${tenantId}-${row.key}`} maxLength={250} onChange={(event) => setRows((current) => current.map((item) => item.key === row.key ? { ...item, altText: event.target.value } : item))} value={row.altText} />
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || index === 0} onClick={() => move(index, -1)} type="button">Move Up</Button>
-                  <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || index === rows.length - 1} onClick={() => move(index, 1)} type="button">Move Down</Button>
-                  <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} type="button">Remove</Button>
+                  <Button disabled={saving || index === 0} onClick={() => move(index, -1)} size="sm" type="button" variant="secondary">Move Up</Button>
+                  <Button disabled={saving || index === rows.length - 1} onClick={() => move(index, 1)} size="sm" type="button" variant="secondary">Move Down</Button>
+                  <Button disabled={saving} onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
                 </div>
               </div>
             </li>
@@ -223,8 +223,8 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
 
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || uploadState === 'uploading'} onClick={onCancel} type="button">Cancel</Button>
-        <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving || uploadState === 'uploading'} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
+        <Button disabled={saving || uploadState === 'uploading'} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
+        <Button disabled={saving || uploadState === 'uploading'} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
       </div>
     </form>
   )

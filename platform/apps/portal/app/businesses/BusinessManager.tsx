@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@bakerrang/ui'
+import { Button, Card, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { listBusinesses, type Business } from '../../lib/businesses'
 import { BusinessList } from './BusinessList'
@@ -41,23 +41,23 @@ export function BusinessManager () {
   }, [])
 
   if (loadState === 'loading') {
-    return <p className="mt-8 text-fg-muted" role="status">Loading businesses…</p>
+    return <StatusMessage>Loading businesses…</StatusMessage>
   }
 
   if (loadState === 'forbidden') {
     return (
-      <section className="mt-8 rounded-md border border-border bg-surface p-6">
+      <Card className="p-6">
         <h2 className="text-xl font-semibold text-fg">Access unavailable</h2>
         <p className="mt-3 leading-7 text-fg-muted">
           Your account does not have access to platform administration.
         </p>
-      </section>
+      </Card>
     )
   }
 
   if (loadState === 'error') {
     return (
-      <section className="mt-8 rounded-md border border-border bg-surface p-6">
+      <Card className="p-6">
         <h2 className="text-xl font-semibold text-fg">Businesses could not be loaded</h2>
         <p className="mt-3 leading-7 text-fg-muted">
           Please try again. If the problem continues, check the API connection.
@@ -65,24 +65,20 @@ export function BusinessManager () {
         <div className="mt-5">
           <Button onClick={() => void loadBusinesses()}>Retry</Button>
         </div>
-      </section>
+      </Card>
     )
   }
 
   return (
-    <section className="mt-10" aria-labelledby="businesses-heading">
-      <div className="mb-5">
-        <h2 className="text-2xl font-semibold tracking-tight text-fg" id="businesses-heading">
-          Businesses
-        </h2>
-        <p className="mt-2 text-fg-muted">Create and review businesses managed by the platform.</p>
-      </div>
-      <div className="space-y-5">
+    <section aria-label="Businesses">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="order-2 xl:order-1"><BusinessList businesses={businesses} /></div>
+        <div className="order-1 xl:order-2">
         <CreateBusinessForm
           onCreated={(business) => setBusinesses((current) => [business, ...current])}
           onForbidden={() => setLoadState('forbidden')}
         />
-        <BusinessList businesses={businesses} />
+        </div>
       </div>
     </section>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@bakerrang/ui'
+import { Button, Card, Textarea } from '@bakerrang/ui'
 import { useAuth } from '../providers/AuthProvider'
 import { addLeadNote, getLeadNotes, type LeadNote } from '../../lib/leads'
 
@@ -74,13 +74,13 @@ export function LeadNotes ({ tenantId, leadId }: LeadNotesProps) {
   }
 
   return (
-    <section className="mt-3 rounded-md border border-border bg-bg p-4" aria-labelledby={`lead-notes-title-${leadId}`}>
+    <Card className="mt-4 p-5 sm:p-6" aria-labelledby={`lead-notes-title-${leadId}`}>
       <h4 className="text-base font-semibold text-fg" id={`lead-notes-title-${leadId}`}>Internal Notes</h4>
       {loadState === 'loading' && <p className="mt-3 text-sm text-fg-muted" role="status">Loading notes…</p>}
       {loadState === 'error' && (
         <div className="mt-3">
           <p className="text-sm text-fg" role="alert">Unable to load notes.</p>
-          <Button className="mt-2 min-h-9 px-3 py-1.5 text-xs" onClick={() => void loadNotes()}>Retry</Button>
+          <Button className="mt-2" onClick={() => void loadNotes()} size="sm">Retry</Button>
         </div>
       )}
       {loadState === 'ready' && (
@@ -104,12 +104,12 @@ export function LeadNotes ({ tenantId, leadId }: LeadNotesProps) {
       )}
       <div className="mt-4">
         <label className="text-sm font-semibold text-fg" htmlFor={`lead-note-text-${leadId}`}>Add an internal note</label>
-        <textarea className="mt-2 min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" disabled={addState === 'saving'} id={`lead-note-text-${leadId}`} maxLength={2000} onChange={(event) => { setText(event.target.value); setAddState('idle') }} value={text} />
-        <Button className="mt-2 min-h-9 px-3 py-1.5 text-xs" disabled={!text.trim() || addState === 'saving'} onClick={() => void submit()}>
+        <Textarea className="mt-2 min-h-24" disabled={addState === 'saving'} id={`lead-note-text-${leadId}`} maxLength={2000} onChange={(event) => { setText(event.target.value); setAddState('idle') }} value={text} />
+        <Button className="mt-2" disabled={!text.trim() || addState === 'saving'} onClick={() => void submit()} size="sm">
           {addState === 'saving' ? 'Adding…' : 'Add Note'}
         </Button>
         {addState === 'error' && <p className="mt-2 text-sm text-fg" role="alert">Unable to add note.</p>}
       </div>
-    </section>
+    </Card>
   )
 }

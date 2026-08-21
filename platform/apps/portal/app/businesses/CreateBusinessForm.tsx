@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, Card, Field, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { createBusiness, type Business } from '../../lib/businesses'
 
@@ -52,15 +52,14 @@ export function CreateBusinessForm ({ onCreated, onForbidden }: CreateBusinessFo
   }
 
   return (
-    <form className="rounded-md border border-border bg-surface p-6" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="text-sm font-semibold text-fg" htmlFor="business-name">
-        Business Name
-      </label>
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+    <Card className="p-5 xl:sticky xl:top-9">
+      <form onSubmit={(event) => void handleSubmit(event)}>
+      <h2 className="text-lg font-semibold text-fg">Create business</h2>
+      <p className="mt-1 text-sm leading-6 text-fg-muted">Add a workspace for a new customer or brand.</p>
+      <Field className="mt-5" error={error} help="Enter a name between 1 and 200 characters." id="business-name" label="Business name">
         <Input
-          aria-describedby={error ? 'business-name-error' : 'business-name-help'}
-          aria-invalid={Boolean(error)}
           autoComplete="organization"
+          className="mt-2"
           disabled={submitting}
           id="business-name"
           maxLength={201}
@@ -68,17 +67,11 @@ export function CreateBusinessForm ({ onCreated, onForbidden }: CreateBusinessFo
           placeholder="Business name"
           value={name}
         />
-        <Button className="shrink-0" disabled={submitting} type="submit">
+      </Field>
+        <Button className="mt-4 w-full" disabled={submitting} type="submit">
           {submitting ? 'Creating…' : 'Create Business'}
         </Button>
-      </div>
-      {error ? (
-        <p className="mt-3 text-sm text-fg" id="business-name-error" role="alert">{error}</p>
-      ) : (
-        <p className="mt-3 text-sm text-fg-muted" id="business-name-help">
-          Enter a name between 1 and 200 characters.
-        </p>
-      )}
-    </form>
+      </form>
+    </Card>
   )
 }

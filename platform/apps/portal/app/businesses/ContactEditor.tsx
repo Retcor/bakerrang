@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { findHomePage, isContactSection, type ContactAction, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, Input, Select, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeContact, type ContactActionInput } from '../../lib/site'
 
@@ -64,20 +64,20 @@ export function ContactEditor ({ tenantId, site, onCancel, onSaved }: ContactEdi
   }
 
   return (
-    <form className="w-full max-w-xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor={`contact-title-${tenantId}`}>Section Heading</label>
       <Input className="mt-2" disabled={saving} id={`contact-title-${tenantId}`} maxLength={150} onChange={(event) => setTitle(event.target.value)} value={title} />
 
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`contact-text-${tenantId}`}>Supporting Text</label>
-      <textarea className="mt-2 min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" disabled={saving} id={`contact-text-${tenantId}`} maxLength={500} onChange={(event) => setText(event.target.value)} value={text} />
+      <Textarea className="mt-2 min-h-24" disabled={saving} id={`contact-text-${tenantId}`} maxLength={500} onChange={(event) => setText(event.target.value)} value={text} />
 
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`contact-button-${tenantId}`}>Button Label</label>
       <Input className="mt-2" disabled={saving} id={`contact-button-${tenantId}`} maxLength={80} onChange={(event) => setButtonLabel(event.target.value)} value={buttonLabel} />
 
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`contact-type-${tenantId}`}>Action Type</label>
-      <select className="mt-2 w-full rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" disabled={saving} id={`contact-type-${tenantId}`} onChange={(event) => { setActionType(event.target.value as ActionType); setActionValue('') }} value={actionType}>
+      <Select className="mt-2" disabled={saving} id={`contact-type-${tenantId}`} onChange={(event) => { setActionType(event.target.value as ActionType); setActionValue('') }} value={actionType}>
         {(Object.keys(actionDetails) as ActionType[]).map((type) => <option key={type} value={type}>{actionDetails[type].label}</option>)}
-      </select>
+      </Select>
 
       {actionType !== 'leadForm' && (
         <>
@@ -89,8 +89,8 @@ export function ContactEditor ({ tenantId, site, onCancel, onSaved }: ContactEdi
 
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={onCancel} type="button">Cancel</Button>
-        <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
+        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
+        <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
       </div>
     </form>
   )

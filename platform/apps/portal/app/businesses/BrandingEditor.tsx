@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, FileInput, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { updateSiteBranding } from '../../lib/site'
@@ -21,6 +21,7 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
   const [loadingMedia, setLoadingMedia] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -53,6 +54,7 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
       setMedia((items) => [uploaded, ...items.filter((item) => item.id !== uploaded.id)])
       setLogoMediaId(uploaded.id)
       if (fileInput.current) fileInput.current.value = ''
+      setSelectedFileName(null)
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to upload the logo. Please try again.')
     } finally {
@@ -82,7 +84,7 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
   const validPrimary = /^#[0-9a-f]{6}$/i.test(primaryColor) ? primaryColor : '#334155'
   const validAccent = /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : '#0f766e'
   return (
-    <form className="w-full max-w-3xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void submit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
       <h3 className="text-lg font-semibold text-fg">Website Branding</h3>
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`site-name-${tenantId}`}>Site Name</label>
       <Input className="mt-2" disabled={saving} id={`site-name-${tenantId}`} maxLength={80} onChange={(event) => setSiteName(event.target.value)} value={siteName} />
@@ -105,10 +107,10 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
             <img alt={`${siteName || 'Site'} logo preview`} className="mt-3 max-h-24 max-w-60 rounded border border-border bg-bg object-contain p-2" height={currentLogo.height} src={currentLogo.src} width={currentLogo.width} />
           </>
         )}
-        {logoMediaId && <Button className="mt-3 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={() => setLogoMediaId(undefined)} type="button">Remove Logo</Button>}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input accept="image/jpeg,image/png,image/webp" disabled={saving || uploading} onChange={(event) => void upload(event.target.files?.[0])} ref={fileInput} type="file" />
-          {uploading && <span className="text-sm text-fg-muted" role="status">Uploading…</span>}
+        {logoMediaId && <Button className="mt-3" disabled={saving} onClick={() => setLogoMediaId(undefined)} size="sm" type="button" variant="secondary">Remove Logo</Button>}
+        <div className="mt-4">
+          <FileInput accept="image/jpeg,image/png,image/webp" disabled={saving || uploading} fileName={selectedFileName} id={`branding-logo-file-${tenantId}`} onChange={(event) => { const file = event.target.files?.[0]; setSelectedFileName(file?.name ?? null); void upload(file) }} ref={fileInput} />
+          {uploading && <span className="mt-2 block text-sm text-fg-muted" role="status">Uploading…</span>}
         </div>
         {loadingMedia && <p className="mt-3 text-sm text-fg-muted" role="status">Loading recent images…</p>}
         {!loadingMedia && media.length > 0 && (
@@ -117,7 +119,7 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
               <li className="rounded border border-border p-2" key={item.id}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img alt="" className="aspect-video w-full rounded object-contain" height={item.height} src={item.src} width={item.width} />
-                <Button className="mt-2 min-h-9 w-full px-2 py-1 text-xs" disabled={saving || logoMediaId === item.id} onClick={() => setLogoMediaId(item.id)} type="button">{logoMediaId === item.id ? 'Selected' : 'Use as Logo'}</Button>
+                <Button className="mt-2 w-full" disabled={saving || logoMediaId === item.id} onClick={() => setLogoMediaId(item.id)} size="sm" type="button">{logoMediaId === item.id ? 'Selected' : 'Use as Logo'}</Button>
               </li>
             ))}
           </ul>
@@ -128,7 +130,7 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
         <span className="mt-3 inline-flex rounded px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: validPrimary }}>Primary action</span>
       </div>
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-5 flex justify-end gap-2"><Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || uploading} onClick={onCancel} type="button">Cancel</Button><Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Branding'}</Button></div>
+      <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Branding'}</Button></div>
     </form>
   )
 }

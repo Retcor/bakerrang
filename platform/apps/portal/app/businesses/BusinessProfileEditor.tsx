@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, FileInput, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { updateBusinessProfile } from '../../lib/site'
@@ -26,6 +26,7 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
   const [loadingMedia, setLoadingMedia] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -58,6 +59,7 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
       setMedia((items) => [uploaded, ...items.filter((item) => item.id !== uploaded.id)])
       setSocialImageMediaId(uploaded.id)
       if (fileInput.current) fileInput.current.value = ''
+      setSelectedFileName(null)
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to upload the social image. Please try again.')
     } finally {
@@ -101,12 +103,12 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
   ] as const
 
   return (
-    <form className="w-full max-w-3xl rounded-md border border-border bg-surface p-4 text-left" onSubmit={(event) => void submit(event)}>
+    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
       <h3 className="text-lg font-semibold text-fg">Business Profile</h3>
       <p className="mt-2 text-sm leading-6 text-fg-muted">These details may appear on your public website and in search-engine listings. Only enter information you want to be public.</p>
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`profile-description-${tenantId}`}>Description</label>
-      <textarea className="mt-2 min-h-28 w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg" disabled={saving} id={`profile-description-${tenantId}`} maxLength={300} onChange={(event) => setDescription(event.target.value)} value={description} />
+      <Textarea className="mt-2" disabled={saving} id={`profile-description-${tenantId}`} maxLength={300} onChange={(event) => setDescription(event.target.value)} value={description} />
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div><label className="text-sm font-semibold text-fg" htmlFor={`profile-phone-${tenantId}`}>Phone</label><Input className="mt-2" disabled={saving} id={`profile-phone-${tenantId}`} maxLength={50} onChange={(event) => setPhone(event.target.value)} value={phone} /></div>
         <div><label className="text-sm font-semibold text-fg" htmlFor={`profile-email-${tenantId}`}>Email</label><Input className="mt-2" disabled={saving} id={`profile-email-${tenantId}`} maxLength={254} onChange={(event) => setEmail(event.target.value)} type="email" value={email} /></div>
@@ -120,7 +122,7 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
       <fieldset className="mt-6 rounded-md border border-border p-4" disabled={saving}>
         <legend className="px-1 text-sm font-semibold text-fg">Service Areas</legend>
         <div className="space-y-3">{serviceAreas.map((area, index) => <div className="flex gap-2" key={index}><Input aria-label={`Service area ${index + 1}`} maxLength={120} onChange={(event) => setServiceAreas((values) => values.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} value={area} /><Button className="min-h-10 border border-border bg-surface px-3 text-xs text-fg" onClick={() => setServiceAreas((values) => values.length === 1 ? [''] : values.filter((_, itemIndex) => itemIndex !== index))} type="button">Remove</Button></div>)}</div>
-        <Button className="mt-3 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={serviceAreas.length >= 20} onClick={() => setServiceAreas((values) => [...values, ''])} type="button">Add Service Area</Button>
+        <Button className="mt-3" disabled={serviceAreas.length >= 20} onClick={() => setServiceAreas((values) => [...values, ''])} size="sm" type="button" variant="secondary">Add Service Area</Button>
       </fieldset>
 
       <section className="mt-6" aria-labelledby={`social-image-${tenantId}`}>
@@ -131,8 +133,8 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
             <img alt="Current social preview" className="mt-3 aspect-[1200/630] max-w-sm rounded border border-border object-cover" height={currentImage.height} src={currentImage.src} width={currentImage.width} />
           </>
         )}
-        {socialImageMediaId && <Button className="mt-3 min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving} onClick={() => setSocialImageMediaId(undefined)} type="button">Remove Social Image</Button>}
-        <input accept="image/jpeg,image/png,image/webp" className="mt-4 block w-full text-sm text-fg" disabled={saving || uploading} onChange={(event) => void upload(event.target.files?.[0])} ref={fileInput} type="file" />
+        {socialImageMediaId && <Button className="mt-3" disabled={saving} onClick={() => setSocialImageMediaId(undefined)} size="sm" type="button" variant="secondary">Remove Social Image</Button>}
+        <FileInput accept="image/jpeg,image/png,image/webp" className="mt-4" disabled={saving || uploading} fileName={selectedFileName} id={`profile-social-image-file-${tenantId}`} onChange={(event) => { const file = event.target.files?.[0]; setSelectedFileName(file?.name ?? null); void upload(file) }} ref={fileInput} />
         {uploading && <p className="mt-2 text-sm text-fg-muted" role="status">Uploading…</p>}
         {loadingMedia && <p className="mt-2 text-sm text-fg-muted" role="status">Loading recent images…</p>}
         {!loadingMedia && media.length > 0 && (
@@ -141,7 +143,7 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
               <li className="rounded border border-border p-2" key={item.id}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img alt="" className="aspect-[1200/630] w-full rounded object-cover" height={item.height} src={item.src} width={item.width} />
-                <Button className="mt-2 min-h-9 w-full px-2 py-1 text-xs" disabled={saving || socialImageMediaId === item.id} onClick={() => setSocialImageMediaId(item.id)} type="button">{socialImageMediaId === item.id ? 'Selected' : 'Use Image'}</Button>
+                <Button className="mt-2 w-full" disabled={saving || socialImageMediaId === item.id} onClick={() => setSocialImageMediaId(item.id)} size="sm" type="button">{socialImageMediaId === item.id ? 'Selected' : 'Use Image'}</Button>
               </li>
             ))}
           </ul>
@@ -149,7 +151,7 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
       </section>
 
       {error && <p className="mt-4 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-5 flex justify-end gap-2"><Button className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg" disabled={saving || uploading} onClick={onCancel} type="button">Cancel</Button><Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Business Profile'}</Button></div>
+      <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Business Profile'}</Button></div>
     </form>
   )
 }

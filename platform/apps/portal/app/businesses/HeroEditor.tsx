@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { findHomePage, isHeroSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input } from '@bakerrang/ui'
+import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateHomeHero } from '../../lib/site'
 
@@ -57,7 +57,7 @@ export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorPro
 
   return (
     <form
-      className="w-full max-w-lg rounded-md border border-border bg-surface p-4 text-left"
+      className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6"
       onSubmit={(event) => void handleSubmit(event)}
     >
       <label className="text-sm font-semibold text-fg" htmlFor={`hero-title-${tenantId}`}>
@@ -75,8 +75,8 @@ export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorPro
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`hero-subtitle-${tenantId}`}>
         Subtitle
       </label>
-      <textarea
-        className="mt-2 min-h-28 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none transition-colors placeholder:text-fg-muted focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+      <Textarea
+        className="mt-2"
         disabled={saving}
         id={`hero-subtitle-${tenantId}`}
         maxLength={500}
@@ -87,14 +87,14 @@ export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorPro
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <Button
-          className="min-h-9 border border-border bg-surface px-3 py-1.5 text-xs text-fg"
           disabled={saving}
           onClick={onCancel}
           type="button"
+          variant="secondary"
         >
           Cancel
         </Button>
-        <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={saving} type="submit">
+        <Button disabled={saving} type="submit">
           {saving ? 'Saving…' : 'Save Changes'}
         </Button>
       </div>
