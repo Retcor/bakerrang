@@ -5,6 +5,7 @@ import * as siteService from '../services/siteService.js'
 import * as leadService from '../services/leadService.js'
 import * as mediaService from '../services/mediaService.js'
 import * as siteDomainService from '../services/siteDomainService.js'
+import * as previewTokenService from '../services/previewTokenService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -48,6 +49,7 @@ export const createTenantRouter = (deps = {}) => {
   const leads = deps.leadService || leadService
   const media = deps.mediaService || mediaService
   const domains = deps.siteDomainService || siteDomainService
+  const previewTokens = deps.previewTokenService || previewTokenService
   const platformAdmin = deps.requirePlatformAdmin || requirePlatformAdmin
   const tenantRole = deps.requireTenantRole || requireTenantRole
   const router = express.Router()
@@ -100,12 +102,24 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateSiteBranding(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/theme', platformAdmin, handle(
+    (req) => sites.updateSiteTheme(req.params.tenantId, req.body)
+  ))
+
   router.put('/:tenantId/site/profile', platformAdmin, handle(
     (req) => sites.updateBusinessProfile(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/business-hours', platformAdmin, handle(
+    (req) => sites.updateBusinessHours(req.params.tenantId, req.body)
+  ))
+
   router.patch('/:tenantId/site/pages/home/sections/hero', platformAdmin, handle(
     (req) => sites.updateHomeHero(req.params.tenantId, req.body)
+  ))
+
+  router.put('/:tenantId/site/pages/home/sections/about', platformAdmin, handle(
+    (req) => sites.upsertHomeAbout(req.params.tenantId, req.body)
   ))
 
   router.put('/:tenantId/site/pages/home/sections/services', platformAdmin, handle(
@@ -124,6 +138,10 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.upsertHomeTestimonials(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/pages/home/sections/faq', platformAdmin, handle(
+    (req) => sites.upsertHomeFaq(req.params.tenantId, req.body)
+  ))
+
   router.put('/:tenantId/site/pages/home/composition', platformAdmin, handle(
     (req) => sites.composeHomeSections(req.params.tenantId, req.body)
   ))
@@ -139,6 +157,10 @@ export const createTenantRouter = (deps = {}) => {
 
   router.get('/:tenantId/site', tenantRole(allTenantRoles), handle(
     (req) => sites.getSite(req.params.tenantId)
+  ))
+
+  router.post('/:tenantId/site/preview-token', tenantRole(allTenantRoles), noStore, handle(
+    (req) => previewTokens.createPreviewToken(req.params.tenantId)
   ))
 
   router.get('/:tenantId/leads', tenantRole(allTenantRoles), noStore, handle(

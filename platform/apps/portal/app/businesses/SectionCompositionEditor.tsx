@@ -13,9 +13,12 @@ interface CompositionRow {
 
 const sectionLabels: Record<SiteSection['type'], string> = {
   hero: 'Hero',
+  about: 'About',
   services: 'Services',
   gallery: 'Gallery',
   testimonials: 'Testimonials',
+  faq: 'FAQ',
+  businessHours: 'Business Hours',
   contact: 'Contact'
 }
 
@@ -28,7 +31,7 @@ function DownIcon () {
 }
 
 function TrashIcon () {
-  return <svg aria-hidden className="size-4" fill="none" viewBox="0 0 20 20"><path d="M4.5 6h11m-7-2h3m-5.5 2 .6 10h6.8L14 6M8.5 9v4m3-4v4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" /></svg>
+  return <svg aria-hidden className="size-5 sm:size-4" fill="none" viewBox="0 0 20 20"><path d="M4.5 6h11m-7-2h3m-5.5 2 .6 10h6.8L14 6M8.5 9v4m3-4v4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" /></svg>
 }
 
 export interface SectionCompositionEditorProps {
@@ -94,7 +97,7 @@ export function SectionCompositionEditor ({ tenantId, site, onCancel, onSaved }:
                 <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-1.5 sm:gap-2">
                   <Button aria-label={`Move ${row.label} up`} className="w-11 px-0 sm:w-auto sm:px-3" disabled={saving || index === 1} onClick={() => moveRow(index, -1)} type="button" variant="secondary"><UpIcon /><span className="hidden sm:inline">Move Up</span></Button>
                   <Button aria-label={`Move ${row.label} down`} className="w-11 px-0 sm:w-auto sm:px-3" disabled={saving || index === rows.length - 1} onClick={() => moveRow(index, 1)} type="button" variant="secondary"><DownIcon /><span className="hidden sm:inline">Move Down</span></Button>
-                  <Button aria-label={`Remove ${row.label}`} className="w-11 px-0 sm:w-auto sm:px-3" disabled={saving} onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))} type="button" variant="secondary"><TrashIcon /><span className="hidden sm:inline">Remove</span></Button>
+                  <Button aria-label={`Remove ${row.label}`} className="w-11 px-0 sm:w-auto sm:px-3" disabled={saving} onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))} type="button" variant="danger"><TrashIcon /><span className="hidden sm:inline">Remove</span></Button>
                 </div>
               )}
             </li>

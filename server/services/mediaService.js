@@ -188,8 +188,10 @@ export const requireGalleryMedia = (tenantId, mediaIds) =>
 
 export const hydrateSiteMedia = async (tenantId, definition) => {
   const galleryItems = []
+  const aboutSections = []
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
     for (const section of Array.isArray(page?.sections) ? page.sections : []) {
+      if (section?.id === 'about' && section?.type === 'about') aboutSections.push(section)
       if (section?.id === 'gallery' && section?.type === 'gallery' && Array.isArray(section.content?.items)) {
         galleryItems.push(...section.content.items)
       }
@@ -204,6 +206,7 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
   const mediaIds = [...new Set([
     ...(logoMediaId ? [logoMediaId] : []),
     ...(socialImageMediaId ? [socialImageMediaId] : []),
+    ...aboutSections.map((section) => section.content?.imageMediaId).filter(nonEmptyString),
     ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString)
   ])]
   const snapshots = mediaIds.length > 0
@@ -244,6 +247,20 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
     pages: (Array.isArray(definition?.pages) ? definition.pages : []).map((page) => ({
       ...page,
       sections: (Array.isArray(page?.sections) ? page.sections : []).map((section) => {
+        if (section?.id === 'about' && section?.type === 'about') {
+          const content = { ...(section.content || {}) }
+          delete content.imageSrc
+          delete content.imageWidth
+          delete content.imageHeight
+          const mediaId = nonEmptyString(content.imageMediaId) ? content.imageMediaId : null
+          const media = mediaId && resolved.get(mediaId)
+          if (media && nonEmptyString(content.imageAlt)) {
+            content.imageSrc = objectStorage.publicUrl(media.objectName)
+            content.imageWidth = media.width
+            content.imageHeight = media.height
+          }
+          return { ...section, content }
+        }
         if (section?.id !== 'gallery' || section?.type !== 'gallery') return section
         const items = (Array.isArray(section.content?.items) ? section.content.items : [])
           .map((item) => {

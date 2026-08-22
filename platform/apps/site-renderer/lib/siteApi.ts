@@ -29,5 +29,27 @@ export const fetchPublicSite = (tenantId: string) => fetchSitePath(tenantId)
 
 export const fetchPublishedSite = (tenantId: string) => fetchSitePath(tenantId, '/published')
 
+export async function fetchPreviewSite (tenantId: string, token: string): Promise<SiteDefinition | null> {
+  let response: Response
+  try {
+    response = await fetch(
+      `${baseUrl()}/public/preview/${encodeURIComponent(tenantId)}`,
+      {
+        cache: 'no-store',
+        headers: { authorization: `Bearer ${token}` }
+      }
+    )
+  } catch {
+    throw new Error('Unable to load site preview')
+  }
+  if (response.status === 401 || response.status === 404) return null
+  if (!response.ok) throw new Error('Unable to load site preview')
+  try {
+    return await response.json() as SiteDefinition
+  } catch {
+    throw new Error('Unable to load site preview')
+  }
+}
+
 export const publishedSiteOrNull = (site: SiteDefinition | null): SiteDefinition | null =>
   site?.status === 'PUBLISHED' ? site : null

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 
 export function SiteContainer ({ children, className = '' }: { children: ReactNode, className?: string }) {
-  return <div className={`mx-auto w-full max-w-6xl px-5 sm:px-8 ${className}`}>{children}</div>
+  return <div className={`site-container mx-auto w-full px-5 sm:px-8 ${className}`}>{children}</div>
 }
 
 export function SiteSection ({ children, id, className = '' }: { children: ReactNode, id: string, className?: string }) {
-  return <section className={`scroll-mt-24 border-b border-site-border py-16 sm:py-24 ${className}`} id={id}>{children}</section>
+  return <section className={`site-section scroll-mt-24 border-b border-site-border ${className}`} id={id}>{children}</section>
 }
 
 export function SectionHeading ({ children, eyebrow }: { children: ReactNode, eyebrow?: string }) {

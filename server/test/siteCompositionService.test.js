@@ -111,7 +111,7 @@ test('composition validates every request shape before mutation', async () => {
     [{ sectionIds: ['services'] }, 'Hero section is required'],
     [{ sectionIds: ['services', 'hero'] }, 'Hero section must be first'],
     [{ sectionIds: ['hero', 'hero'] }, 'Duplicate section id'],
-    [{ sectionIds: ['hero', 'services', 'gallery', 'testimonials', 'contact', 'bogus'] }, 'Composition cannot exceed 5 sections']
+    [{ sectionIds: ['hero', 'about', 'services', 'gallery', 'testimonials', 'faq', 'businessHours', 'contact', 'bogus'] }, 'Composition cannot exceed 8 sections']
   ]
   for (const [input, message] of invalid) {
     const homeBefore = fakeDb.data(homePath)
@@ -137,7 +137,7 @@ test('composition fails closed on whole-array stored structural corruption', asy
   const hero = fullSections()[0]
   const services = fullSections()[1]
   const corruptArrays = [
-    [hero, { id: 'about', type: 'about', content: {} }],
+    [hero, { id: 'about', type: 'future', content: {} }],
     [hero, services, structuredClone(services)],
     [hero, { id: 'services', type: 'gallery', content: {} }],
     [hero, ...fullSections().slice(1), structuredClone(fullSections().at(-1))],

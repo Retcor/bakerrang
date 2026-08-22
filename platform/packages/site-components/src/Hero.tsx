@@ -8,7 +8,7 @@ export interface HeroProps {
 
 export function Hero ({ content, contactHref }: HeroProps) {
   return (
-    <section className="flex min-h-[68vh] items-center border-b border-site-border bg-site-surface py-20 sm:py-28" id="top">
+    <section className="site-hero flex min-h-[68vh] items-center border-b border-site-border bg-site-surface" id="top">
       <SiteContainer>
         <div className="max-w-4xl">
           <div className="mb-7 h-1.5 w-20 rounded-full bg-site-accent" />
@@ -22,7 +22,7 @@ export function Hero ({ content, contactHref }: HeroProps) {
           )}
           {content.ctaLabel && contactHref && (
             <div className="mt-9">
-              <a className="inline-flex min-h-12 items-center rounded-md bg-site-primary px-6 py-3 font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref}>{content.ctaLabel}</a>
+              <a className="site-radius-control inline-flex min-h-12 items-center bg-site-primary px-6 py-3 font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref}>{content.ctaLabel}</a>
             </div>
           )}
         </div>

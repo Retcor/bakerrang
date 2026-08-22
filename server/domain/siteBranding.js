@@ -56,7 +56,9 @@ export const validateSiteBranding = (input) => {
     throw error
   }
   for (const [key, label] of [['primaryColor', 'Primary color'], ['accentColor', 'Accent color']]) {
-    if (typeof body[key] !== 'string' || !HEX_COLOR.test(body[key])) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && (
+      typeof body[key] !== 'string' || !HEX_COLOR.test(body[key])
+    )) {
       const error = new Error(`${label} must use the #RRGGBB format`)
       error.status = 400
       throw error
@@ -71,8 +73,8 @@ export const validateSiteBranding = (input) => {
   }
   return {
     siteName,
-    primaryColor: body.primaryColor.toLowerCase(),
-    accentColor: body.accentColor.toLowerCase(),
+    ...(typeof body.primaryColor === 'string' ? { primaryColor: body.primaryColor.toLowerCase() } : {}),
+    ...(typeof body.accentColor === 'string' ? { accentColor: body.accentColor.toLowerCase() } : {}),
     ...(typeof body.logoMediaId === 'string' ? { logoMediaId: body.logoMediaId.trim() } : {})
   }
 }

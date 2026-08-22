@@ -67,12 +67,27 @@ const sites = {
     calls.push({ operation: 'updateSiteBranding', tenantId, body })
     return siteDefinition
   },
+  updateSiteTheme: async (tenantId, body) => {
+    if (body.headingFont === 'invalid') {
+      throw Object.assign(new Error('Heading font is not supported'), { status: 400 })
+    }
+    calls.push({ operation: 'updateSiteTheme', tenantId, body })
+    return siteDefinition
+  },
   updateBusinessProfile: async (tenantId, body) => {
     calls.push({ operation: 'updateBusinessProfile', tenantId, body })
     return siteDefinition
   },
+  updateBusinessHours: async (tenantId, body) => {
+    calls.push({ operation: 'updateBusinessHours', tenantId, body })
+    return siteDefinition
+  },
   updateHomeHero: async (tenantId, body) => {
     calls.push({ operation: 'updateHomeHero', tenantId, body })
+    return siteDefinition
+  },
+  upsertHomeAbout: async (tenantId, body) => {
+    calls.push({ operation: 'upsertHomeAbout', tenantId, body })
     return siteDefinition
   },
   upsertHomeServices: async (tenantId, body) => {
@@ -91,9 +106,20 @@ const sites = {
     calls.push({ operation: 'upsertHomeTestimonials', tenantId, body })
     return siteDefinition
   },
+  upsertHomeFaq: async (tenantId, body) => {
+    calls.push({ operation: 'upsertHomeFaq', tenantId, body })
+    return siteDefinition
+  },
   composeHomeSections: async (tenantId, body) => {
     calls.push({ operation: 'composeHomeSections', tenantId, body })
     return siteDefinition
+  }
+}
+
+const previewTokens = {
+  createPreviewToken: (tenantId) => {
+    calls.push({ operation: 'createPreviewToken', tenantId })
+    return { token: `preview-${tenantId}`, expiresAt: 1234 }
   }
 }
 
@@ -218,6 +244,7 @@ before(async () => {
     leadService: leads,
     mediaService: media,
     siteDomainService: domains,
+    previewTokenService: previewTokens,
     requirePlatformAdmin: createRequirePlatformAdmin(authDeps),
     requireTenantRole: (roles) => requireTenantRole(roles, authDeps)
   }))
@@ -333,6 +360,25 @@ test('PLATFORM_ADMIN and tenant OWNER, ADMIN, and STAFF roles may read a site', 
   assert.equal((await request('/tenants/tenant-1/site', { userId: 'ordinary' })).status, 403)
 })
 
+test('preview token minting uses site-read authorization for every tenant role', async () => {
+  assert.equal((await request('/tenants/tenant-1/site/preview-token', {
+    method: 'POST'
+  })).status, 401)
+  assert.equal((await request('/tenants/tenant-1/site/preview-token', {
+    userId: 'ordinary', method: 'POST'
+  })).status, 403)
+
+  for (const userId of ['platform', 'owner', 'admin', 'staff']) {
+    const response = await request('/tenants/tenant-1/site/preview-token', {
+      userId, method: 'POST'
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.deepEqual(await response.json(), { token: 'preview-tenant-1', expiresAt: 1234 })
+    assert.deepEqual(calls.at(-1), { operation: 'createPreviewToken', tenantId: 'tenant-1' })
+  }
+})
+
 test('only PLATFORM_ADMIN can publish and unpublish a site', async () => {
   for (const operation of ['publish', 'unpublish']) {
     assert.equal((await request(`/tenants/tenant-1/site/${operation}`, {
@@ -412,6 +458,18 @@ test('only PLATFORM_ADMIN can edit the Home Hero and the route forwards tenantId
   })
 })
 
+test('only PLATFORM_ADMIN can PUT About and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/pages/home/sections/about'
+  const body = { eyebrow: 'About', heading: 'Our story', body: 'Plain text.' }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeAbout', tenantId: 'tenant-1', body })
+})
+
 test('only PLATFORM_ADMIN can PUT branding and the route forwards tenantId and body', async () => {
   const path = '/tenants/tenant-1/site/branding'
   const body = { siteName: 'Site', primaryColor: '#112233', accentColor: '#445566' }
@@ -424,6 +482,33 @@ test('only PLATFORM_ADMIN can PUT branding and the route forwards tenantId and b
   assert.deepEqual(calls.at(-1), { operation: 'updateSiteBranding', tenantId: 'tenant-1', body })
 })
 
+test('Theme mutation matches the existing PLATFORM_ADMIN site-edit policy', async () => {
+  const path = '/tenants/tenant-1/site/theme'
+  const body = {
+    colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' },
+    headingFont: 'poppins',
+    bodyFont: 'lora',
+    cornerStyle: 'rounded',
+    contentWidth: 'wide',
+    sectionSpacing: 'spacious'
+  }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'updateSiteTheme', tenantId: 'tenant-1', body })
+
+  const invalid = await request(path, {
+    userId: 'platform',
+    method: 'PUT',
+    body: { ...body, headingFont: 'invalid' }
+  })
+  assert.equal(invalid.status, 400)
+  assert.deepEqual(await invalid.json(), { error: 'Heading font is not supported' })
+})
+
 test('only PLATFORM_ADMIN can PUT Business Profile and the route forwards tenantId and body', async () => {
   const path = '/tenants/tenant-1/site/profile'
   const body = { description: 'Public description', serviceAreas: ['Denver'] }
@@ -434,6 +519,18 @@ test('only PLATFORM_ADMIN can PUT Business Profile and the route forwards tenant
   const response = await request(path, { userId: 'platform', method: 'PUT', body })
   assert.equal(response.status, 200)
   assert.deepEqual(calls.at(-1), { operation: 'updateBusinessProfile', tenantId: 'tenant-1', body })
+})
+
+test('only PLATFORM_ADMIN can PUT focused Business Hours and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/business-hours'
+  const body = { businessHours: null, homepage: { enabled: false } }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'updateBusinessHours', tenantId: 'tenant-1', body })
 })
 
 test('only PLATFORM_ADMIN can PUT Services and the route forwards tenantId and body', async () => {
@@ -494,6 +591,18 @@ test('only PLATFORM_ADMIN can PUT Testimonials and the route forwards tenantId a
   assert.deepEqual(calls.at(-1), {
     operation: 'upsertHomeTestimonials', tenantId: 'tenant-1', body
   })
+})
+
+test('only PLATFORM_ADMIN can PUT FAQ and the route forwards tenantId and body', async () => {
+  const path = '/tenants/tenant-1/site/pages/home/sections/faq'
+  const body = { heading: 'FAQ', items: [{ question: 'When?', answer: 'Today.' }] }
+  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+  }
+  const response = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeFaq', tenantId: 'tenant-1', body })
 })
 
 test('only PLATFORM_ADMIN can PUT Home composition and the route forwards tenantId and body', async () => {

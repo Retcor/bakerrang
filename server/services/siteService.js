@@ -14,18 +14,23 @@ import {
   siteBrandingResponse,
   validateSiteBranding
 } from '../domain/siteBranding.js'
+import { DEFAULT_SITE_THEME, normalizeSiteTheme, validateSiteTheme } from '../domain/siteTheme.js'
 import {
   businessProfileResponse,
   hasBusinessProfile,
   validateBusinessProfile
 } from '../domain/businessProfile.js'
+import { validateBusinessHoursUpdate } from '../domain/businessHours.js'
 
 const TENANTS = 'tenants'
 const CANONICAL_SECTION_IDS = new Set([
   'hero',
+  'about',
   'services',
   'gallery',
   'testimonials',
+  'faq',
+  'businessHours',
   'contact'
 ])
 
@@ -50,6 +55,37 @@ const refsFor = (tenantId) => {
 }
 
 const siteSectionResponse = (section) => {
+  if (section?.id === 'businessHours' && section?.type === 'businessHours') {
+    const content = section.content && typeof section.content === 'object' && !Array.isArray(section.content)
+      ? section.content
+      : {}
+    const heading = typeof content.heading === 'string' ? content.heading.trim().slice(0, 120) : ''
+    const intro = typeof content.intro === 'string' ? content.intro.trim().slice(0, 300) : ''
+    return {
+      id: 'businessHours',
+      type: 'businessHours',
+      content: {
+        ...(heading ? { heading } : {}),
+        ...(intro ? { intro } : {})
+      }
+    }
+  }
+  if (section?.id === 'faq' && section?.type === 'faq') {
+    const content = section.content && typeof section.content === 'object' ? section.content : {}
+    return {
+      id: 'faq',
+      type: 'faq',
+      content: {
+        heading: content.heading,
+        ...(typeof content.intro === 'string' && content.intro ? { intro: content.intro } : {}),
+        items: (Array.isArray(content.items) ? content.items : []).map((item) => ({
+          id: item?.id,
+          question: item?.question,
+          answer: item?.answer
+        }))
+      }
+    }
+  }
   if (section?.id !== 'testimonials' || section?.type !== 'testimonials') return section
   const content = section.content && typeof section.content === 'object' ? section.content : {}
   return {
@@ -80,6 +116,7 @@ const toSiteDefinition = (config, home) => {
   return {
     ...definition,
     branding: siteBrandingResponse(config.branding, definition),
+    theme: normalizeSiteTheme(config.theme, config.branding),
     ...(businessProfile ? { businessProfile } : {})
   }
 }
@@ -88,7 +125,8 @@ const normalizePublishedSiteDefinition = (definition) => {
   const businessProfile = businessProfileResponse(definition?.businessProfile)
   const normalized = {
     ...definition,
-    branding: siteBrandingResponse(definition?.branding, definition)
+    branding: siteBrandingResponse(definition?.branding, definition),
+    theme: normalizeSiteTheme(definition?.theme, definition?.branding)
   }
   if (businessProfile) normalized.businessProfile = businessProfile
   else delete normalized.businessProfile
@@ -173,6 +211,48 @@ const validateServicesInput = (input) => {
   })
 
   return { title, items }
+}
+
+const validateAboutInput = (input) => {
+  const value = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  let eyebrow
+  if (Object.prototype.hasOwnProperty.call(value, 'eyebrow')) {
+    if (typeof value.eyebrow !== 'string') throw httpError(400, 'About eyebrow must be a string')
+    eyebrow = value.eyebrow.trim()
+    if (eyebrow.length > 60) throw httpError(400, 'About eyebrow must be 60 characters or fewer')
+  }
+  if (typeof value.heading !== 'string' || !value.heading.trim()) {
+    throw httpError(400, 'About heading is required')
+  }
+  const heading = value.heading.trim()
+  if (heading.length > 120) throw httpError(400, 'About heading must be 120 characters or fewer')
+  if (typeof value.body !== 'string' || !value.body.trim()) {
+    throw httpError(400, 'About body is required')
+  }
+  const body = value.body.trim()
+  if (body.length > 2000) throw httpError(400, 'About body must be 2000 characters or fewer')
+
+  let imageMediaId
+  if (Object.prototype.hasOwnProperty.call(value, 'imageMediaId')) {
+    if (typeof value.imageMediaId !== 'string') throw httpError(400, 'About image must be a string')
+    imageMediaId = value.imageMediaId.trim()
+  }
+  let imageAlt
+  if (imageMediaId) {
+    if (typeof value.imageAlt !== 'string' || !value.imageAlt.trim()) {
+      throw httpError(400, 'About image alt text is required')
+    }
+    imageAlt = value.imageAlt.trim()
+    if (imageAlt.length > 250) {
+      throw httpError(400, 'About image alt text must be 250 characters or fewer')
+    }
+  }
+  return {
+    ...(eyebrow ? { eyebrow } : {}),
+    heading,
+    body,
+    ...(imageMediaId ? { imageMediaId, imageAlt } : {})
+  }
 }
 
 const validateContactAction = (action) => {
@@ -353,13 +433,57 @@ const validateTestimonialsInput = (input) => {
   return { title, items }
 }
 
+const validateFaqInput = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (typeof body.heading !== 'string' || !body.heading.trim()) {
+    throw httpError(400, 'FAQ heading is required')
+  }
+  const heading = body.heading.trim()
+  if (heading.length > 120) throw httpError(400, 'FAQ heading must be 120 characters or fewer')
+
+  let intro
+  if (Object.prototype.hasOwnProperty.call(body, 'intro')) {
+    if (typeof body.intro !== 'string') throw httpError(400, 'FAQ intro must be a string')
+    intro = body.intro.trim()
+    if (intro.length > 300) throw httpError(400, 'FAQ intro must be 300 characters or fewer')
+  }
+  if (!Array.isArray(body.items)) throw httpError(400, 'FAQ items must be an array')
+  if (body.items.length === 0) throw httpError(400, 'FAQ must include at least one question')
+  if (body.items.length > 20) throw httpError(400, 'FAQ cannot exceed 20 questions')
+
+  const suppliedIds = new Set()
+  const items = body.items.map((item) => {
+    const value = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+    const idSupplied = Object.prototype.hasOwnProperty.call(value, 'id')
+    if (idSupplied && (typeof value.id !== 'string' || !value.id.trim())) {
+      throw httpError(400, 'FAQ item id must be a non-empty string')
+    }
+    if (idSupplied) {
+      if (suppliedIds.has(value.id)) throw httpError(400, 'Duplicate FAQ item id')
+      suppliedIds.add(value.id)
+    }
+    if (typeof value.question !== 'string' || !value.question.trim()) {
+      throw httpError(400, 'FAQ question is required')
+    }
+    const question = value.question.trim()
+    if (question.length > 200) throw httpError(400, 'FAQ question must be 200 characters or fewer')
+    if (typeof value.answer !== 'string' || !value.answer.trim()) {
+      throw httpError(400, 'FAQ answer is required')
+    }
+    const answer = value.answer.trim()
+    if (answer.length > 1000) throw httpError(400, 'FAQ answer must be 1000 characters or fewer')
+    return { ...(idSupplied ? { id: value.id } : {}), question, answer }
+  })
+  return { heading, ...(intro ? { intro } : {}), items }
+}
+
 const validateCompositionInput = (input) => {
   const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
   if (!Array.isArray(body.sectionIds)) {
     throw httpError(400, 'Composition sectionIds must be an array')
   }
   if (body.sectionIds.length > CANONICAL_SECTION_IDS.size) {
-    throw httpError(400, 'Composition cannot exceed 5 sections')
+    throw httpError(400, `Composition cannot exceed ${CANONICAL_SECTION_IDS.size} sections`)
   }
 
   const seen = new Set()
@@ -467,6 +591,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
         primaryColor: DEFAULT_SITE_PRIMARY_COLOR,
         accentColor: DEFAULT_SITE_ACCENT_COLOR
       },
+      theme: DEFAULT_SITE_THEME,
       createdAt: now,
       updatedAt: now,
       createdByUserId: actorUserId
@@ -524,9 +649,9 @@ export const getPublishedSiteDefinition = async (tenantId) => {
 }
 
 export const updateSiteBranding = async (tenantId, input) => {
-  const branding = validateSiteBranding(input)
-  if (branding.logoMediaId) {
-    await requireTenantMedia(tenantId, [branding.logoMediaId], 'Logo image not found')
+  const identity = validateSiteBranding(input)
+  if (identity.logoMediaId) {
+    await requireTenantMedia(tenantId, [identity.logoMediaId], 'Logo image not found')
   }
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -538,8 +663,36 @@ export const updateSiteBranding = async (tenantId, input) => {
     ])
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+    const storedBranding = configSnapshot.data().branding || {}
+    const branding = {
+      siteName: identity.siteName,
+      ...(typeof storedBranding.primaryColor === 'string' ? { primaryColor: storedBranding.primaryColor } : {}),
+      ...(typeof storedBranding.accentColor === 'string' ? { accentColor: storedBranding.accentColor } : {}),
+      ...(identity.primaryColor ? { primaryColor: identity.primaryColor } : {}),
+      ...(identity.accentColor ? { accentColor: identity.accentColor } : {}),
+      ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {})
+    }
     const nextConfig = { ...configSnapshot.data(), branding, updatedAt: now }
     transaction.set(refs.config, { branding, updatedAt: now }, { merge: true })
+    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+  })
+  return hydrateSiteMedia(tenantId, definition)
+}
+
+export const updateSiteTheme = async (tenantId, input) => {
+  const theme = validateSiteTheme(input)
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const [configSnapshot, homeSnapshot] = await Promise.all([
+      transaction.get(refs.config),
+      transaction.get(refs.home)
+    ])
+    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+    const nextConfig = { ...configSnapshot.data(), theme, updatedAt: now }
+    transaction.set(refs.config, { theme, updatedAt: now }, { merge: true })
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
   return hydrateSiteMedia(tenantId, definition)
@@ -560,12 +713,79 @@ export const updateBusinessProfile = async (tenantId, input) => {
     ])
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+    const storedBusinessHours = businessProfileResponse(configSnapshot.data().businessProfile)?.businessHours
+    const compatibleProfile = {
+      ...businessProfile,
+      ...(storedBusinessHours ? { businessHours: storedBusinessHours } : {})
+    }
     const nextConfig = { ...configSnapshot.data(), updatedAt: now }
-    if (hasBusinessProfile(businessProfile)) nextConfig.businessProfile = businessProfile
+    if (hasBusinessProfile(compatibleProfile)) nextConfig.businessProfile = compatibleProfile
     else delete nextConfig.businessProfile
     transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
+  return hydrateSiteMedia(tenantId, definition)
+}
+
+export const updateBusinessHours = async (tenantId, input) => {
+  const update = validateBusinessHoursUpdate(input)
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+
+  await firestore.runTransaction(async (transaction) => {
+    const [configSnapshot, homeSnapshot] = await Promise.all([
+      transaction.get(refs.config),
+      transaction.get(refs.home)
+    ])
+    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+
+    const config = configSnapshot.data()
+    const home = homeSnapshot.data()
+    const sections = Array.isArray(home.sections) ? home.sections : []
+    mapCanonicalSections(sections)
+    const hoursIndexes = sections
+      .map((section, index) => ({ section, index }))
+      .filter(({ section }) => section.id === 'businessHours' || section.type === 'businessHours')
+    if (hoursIndexes.length > 1 || (hoursIndexes.length === 1 && (
+      hoursIndexes[0].section.id !== 'businessHours' || hoursIndexes[0].section.type !== 'businessHours'
+    ))) throw httpError(500, 'Home Business Hours section invalid')
+
+    const nextProfile = { ...(config.businessProfile || {}) }
+    if (update.businessHours) nextProfile.businessHours = update.businessHours
+    else delete nextProfile.businessHours
+
+    const nextSections = [...sections]
+    const existing = hoursIndexes[0]
+    if (!update.businessHours || !update.homepage.enabled) {
+      if (existing) nextSections.splice(existing.index, 1)
+    } else {
+      const section = {
+        id: 'businessHours',
+        type: 'businessHours',
+        content: {
+          ...(update.homepage.heading ? { heading: update.homepage.heading } : {}),
+          ...(update.homepage.intro ? { intro: update.homepage.intro } : {})
+        }
+      }
+      if (existing) nextSections[existing.index] = section
+      else {
+        const contactIndex = nextSections.findIndex((item) => item.id === 'contact' && item.type === 'contact')
+        if (contactIndex === -1) nextSections.push(section)
+        else nextSections.splice(contactIndex, 0, section)
+      }
+    }
+
+    const nextConfig = { ...config, updatedAt: now }
+    if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
+    else delete nextConfig.businessProfile
+    const nextHome = { ...home, sections: nextSections, updatedAt: now }
+    transaction.set(refs.config, nextConfig)
+    transaction.set(refs.home, nextHome)
+    definition = toSiteDefinition(nextConfig, nextHome)
+  })
+
   return hydrateSiteMedia(tenantId, definition)
 }
 
@@ -715,11 +935,39 @@ export const upsertHomeServices = async (tenantId, input) => {
       }
     } else {
       const heroIndex = requireHeroIndex(sections)
-      nextSections.splice(heroIndex + 1, 0, {
+      const aboutIndex = sections.findIndex((section) => section.id === 'about' && section.type === 'about')
+      nextSections.splice(aboutIndex === -1 ? heroIndex + 1 : aboutIndex + 1, 0, {
         id: 'services',
         type: 'services',
         content: { title, items: resolvedItems }
       })
+    }
+    return nextSections
+  })
+}
+
+export const upsertHomeAbout = async (tenantId, input) => {
+  const content = validateAboutInput(input)
+  if (content.imageMediaId) {
+    await requireTenantMedia(tenantId, [content.imageMediaId], 'About image not found')
+  }
+  return mutateWorkingHome(tenantId, (sections) => {
+    const aboutIndexes = sections
+      .map((section, index) => ({ section, index }))
+      .filter(({ section }) => section.id === 'about' || section.type === 'about')
+    if (aboutIndexes.length > 1 || (aboutIndexes.length === 1 && (
+      aboutIndexes[0].section.id !== 'about' || aboutIndexes[0].section.type !== 'about'
+    ))) {
+      throw httpError(500, 'Home about section invalid')
+    }
+
+    const existingAbout = aboutIndexes[0]
+    const nextSections = [...sections]
+    if (existingAbout) {
+      nextSections[existingAbout.index] = { id: 'about', type: 'about', content }
+    } else {
+      const heroIndex = requireHeroIndex(sections)
+      nextSections.splice(heroIndex + 1, 0, { id: 'about', type: 'about', content })
     }
     return nextSections
   })
@@ -893,6 +1141,52 @@ export const upsertHomeTestimonials = async (tenantId, input) => {
       }
       if (contactIndex === -1) nextSections.push(testimonials)
       else nextSections.splice(contactIndex, 0, testimonials)
+    }
+    return nextSections
+  })
+}
+
+export const upsertHomeFaq = async (tenantId, input) => {
+  const { heading, intro, items } = validateFaqInput(input)
+  return mutateWorkingHome(tenantId, (sections) => {
+    const faqIndexes = sections
+      .map((section, index) => ({ section, index }))
+      .filter(({ section }) => section.id === 'faq' || section.type === 'faq')
+    if (faqIndexes.length > 1 || (faqIndexes.length === 1 && (
+      faqIndexes[0].section.id !== 'faq' || faqIndexes[0].section.type !== 'faq'
+    ))) {
+      throw httpError(500, 'Home FAQ section invalid')
+    }
+
+    const existingFaq = faqIndexes[0]
+    const storedItems = existingFaq?.section.content?.items
+    if (existingFaq && !Array.isArray(storedItems)) throw httpError(500, 'Home FAQ section invalid')
+    const storedIds = new Set()
+    for (const item of storedItems || []) {
+      if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id.trim() || storedIds.has(item.id)) {
+        throw httpError(500, 'Home FAQ section invalid')
+      }
+      storedIds.add(item.id)
+    }
+    const storedById = new Map((storedItems || []).map((item) => [item.id, item]))
+    const resolvedItems = items.map((item) => {
+      if (!Object.prototype.hasOwnProperty.call(item, 'id')) {
+        return { id: randomUUID(), question: item.question, answer: item.answer }
+      }
+      const stored = storedById.get(item.id)
+      if (!stored) throw httpError(400, 'Unknown FAQ item id')
+      return { ...stored, question: item.question, answer: item.answer }
+    })
+
+    const content = { heading, ...(intro ? { intro } : {}), items: resolvedItems }
+    const nextSections = [...sections]
+    if (existingFaq) {
+      nextSections[existingFaq.index] = { ...existingFaq.section, content }
+    } else {
+      const contactIndex = sections.findIndex((section) => section.id === 'contact' || section.type === 'contact')
+      const faq = { id: 'faq', type: 'faq', content }
+      if (contactIndex === -1) nextSections.push(faq)
+      else nextSections.splice(contactIndex, 0, faq)
     }
     return nextSections
   })

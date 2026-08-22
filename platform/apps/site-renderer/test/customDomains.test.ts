@@ -100,8 +100,16 @@ test('preview-capable and published-only renderer fetches use isolated API paths
   const originalFetch = globalThis.fetch
   const originalBase = process.env.SITE_API_BASE_URL
   process.env.SITE_API_BASE_URL = 'https://api.example'
-  const draft = { status: 'DRAFT', pages: [{ sections: [{ content: { title: 'Working' } }] }] }
-  const published = { status: 'PUBLISHED', pages: [{ sections: [{ content: { title: 'Published' } }] }] }
+  const draft = {
+    status: 'DRAFT',
+    theme: { colors: { primary: '#112233' }, headingFont: 'lora' },
+    pages: [{ sections: [{ content: { title: 'Working' } }] }]
+  }
+  const published = {
+    status: 'PUBLISHED',
+    theme: { colors: { primary: '#445566' }, headingFont: 'inter' },
+    pages: [{ sections: [{ content: { title: 'Published' } }] }]
+  }
   try {
     globalThis.fetch = (async (input: string | URL | Request) => {
       const url = String(input)

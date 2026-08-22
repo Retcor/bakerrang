@@ -3,15 +3,17 @@
 import { useState, type FormEvent } from 'react'
 import { Button, Input } from '@bakerrang/ui'
 import { LeadSubmissionError, submitLead } from '../lib/leads'
+import { submitLeadForContext } from '../lib/leadPreview'
 
 export interface LeadFormProps {
   tenantId: string
+  preview?: boolean
 }
 
 const emailPattern = /^\S+@\S+\.\S+$/
 const phoneDial = (value: string) => value.replace(/[()\-.\s]/g, '')
 
-export function LeadForm ({ tenantId }: LeadFormProps) {
+export function LeadForm ({ preview = false, tenantId }: LeadFormProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -24,6 +26,12 @@ export function LeadForm ({ tenantId }: LeadFormProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (pending) return
+    if (preview) {
+      setError(await submitLeadForContext(true, () => submitLead(tenantId, {
+        name, email, phone, message, website
+      })))
+      return
+    }
 
     const trimmedName = name.trim()
     const trimmedEmail = email.trim()
@@ -38,13 +46,13 @@ export function LeadForm ({ tenantId }: LeadFormProps) {
     setPending(true)
     setError(null)
     try {
-      await submitLead(tenantId, {
+      await submitLeadForContext(false, () => submitLead(tenantId, {
         name: trimmedName,
         ...(trimmedEmail ? { email: trimmedEmail } : {}),
         ...(trimmedPhone ? { phone: trimmedPhone } : {}),
         message: trimmedMessage,
         website
-      })
+      }))
       setSubmitted(true)
     } catch (caught) {
       setError(caught instanceof LeadSubmissionError
@@ -57,7 +65,7 @@ export function LeadForm ({ tenantId }: LeadFormProps) {
 
   if (submitted) {
     return (
-      <div className="rounded-md border border-border bg-surface p-6" role="status">
+      <div className="site-radius-panel border border-border bg-surface p-6" role="status">
         <h2 className="text-xl font-semibold text-fg">Thanks for reaching out.</h2>
         <p className="mt-2 text-fg-muted">Your message has been sent.</p>
       </div>
@@ -65,7 +73,7 @@ export function LeadForm ({ tenantId }: LeadFormProps) {
   }
 
   return (
-    <form className="rounded-md border border-border bg-surface p-5 sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="site-radius-panel border border-border bg-surface p-5 sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor="lead-name">Name</label>
       <Input autoComplete="name" className="mt-2" disabled={pending} id="lead-name" maxLength={120} onChange={(event) => setName(event.target.value)} value={name} />
 
@@ -76,7 +84,7 @@ export function LeadForm ({ tenantId }: LeadFormProps) {
       <Input autoComplete="tel" className="mt-2" disabled={pending} id="lead-phone" maxLength={50} onChange={(event) => setPhone(event.target.value)} type="tel" value={phone} />
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor="lead-message">Message</label>
-      <textarea autoComplete="off" className="mt-2 min-h-36 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} id="lead-message" maxLength={2000} onChange={(event) => setMessage(event.target.value)} value={message} />
+      <textarea autoComplete="off" className="site-radius-control mt-2 min-h-36 w-full resize-y border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} id="lead-message" maxLength={2000} onChange={(event) => setMessage(event.target.value)} value={message} />
 
       <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
         <label htmlFor="lead-website">Website</label>

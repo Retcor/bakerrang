@@ -2,6 +2,16 @@ import type { Metadata } from 'next'
 import type { BusinessProfile, SiteDefinition } from '@bakerrang/site-schema'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSiteBaseUrl, type PublicSiteEnvironment } from './siteUrl.ts'
 
+const schemaDays = {
+  monday: 'https://schema.org/Monday',
+  tuesday: 'https://schema.org/Tuesday',
+  wednesday: 'https://schema.org/Wednesday',
+  thursday: 'https://schema.org/Thursday',
+  friday: 'https://schema.org/Friday',
+  saturday: 'https://schema.org/Saturday',
+  sunday: 'https://schema.org/Sunday'
+} as const
+
 const socialImage = (profile: BusinessProfile | undefined) => {
   if (!profile?.socialImageMediaId || !profile.socialImageSrc) return undefined
   return {
@@ -77,6 +87,14 @@ export function localBusinessData (site: SiteDefinition, siteBaseUrl: string | n
         ...(profile.address.country ? { addressCountry: profile.address.country } : {})
       }
     : undefined
+  const openingHoursSpecification = profile.businessHours
+    ? Object.entries(schemaDays).flatMap(([day, dayOfWeek]) => {
+        const hours = profile.businessHours?.[day as keyof typeof schemaDays]
+        return hours && !('closed' in hours)
+          ? [{ '@type': 'OpeningHoursSpecification', dayOfWeek, opens: hours.open, closes: hours.close }]
+          : []
+      })
+    : []
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -87,6 +105,7 @@ export function localBusinessData (site: SiteDefinition, siteBaseUrl: string | n
     ...(profile.email ? { email: profile.email } : {}),
     ...(address ? { address } : {}),
     ...(profile.serviceAreas?.length ? { areaServed: profile.serviceAreas } : {}),
+    ...(openingHoursSpecification.length ? { openingHoursSpecification } : {}),
     ...(site.branding.logoSrc ? { logo: site.branding.logoSrc } : {}),
     ...(profile.socialImageMediaId && profile.socialImageSrc ? { image: profile.socialImageSrc } : {})
   }

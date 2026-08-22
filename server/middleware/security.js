@@ -42,6 +42,7 @@ export const authLimiter = limiter(100)
 export const vaultLimiter = limiter(300)
 export const tenantLimiter = limiter(300)
 export const chatbotLimiter = limiter(60)
+export const previewReadLimiter = limiter(120)
 
 export const publicLeadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

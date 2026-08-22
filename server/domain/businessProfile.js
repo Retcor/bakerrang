@@ -4,6 +4,7 @@ import {
   isValidEmail,
   isValidPhone
 } from '../validation/contactMethods.js'
+import { normalizeBusinessHours } from './businessHours.js'
 
 const DESCRIPTION_MAX = 300
 const ADDRESS_LIMITS = {
@@ -146,5 +147,7 @@ export const businessProfileResponse = (input) => {
   if (serviceAreas) profile.serviceAreas = serviceAreas
   const socialImageMediaId = sanitizeString(input.socialImageMediaId, 200)
   if (socialImageMediaId) profile.socialImageMediaId = socialImageMediaId
+  const businessHours = normalizeBusinessHours(input.businessHours)
+  if (businessHours) profile.businessHours = businessHours
   return hasBusinessProfile(profile) ? profile : undefined
 }

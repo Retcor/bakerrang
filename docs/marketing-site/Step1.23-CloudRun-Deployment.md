@@ -4,12 +4,13 @@ This step packages the Portal and Site Renderer as independent production images
 
 ## Image builds
 
-Portal browser configuration is baked into its JavaScript bundle. `NEXT_PUBLIC_API_BASE_URL` is required. The custom-domain values are public and optional until the load balancer exists.
+Portal browser configuration is baked into its JavaScript bundle. `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_SITE_PREVIEW_ORIGIN` are required. The custom-domain values are public and optional until the load balancer exists. Use `http://localhost:3002` locally and `https://sites-dev.bakerrang.com` for DEV preview links.
 
 ```powershell
 cd platform
 docker build -f apps/portal/Dockerfile `
   --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 `
+  --build-arg NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=http://localhost:3002 `
   --build-arg CUSTOM_DOMAIN_IPV4_ADDRESS=203.0.113.10 `
   --build-arg CUSTOM_DOMAIN_CNAME_TARGET=example.invalid `
   -t bakerrang-portal:dev .
@@ -43,6 +44,8 @@ docker run --rm -p 3002:8080 `
 Both images default to `PORT=8080`, bind `HOSTNAME=0.0.0.0`, terminate no TLS, and run the standalone Next server as a dedicated non-root user. Cloud Run may override `PORT`.
 
 ## Deployment prerequisites and later steps
+
+The API runtime also requires an independent `PREVIEW_TOKEN_SECRET` in deployed environments. Generate it like the session and CSRF secrets, keep it server-only, and use the same API deployment for both token minting and preview reads. DEV Portal images must be rebuilt with `NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=https://sites-dev.bakerrang.com`.
 
 Functional Cloud Run testing requires a network-reachable DEV Express API connected to the `bakerrang-dev` data environment. Cloud Run cannot call the developer's localhost API. Determining whether an existing DEV API service can be used or whether the API must first be deployed is a separate next step; this work does not containerize or deploy the API.
 

@@ -24,6 +24,15 @@
   --site-accent-fg: #ffffff;
   --site-footer: #111827;
   --site-footer-fg: #f8fafc;
+  --site-radius: 0.375rem;
+  --site-radius-large: 0.75rem;
+  --site-content-width: 72rem;
+  --site-section-space: 4rem;
+  --site-section-space-lg: 6rem;
+  --site-hero-space: 5rem;
+  --site-hero-space-lg: 7.2rem;
+  --site-heading-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  --site-body-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --color-bg: var(--site-bg);
   --color-surface: var(--site-surface);
   --color-border: var(--site-border);
@@ -33,4 +42,43 @@
   --color-accent-fg: var(--site-primary-fg);
   background: var(--site-bg);
   color: var(--site-fg);
+  font-family: var(--site-body-font);
+}
+
+.site-shell :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--site-heading-font);
+}
+
+.site-shell :where(button, input, textarea, select) {
+  border-radius: var(--site-radius);
+}
+
+.site-container {
+  max-width: var(--site-content-width);
+}
+
+.site-section {
+  padding-block: var(--site-section-space);
+}
+
+.site-hero {
+  padding-block: var(--site-hero-space);
+}
+
+.site-radius-control {
+  border-radius: var(--site-radius);
+}
+
+.site-radius-panel {
+  border-radius: var(--site-radius-large);
+}
+
+@media (min-width: 640px) {
+  .site-section {
+    padding-block: var(--site-section-space-lg);
+  }
+
+  .site-hero {
+    padding-block: var(--site-hero-space-lg);
+  }
 }

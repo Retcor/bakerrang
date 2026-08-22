@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { findHomePage, isContactSection, isGallerySection, isServicesSection, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { findHomePage, isAboutSection, isContactSection, isFaqSection, isGallerySection, isServicesSection, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Badge, Button, Card, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import {
   getSite,
+  createSitePreviewToken,
   initializeSite,
   publishSite,
   unpublishSite
 } from '../../lib/site'
+import { sitePreviewUrl } from '../../lib/sitePreview'
 import { HeroEditor } from './HeroEditor'
 import { ServicesEditor } from './ServicesEditor'
 import { ContactEditor } from './ContactEditor'
@@ -18,6 +20,10 @@ import { TestimonialsEditor } from './TestimonialsEditor'
 import { SectionCompositionEditor } from './SectionCompositionEditor'
 import { BrandingEditor } from './BrandingEditor'
 import { BusinessProfileEditor } from './BusinessProfileEditor'
+import { ThemeEditor } from './ThemeEditor'
+import { AboutEditor } from './AboutEditor'
+import { FaqEditor } from './FaqEditor'
+import { BusinessHoursEditor } from './BusinessHoursEditor'
 
 export interface BusinessWebsiteProps {
   tenantId: string
@@ -25,8 +31,8 @@ export interface BusinessWebsiteProps {
 }
 
 type View = 'initial' | 'missing' | 'site'
-type Operation = 'manage' | 'initialize' | 'publish' | 'unpublish'
-type EditorMode = 'branding' | 'profile' | 'hero' | 'services' | 'gallery' | 'testimonials' | 'contact' | 'composition' | null
+type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish'
+type EditorMode = 'branding' | 'theme' | 'profile' | 'businessHours' | 'hero' | 'about' | 'services' | 'gallery' | 'testimonials' | 'faq' | 'contact' | 'composition' | null
 
 export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsiteProps) {
   const [view, setView] = useState<View>('initial')
@@ -35,6 +41,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const [error, setError] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorMode>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [previewFallback, setPreviewFallback] = useState<string | null>(null)
 
   useEffect(() => {
     if (!autoLoad) return
@@ -113,6 +120,24 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     }
   }
 
+  const handlePreview = () => {
+    if (pending) return
+    const previewWindow = window.open('about:blank', '_blank')
+    if (previewWindow) previewWindow.opener = null
+    setPending('preview')
+    setError(null)
+    setFeedback(null)
+    setPreviewFallback(null)
+    void createSitePreviewToken(tenantId).then(({ token }) => {
+      const url = sitePreviewUrl(tenantId, token)
+      if (previewWindow) previewWindow.location.href = url
+      else setPreviewFallback(url)
+    }).catch(() => {
+      previewWindow?.close()
+      setError('Unable to open the website preview. Please try again.')
+    }).finally(() => setPending(null))
+  }
+
   if (view === 'initial') {
     if (autoLoad) return <StatusMessage>Loading website…</StatusMessage>
     return (
@@ -141,9 +166,11 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const published = site?.status === 'PUBLISHED'
   const home = site ? findHomePage(site) : undefined
   const services = home?.sections.find(isServicesSection)
+  const about = home?.sections.find(isAboutSection)
   const contact = home?.sections.find(isContactSection)
   const gallery = home?.sections.find(isGallerySection)
   const testimonials = home?.sections.find(isTestimonialsSection)
+  const faq = home?.sections.find(isFaqSection)
   const handleEditorSaved = (definition: SiteDefinition) => {
     setSite(definition)
     setEditor(null)
@@ -157,8 +184,12 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
       <div className="mb-5"><Badge tone={published ? 'success' : 'warning'}>Website: {site?.status}</Badge></div>
       {editor === 'branding' && site ? (
         <BrandingEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'theme' && site ? (
+        <ThemeEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'profile' && site ? (
         <BusinessProfileEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'businessHours' && site ? (
+        <BusinessHoursEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'hero' && site ? (
         <HeroEditor
           onCancel={() => setEditor(null)}
@@ -166,6 +197,8 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
           site={site}
           tenantId={tenantId}
         />
+      ) : editor === 'about' && site ? (
+        <AboutEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'services' && site ? (
         <ServicesEditor
           onCancel={() => setEditor(null)}
@@ -194,6 +227,8 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
           site={site}
           tenantId={tenantId}
         />
+      ) : editor === 'faq' && site ? (
+        <FaqEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'composition' && site ? (
         <SectionCompositionEditor
           onCancel={() => setEditor(null)}
@@ -207,7 +242,9 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
             <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-foundation-${tenantId}`}>Site foundation</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('branding'); setError(null); setFeedback(null) }}>Branding</Button>
+          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('theme'); setError(null); setFeedback(null) }}>Theme</Button>
           <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('profile'); setError(null); setFeedback(null) }}>Business Profile</Button>
+          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('businessHours'); setError(null); setFeedback(null) }}>Business Hours</Button>
           <Button
             variant="secondary"
             disabled={Boolean(pending)}
@@ -234,6 +271,17 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
             }}
           >
             Edit Hero
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={Boolean(pending)}
+            onClick={() => {
+              setEditor('about')
+              setError(null)
+              setFeedback(null)
+            }}
+          >
+            {about ? 'Edit About' : 'Add About'}
           </Button>
           <Button
             variant="secondary"
@@ -272,6 +320,17 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
             variant="secondary"
             disabled={Boolean(pending)}
             onClick={() => {
+              setEditor('faq')
+              setError(null)
+              setFeedback(null)
+            }}
+          >
+            {faq ? 'Edit FAQ' : 'Add FAQ'}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={Boolean(pending)}
+            onClick={() => {
               setEditor('contact')
               setError(null)
               setFeedback(null)
@@ -284,6 +343,13 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
           <Card className="sticky bottom-4 z-10 flex flex-col gap-4 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div><h2 className="font-semibold text-fg">Publishing</h2><p className="mt-1 text-sm text-fg-muted">{published ? 'Republish to send working changes live.' : 'Publish when the site is ready for visitors.'}</p></div>
             <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            disabled={Boolean(pending)}
+            onClick={handlePreview}
+            variant="secondary"
+          >
+            {pending === 'preview' ? 'Opening preview…' : 'Preview changes'}
+          </Button>
           <Button
             disabled={Boolean(pending)}
             onClick={() => void run(
@@ -312,6 +378,14 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
         </div>
       )}
       {error && <div className="mt-4"><StatusMessage tone="error">{error}</StatusMessage></div>}
+      {previewFallback && (
+        <div className="mt-4">
+          <StatusMessage>
+            Your browser blocked the preview tab.{' '}
+            <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a>
+          </StatusMessage>
+        </div>
+      )}
       {feedback && <div className="mt-4"><StatusMessage tone="success">{feedback}</StatusMessage></div>}
     </div>
   )

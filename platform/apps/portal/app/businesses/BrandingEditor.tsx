@@ -14,8 +14,6 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
   tenantId: string
 }) {
   const [siteName, setSiteName] = useState(site.branding.siteName)
-  const [primaryColor, setPrimaryColor] = useState(site.branding.primaryColor)
-  const [accentColor, setAccentColor] = useState(site.branding.accentColor)
   const [logoMediaId, setLogoMediaId] = useState(site.branding.logoMediaId)
   const [media, setMedia] = useState<MediaItem[]>([])
   const [loadingMedia, setLoadingMedia] = useState(true)
@@ -67,13 +65,10 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
     if (saving) return
     const name = siteName.trim()
     if (!name || name.length > 80) return setError('Site name must be between 1 and 80 characters.')
-    if (!/^#[0-9a-f]{6}$/i.test(primaryColor) || !/^#[0-9a-f]{6}$/i.test(accentColor)) {
-      return setError('Colors must use the #RRGGBB format.')
-    }
     setSaving(true)
     setError(null)
     try {
-      onSaved(await updateSiteBranding(tenantId, { siteName: name, primaryColor, accentColor, ...(logoMediaId ? { logoMediaId } : {}) }))
+      onSaved(await updateSiteBranding(tenantId, { siteName: name, ...(logoMediaId ? { logoMediaId } : {}) }))
     } catch (caught) {
       setError(caught instanceof ApiError && caught.status === 400 ? caught.message : 'Unable to save branding. Please try again.')
     } finally {
@@ -81,24 +76,11 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
     }
   }
 
-  const validPrimary = /^#[0-9a-f]{6}$/i.test(primaryColor) ? primaryColor : '#334155'
-  const validAccent = /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : '#0f766e'
   return (
     <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
       <h3 className="text-lg font-semibold text-fg">Website Branding</h3>
       <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`site-name-${tenantId}`}>Site Name</label>
       <Input className="mt-2" disabled={saving} id={`site-name-${tenantId}`} maxLength={80} onChange={(event) => setSiteName(event.target.value)} value={siteName} />
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        {([['Primary Color', primaryColor, setPrimaryColor, validPrimary], ['Accent Color', accentColor, setAccentColor, validAccent]] as const).map(([label, value, setter, valid]) => (
-          <div key={label}>
-            <label className="text-sm font-semibold text-fg" htmlFor={`${label}-${tenantId}`}>{label}</label>
-            <div className="mt-2 flex gap-2">
-              <input aria-label={`${label} picker`} className="h-10 w-12 rounded border border-border bg-surface p-1" disabled={saving} onChange={(event) => setter(event.target.value)} type="color" value={valid} />
-              <Input disabled={saving} id={`${label}-${tenantId}`} maxLength={7} onChange={(event) => setter(event.target.value)} value={value} />
-            </div>
-          </div>
-        ))}
-      </div>
       <section className="mt-6" aria-labelledby={`logo-heading-${tenantId}`}>
         <h4 className="text-sm font-semibold text-fg" id={`logo-heading-${tenantId}`}>Logo (optional)</h4>
         {currentLogo?.src && (
@@ -125,10 +107,6 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
           </ul>
         )}
       </section>
-      <div className="mt-6 rounded-md border border-border p-4" style={{ borderTopColor: validAccent, borderTopWidth: 5 }}>
-        <p className="font-semibold text-fg">Theme preview</p>
-        <span className="mt-3 inline-flex rounded px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: validPrimary }}>Primary action</span>
-      </div>
       {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
       <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Branding'}</Button></div>
     </form>

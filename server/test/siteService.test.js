@@ -45,6 +45,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     'createdAt',
     'createdByUserId',
     'status',
+    'theme',
     'updatedAt'
   ])
   assert.equal(config.status, 'DRAFT')
@@ -54,6 +55,16 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     siteName: 'Baker Street Cafe',
     primaryColor: '#334155',
     accentColor: '#0f766e'
+  })
+  assert.deepEqual(config.theme, {
+    colors: {
+      primary: '#334155', accent: '#0f766e', background: '#f8fafc', text: '#172033'
+    },
+    headingFont: 'inter',
+    bodyFont: 'inter',
+    cornerStyle: 'soft',
+    contentWidth: 'standard',
+    sectionSpacing: 'comfortable'
   })
 
   assert.deepEqual(Object.keys(home).sort(), [
@@ -84,6 +95,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
       primaryColor: '#334155',
       accentColor: '#0f766e'
     },
+    theme: config.theme,
     pages: [{
       id: 'home',
       slug: '/',
@@ -159,7 +171,7 @@ test('publish creates a sanitized snapshot and persists publication audit metada
     'siteDefinition'
   ])
   assert.deepEqual(snapshot.siteDefinition, published)
-  assert.deepEqual(Object.keys(published), ['status', 'pages', 'branding'])
+  assert.deepEqual(Object.keys(published), ['status', 'pages', 'branding', 'theme'])
   assert.deepEqual(Object.keys(published.pages[0]).sort(), ['id', 'sections', 'slug', 'title'])
   assert.equal(published.status, 'PUBLISHED')
   assert.equal(snapshot.publishedByUserId, 'publisher')

@@ -4,7 +4,8 @@ import { SiteShell } from '@bakerrang/site-components'
 import { BusinessJsonLd } from './BusinessJsonLd'
 import { SectionRenderer } from './SectionRenderer'
 
-export function PublicHome ({ site, siteBaseUrl, sitePath }: {
+export function PublicHome ({ previewToken, site, siteBaseUrl, sitePath }: {
+  previewToken?: string
   site: SiteDefinition
   siteBaseUrl: string | null
   sitePath: string
@@ -18,8 +19,10 @@ export function PublicHome ({ site, siteBaseUrl, sitePath }: {
       <main>
         {home.sections.map((section) => (
           <SectionRenderer
+            businessHours={site.businessProfile?.businessHours}
             heroContactHref={hasContact ? '#contact' : undefined}
             key={section.id}
+            previewToken={previewToken}
             section={section}
             sitePath={sitePath}
           />

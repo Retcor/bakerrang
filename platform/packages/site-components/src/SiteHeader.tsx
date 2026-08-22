@@ -26,15 +26,15 @@ export function SiteHeader ({ branding, contactHref, homeHref, navItems }: {
         </a>
         <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
           {navItems.map((item) => <a className="text-sm font-medium text-site-muted hover:text-site-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" href={item.href} key={item.href}>{item.label}</a>)}
-          {contactHref && <a className="rounded-md bg-site-primary px-4 py-2.5 text-sm font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref}>Contact</a>}
+          {contactHref && <a className="site-radius-control bg-site-primary px-4 py-2.5 text-sm font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref}>Contact</a>}
         </nav>
-        <button aria-controls="tenant-mobile-navigation" aria-expanded={open} aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} className="min-h-11 rounded-md border border-site-border px-4 text-sm font-semibold text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent md:hidden" onClick={() => setOpen((value) => !value)} type="button">{open ? 'Close' : 'Menu'}</button>
+        <button aria-controls="tenant-mobile-navigation" aria-expanded={open} aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} className="site-radius-control min-h-11 border border-site-border px-4 text-sm font-semibold text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent md:hidden" onClick={() => setOpen((value) => !value)} type="button">{open ? 'Close' : 'Menu'}</button>
       </SiteContainer>
       {open && (
         <nav aria-label="Mobile primary" className="border-t border-site-border bg-site-surface md:hidden" id="tenant-mobile-navigation">
           <SiteContainer className="flex flex-col py-4">
             {navItems.map((item) => <a className="rounded px-2 py-3 font-medium text-site-fg focus-visible:outline-2 focus-visible:outline-site-accent" href={item.href} key={item.href} onClick={close}>{item.label}</a>)}
-            {contactHref && <a className="mt-2 rounded-md bg-site-primary px-4 py-3 text-center font-semibold text-site-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref} onClick={close}>Contact</a>}
+            {contactHref && <a className="site-radius-control mt-2 bg-site-primary px-4 py-3 text-center font-semibold text-site-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref} onClick={close}>Contact</a>}
           </SiteContainer>
         </nav>
       )}

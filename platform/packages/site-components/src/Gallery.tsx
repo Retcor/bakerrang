@@ -23,7 +23,7 @@ export function Gallery ({ content }: GalleryProps) {
         <SectionHeading>{content.title}</SectionHeading>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <figure className="aspect-[4/3] overflow-hidden rounded-xl bg-site-bg" key={item.id}>
+            <figure className="site-radius-panel aspect-[4/3] overflow-hidden bg-site-bg" key={item.id}>
               {/* The managed source is resolved server-side and intentionally rendered without Next image optimization. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

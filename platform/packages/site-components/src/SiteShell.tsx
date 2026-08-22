@@ -1,11 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { contrastColor } from './branding'
+import { resolveSiteTheme } from './theme'
 import { SiteHeader, type SiteNavItem } from './SiteHeader'
 import { SiteFooter } from './SiteFooter'
 import { siteNavigationPaths } from './sitePath'
 
-const labels: Record<string, string> = { services: 'Services', gallery: 'Gallery', testimonials: 'Testimonials', contact: 'Contact' }
+const labels: Record<string, string> = { about: 'About', services: 'Services', gallery: 'Gallery', testimonials: 'Testimonials', faq: 'FAQ', businessHours: 'Hours', contact: 'Contact' }
 
 export function SiteShell ({ children, currentPage, site, sitePath }: {
   children: ReactNode
@@ -24,12 +24,7 @@ export function SiteShell ({ children, currentPage, site, sitePath }: {
   const contact = sectionItems.find((item) => item.label === 'Contact')
   const primaryNav: SiteNavItem[] = sectionItems.filter((item) => item.label !== 'Contact')
   const footerNav = [...primaryNav, ...(contact ? [contact] : [])]
-  const style = {
-    '--site-primary': site.branding.primaryColor,
-    '--site-primary-fg': contrastColor(site.branding.primaryColor),
-    '--site-accent': site.branding.accentColor,
-    '--site-accent-fg': contrastColor(site.branding.accentColor)
-  } as CSSProperties
+  const style = resolveSiteTheme(site.theme)
   return (
     <div className="site-shell min-h-screen" style={style}>
       <SiteHeader branding={site.branding} contactHref={contact?.href} homeHref={homeHref} navItems={primaryNav} />

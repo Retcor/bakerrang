@@ -10,6 +10,24 @@ export interface HeroSection {
   content: HeroContent
 }
 
+export interface AboutContent {
+  eyebrow?: string
+  heading: string
+  body: string
+  imageMediaId?: string
+  imageAlt?: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  imageSrc?: string
+  imageWidth?: number
+  imageHeight?: number
+}
+
+export interface AboutSection {
+  id: 'about'
+  type: 'about'
+  content: AboutContent
+}
+
 export interface ServiceItem {
   id: string
   name: string
@@ -84,7 +102,59 @@ export interface TestimonialsSection {
   content: TestimonialsContent
 }
 
-export type SiteSection = HeroSection | ServicesSection | GallerySection | TestimonialsSection | ContactSection
+export interface FaqItem {
+  id: string
+  question: string
+  answer: string
+}
+
+export interface FaqContent {
+  heading: string
+  intro?: string
+  items: FaqItem[]
+}
+
+export interface FaqSection {
+  id: 'faq'
+  type: 'faq'
+  content: FaqContent
+}
+
+export type WeekdayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+export type DayHours =
+  | { closed: true }
+  | { open: string, close: string }
+
+export interface BusinessHours {
+  monday: DayHours
+  tuesday: DayHours
+  wednesday: DayHours
+  thursday: DayHours
+  friday: DayHours
+  saturday: DayHours
+  sunday: DayHours
+}
+
+export interface BusinessHoursContent {
+  heading?: string
+  intro?: string
+}
+
+export interface BusinessHoursSection {
+  id: 'businessHours'
+  type: 'businessHours'
+  content: BusinessHoursContent
+}
+
+export type SiteSection = HeroSection | AboutSection | ServicesSection | GallerySection | TestimonialsSection | FaqSection | BusinessHoursSection | ContactSection
 
 export interface SitePage {
   id: string
@@ -94,6 +164,36 @@ export interface SitePage {
 }
 
 export type SiteStatus = 'DRAFT' | 'PUBLISHED'
+
+export type SiteFont =
+  | 'inter'
+  | 'poppins'
+  | 'montserrat'
+  | 'workSans'
+  | 'lora'
+  | 'merriweather'
+  | 'playfair'
+  | 'sourceSerif'
+
+export type CornerStyle = 'rounded' | 'soft' | 'square'
+export type ContentWidth = 'narrow' | 'standard' | 'wide'
+export type SectionSpacing = 'compact' | 'comfortable' | 'spacious'
+
+export interface SiteThemeColors {
+  primary: string
+  accent: string
+  background: string
+  text: string
+}
+
+export interface SiteTheme {
+  colors: SiteThemeColors
+  headingFont: SiteFont
+  bodyFont: SiteFont
+  cornerStyle: CornerStyle
+  contentWidth: ContentWidth
+  sectionSpacing: SectionSpacing
+}
 
 export interface SiteBranding {
   siteName: string
@@ -126,17 +226,22 @@ export interface BusinessProfile {
   socialImageSrc?: string
   socialImageWidth?: number
   socialImageHeight?: number
+  businessHours?: BusinessHours
 }
 
 export interface SiteDefinition {
   status: SiteStatus
   branding: SiteBranding
+  theme: SiteTheme
   businessProfile?: BusinessProfile
   pages: SitePage[]
 }
 
 export const isHeroSection = (section: SiteSection): section is HeroSection =>
   section.id === 'hero' && section.type === 'hero'
+
+export const isAboutSection = (section: SiteSection): section is AboutSection =>
+  section.id === 'about' && section.type === 'about'
 
 export const isServicesSection = (section: SiteSection): section is ServicesSection =>
   section.id === 'services' && section.type === 'services'
@@ -149,6 +254,12 @@ export const isGallerySection = (section: SiteSection): section is GallerySectio
 
 export const isTestimonialsSection = (section: SiteSection): section is TestimonialsSection =>
   section.id === 'testimonials' && section.type === 'testimonials'
+
+export const isFaqSection = (section: SiteSection): section is FaqSection =>
+  section.id === 'faq' && section.type === 'faq'
+
+export const isBusinessHoursSection = (section: SiteSection): section is BusinessHoursSection =>
+  section.id === 'businessHours' && section.type === 'businessHours'
 
 export const findHomePage = (site: SiteDefinition): SitePage | undefined =>
   site.pages.find((page) => page.slug === '/')

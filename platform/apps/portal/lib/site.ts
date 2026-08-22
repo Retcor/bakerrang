@@ -1,4 +1,4 @@
-import type { SiteDefinition } from '@bakerrang/site-schema'
+import type { BusinessHours, SiteDefinition, SiteTheme } from '@bakerrang/site-schema'
 import type { PostalAddress } from '@bakerrang/site-schema'
 import { apiGet, apiSend } from './api'
 
@@ -16,6 +16,14 @@ export interface ServiceItemInput {
 export interface ServicesInput {
   title: string
   items: ServiceItemInput[]
+}
+
+export interface AboutInput {
+  eyebrow?: string
+  heading: string
+  body: string
+  imageMediaId?: string
+  imageAlt?: string
 }
 
 export type ContactActionInput =
@@ -53,14 +61,24 @@ export interface TestimonialsInput {
   items: TestimonialItemInput[]
 }
 
+export interface FaqItemInput {
+  id?: string
+  question: string
+  answer: string
+}
+
+export interface FaqInput {
+  heading: string
+  intro?: string
+  items: FaqItemInput[]
+}
+
 export interface CompositionInput {
   sectionIds: string[]
 }
 
 export interface BrandingInput {
   siteName: string
-  primaryColor: string
-  accentColor: string
   logoMediaId?: string
 }
 
@@ -71,6 +89,20 @@ export interface BusinessProfileInput {
   address?: Partial<PostalAddress>
   serviceAreas?: string[]
   socialImageMediaId?: string
+}
+
+export interface BusinessHoursUpdateInput {
+  businessHours: BusinessHours | null
+  homepage: {
+    enabled: boolean
+    heading?: string
+    intro?: string
+  }
+}
+
+export interface SitePreviewToken {
+  token: string
+  expiresAt: number
 }
 
 export type SiteDomainStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'ACTIVE' | 'DISABLED'
@@ -97,6 +129,9 @@ export const initializeSite = (tenantId: string) =>
 export const getSite = (tenantId: string) =>
   apiGet<SiteDefinition>(`/tenants/${encodeURIComponent(tenantId)}/site`)
 
+export const createSitePreviewToken = (tenantId: string) =>
+  apiSend<SitePreviewToken>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/preview-token`)
+
 export const getSiteDomain = (tenantId: string) =>
   apiGet<SiteDomain | null>(`/tenants/${encodeURIComponent(tenantId)}/site/domain`)
 
@@ -118,8 +153,14 @@ export const removeSiteDomain = (tenantId: string) =>
 export const updateSiteBranding = (tenantId: string, input: BrandingInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/branding`, input)
 
+export const updateSiteTheme = (tenantId: string, input: SiteTheme) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/theme`, input)
+
 export const updateBusinessProfile = (tenantId: string, input: BusinessProfileInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/profile`, input)
+
+export const updateBusinessHours = (tenantId: string, input: BusinessHoursUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/business-hours`, input)
 
 export const publishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/publish`)
@@ -141,6 +182,13 @@ export const upsertHomeServices = (tenantId: string, input: ServicesInput) =>
     input
   )
 
+export const upsertHomeAbout = (tenantId: string, input: AboutInput) =>
+  apiSend<SiteDefinition>(
+    'PUT',
+    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/about`,
+    input
+  )
+
 export const upsertHomeContact = (tenantId: string, input: ContactInput) =>
   apiSend<SiteDefinition>(
     'PUT',
@@ -159,6 +207,13 @@ export const upsertHomeTestimonials = (tenantId: string, input: TestimonialsInpu
   apiSend<SiteDefinition>(
     'PUT',
     `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/testimonials`,
+    input
+  )
+
+export const upsertHomeFaq = (tenantId: string, input: FaqInput) =>
+  apiSend<SiteDefinition>(
+    'PUT',
+    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/faq`,
     input
   )
 

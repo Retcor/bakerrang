@@ -6,7 +6,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
-import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter } from './middleware/security.js'
+import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
 import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 
@@ -66,6 +66,9 @@ app.use(express.static(path.join(__dirname, 'public')))
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set. Refusing to start with an insecure session secret.')
 }
+if (process.env.NODE_ENV === 'production' && !process.env.PREVIEW_TOKEN_SECRET) {
+  throw new Error('PREVIEW_TOKEN_SECRET is not set. Refusing to start without preview signing.')
+}
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -105,6 +108,7 @@ passport.use(new GoogleStrategy(buildGoogleStrategyOptions(), (token, tokenSecre
 
 app.use('/chatbot', chatbotLimiter, chatbotRouter)
 app.use('/public', publicLeadRouter)
+app.use('/public/preview', previewReadLimiter)
 app.use('/public', publicSiteRouter)
 app.use('/auth', authLimiter, authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
