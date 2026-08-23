@@ -18,7 +18,8 @@ const site: SiteDefinition = {
 
 const mocks = vi.hoisted(() => ({
   getSite: vi.fn(),
-  createSitePreviewToken: vi.fn()
+  createSitePreviewToken: vi.fn(),
+  updateCustomCss: vi.fn()
 }))
 
 vi.mock('../../../lib/site', () => ({
@@ -37,7 +38,8 @@ vi.mock('../../../lib/site', () => ({
   updateHomeTestimonials: vi.fn(),
   updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(),
-  updateSiteTheme: vi.fn()
+  updateSiteTheme: vi.fn(),
+  updateCustomCss: mocks.updateCustomCss
 }))
 
 import { BusinessWebsite } from '../BusinessWebsite'
@@ -48,6 +50,7 @@ describe('working-site preview launch', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_PREVIEW_ORIGIN', 'https://sites-dev.bakerrang.com')
     mocks.getSite.mockResolvedValue(site)
     mocks.createSitePreviewToken.mockResolvedValue({ token: 'token value', expiresAt: 1234 })
+    mocks.updateCustomCss.mockResolvedValue(site)
   })
 
   it('shows Preview changes only for an initialized site and opens before minting', async () => {
@@ -121,5 +124,30 @@ describe('working-site preview launch', () => {
     expect(mocks.createSitePreviewToken).toHaveBeenCalledTimes(2)
     expect(popups[0].opener).toBeNull()
     expect(popups[1].opener).toBeNull()
+  })
+
+  it('keeps existing editors available and integrates Custom CSS under Advanced', async () => {
+    const updated: SiteDefinition = {
+      ...site,
+      customCss: '[data-br-site] { color: rebeccapurple; }',
+      scopedCustomCss: '[data-br-tenant="tenant-1"] [data-br-site] { color: rebeccapurple; }'
+    }
+    mocks.updateCustomCss.mockResolvedValue(updated)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+
+    const foundation = (await screen.findByRole('heading', { name: 'Site foundation' })).closest('section')
+    expect(foundation).not.toBeNull()
+    for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Manage Sections']) {
+      expect(within(foundation as HTMLElement).getByRole('button', { name })).toBeInTheDocument()
+    }
+    const advanced = screen.getByRole('heading', { name: 'Advanced' }).closest('section')
+    fireEvent.click(within(advanced as HTMLElement).getByRole('button', { name: 'Edit Custom CSS' }))
+    fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: updated.customCss } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Custom CSS' }))
+
+    await screen.findByText('Changes saved.')
+    expect(mocks.updateCustomCss).toHaveBeenCalledWith('tenant-1', { customCss: updated.customCss })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Custom CSS' }))
+    expect(screen.getByLabelText('Custom CSS')).toHaveValue(updated.customCss)
   })
 })

@@ -16,7 +16,7 @@ export function PublicHome ({ previewToken, site, siteBaseUrl, sitePath }: {
   return (
     <SiteShell currentPage="home" site={site} sitePath={sitePath}>
       <BusinessJsonLd site={site} siteBaseUrl={siteBaseUrl} />
-      <main>
+      <main data-br-role="main">
         {home.sections.map((section) => (
           <SectionRenderer
             businessHours={site.businessProfile?.businessHours}

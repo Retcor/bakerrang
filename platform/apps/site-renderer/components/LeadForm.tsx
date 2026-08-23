@@ -73,18 +73,18 @@ export function LeadForm ({ preview = false, tenantId }: LeadFormProps) {
   }
 
   return (
-    <form className="site-radius-panel border border-border bg-surface p-5 sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="site-radius-panel border border-border bg-surface p-5 sm:p-6" data-br-role="form" onSubmit={(event) => void handleSubmit(event)}>
       <label className="text-sm font-semibold text-fg" htmlFor="lead-name">Name</label>
-      <Input autoComplete="name" className="mt-2" disabled={pending} id="lead-name" maxLength={120} onChange={(event) => setName(event.target.value)} value={name} />
+      <Input autoComplete="name" className="mt-2" data-br-role="input" disabled={pending} id="lead-name" maxLength={120} onChange={(event) => setName(event.target.value)} value={name} />
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor="lead-email">Email</label>
-      <Input autoComplete="email" className="mt-2" disabled={pending} id="lead-email" maxLength={254} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+      <Input autoComplete="email" className="mt-2" data-br-role="input" disabled={pending} id="lead-email" maxLength={254} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor="lead-phone">Phone</label>
-      <Input autoComplete="tel" className="mt-2" disabled={pending} id="lead-phone" maxLength={50} onChange={(event) => setPhone(event.target.value)} type="tel" value={phone} />
+      <Input autoComplete="tel" className="mt-2" data-br-role="input" disabled={pending} id="lead-phone" maxLength={50} onChange={(event) => setPhone(event.target.value)} type="tel" value={phone} />
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor="lead-message">Message</label>
-      <textarea autoComplete="off" className="site-radius-control mt-2 min-h-36 w-full resize-y border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} id="lead-message" maxLength={2000} onChange={(event) => setMessage(event.target.value)} value={message} />
+      <textarea autoComplete="off" className="site-radius-control mt-2 min-h-36 w-full resize-y border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50" data-br-role="input" disabled={pending} id="lead-message" maxLength={2000} onChange={(event) => setMessage(event.target.value)} value={message} />
 
       <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
         <label htmlFor="lead-website">Website</label>
@@ -92,7 +92,7 @@ export function LeadForm ({ preview = false, tenantId }: LeadFormProps) {
       </div>
 
       {error && <p className="mt-4 text-sm text-fg" role="alert">{error}</p>}
-      <Button className="mt-5" disabled={pending} type="submit">
+      <Button className="mt-5" data-br-role="button" disabled={pending} type="submit">
         {pending ? 'Sending…' : 'Send Message'}
       </Button>
     </form>

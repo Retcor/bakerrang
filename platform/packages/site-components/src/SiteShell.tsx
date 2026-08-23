@@ -26,10 +26,12 @@ export function SiteShell ({ children, currentPage, site, sitePath }: {
   const footerNav = [...primaryNav, ...(contact ? [contact] : [])]
   const style = resolveSiteTheme(site.theme)
   return (
-    <div className="site-shell min-h-screen" style={style}>
+    // data-br-* attributes are stable public Custom CSS hooks. Do not rename/remove casually.
+    <div className="site-shell min-h-screen" data-br-site="" style={style}>
+      {site.scopedCustomCss ? <style id="br-custom-css">{site.scopedCustomCss}</style> : null}
       <SiteHeader branding={site.branding} contactHref={contact?.href} homeHref={homeHref} navItems={primaryNav} />
       {children}
-      <SiteFooter navItems={footerNav} siteName={site.branding.siteName} />
+      <SiteFooter navItems={footerNav} siteName={site.branding.siteName} socialLinks={site.businessProfile?.socialLinks} />
     </div>
   )
 }

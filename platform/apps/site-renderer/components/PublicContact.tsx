@@ -11,10 +11,10 @@ export function PublicContact ({ contact, preview = false, site, sitePath, tenan
 }) {
   return (
     <SiteShell currentPage="contact" site={site} sitePath={sitePath}>
-      <main className="site-section bg-site-bg">
+      <main className="site-section bg-site-bg" data-br-role="main">
         <SiteContainer>
           <div className="mx-auto max-w-2xl">
-            <h1 className="text-4xl font-semibold tracking-tight text-site-fg">{contact.content.title}</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-site-fg" data-br-role="section-heading">{contact.content.title}</h1>
             {contact.content.text && <p className="mt-4 text-lg leading-8 text-site-muted">{contact.content.text}</p>}
             <div className="mt-8">
               <LeadForm preview={preview} tenantId={tenantId} />

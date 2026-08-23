@@ -7,12 +7,14 @@ export function PreviewFrame ({ children, tenantId, token }: {
   token: string
 }) {
   return (
-    <div>
-      <div className="sticky top-0 z-50 flex min-h-11 items-center justify-center bg-amber-300 px-4 py-2 text-center text-sm font-bold text-neutral-900 shadow-sm" role="status">
+    <div data-preview-frame="">
+      <div className="sticky top-0 z-50 flex min-h-11 items-center justify-center bg-amber-300 px-4 py-2 text-center text-sm font-bold text-neutral-900 shadow-sm" data-preview-banner="" role="status">
         Preview — not published
       </div>
       <PreviewQueryPreserver tenantId={tenantId} token={token} />
-      {children}
+      <div className="relative z-0 isolate" data-preview-site-layer="">
+        {children}
+      </div>
     </div>
   )
 }

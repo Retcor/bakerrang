@@ -21,6 +21,8 @@ import {
   validateBusinessProfile
 } from '../domain/businessProfile.js'
 import { validateBusinessHoursUpdate } from '../domain/businessHours.js'
+import { validateSocialLinksUpdate } from '../domain/socialLinks.js'
+import { normalizeStoredCustomCss, validateCustomCss } from '../domain/customCss.js'
 
 const TENANTS = 'tenants'
 const CANONICAL_SECTION_IDS = new Set([
@@ -117,20 +119,36 @@ const toSiteDefinition = (config, home) => {
     ...definition,
     branding: siteBrandingResponse(config.branding, definition),
     theme: normalizeSiteTheme(config.theme, config.branding),
+    ...(typeof config.customCss === 'string' ? { customCss: config.customCss } : {}),
     ...(businessProfile ? { businessProfile } : {})
   }
 }
 
 const normalizePublishedSiteDefinition = (definition) => {
   const businessProfile = businessProfileResponse(definition?.businessProfile)
+  const canonical = definition && typeof definition === 'object' ? { ...definition } : {}
+  delete canonical.customCss
+  delete canonical.scopedCustomCss
   const normalized = {
-    ...definition,
+    ...canonical,
     branding: siteBrandingResponse(definition?.branding, definition),
-    theme: normalizeSiteTheme(definition?.theme, definition?.branding)
+    theme: normalizeSiteTheme(definition?.theme, definition?.branding),
+    ...(typeof definition?.customCss === 'string' ? { customCss: definition.customCss } : {})
   }
   if (businessProfile) normalized.businessProfile = businessProfile
   else delete normalized.businessProfile
   return normalized
+}
+
+export const finalizeSiteDefinitionRead = async (tenantId, definition) => {
+  const canonical = { ...definition }
+  delete canonical.scopedCustomCss
+  const hydrated = await hydrateSiteMedia(tenantId, canonical)
+  const scopedCustomCss = normalizeStoredCustomCss(canonical.customCss)
+  return {
+    ...hydrated,
+    ...(scopedCustomCss ? { scopedCustomCss } : {})
+  }
 }
 
 const validateHeroInput = (input) => {
@@ -566,7 +584,7 @@ const mutateWorkingHome = async (tenantId, transformSections) => {
     definition = toSiteDefinition(nextConfig, nextHome)
   })
 
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const initializeSite = async (tenantId, actorUserId) => {
@@ -616,7 +634,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
     definition = toSiteDefinition(config, home)
   })
 
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const getSite = async (tenantId) => {
@@ -629,7 +647,7 @@ export const getSite = async (tenantId) => {
   if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
   if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
 
-  return hydrateSiteMedia(tenantId, toSiteDefinition(configSnapshot.data(), homeSnapshot.data()))
+  return finalizeSiteDefinitionRead(tenantId, toSiteDefinition(configSnapshot.data(), homeSnapshot.data()))
 }
 
 export const getPublishedSiteDefinition = async (tenantId) => {
@@ -645,7 +663,7 @@ export const getPublishedSiteDefinition = async (tenantId) => {
     throw httpError(404, 'Site not found')
   }
 
-  return hydrateSiteMedia(tenantId, normalizePublishedSiteDefinition(snapshot.siteDefinition))
+  return finalizeSiteDefinitionRead(tenantId, normalizePublishedSiteDefinition(snapshot.siteDefinition))
 }
 
 export const updateSiteBranding = async (tenantId, input) => {
@@ -676,7 +694,7 @@ export const updateSiteBranding = async (tenantId, input) => {
     transaction.set(refs.config, { branding, updatedAt: now }, { merge: true })
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const updateSiteTheme = async (tenantId, input) => {
@@ -695,7 +713,7 @@ export const updateSiteTheme = async (tenantId, input) => {
     transaction.set(refs.config, { theme, updatedAt: now }, { merge: true })
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const updateBusinessProfile = async (tenantId, input) => {
@@ -713,10 +731,11 @@ export const updateBusinessProfile = async (tenantId, input) => {
     ])
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-    const storedBusinessHours = businessProfileResponse(configSnapshot.data().businessProfile)?.businessHours
+    const storedProfile = businessProfileResponse(configSnapshot.data().businessProfile)
     const compatibleProfile = {
       ...businessProfile,
-      ...(storedBusinessHours ? { businessHours: storedBusinessHours } : {})
+      ...(storedProfile?.businessHours ? { businessHours: storedProfile.businessHours } : {}),
+      ...(storedProfile?.socialLinks ? { socialLinks: storedProfile.socialLinks } : {})
     }
     const nextConfig = { ...configSnapshot.data(), updatedAt: now }
     if (hasBusinessProfile(compatibleProfile)) nextConfig.businessProfile = compatibleProfile
@@ -724,7 +743,7 @@ export const updateBusinessProfile = async (tenantId, input) => {
     transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const updateBusinessHours = async (tenantId, input) => {
@@ -786,7 +805,60 @@ export const updateBusinessHours = async (tenantId, input) => {
     definition = toSiteDefinition(nextConfig, nextHome)
   })
 
-  return hydrateSiteMedia(tenantId, definition)
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const updateSocialLinks = async (tenantId, input) => {
+  const socialLinks = validateSocialLinksUpdate(input)
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+
+  await firestore.runTransaction(async (transaction) => {
+    const [configSnapshot, homeSnapshot] = await Promise.all([
+      transaction.get(refs.config),
+      transaction.get(refs.home)
+    ])
+    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+
+    const config = configSnapshot.data()
+    const nextProfile = { ...(config.businessProfile || {}) }
+    if (socialLinks) nextProfile.socialLinks = socialLinks
+    else delete nextProfile.socialLinks
+    const nextConfig = { ...config, updatedAt: now }
+    if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
+    else delete nextConfig.businessProfile
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+  })
+
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const updateCustomCss = async (tenantId, input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  const customCss = body.customCss === null ? undefined : validateCustomCss(body.customCss)
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+
+  await firestore.runTransaction(async (transaction) => {
+    const [configSnapshot, homeSnapshot] = await Promise.all([
+      transaction.get(refs.config),
+      transaction.get(refs.home)
+    ])
+    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+
+    const nextConfig = { ...configSnapshot.data(), updatedAt: now }
+    if (customCss) nextConfig.customCss = customCss
+    else delete nextConfig.customCss
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+  })
+
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const getPublicSite = async (tenantId, env = process.env) => {
@@ -833,7 +905,7 @@ export const publishSite = async (tenantId, actorUserId) => {
     }, { merge: true })
   })
 
-  return hydrateSiteMedia(tenantId, publishedDefinition)
+  return finalizeSiteDefinitionRead(tenantId, publishedDefinition)
 }
 
 export const unpublishSite = async (tenantId, actorUserId) => {
@@ -863,7 +935,7 @@ export const unpublishSite = async (tenantId, actorUserId) => {
     }, { merge: true })
   })
 
-  return hydrateSiteMedia(tenantId, draftDefinition)
+  return finalizeSiteDefinitionRead(tenantId, draftDefinition)
 }
 
 export const updateHomeHero = async (tenantId, input) => {

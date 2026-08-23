@@ -14,7 +14,7 @@ export function Services ({ content }: ServicesProps) {
         <SectionHeading>{content.title}</SectionHeading>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {content.items.map((item) => (
-            <article className="site-radius-panel border border-site-border bg-site-surface p-7 shadow-sm" key={item.id}>
+            <article className="site-radius-panel border border-site-border bg-site-surface p-7 shadow-sm" data-br-role="card" key={item.id}>
               <h3 className="text-xl font-semibold text-site-fg">{item.name}</h3>
               {item.description && (
                 <p className="mt-3 leading-7 text-site-muted">{item.description}</p>

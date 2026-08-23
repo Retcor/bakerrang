@@ -12,6 +12,16 @@ const schemaDays = {
   sunday: 'https://schema.org/Sunday'
 } as const
 
+const safeSocialUrl = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^https:\/\//i.test(value)) return false
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'https:' && Boolean(parsed.hostname)
+  } catch {
+    return false
+  }
+}
+
 const socialImage = (profile: BusinessProfile | undefined) => {
   if (!profile?.socialImageMediaId || !profile.socialImageSrc) return undefined
   return {
@@ -95,6 +105,8 @@ export function localBusinessData (site: SiteDefinition, siteBaseUrl: string | n
           : []
       })
     : []
+  const sameAs = (Array.isArray(profile.socialLinks) ? profile.socialLinks : [])
+    .flatMap((link) => link && safeSocialUrl(link.url) ? [link.url] : [])
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -106,6 +118,7 @@ export function localBusinessData (site: SiteDefinition, siteBaseUrl: string | n
     ...(address ? { address } : {}),
     ...(profile.serviceAreas?.length ? { areaServed: profile.serviceAreas } : {}),
     ...(openingHoursSpecification.length ? { openingHoursSpecification } : {}),
+    ...(sameAs.length ? { sameAs } : {}),
     ...(site.branding.logoSrc ? { logo: site.branding.logoSrc } : {}),
     ...(profile.socialImageMediaId && profile.socialImageSrc ? { image: profile.socialImageSrc } : {})
   }

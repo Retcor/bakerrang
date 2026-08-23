@@ -24,6 +24,8 @@ import { ThemeEditor } from './ThemeEditor'
 import { AboutEditor } from './AboutEditor'
 import { FaqEditor } from './FaqEditor'
 import { BusinessHoursEditor } from './BusinessHoursEditor'
+import { SocialProfilesEditor } from './SocialProfilesEditor'
+import { CustomCssEditor } from './CustomCssEditor'
 
 export interface BusinessWebsiteProps {
   tenantId: string
@@ -32,7 +34,7 @@ export interface BusinessWebsiteProps {
 
 type View = 'initial' | 'missing' | 'site'
 type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish'
-type EditorMode = 'branding' | 'theme' | 'profile' | 'businessHours' | 'hero' | 'about' | 'services' | 'gallery' | 'testimonials' | 'faq' | 'contact' | 'composition' | null
+type EditorMode = 'branding' | 'theme' | 'profile' | 'businessHours' | 'socialProfiles' | 'customCss' | 'hero' | 'about' | 'services' | 'gallery' | 'testimonials' | 'faq' | 'contact' | 'composition' | null
 
 export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsiteProps) {
   const [view, setView] = useState<View>('initial')
@@ -190,6 +192,10 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
         <BusinessProfileEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'businessHours' && site ? (
         <BusinessHoursEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'socialProfiles' && site ? (
+        <SocialProfilesEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
+      ) : editor === 'customCss' && site ? (
+        <CustomCssEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
       ) : editor === 'hero' && site ? (
         <HeroEditor
           onCancel={() => setEditor(null)}
@@ -245,6 +251,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
           <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('theme'); setError(null); setFeedback(null) }}>Theme</Button>
           <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('profile'); setError(null); setFeedback(null) }}>Business Profile</Button>
           <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('businessHours'); setError(null); setFeedback(null) }}>Business Hours</Button>
+          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('socialProfiles'); setError(null); setFeedback(null) }}>Social Profiles</Button>
           <Button
             variant="secondary"
             disabled={Boolean(pending)}
@@ -257,6 +264,16 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
             Manage Sections
           </Button>
             </div>
+          </section>
+          <section aria-labelledby={`site-advanced-${tenantId}`}>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-advanced-${tenantId}`}>Advanced</h2>
+            <Card className="flex flex-col gap-4 border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-fg">Custom CSS</h3>
+                <p className="mt-1 text-sm leading-6 text-fg-muted">Add scoped overrides for styling that is not available through Theme.</p>
+              </div>
+              <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('customCss'); setError(null); setFeedback(null) }}>Edit Custom CSS</Button>
+            </Card>
           </section>
           <section aria-labelledby={`site-content-${tenantId}`}>
             <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-content-${tenantId}`}>Homepage content</h2>

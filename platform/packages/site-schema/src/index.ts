@@ -215,6 +215,19 @@ export interface PostalAddress {
   country?: string
 }
 
+export type SocialPlatform =
+  | 'facebook'
+  | 'instagram'
+  | 'linkedin'
+  | 'youtube'
+  | 'tiktok'
+  | 'x'
+
+export interface SocialLink {
+  platform: SocialPlatform
+  url: string
+}
+
 export interface BusinessProfile {
   description?: string
   phone?: string
@@ -227,12 +240,17 @@ export interface BusinessProfile {
   socialImageWidth?: number
   socialImageHeight?: number
   businessHours?: BusinessHours
+  socialLinks?: SocialLink[]
 }
 
 export interface SiteDefinition {
   status: SiteStatus
   branding: SiteBranding
   theme: SiteTheme
+  /** Canonical operator-authored CSS. Stored and published without selector rewriting. */
+  customCss?: string
+  /** Read-time only. Server-validated and scoped for renderer injection; never persisted. */
+  scopedCustomCss?: string
   businessProfile?: BusinessProfile
   pages: SitePage[]
 }

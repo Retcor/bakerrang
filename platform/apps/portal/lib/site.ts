@@ -1,4 +1,4 @@
-import type { BusinessHours, SiteDefinition, SiteTheme } from '@bakerrang/site-schema'
+import type { BusinessHours, SiteDefinition, SiteTheme, SocialLink } from '@bakerrang/site-schema'
 import type { PostalAddress } from '@bakerrang/site-schema'
 import { apiGet, apiSend } from './api'
 
@@ -100,6 +100,14 @@ export interface BusinessHoursUpdateInput {
   }
 }
 
+export interface SocialLinksUpdateInput {
+  socialLinks: SocialLink[] | null
+}
+
+export interface CustomCssUpdateInput {
+  customCss: string | null
+}
+
 export interface SitePreviewToken {
   token: string
   expiresAt: number
@@ -161,6 +169,12 @@ export const updateBusinessProfile = (tenantId: string, input: BusinessProfileIn
 
 export const updateBusinessHours = (tenantId: string, input: BusinessHoursUpdateInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/business-hours`, input)
+
+export const updateSocialLinks = (tenantId: string, input: SocialLinksUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/social-links`, input)
+
+export const updateCustomCss = (tenantId: string, input: CustomCssUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/custom-css`, input)
 
 export const publishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/publish`)

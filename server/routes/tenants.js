@@ -114,6 +114,14 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateBusinessHours(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/social-links', platformAdmin, handle(
+    (req) => sites.updateSocialLinks(req.params.tenantId, req.body)
+  ))
+
+  router.put('/:tenantId/site/custom-css', platformAdmin, handle(
+    (req) => sites.updateCustomCss(req.params.tenantId, req.body)
+  ))
+
   router.patch('/:tenantId/site/pages/home/sections/hero', platformAdmin, handle(
     (req) => sites.updateHomeHero(req.params.tenantId, req.body)
   ))

@@ -15,7 +15,7 @@ export function SiteHeader ({ branding, contactHref, homeHref, navItems }: {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   return (
-    <header className="sticky top-0 z-40 border-b border-site-border bg-site-surface/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-site-border bg-site-surface/95 backdrop-blur" data-br-role="header">
       <SiteContainer className="flex min-h-20 items-center justify-between gap-6">
         <a aria-label={`${branding.siteName} home`} className="flex min-w-0 items-center gap-3 font-semibold text-site-fg" href={homeHref} onClick={close}>
           {branding.logoSrc && branding.logoWidth && branding.logoHeight && (
@@ -24,17 +24,17 @@ export function SiteHeader ({ branding, contactHref, homeHref, navItems }: {
           )}
           {!branding.logoSrc && <span className="truncate text-lg">{branding.siteName}</span>}
         </a>
-        <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-7 md:flex" data-br-role="nav">
           {navItems.map((item) => <a className="text-sm font-medium text-site-muted hover:text-site-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" href={item.href} key={item.href}>{item.label}</a>)}
-          {contactHref && <a className="site-radius-control bg-site-primary px-4 py-2.5 text-sm font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref}>Contact</a>}
+          {contactHref && <a className="site-radius-control bg-site-primary px-4 py-2.5 text-sm font-semibold text-site-primary-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" data-br-role="button" href={contactHref}>Contact</a>}
         </nav>
-        <button aria-controls="tenant-mobile-navigation" aria-expanded={open} aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} className="site-radius-control min-h-11 border border-site-border px-4 text-sm font-semibold text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent md:hidden" onClick={() => setOpen((value) => !value)} type="button">{open ? 'Close' : 'Menu'}</button>
+        <button aria-controls="tenant-mobile-navigation" aria-expanded={open} aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} className="site-radius-control min-h-11 border border-site-border px-4 text-sm font-semibold text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent md:hidden" data-br-role="button" onClick={() => setOpen((value) => !value)} type="button">{open ? 'Close' : 'Menu'}</button>
       </SiteContainer>
       {open && (
-        <nav aria-label="Mobile primary" className="border-t border-site-border bg-site-surface md:hidden" id="tenant-mobile-navigation">
+        <nav aria-label="Mobile primary" className="border-t border-site-border bg-site-surface md:hidden" data-br-role="nav" id="tenant-mobile-navigation">
           <SiteContainer className="flex flex-col py-4">
             {navItems.map((item) => <a className="rounded px-2 py-3 font-medium text-site-fg focus-visible:outline-2 focus-visible:outline-site-accent" href={item.href} key={item.href} onClick={close}>{item.label}</a>)}
-            {contactHref && <a className="site-radius-control mt-2 bg-site-primary px-4 py-3 text-center font-semibold text-site-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" href={contactHref} onClick={close}>Contact</a>}
+            {contactHref && <a className="site-radius-control mt-2 bg-site-primary px-4 py-3 text-center font-semibold text-site-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-primary" data-br-role="button" href={contactHref} onClick={close}>Contact</a>}
           </SiteContainer>
         </nav>
       )}
