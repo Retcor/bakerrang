@@ -2,18 +2,20 @@
 
 import { useState, type FormEvent } from 'react'
 import { findHomePage, isHeroSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input, Textarea } from '@bakerrang/ui'
+import { Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateHomeHero } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 export interface HeroEditorProps {
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
   onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorProps) {
+export function HeroEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: HeroEditorProps) {
   const home = findHomePage(site)
   const hero = home?.sections.find(isHeroSection)
   const [title, setTitle] = useState(hero?.content.title ?? '')
@@ -56,10 +58,7 @@ export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorPro
   }
 
   return (
-    <form
-      className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6"
-      onSubmit={(event) => void handleSubmit(event)}
-    >
+    <WebsiteEditorShell dirtyValue={{ title: title.trim(), subtitle }} editor="hero" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void handleSubmit(event)} saving={saving}>
       <label className="text-sm font-semibold text-fg" htmlFor={`hero-title-${tenantId}`}>
         Headline
       </label>
@@ -84,20 +83,6 @@ export function HeroEditor ({ tenantId, site, onCancel, onSaved }: HeroEditorPro
         value={subtitle}
       />
 
-      {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button
-          disabled={saving}
-          onClick={onCancel}
-          type="button"
-          variant="secondary"
-        >
-          Cancel
-        </Button>
-        <Button disabled={saving} type="submit">
-          {saving ? 'Saving…' : 'Save Changes'}
-        </Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

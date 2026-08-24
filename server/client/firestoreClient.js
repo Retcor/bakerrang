@@ -6,9 +6,7 @@ export const db = new Firestore({
   projectId
 })
 
-console.log(`Firestore configuration:
-  project: ${projectId}
-  database: (default)`)
+console.log(`Firestore project: ${projectId}`)
 
 // Sentinel factory for atomic field ops (e.g. FieldValue.increment(1)).
 export const FieldValue = Firestore.FieldValue

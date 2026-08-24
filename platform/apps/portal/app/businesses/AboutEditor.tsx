@@ -6,9 +6,11 @@ import { Button, FileInput, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { upsertHomeAbout } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
-export function AboutEditor ({ onCancel, onSaved, site, tenantId }: {
+export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -89,9 +91,8 @@ export function AboutEditor ({ onCancel, onSaved, site, tenantId }: {
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" noValidate onSubmit={(event) => void submit(event)}>
-      <h3 className="text-lg font-semibold text-fg">About</h3>
-      <p className="mt-2 text-sm leading-6 text-fg-muted">Tell visitors what makes this business distinct. Save, then use Preview changes to review it on the website.</p>
+    <WebsiteEditorShell dirtyValue={{ eyebrow: eyebrow.trim(), heading: heading.trim(), body: body.trim(), imageMediaId, imageAlt: imageMediaId ? imageAlt.trim() : '' }} editor="about" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploading} saving={saving}>
+      <p className="text-sm leading-6 text-fg-muted">Tell visitors what makes this business distinct. Save, then use Preview to review it on the website.</p>
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`about-eyebrow-${tenantId}`}>Eyebrow / label <span className="font-normal text-fg-muted">Optional</span></label>
       <Input className="mt-2" disabled={saving} id={`about-eyebrow-${tenantId}`} maxLength={60} onChange={(event) => setEyebrow(event.target.value)} value={eyebrow} />
@@ -125,8 +126,6 @@ export function AboutEditor ({ onCancel, onSaved, site, tenantId }: {
         {imageMediaId && <><label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`about-image-alt-${tenantId}`}>Image alt text</label><Input className="mt-2" disabled={saving} id={`about-image-alt-${tenantId}`} maxLength={250} onChange={(event) => setImageAlt(event.target.value)} required value={imageAlt} /></>}
       </section>
 
-      {error && <p className="mt-4 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save About'}</Button></div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

@@ -7,6 +7,21 @@ Navigate to client directory and run `npm i`. Then, run `npm run dev` to start t
 Update the .env file with API keys for Elevenlabs and ChatGPT and Google Credentials and then navigate to server directory and run `npm i`. 
 Then, run `npm run start` to start the server app using Express.
 
+## Platform
+
+The marketing platform is a workspace alongside the original learning-playground client:
+
+- `platform/apps/portal` — authenticated operator/admin application for businesses, websites, leads, and domains.
+- `platform/apps/site-renderer` — public multi-tenant site renderer.
+- `platform/packages/ui` — shared Portal UI primitives.
+- `platform/packages/site-components` — public-site section and shell components.
+- `platform/packages/site-schema` — shared site contracts and normalization.
+- `server/` — Express API, authorization boundary, media integration, and the only Firestore access layer used by the platform.
+
+The main flows are `Portal -> API -> Firestore` and `Public renderer -> sanitized API -> Firestore`; the renderer never connects directly to Firestore. Website edits update a working copy, Preview renders that copy, and Publish creates the public snapshot.
+
+For local setup, DEV configuration, safe image-only deployment, and the final smoke checklist, see [docs/DEV-DEPLOYMENT.md](docs/DEV-DEPLOYMENT.md). The Portal and renderer each currently include both `.env.example` and `.env.local.example`; the API uses `server/.env.example`.
+
 ### Setting Up Firestore Locally
 
 Firestore is used to store data. The Google account that has the Firestore will need to be setup locally and a default
@@ -132,7 +147,7 @@ gcloud firestore indexes composite list
 
 Wait until all indexes show `READY` before using the features that depend on them.
 
-### Environment Variables Required
+### Environment Variables
 
 Add the following to the server `.env` file:
 ```
@@ -141,7 +156,7 @@ ELEVEN_LABS_API_KEY=...       # ElevenLabs API key — used for TTS and voice cl
 DEEPGRAM_API_KEY=...          # Deepgram API key — used for speech-to-text transcription
 GOOGLE_OAUTH_CLIENT_ID=...    # Google OAuth client ID — used for user authentication
 GOOGLE_OAUTH_CLIENT_SECRET=.. # Google OAuth client secret — used for user authentication
-CLIENT_DOMAIN=...             # URL of the frontend client (e.g. http://localhost:3001)
+CLIENT_DOMAIN=...             # Optional legacy-client CORS origin
 SERVER_DOMAIN=...             # URL of this server (e.g. http://localhost:8080)
 CHATBOT_ORIGIN=...            # Allowed origin for the dan-baker-info chatbot (e.g. https://danbaker.info)
 CHATBOT_VOICE_ID=...          # ElevenLabs voice ID used for chatbot audio responses

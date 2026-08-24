@@ -2,9 +2,11 @@
 
 import { useRef, useState, type FormEvent } from 'react'
 import type { SiteDefinition, SocialLink, SocialPlatform } from '@bakerrang/site-schema'
-import { Button, Input, Select, StatusMessage } from '@bakerrang/ui'
+import { Button, Input, Select } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateSocialLinks } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 export const socialPlatforms: ReadonlyArray<{ value: SocialPlatform, label: string }> = [
   { value: 'facebook', label: 'Facebook' },
@@ -20,16 +22,9 @@ interface EditorRow extends SocialLink { key: string }
 const platformLabel = (platform: SocialPlatform) =>
   socialPlatforms.find((item) => item.value === platform)?.label ?? platform
 
-function ArrowIcon ({ direction }: { direction: 'up' | 'down' }) {
-  return <svg aria-hidden className="size-5" fill="none" viewBox="0 0 20 20"><path d={direction === 'up' ? 'm5 12.5 5-5 5 5' : 'm5 7.5 5 5 5-5'} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
-}
-
-function TrashIcon () {
-  return <svg aria-hidden className="size-5" fill="none" viewBox="0 0 20 20"><path d="M4.5 6h11M8 3.75h4M6 6l.6 10.25h6.8L14 6M8.25 8.5v5M11.75 8.5v5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" /></svg>
-}
-
-export function SocialProfilesEditor ({ onCancel, onSaved, site, tenantId }: {
+export function SocialProfilesEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -101,9 +96,8 @@ export function SocialProfilesEditor ({ onCancel, onSaved, site, tenantId }: {
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" noValidate onSubmit={(event) => void submit(event)}>
-      <h2 className="text-lg font-semibold text-fg">Social Profiles</h2>
-      <p className="mt-2 text-sm leading-6 text-fg-muted">Add HTTPS links to profiles that should appear in the public website footer and search-engine business data.</p>
+    <WebsiteEditorShell dirtyValue={rows.map(({ platform, url }) => ({ platform, url: url.trim() }))} editor="socialProfiles" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} width="wide">
+      <p className="text-sm leading-6 text-fg-muted">Add HTTPS links to profiles that should appear in the public website footer and search-engine business data.</p>
 
       {rows.length === 0 ? (
         <div className="mt-5 rounded-md border border-dashed border-border-strong bg-surface-muted p-5 text-sm text-fg-muted">No social profiles configured.</div>
@@ -117,11 +111,7 @@ export function SocialProfilesEditor ({ onCancel, onSaved, site, tenantId }: {
                 <legend className="sr-only">{label} profile</legend>
                 <div className="min-w-0"><label className="text-sm font-semibold text-fg" htmlFor={`social-platform-${tenantId}-${row.key}`}>Platform</label><Select className="mt-2 min-w-0" id={`social-platform-${tenantId}-${row.key}`} onChange={(event) => updateRow(row.key, { platform: event.target.value as SocialPlatform })} value={row.platform}>{options.map((platform) => <option key={platform.value} value={platform.value}>{platform.label}</option>)}</Select></div>
                 <div className="min-w-0"><label className="text-sm font-semibold text-fg" htmlFor={`social-url-${tenantId}-${row.key}`}>{label} URL</label><Input className="mt-2 min-w-0" id={`social-url-${tenantId}-${row.key}`} maxLength={300} onChange={(event) => updateRow(row.key, { url: event.target.value })} placeholder="https://" type="url" value={row.url} /></div>
-                <div className="flex flex-wrap gap-2 md:justify-end">
-                  <Button aria-label={`Move ${label} up`} className="min-h-11 min-w-11 px-3" disabled={index === 0} onClick={() => moveRow(index, -1)} type="button" variant="secondary"><ArrowIcon direction="up" /></Button>
-                  <Button aria-label={`Move ${label} down`} className="min-h-11 min-w-11 px-3" disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} type="button" variant="secondary"><ArrowIcon direction="down" /></Button>
-                  <Button aria-label={`Remove ${label}`} className="min-h-11 min-w-11 px-3" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} type="button" variant="danger"><TrashIcon /></Button>
-                </div>
+                <RowActions className="md:justify-end" moveUp={{ label: `Move ${label} profile up`, onClick: () => moveRow(index, -1), disabled: index === 0 }} moveDown={{ label: `Move ${label} profile down`, onClick: () => moveRow(index, 1), disabled: index === rows.length - 1 }} remove={{ label: `Remove ${label} profile`, onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)) }} />
               </fieldset>
             )
           })}
@@ -133,11 +123,6 @@ export function SocialProfilesEditor ({ onCancel, onSaved, site, tenantId }: {
         if (!platform) return
         setRows((current) => [...current, { key: `new-${nextKey.current++}`, platform: platform.value, url: '' }])
       }} type="button" variant="secondary">Add Social Profile</Button>
-      {error && <div className="mt-4"><StatusMessage tone="error">{error}</StatusMessage></div>}
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-        <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Social Profiles'}</Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

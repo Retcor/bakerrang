@@ -36,8 +36,9 @@ RUN groupadd --system --gid 1001 nodejs \
 
 COPY --from=builder /app/apps/site-renderer/.next/standalone ./
 COPY --from=builder /app/apps/site-renderer/.next/static ./apps/site-renderer/.next/static
+COPY --from=builder /app/scripts/config-validation.mjs ./scripts/config-validation.mjs
 
 USER nextjs
 EXPOSE 8080
 
-CMD ["node", "apps/site-renderer/server.js"]
+CMD ["sh", "-c", "node scripts/config-validation.mjs renderer-runtime && exec node apps/site-renderer/server.js"]

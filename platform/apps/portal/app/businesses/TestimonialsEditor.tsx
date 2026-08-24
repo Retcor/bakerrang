@@ -5,6 +5,8 @@ import { findHomePage, isTestimonialsSection, type SiteDefinition } from '@baker
 import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeTestimonials } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 interface EditorRow {
   key: string
@@ -18,9 +20,10 @@ export interface TestimonialsEditorProps {
   site: SiteDefinition
   onCancel: () => void
   onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function TestimonialsEditor ({ tenantId, site, onCancel, onSaved }: TestimonialsEditorProps) {
+export function TestimonialsEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: TestimonialsEditorProps) {
   const testimonials = findHomePage(site)?.sections.find(isTestimonialsSection)
   const nextKey = useRef(1)
   const [title, setTitle] = useState(testimonials?.content.title ?? 'Testimonials')
@@ -79,7 +82,7 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onSaved }: Testi
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
+    <WebsiteEditorShell dirtyValue={{ title: title.trim(), items: rows.map(({ id, customerName, quote }) => ({ id, customerName: customerName.trim(), quote: quote.trim() })) }} editor="testimonials" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void handleSubmit(event)} saveDisabled={!canSave} saving={saving} width="wide">
       <label className="text-sm font-semibold text-fg" htmlFor={`testimonials-title-${tenantId}`}>Section Title</label>
       <Input className="mt-2" disabled={saving} id={`testimonials-title-${tenantId}`} maxLength={100} onChange={(event) => setTitle(event.target.value)} value={title} />
 
@@ -91,21 +94,12 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onSaved }: Testi
             <Input className="mt-2" id={`testimonial-name-${tenantId}-${row.key}`} maxLength={120} onChange={(event) => updateRow(row.key, { customerName: event.target.value })} value={row.customerName} />
             <label className="mt-4 block text-sm text-fg" htmlFor={`testimonial-quote-${tenantId}-${row.key}`}>Quote</label>
             <Textarea className="mt-2" id={`testimonial-quote-${tenantId}-${row.key}`} maxLength={1000} onChange={(event) => updateRow(row.key, { quote: event.target.value })} value={row.quote} />
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button disabled={index === 0} onClick={() => moveRow(index, -1)} size="sm" type="button" variant="secondary">Move Up</Button>
-              <Button disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} size="sm" type="button" variant="secondary">Move Down</Button>
-              <Button onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
-            </div>
+            <RowActions className="mt-3" moveUp={{ label: 'Move testimonial up', onClick: () => moveRow(index, -1), disabled: index === 0 }} moveDown={{ label: 'Move testimonial down', onClick: () => moveRow(index, 1), disabled: index === rows.length - 1 }} remove={{ label: 'Remove testimonial', onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)) }} />
           </fieldset>
         ))}
       </div>
 
       <Button className="mt-4" disabled={saving || rows.length >= 10} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, customerName: '', quote: '' }])} size="sm" type="button" variant="secondary">Add Testimonial</Button>
-      {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-        <Button disabled={saving || !canSave} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

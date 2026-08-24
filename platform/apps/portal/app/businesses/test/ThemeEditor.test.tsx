@@ -51,7 +51,7 @@ describe('Theme editor', () => {
   it('rejects invalid hex client-side', () => {
     render(<ThemeEditor onCancel={() => undefined} onSaved={() => undefined} site={site} tenantId="tenant-1" />)
     fireEvent.change(screen.getByLabelText('Primary color hex'), { target: { value: 'rgb(0,0,0)' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Theme' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Colors must use the #RRGGBB format.')
     expect(mocks.updateSiteTheme).not.toHaveBeenCalled()
   })
@@ -65,7 +65,7 @@ describe('Theme editor', () => {
     fireEvent.click(screen.getByLabelText('rounded'))
     fireEvent.click(screen.getByLabelText('wide'))
     fireEvent.click(screen.getByLabelText('spacious'))
-    fireEvent.click(screen.getByRole('button', { name: 'Save Theme' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(mocks.updateSiteTheme).toHaveBeenCalledWith('tenant-1', expect.objectContaining({
       colors: expect.objectContaining({ primary: '#aabbcc' }),
@@ -84,7 +84,7 @@ describe('Theme editor', () => {
     fireEvent.change(screen.getByLabelText('Background color hex'), { target: { value: '#777777' } })
     fireEvent.change(screen.getByLabelText('Text color hex'), { target: { value: '#777777' } })
     expect(screen.getByText('This text may be difficult to read on the selected background.')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Save Theme' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteTheme).toHaveBeenCalledOnce())
   })
 

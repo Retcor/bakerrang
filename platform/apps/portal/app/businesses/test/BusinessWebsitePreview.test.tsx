@@ -18,16 +18,32 @@ const site: SiteDefinition = {
 
 const mocks = vi.hoisted(() => ({
   getSite: vi.fn(),
+  getSiteDomain: vi.fn(),
   createSitePreviewToken: vi.fn(),
-  updateCustomCss: vi.fn()
+  updateCustomCss: vi.fn(),
+  publishSite: vi.fn(),
+  unpublishSite: vi.fn()
+}))
+
+const navigation = vi.hoisted(() => ({
+  pathname: '/businesses/tenant-1/website',
+  search: '',
+  replace: vi.fn()
+}))
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ replace: navigation.replace }),
+  useSearchParams: () => new URLSearchParams(navigation.search)
 }))
 
 vi.mock('../../../lib/site', () => ({
   getSite: mocks.getSite,
+  getSiteDomain: mocks.getSiteDomain,
   createSitePreviewToken: mocks.createSitePreviewToken,
   initializeSite: vi.fn(),
-  publishSite: vi.fn(),
-  unpublishSite: vi.fn(),
+  publishSite: mocks.publishSite,
+  unpublishSite: mocks.unpublishSite,
   updateBusinessProfile: vi.fn(),
   updateHomeHero: vi.fn(),
   upsertHomeAbout: vi.fn(),
@@ -49,8 +65,13 @@ describe('working-site preview launch', () => {
     vi.clearAllMocks()
     vi.stubEnv('NEXT_PUBLIC_SITE_PREVIEW_ORIGIN', 'https://sites-dev.bakerrang.com')
     mocks.getSite.mockResolvedValue(site)
+    mocks.getSiteDomain.mockResolvedValue(null)
     mocks.createSitePreviewToken.mockResolvedValue({ token: 'token value', expiresAt: 1234 })
     mocks.updateCustomCss.mockResolvedValue(site)
+    mocks.publishSite.mockResolvedValue({ ...site, status: 'PUBLISHED', hasUnpublishedChanges: false, lastPublishedAt: 100 })
+    mocks.unpublishSite.mockResolvedValue(site)
+    navigation.pathname = '/businesses/tenant-1/website'
+    navigation.search = ''
   })
 
   it('shows Preview changes only for an initialized site and opens before minting', async () => {
@@ -67,10 +88,8 @@ describe('working-site preview launch', () => {
 
     render(<BusinessWebsite autoLoad tenantId="tenant/one" />)
     const button = await screen.findByRole('button', { name: 'Preview changes' })
-    const homepageContent = screen.getByRole('heading', { name: 'Homepage content' }).closest('section')
-    expect(homepageContent).not.toBeNull()
-    expect(within(homepageContent as HTMLElement).getByRole('button', { name: 'Add About' })).toBeInTheDocument()
-    expect(within(homepageContent as HTMLElement).getByRole('button', { name: 'Add FAQ' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
+    expect(screen.getByText('1 homepage section configured')).toBeInTheDocument()
     fireEvent.click(button)
 
     expect(sequence).toEqual(['open', 'mint'])
@@ -135,19 +154,19 @@ describe('working-site preview launch', () => {
     mocks.updateCustomCss.mockResolvedValue(updated)
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
 
-    const foundation = (await screen.findByRole('heading', { name: 'Site foundation' })).closest('section')
-    expect(foundation).not.toBeNull()
+    const desktopNav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
     for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Manage Sections']) {
-      expect(within(foundation as HTMLElement).getByRole('button', { name })).toBeInTheDocument()
+      expect(within(desktopNav).getByRole('button', { name })).toBeInTheDocument()
     }
-    const advanced = screen.getByRole('heading', { name: 'Advanced' }).closest('section')
-    fireEvent.click(within(advanced as HTMLElement).getByRole('button', { name: 'Edit Custom CSS' }))
+    const advanced = within(desktopNav).getByRole('heading', { name: 'Advanced' }).closest('section')
+    fireEvent.click(within(advanced as HTMLElement).getByRole('button', { name: 'Custom CSS' }))
     fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: updated.customCss } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Custom CSS' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await screen.findByText('Changes saved.')
     expect(mocks.updateCustomCss).toHaveBeenCalledWith('tenant-1', { customCss: updated.customCss })
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Custom CSS' }))
     expect(screen.getByLabelText('Custom CSS')).toHaveValue(updated.customCss)
+    expect(navigation.replace).toHaveBeenCalledWith('/businesses/tenant-1/website?editor=customCss', { scroll: false })
+    expect(mocks.getSite).toHaveBeenCalledTimes(1)
   })
 })

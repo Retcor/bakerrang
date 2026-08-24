@@ -1,5 +1,8 @@
 import type { NextConfig } from 'next'
 import path from 'node:path'
+import { validatePortalBuildConfig } from '../../scripts/config-validation.mjs'
+
+validatePortalBuildConfig()
 
 const nextConfig: NextConfig = {
   output: 'standalone',

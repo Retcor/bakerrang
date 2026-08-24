@@ -5,6 +5,7 @@ import type { SiteDefinition } from '@bakerrang/site-schema'
 import { Button, StatusMessage, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateCustomCss } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 export const CUSTOM_CSS_MAX_BYTES = 20 * 1024
 
@@ -32,8 +33,9 @@ const selectorGroups = [
   ['Elements', '[data-br-role="section-heading"]', '[data-br-role="card"]', '[data-br-role="button"]', '[data-br-role="form"]', '[data-br-role="input"]']
 ] as const
 
-export function CustomCssEditor ({ onCancel, onSaved, site, tenantId }: {
+export function CustomCssEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -66,9 +68,8 @@ export function CustomCssEditor ({ onCancel, onSaved, site, tenantId }: {
   }
 
   return (
-    <form className="min-w-0 w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" noValidate onSubmit={(event) => void submit(event)}>
-      <h2 className="text-lg font-semibold text-fg">Custom CSS</h2>
-      <p className="mt-2 text-sm leading-6 text-fg-muted">
+    <WebsiteEditorShell dirtyValue={css} editor="customCss" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={overLimit || !dirty} saving={saving} width="wide" secondaryActions={<Button disabled={saving || css === ''} onClick={() => { setCss(''); setError(null) }} type="button" variant="danger">Clear</Button>}>
+      <p className="text-sm leading-6 text-fg-muted">
         Custom CSS is an advanced override for styles that Theme does not cover. Theme remains the recommended way to control colors, fonts, spacing, and standard site styling. Custom CSS can override rendered styles where the normal CSS cascade allows.
       </p>
       <p className="mt-2 text-sm leading-6 text-fg-muted">
@@ -99,7 +100,6 @@ export function CustomCssEditor ({ onCancel, onSaved, site, tenantId }: {
       </div>
 
       {overLimit && <div className="mt-4"><StatusMessage tone="error">Custom CSS exceeds the 20 KB UTF-8 limit. Reduce it before saving.</StatusMessage></div>}
-      {error && <div className="mt-4"><StatusMessage tone="error">{error}</StatusMessage></div>}
       {clearedLocally && <div className="mt-4"><StatusMessage>Cleared locally. Save Custom CSS to remove it from Preview.</StatusMessage></div>}
 
       <div className="mt-6 rounded-md border border-border bg-surface-muted p-4">
@@ -129,13 +129,6 @@ export function CustomCssEditor ({ onCancel, onSaved, site, tenantId }: {
         </details>
       </div>
 
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-        <Button disabled={saving || css === ''} onClick={() => { setCss(''); setError(null) }} type="button" variant="danger">Clear</Button>
-        <div className="flex flex-col-reverse gap-3 sm:flex-row">
-          <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-          <Button disabled={saving || overLimit || !dirty} type="submit">{saving ? 'Saving…' : 'Save Custom CSS'}</Button>
-        </div>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

@@ -1,57 +1,157 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { findHomePage, isAboutSection, isContactSection, isFaqSection, isGallerySection, isServicesSection, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Badge, Button, Card, StatusMessage } from '@bakerrang/ui'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { findHomePage, type SiteDefinition } from '@bakerrang/site-schema'
+import { Badge, Button, Card, ConfirmDialog, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import {
-  getSite,
-  createSitePreviewToken,
-  initializeSite,
-  publishSite,
-  unpublishSite
-} from '../../lib/site'
+import { createSitePreviewToken, getSite, getSiteDomain, initializeSite, publishSite, unpublishSite, type SiteDomain } from '../../lib/site'
 import { sitePreviewUrl } from '../../lib/sitePreview'
-import { HeroEditor } from './HeroEditor'
-import { ServicesEditor } from './ServicesEditor'
-import { ContactEditor } from './ContactEditor'
-import { GalleryEditor } from './GalleryEditor'
-import { TestimonialsEditor } from './TestimonialsEditor'
-import { SectionCompositionEditor } from './SectionCompositionEditor'
-import { BrandingEditor } from './BrandingEditor'
-import { BusinessProfileEditor } from './BusinessProfileEditor'
-import { ThemeEditor } from './ThemeEditor'
 import { AboutEditor } from './AboutEditor'
-import { FaqEditor } from './FaqEditor'
+import { BrandingEditor } from './BrandingEditor'
 import { BusinessHoursEditor } from './BusinessHoursEditor'
-import { SocialProfilesEditor } from './SocialProfilesEditor'
+import { BusinessProfileEditor } from './BusinessProfileEditor'
+import { ContactEditor } from './ContactEditor'
 import { CustomCssEditor } from './CustomCssEditor'
+import { FaqEditor } from './FaqEditor'
+import { GalleryEditor } from './GalleryEditor'
+import { HeroEditor } from './HeroEditor'
+import { SectionCompositionEditor } from './SectionCompositionEditor'
+import { ServicesEditor } from './ServicesEditor'
+import { SocialProfilesEditor } from './SocialProfilesEditor'
+import { TestimonialsEditor } from './TestimonialsEditor'
+import { ThemeEditor } from './ThemeEditor'
+import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
+import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
+import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsitePaneId } from './websiteEditors'
 
-export interface BusinessWebsiteProps {
-  tenantId: string
-  autoLoad?: boolean
-}
-
+export interface BusinessWebsiteProps { tenantId: string, autoLoad?: boolean }
 type View = 'initial' | 'missing' | 'site'
 type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish'
-type EditorMode = 'branding' | 'theme' | 'profile' | 'businessHours' | 'socialProfiles' | 'customCss' | 'hero' | 'about' | 'services' | 'gallery' | 'testimonials' | 'faq' | 'contact' | 'composition' | null
+
+const homepageSectionLabels: Record<string, string> = {
+  hero: 'Hero', about: 'About', services: 'Services', gallery: 'Gallery', testimonials: 'Testimonials',
+  faq: 'FAQ', businessHours: 'Hours', contact: 'Contact'
+}
+
+function publicationStatus (site: SiteDefinition) {
+  if (site.status === 'DRAFT') return { label: 'Draft', tone: 'warning' as const }
+  if (site.hasUnpublishedChanges) return { label: 'Changes not published', tone: 'warning' as const }
+  return { label: 'Published', tone: 'success' as const }
+}
+
+function publishedDate (timestamp: number | undefined) {
+  if (!Number.isSafeInteger(timestamp) || (timestamp ?? -1) < 0) return null
+  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(timestamp)
+}
+
+function ActiveWebsiteEditor ({ editor, onCancel, onDirtyChange, onSaved, site, tenantId }: {
+  editor: WebsiteEditorId
+  onCancel: () => void
+  onDirtyChange: (dirty: boolean) => void
+  onSaved: (site: SiteDefinition) => void
+  site: SiteDefinition
+  tenantId: string
+}) {
+  switch (editor) {
+    case 'branding': return <BrandingEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'theme': return <ThemeEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'businessProfile': return <BusinessProfileEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'businessHours': return <BusinessHoursEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'customCss': return <CustomCssEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'hero': return <HeroEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'about': return <AboutEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'services': return <ServicesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'gallery': return <GalleryEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'testimonials': return <TestimonialsEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'faq': return <FaqEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'contact': return <ContactEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'sections': return <SectionCompositionEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+  }
+}
+
+function WebsiteOverview ({ domain, onUnpublish, pending, site, tenantId }: {
+  domain: SiteDomain | null
+  onUnpublish: () => void
+  pending: Operation | null
+  site: SiteDefinition
+  tenantId: string
+}) {
+  const status = publicationStatus(site)
+  const sectionLabels = (findHomePage(site)?.sections ?? []).map((section) => homepageSectionLabels[section.id] ?? section.id)
+  const lastPublished = publishedDate(site.lastPublishedAt)
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight text-fg">Website Overview</h2>
+        <p className="mt-1 text-sm leading-6 text-fg-muted">Review what is configured and whether the public site is up to date.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-5">
+          <h3 className="text-sm font-semibold text-fg">Publication</h3>
+          <Badge className="mt-3" tone={status.tone}>{status.label}</Badge>
+          {lastPublished && <p className="mt-3 text-sm text-fg-muted">Last published {lastPublished}</p>}
+          {site.status === 'PUBLISHED' && <Button className="mt-5" disabled={Boolean(pending)} onClick={onUnpublish} size="sm" variant="secondary">{pending === 'unpublish' ? 'Unpublishing…' : 'Unpublish'}</Button>}
+        </Card>
+        <Card className="min-w-0 p-5">
+          <h3 className="text-sm font-semibold text-fg">Homepage</h3>
+          <p className="mt-3 text-sm text-fg-muted">{sectionLabels.length} homepage {sectionLabels.length === 1 ? 'section' : 'sections'} configured</p>
+          {sectionLabels.length > 0 && <p className="mt-2 break-words text-sm leading-6 text-fg">{sectionLabels.join(' · ')}</p>}
+        </Card>
+      </div>
+      {domain?.status === 'ACTIVE' && (
+        <Card className="min-w-0 p-5">
+          <h3 className="text-sm font-semibold text-fg">Active custom domain</h3>
+          <p className="mt-2 break-all text-sm text-fg-muted">{domain.hostname}</p>
+          <Link className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-info-fg underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" href={`/businesses/${encodeURIComponent(tenantId)}/domain`}>Manage domain →</Link>
+        </Card>
+      )}
+    </div>
+  )
+}
 
 export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsiteProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const queryKey = searchParams.toString()
+  const queryEditor = parseWebsiteEditor(searchParams.get('editor'))
   const [view, setView] = useState<View>('initial')
   const [site, setSite] = useState<SiteDefinition | null>(null)
+  const [domain, setDomain] = useState<SiteDomain | null>(null)
   const [pending, setPending] = useState<Operation | null>(autoLoad ? 'manage' : null)
   const [error, setError] = useState<string | null>(null)
-  const [editor, setEditor] = useState<EditorMode>(null)
+  const [editorSelection, setEditorSelection] = useState<{ fromQueryKey: string, toQueryKey: string, editor: WebsiteEditorId | null }>({ fromQueryKey: queryKey, toQueryKey: queryKey, editor: queryEditor })
   const [feedback, setFeedback] = useState<string | null>(null)
   const [previewFallback, setPreviewFallback] = useState<string | null>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
+  const [editorSessionRevision, setEditorSessionRevision] = useState(0)
+  const [pendingPane, setPendingPane] = useState<WebsitePaneId | null>(null)
+  useBusinessNavigationGuard(editorDirty)
 
+  const editor = queryKey === editorSelection.fromQueryKey || queryKey === editorSelection.toQueryKey
+    ? editorSelection.editor
+    : queryEditor
+  const handleDirtyChange = useCallback((dirty: boolean) => setEditorDirty(dirty), [])
+  useEffect(() => {
+    if (!editorDirty) return
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', beforeUnload)
+    return () => window.removeEventListener('beforeunload', beforeUnload)
+  }, [editorDirty])
+  useEffect(() => {
+    let cancelled = false
+    void getSiteDomain(tenantId).then((value) => { if (!cancelled) setDomain(value) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [tenantId])
   useEffect(() => {
     if (!autoLoad) return
     let cancelled = false
     void getSite(tenantId).then((definition) => {
       if (cancelled) return
-      setSite(definition)
-      setView('site')
+      setSite(definition); setView('site')
     }).catch((caught: unknown) => {
       if (cancelled) return
       if (caught instanceof ApiError && caught.status === 404) setView('missing')
@@ -60,350 +160,92 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     return () => { cancelled = true }
   }, [autoLoad, tenantId])
 
-  const run = async (
-    operation: Operation,
-    action: () => Promise<SiteDefinition>,
-    message: string
-  ) => {
-    if (pending) return
-    setPending(operation)
-    setError(null)
-    setFeedback(null)
-    try {
-      const definition = await action()
-      setSite(definition)
-      setView('site')
-    } catch {
-      setError(message)
-    } finally {
-      setPending(null)
-    }
+  const navigateToEditor = (next: WebsitePaneId) => {
+    const nextEditor = next === 'overview' ? null : next
+    setError(null); setFeedback(null)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextEditor) params.set('editor', nextEditor)
+    else params.delete('editor')
+    const query = params.toString()
+    setEditorSelection({ fromQueryKey: queryKey, toQueryKey: query, editor: nextEditor })
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
-
+  const selectEditor = (next: WebsitePaneId) => {
+    const current: WebsitePaneId = editor ?? 'overview'
+    if (next === current) return
+    if (editorDirty) { setPendingPane(next); return }
+    navigateToEditor(next)
+  }
+  const run = async (operation: Operation, action: () => Promise<SiteDefinition>, message: string) => {
+    if (pending) return
+    setPending(operation); setError(null); setFeedback(null)
+    try { setSite(await action()); setView('site') } catch { setError(message) } finally { setPending(null) }
+  }
   const handleManage = async () => {
     if (pending) return
-    setPending('manage')
-    setError(null)
-    try {
-      setSite(await getSite(tenantId))
-      setView('site')
-    } catch (caught) {
-      if (caught instanceof ApiError && caught.status === 404) {
-        setView('missing')
-      } else {
-        setError('Unable to load the website. Please try again.')
-      }
-    } finally {
-      setPending(null)
-    }
+    setPending('manage'); setError(null)
+    try { setSite(await getSite(tenantId)); setView('site') } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 404) setView('missing')
+      else setError('Unable to load the website. Please try again.')
+    } finally { setPending(null) }
   }
-
   const handleInitialize = async () => {
     if (pending) return
-    setPending('initialize')
-    setError(null)
-    try {
-      setSite(await initializeSite(tenantId))
-      setView('site')
-    } catch (caught) {
+    setPending('initialize'); setError(null)
+    try { setSite(await initializeSite(tenantId)); setView('site') } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409) {
-        try {
-          setSite(await getSite(tenantId))
-          setView('site')
-          return
-        } catch {
-          setError('Unable to load the existing website. Please try again.')
-          return
-        }
+        try { setSite(await getSite(tenantId)); setView('site'); return } catch { setError('Unable to load the existing website. Please try again.'); return }
       }
       setError('Unable to initialize the website. Please try again.')
-    } finally {
-      setPending(null)
-    }
+    } finally { setPending(null) }
   }
-
   const handlePreview = () => {
-    if (pending) return
+    if (pending || editorDirty) return
     const previewWindow = window.open('about:blank', '_blank')
     if (previewWindow) previewWindow.opener = null
-    setPending('preview')
-    setError(null)
-    setFeedback(null)
-    setPreviewFallback(null)
+    setPending('preview'); setError(null); setFeedback(null); setPreviewFallback(null)
     void createSitePreviewToken(tenantId).then(({ token }) => {
       const url = sitePreviewUrl(tenantId, token)
       if (previewWindow) previewWindow.location.href = url
       else setPreviewFallback(url)
-    }).catch(() => {
-      previewWindow?.close()
-      setError('Unable to open the website preview. Please try again.')
-    }).finally(() => setPending(null))
+    }).catch(() => { previewWindow?.close(); setError('Unable to open the website preview. Please try again.') }).finally(() => setPending(null))
   }
 
   if (view === 'initial') {
     if (autoLoad) return <StatusMessage>Loading website…</StatusMessage>
-    return (
-      <div>
-        <Button disabled={Boolean(pending)} onClick={() => void handleManage()} size="sm">
-          {pending === 'manage' ? 'Loading…' : 'Manage Website'}
-        </Button>
-        {error && <div className="mt-3"><StatusMessage tone="error">{error}</StatusMessage></div>}
-      </div>
-    )
+    return <div><Button disabled={Boolean(pending)} onClick={() => void handleManage()} size="sm">{pending === 'manage' ? 'Loading…' : 'Manage Website'}</Button>{error && <div className="mt-3"><StatusMessage tone="error">{error}</StatusMessage></div>}</div>
   }
-
   if (view === 'missing') {
-    return (
-      <Card className="p-6 text-left">
-        <h2 className="text-lg font-semibold text-fg">Initialize this website</h2>
-        <p className="mt-2 text-sm leading-6 text-fg-muted">Create the working site before adding content or publishing.</p>
-        <Button className="mt-5" disabled={Boolean(pending)} onClick={() => void handleInitialize()}>
-          {pending === 'initialize' ? 'Initializing…' : 'Initialize Website'}
-        </Button>
-        {error && <div className="mt-3"><StatusMessage tone="error">{error}</StatusMessage></div>}
-      </Card>
-    )
+    return <Card className="p-6 text-left"><h2 className="text-lg font-semibold text-fg">Initialize this website</h2><p className="mt-2 text-sm leading-6 text-fg-muted">Create the working site before adding content or publishing.</p><Button className="mt-5" disabled={Boolean(pending)} onClick={() => void handleInitialize()}>{pending === 'initialize' ? 'Initializing…' : 'Initialize Website'}</Button>{error && <div className="mt-3"><StatusMessage tone="error">{error}</StatusMessage></div>}</Card>
   }
+  if (!site) return <StatusMessage tone="error">Unable to load the website. Please try again.</StatusMessage>
 
-  const published = site?.status === 'PUBLISHED'
-  const home = site ? findHomePage(site) : undefined
-  const services = home?.sections.find(isServicesSection)
-  const about = home?.sections.find(isAboutSection)
-  const contact = home?.sections.find(isContactSection)
-  const gallery = home?.sections.find(isGallerySection)
-  const testimonials = home?.sections.find(isTestimonialsSection)
-  const faq = home?.sections.find(isFaqSection)
+  const published = site.status === 'PUBLISHED'
+  const status = editorDirty ? { label: 'Unsaved changes', tone: 'warning' as const } : publicationStatus(site)
+  const activePane: WebsitePaneId = editor ?? 'overview'
   const handleEditorSaved = (definition: SiteDefinition) => {
-    setSite(definition)
-    setEditor(null)
-    setError(null)
-    setFeedback(definition.status === 'PUBLISHED'
-      ? 'Saved to the working site. Republish to change the public site.'
-      : 'Changes saved.')
+    setSite(definition); setError(null); setEditorDirty(false); setEditorSessionRevision((revision) => revision + 1)
+    setFeedback(definition.status === 'PUBLISHED' ? 'Saved. Republish to update the public site.' : 'Changes saved.')
   }
+  const publish = () => { if (!editorDirty) void run('publish', () => publishSite(tenantId), 'Unable to publish the website. Please try again.') }
+  const unpublish = () => void run('unpublish', () => unpublishSite(tenantId), 'Unable to unpublish the website. Please try again.')
+
   return (
-    <div className="w-full">
-      <div className="mb-5"><Badge tone={published ? 'success' : 'warning'}>Website: {site?.status}</Badge></div>
-      {editor === 'branding' && site ? (
-        <BrandingEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'theme' && site ? (
-        <ThemeEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'profile' && site ? (
-        <BusinessProfileEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'businessHours' && site ? (
-        <BusinessHoursEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'socialProfiles' && site ? (
-        <SocialProfilesEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'customCss' && site ? (
-        <CustomCssEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'hero' && site ? (
-        <HeroEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : editor === 'about' && site ? (
-        <AboutEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'services' && site ? (
-        <ServicesEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : editor === 'contact' && site ? (
-        <ContactEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : editor === 'gallery' && site ? (
-        <GalleryEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : editor === 'testimonials' && site ? (
-        <TestimonialsEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : editor === 'faq' && site ? (
-        <FaqEditor onCancel={() => setEditor(null)} onSaved={handleEditorSaved} site={site} tenantId={tenantId} />
-      ) : editor === 'composition' && site ? (
-        <SectionCompositionEditor
-          onCancel={() => setEditor(null)}
-          onSaved={handleEditorSaved}
-          site={site}
-          tenantId={tenantId}
-        />
-      ) : (
-        <div className="space-y-6">
-          <section aria-labelledby={`site-foundation-${tenantId}`}>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-foundation-${tenantId}`}>Site foundation</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('branding'); setError(null); setFeedback(null) }}>Branding</Button>
-          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('theme'); setError(null); setFeedback(null) }}>Theme</Button>
-          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('profile'); setError(null); setFeedback(null) }}>Business Profile</Button>
-          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('businessHours'); setError(null); setFeedback(null) }}>Business Hours</Button>
-          <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('socialProfiles'); setError(null); setFeedback(null) }}>Social Profiles</Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('composition')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            Manage Sections
-          </Button>
-            </div>
-          </section>
-          <section aria-labelledby={`site-advanced-${tenantId}`}>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-advanced-${tenantId}`}>Advanced</h2>
-            <Card className="flex flex-col gap-4 border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <h3 className="font-semibold text-fg">Custom CSS</h3>
-                <p className="mt-1 text-sm leading-6 text-fg-muted">Add scoped overrides for styling that is not available through Theme.</p>
-              </div>
-              <Button variant="secondary" disabled={Boolean(pending)} onClick={() => { setEditor('customCss'); setError(null); setFeedback(null) }}>Edit Custom CSS</Button>
-            </Card>
-          </section>
-          <section aria-labelledby={`site-content-${tenantId}`}>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-fg-subtle" id={`site-content-${tenantId}`}>Homepage content</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('hero')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            Edit Hero
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('about')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {about ? 'Edit About' : 'Add About'}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('services')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {services ? 'Edit Services' : 'Add Services'}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('gallery')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {gallery ? 'Edit Gallery' : 'Add Gallery'}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('testimonials')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {testimonials ? 'Edit Testimonials' : 'Add Testimonials'}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('faq')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {faq ? 'Edit FAQ' : 'Add FAQ'}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={Boolean(pending)}
-            onClick={() => {
-              setEditor('contact')
-              setError(null)
-              setFeedback(null)
-            }}
-          >
-            {contact ? 'Edit Contact' : 'Add Contact'}
-          </Button>
-            </div>
-          </section>
-          <Card className="sticky bottom-4 z-10 flex flex-col gap-4 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-semibold text-fg">Publishing</h2><p className="mt-1 text-sm text-fg-muted">{published ? 'Republish to send working changes live.' : 'Publish when the site is ready for visitors.'}</p></div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            disabled={Boolean(pending)}
-            onClick={handlePreview}
-            variant="secondary"
-          >
-            {pending === 'preview' ? 'Opening preview…' : 'Preview changes'}
-          </Button>
-          <Button
-            disabled={Boolean(pending)}
-            onClick={() => void run(
-              'publish',
-              () => publishSite(tenantId),
-              'Unable to publish the website. Please try again.'
-            )}
-          >
-            {pending === 'publish' ? 'Publishing…' : published ? 'Republish' : 'Publish'}
-          </Button>
-          {published && (
-            <Button
-              disabled={Boolean(pending)}
-              onClick={() => void run(
-                'unpublish',
-                () => unpublishSite(tenantId),
-                'Unable to unpublish the website. Please try again.'
-              )}
-              variant="secondary"
-            >
-              {pending === 'unpublish' ? 'Unpublishing…' : 'Unpublish'}
-            </Button>
-          )}
-            </div>
-          </Card>
+    <div className="w-full min-w-0">
+      <header className="mb-5 rounded-lg border border-border bg-surface p-4 shadow-xs sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0"><h2 className="text-xl font-semibold tracking-tight text-fg">Website</h2><Badge className="mt-2" tone={status.tone}>{status.label}</Badge></div>
+          <div className="flex flex-col items-end gap-2"><div className="flex flex-wrap gap-2"><Button aria-describedby={editorDirty ? 'dirty-preview-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={handlePreview} title={editorDirty ? 'Save or discard your changes before previewing.' : undefined} variant="secondary">{pending === 'preview' ? 'Opening preview…' : 'Preview changes'}</Button><Button aria-describedby={editorDirty ? 'dirty-publish-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={publish} title={editorDirty ? 'Save or discard your changes before publishing.' : undefined}>{pending === 'publish' ? 'Publishing…' : published ? 'Republish' : 'Publish'}</Button></div>{editorDirty && <div className="text-right text-xs text-fg-muted"><span id="dirty-preview-help">Save or discard your changes before previewing.</span> <span id="dirty-publish-help">Save or discard your changes before publishing.</span></div>}</div>
         </div>
-      )}
-      {error && <div className="mt-4"><StatusMessage tone="error">{error}</StatusMessage></div>}
-      {previewFallback && (
-        <div className="mt-4">
-          <StatusMessage>
-            Your browser blocked the preview tab.{' '}
-            <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a>
-          </StatusMessage>
-        </div>
-      )}
-      {feedback && <div className="mt-4"><StatusMessage tone="success">{feedback}</StatusMessage></div>}
+      </header>
+      {(error || previewFallback || feedback) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{feedback && <StatusMessage tone="success">{feedback}</StatusMessage>}</div>}
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
+        <WebsiteEditorNavigation active={activePane} onSelect={selectEditor} />
+        <main className="min-w-0">
+          {editor ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${editorSessionRevision}`} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onSaved={handleEditorSaved} site={site} tenantId={tenantId} /> : <WebsiteOverview domain={domain} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />}
+        </main>
+      </div>
+      <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description={`Your changes in ${editor ? websiteEditorById.get(editor)?.label ?? 'this editor' : 'this editor'} haven't been saved.`} onCancel={() => setPendingPane(null)} onConfirm={() => { const destination = pendingPane; setPendingPane(null); setEditorDirty(false); if (destination) navigateToEditor(destination) }} open={pendingPane !== null} title="Discard unsaved changes?" />
     </div>
   )
 }

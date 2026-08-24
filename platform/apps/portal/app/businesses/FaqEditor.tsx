@@ -2,9 +2,11 @@
 
 import { useRef, useState, type FormEvent } from 'react'
 import { findHomePage, isFaqSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, Input, StatusMessage, Textarea } from '@bakerrang/ui'
+import { Button, Field, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeFaq } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 interface EditorRow {
   key: string
@@ -18,25 +20,10 @@ export interface FaqEditorProps {
   site: SiteDefinition
   onCancel: () => void
   onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-function ArrowIcon ({ direction }: { direction: 'up' | 'down' }) {
-  return (
-    <svg aria-hidden className="size-5" fill="none" viewBox="0 0 20 20">
-      <path d={direction === 'up' ? 'm5 12.5 5-5 5 5' : 'm5 7.5 5 5 5-5'} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-    </svg>
-  )
-}
-
-function TrashIcon () {
-  return (
-    <svg aria-hidden className="size-5" fill="none" viewBox="0 0 20 20">
-      <path d="M4.5 6h11M8 3.75h4M6 6l.6 10.25h6.8L14 6M8.25 8.5v5M11.75 8.5v5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  )
-}
-
-export function FaqEditor ({ tenantId, site, onCancel, onSaved }: FaqEditorProps) {
+export function FaqEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: FaqEditorProps) {
   const faq = findHomePage(site)?.sections.find(isFaqSection)
   const nextKey = useRef(1)
   const [heading, setHeading] = useState(faq?.content.heading ?? 'Frequently Asked Questions')
@@ -96,11 +83,9 @@ export function FaqEditor ({ tenantId, site, onCancel, onSaved }: FaqEditorProps
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" noValidate onSubmit={(event) => void handleSubmit(event)}>
-      <label className="text-sm font-semibold text-fg" htmlFor={`faq-heading-${tenantId}`}>Heading</label>
-      <Input className="mt-2" disabled={saving} id={`faq-heading-${tenantId}`} maxLength={120} onChange={(event) => setHeading(event.target.value)} value={heading} />
-      <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`faq-intro-${tenantId}`}>Intro <span className="font-normal text-fg-subtle">Optional</span></label>
-      <Textarea className="mt-2" disabled={saving} id={`faq-intro-${tenantId}`} maxLength={300} onChange={(event) => setIntro(event.target.value)} rows={3} value={intro} />
+    <WebsiteEditorShell dirtyValue={{ heading: heading.trim(), intro: intro.trim(), items: rows.map(({ id, question, answer }) => ({ id, question: question.trim(), answer: answer.trim() })) }} editor="faq" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void handleSubmit(event)} saving={saving} width="wide">
+      <Field id={`faq-heading-${tenantId}`} label="Heading"><Input className="mt-2" disabled={saving} maxLength={120} onChange={(event) => setHeading(event.target.value)} value={heading} /></Field>
+      <Field className="mt-5" id={`faq-intro-${tenantId}`} label="Intro" optional><Textarea className="mt-2" disabled={saving} maxLength={300} onChange={(event) => setIntro(event.target.value)} rows={3} value={intro} /></Field>
 
       <div className="mt-6 space-y-4">
         {rows.map((row, index) => (
@@ -110,21 +95,12 @@ export function FaqEditor ({ tenantId, site, onCancel, onSaved }: FaqEditorProps
             <Input className="mt-2" id={`faq-question-${tenantId}-${row.key}`} maxLength={200} onChange={(event) => updateRow(row.key, { question: event.target.value })} value={row.question} />
             <label className="mt-4 block text-sm text-fg" htmlFor={`faq-answer-${tenantId}-${row.key}`}>Answer</label>
             <Textarea className="mt-2" id={`faq-answer-${tenantId}-${row.key}`} maxLength={1000} onChange={(event) => updateRow(row.key, { answer: event.target.value })} rows={5} value={row.answer} />
-            <div className="mt-3 flex flex-wrap justify-end gap-2">
-              <Button aria-label="Move question up" className="min-h-11 min-w-11 px-3" disabled={index === 0} onClick={() => moveRow(index, -1)} type="button" variant="secondary"><ArrowIcon direction="up" /></Button>
-              <Button aria-label="Move question down" className="min-h-11 min-w-11 px-3" disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} type="button" variant="secondary"><ArrowIcon direction="down" /></Button>
-              <Button aria-label="Remove question" className="min-h-11 min-w-11 px-3" disabled={rows.length === 1} onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} type="button" variant="danger"><TrashIcon /></Button>
-            </div>
+            <RowActions className="mt-3 justify-end" moveUp={{ label: 'Move FAQ item up', onClick: () => moveRow(index, -1), disabled: index === 0 }} moveDown={{ label: 'Move FAQ item down', onClick: () => moveRow(index, 1), disabled: index === rows.length - 1 }} remove={{ label: 'Remove FAQ item', onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)), disabled: rows.length === 1 }} />
           </fieldset>
         ))}
       </div>
 
       <Button className="mt-4" disabled={saving || rows.length >= 20} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, question: '', answer: '' }])} type="button" variant="secondary">Add Question</Button>
-      {error && <div className="mt-4"><StatusMessage tone="error">{error}</StatusMessage></div>}
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-        <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save FAQ'}</Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

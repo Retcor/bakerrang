@@ -2,9 +2,10 @@
 
 import { useState, type FormEvent } from 'react'
 import { findHomePage, isBusinessHoursSection, type BusinessHours, type DayHours, type SiteDefinition, type WeekdayKey } from '@bakerrang/site-schema'
-import { Button, ConfirmDialog, Input, Textarea } from '@bakerrang/ui'
+import { Button, ConfirmDialog, Field, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateBusinessHours } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 const weekdays: ReadonlyArray<{ key: WeekdayKey, label: string }> = [
   { key: 'monday', label: 'Monday' }, { key: 'tuesday', label: 'Tuesday' },
@@ -35,8 +36,9 @@ const canonicalWeek = (week: EditableWeek): BusinessHours => Object.fromEntries(
     : { open: week[key].open, close: week[key].close }])
 ) as unknown as BusinessHours
 
-export function BusinessHoursEditor ({ onCancel, onSaved, site, tenantId }: {
+export function BusinessHoursEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -94,9 +96,8 @@ export function BusinessHoursEditor ({ onCancel, onSaved, site, tenantId }: {
 
   return (
     <>
-      <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={submit}>
-        <h2 className="text-lg font-semibold text-fg">Business Hours</h2>
-        <p className="mt-2 text-sm leading-6 text-fg-muted">Set one local opening interval per day. These hours also power search-engine business data.</p>
+      <WebsiteEditorShell dirtyValue={{ businessHours: canonicalWeek(week), homepage: { enabled: homepageEnabled, heading: heading.trim(), intro: intro.trim() } }} editor="businessHours" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={submit} saving={saving} width="wide" secondaryActions={configured && <Button disabled={saving} onClick={() => setConfirmRemove(true)} type="button" variant="danger">Remove business hours</Button>}>
+        <p className="text-sm leading-6 text-fg-muted">Set the weekly schedule used across your site and in search results. You can also choose whether a separate Hours section appears on the homepage.</p>
         {!configured && <p className="mt-3 text-sm text-fg-muted">Weekday defaults are ready to edit and won&apos;t be saved until you choose Save.</p>}
 
         <div className="mt-5 space-y-3">
@@ -134,19 +135,14 @@ export function BusinessHoursEditor ({ onCancel, onSaved, site, tenantId }: {
           </label>
           {homepageEnabled && (
             <div className="mt-4 space-y-4">
-              <div><label className="text-sm font-semibold text-fg" htmlFor={`hours-heading-${tenantId}`}>Section heading <span className="font-normal text-fg-muted">Optional</span></label><Input className="mt-2" id={`hours-heading-${tenantId}`} maxLength={120} onChange={(event) => setHeading(event.target.value)} placeholder="Business Hours" value={heading} /></div>
-              <div><label className="text-sm font-semibold text-fg" htmlFor={`hours-intro-${tenantId}`}>Intro <span className="font-normal text-fg-muted">Optional</span></label><Textarea className="mt-2" id={`hours-intro-${tenantId}`} maxLength={300} onChange={(event) => setIntro(event.target.value)} value={intro} /></div>
+              <Field id={`hours-heading-${tenantId}`} label="Section heading" optional><Input className="mt-2" maxLength={120} onChange={(event) => setHeading(event.target.value)} placeholder="Business Hours" value={heading} /></Field>
+              <Field id={`hours-intro-${tenantId}`} label="Intro" optional><Textarea className="mt-2" maxLength={300} onChange={(event) => setIntro(event.target.value)} value={intro} /></Field>
             </div>
           )}
         </fieldset>
 
-        {error && <p className="mt-4 text-sm text-fg" role="alert">{error}</p>}
-        <div className="mt-5 flex flex-wrap justify-between gap-2">
-          <div>{configured && <Button disabled={saving} onClick={() => setConfirmRemove(true)} type="button" variant="danger">Remove business hours</Button>}</div>
-          <div className="flex flex-wrap gap-2"><Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Business Hours'}</Button></div>
-        </div>
-      </form>
-      <ConfirmDialog busy={saving} confirmLabel="Remove hours" description="This removes the canonical weekly schedule and its homepage section from the working site. Your published site will not change until you republish." onCancel={() => setConfirmRemove(false)} onConfirm={() => void save(null)} open={confirmRemove} title="Remove business hours?" />
+      </WebsiteEditorShell>
+      <ConfirmDialog busy={saving} confirmLabel="Remove hours" description="This removes the weekly schedule and the optional homepage Hours section from the working site. Your published site will not change until you republish." onCancel={() => setConfirmRemove(false)} onConfirm={() => void save(null)} open={confirmRemove} title="Remove business hours?" />
     </>
   )
 }

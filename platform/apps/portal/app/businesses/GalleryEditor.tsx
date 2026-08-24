@@ -6,6 +6,8 @@ import { Button, FileInput, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { upsertHomeGallery } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 interface GalleryRow {
   key: string
@@ -25,11 +27,12 @@ export interface GalleryEditorProps {
   site: SiteDefinition
   onCancel: () => void
   onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEditorProps) {
+export function GalleryEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: GalleryEditorProps) {
   const gallery = findHomePage(site)?.sections.find(isGallerySection)
   const fileInput = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(gallery?.content.title ?? 'Gallery')
@@ -157,7 +160,7 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
+    <WebsiteEditorShell dirtyValue={{ title: title.trim(), items: rows.map(({ id, mediaId, altText }) => ({ id, mediaId, altText: altText.trim() })) }} editor="gallery" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploadState === 'uploading'} saving={saving} width="wide">
       <label className="text-sm font-semibold text-fg" htmlFor={`gallery-title-${tenantId}`}>Section Heading</label>
       <Input className="mt-2" disabled={saving} id={`gallery-title-${tenantId}`} maxLength={100} onChange={(event) => setTitle(event.target.value)} value={title} />
 
@@ -210,22 +213,13 @@ export function GalleryEditor ({ tenantId, site, onCancel, onSaved }: GalleryEdi
               <div>
                 <label className="text-sm font-semibold text-fg" htmlFor={`gallery-alt-${tenantId}-${row.key}`}>Alt Text</label>
                 <Input className="mt-2" disabled={saving} id={`gallery-alt-${tenantId}-${row.key}`} maxLength={250} onChange={(event) => setRows((current) => current.map((item) => item.key === row.key ? { ...item, altText: event.target.value } : item))} value={row.altText} />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button disabled={saving || index === 0} onClick={() => move(index, -1)} size="sm" type="button" variant="secondary">Move Up</Button>
-                  <Button disabled={saving || index === rows.length - 1} onClick={() => move(index, 1)} size="sm" type="button" variant="secondary">Move Down</Button>
-                  <Button disabled={saving} onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
-                </div>
+                <RowActions className="mt-2" moveUp={{ label: 'Move gallery image up', onClick: () => move(index, -1), disabled: saving || index === 0 }} moveDown={{ label: 'Move gallery image down', onClick: () => move(index, 1), disabled: saving || index === rows.length - 1 }} remove={{ label: 'Remove gallery image', onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)), disabled: saving }} />
               </div>
             </li>
           ))}
         </ol>
       </section>
 
-      {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button disabled={saving || uploadState === 'uploading'} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-        <Button disabled={saving || uploadState === 'uploading'} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

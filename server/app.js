@@ -9,6 +9,7 @@ import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
 import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
 import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
+import { validateServerRuntimeConfig } from './config/runtimeConfig.js'
 
 import authRouter, { isAuthenticated } from './routes/auth.js'
 import chatgptRouter from './routes/chatgpt.js'
@@ -32,6 +33,8 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+validateServerRuntimeConfig()
 
 const app = express()
 
@@ -62,13 +65,6 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
-
-if (!process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET is not set. Refusing to start with an insecure session secret.')
-}
-if (process.env.NODE_ENV === 'production' && !process.env.PREVIEW_TOKEN_SECRET) {
-  throw new Error('PREVIEW_TOKEN_SECRET is not set. Refusing to start without preview signing.')
-}
 
 app.use(session({
   secret: process.env.SESSION_SECRET,

@@ -245,6 +245,10 @@ export interface BusinessProfile {
 
 export interface SiteDefinition {
   status: SiteStatus
+  /** Read-time publication signal derived from authoritative working timestamps. */
+  hasUnpublishedChanges?: boolean
+  /** Authoritative publication timestamp, represented as epoch milliseconds. */
+  lastPublishedAt?: number
   branding: SiteBranding
   theme: SiteTheme
   /** Canonical operator-authored CSS. Stored and published without selector rewriting. */

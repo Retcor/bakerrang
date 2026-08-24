@@ -1,5 +1,8 @@
 import type { NextConfig } from 'next'
 import path from 'node:path'
+import { validateRendererBuildConfig } from '../../scripts/config-validation.mjs'
+
+validateRendererBuildConfig()
 
 const nextConfig: NextConfig = {
   output: 'standalone',

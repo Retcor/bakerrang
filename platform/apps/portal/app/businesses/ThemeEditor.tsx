@@ -18,6 +18,7 @@ import {
   SITE_FONT_OPTIONS,
   themeColorContrast
 } from '../../lib/theme'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 const HEX = /^#[0-9a-f]{6}$/i
 const colorFields = [
@@ -25,8 +26,9 @@ const colorFields = [
 ] as const
 const fontFamily = (font: SiteFont) => SITE_FONT_OPTIONS.find((option) => option.value === font)?.family
 
-export function ThemeEditor ({ onCancel, onSaved, site, tenantId }: {
+export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -66,9 +68,8 @@ export function ThemeEditor ({ onCancel, onSaved, site, tenantId }: {
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
-      <h3 className="text-lg font-semibold text-fg">Website Theme</h3>
-      <p className="mt-2 text-sm leading-6 text-fg-muted">Save the Theme, then use Preview changes to review the actual website before republishing.</p>
+    <WebsiteEditorShell dirtyValue={theme} editor="theme" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} secondaryActions={<Button disabled={saving} onClick={() => { setTheme(DEFAULT_SITE_THEME); setError(null) }} type="button" variant="ghost">Reset to defaults</Button>}>
+      <p className="text-sm leading-6 text-fg-muted">Save, then use Preview to review the actual website before republishing.</p>
 
       <fieldset className="mt-6">
         <legend className="text-sm font-semibold text-fg">Colors</legend>
@@ -124,15 +125,7 @@ export function ThemeEditor ({ onCancel, onSaved, site, tenantId }: {
         }}>Primary action</span>
       </section>
 
-      {error && <p className="mt-3 text-sm text-danger-fg" role="alert">{error}</p>}
-      <div className="mt-6 flex flex-wrap justify-between gap-2">
-        <Button disabled={saving} onClick={() => { setTheme(DEFAULT_SITE_THEME); setError(null) }} type="button" variant="ghost">Reset to defaults</Button>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-          <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Theme'}</Button>
-        </div>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }
 

@@ -8,6 +8,7 @@ import {
   initializeSite,
   publishSite,
   unpublishSite,
+  updateSiteBranding,
   updateHomeHero,
   upsertHomeContact,
   upsertHomeServices
@@ -90,6 +91,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
 
   assert.deepEqual(site, {
     status: 'DRAFT',
+    hasUnpublishedChanges: false,
     branding: {
       siteName: 'Baker Street Cafe',
       primaryColor: '#334155',
@@ -170,16 +172,77 @@ test('publish creates a sanitized snapshot and persists publication audit metada
     'publishedByUserId',
     'siteDefinition'
   ])
-  assert.deepEqual(snapshot.siteDefinition, published)
-  assert.deepEqual(Object.keys(published), ['status', 'pages', 'branding', 'theme'])
+  assert.deepEqual(snapshot.siteDefinition, {
+    status: published.status,
+    pages: published.pages,
+    branding: published.branding,
+    theme: published.theme
+  })
+  assert.deepEqual(Object.keys(published), [
+    'status', 'hasUnpublishedChanges', 'lastPublishedAt', 'pages', 'branding', 'theme'
+  ])
   assert.deepEqual(Object.keys(published.pages[0]).sort(), ['id', 'sections', 'slug', 'title'])
   assert.equal(published.status, 'PUBLISHED')
+  assert.equal(published.hasUnpublishedChanges, false)
+  assert.equal(published.lastPublishedAt, snapshot.publishedAt)
+  assert.equal(Object.hasOwn(snapshot.siteDefinition, 'hasUnpublishedChanges'), false)
+  assert.equal(Object.hasOwn(snapshot.siteDefinition, 'lastPublishedAt'), false)
   assert.equal(snapshot.publishedByUserId, 'publisher')
   assert.equal(config.status, 'PUBLISHED')
   assert.equal(config.updatedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedByUserId, 'publisher')
   assert.notEqual(config.updatedAt, 1)
+})
+
+test('publication status follows config and home working timestamps across publish cycles', async () => {
+  const originalNow = Date.now
+  let now = 100
+  Date.now = () => now
+  try {
+    fakeDb.seed('tenants/tenant-1', { name: 'Version A' })
+    const draft = await initializeSite('tenant-1', 'admin')
+    assert.equal(draft.hasUnpublishedChanges, false)
+    assert.equal(Object.hasOwn(draft, 'lastPublishedAt'), false)
+
+    now = 200
+    const published = await publishSite('tenant-1', 'publisher')
+    assert.equal(published.status, 'PUBLISHED')
+    assert.equal(published.hasUnpublishedChanges, false)
+    assert.equal(published.lastPublishedAt, 200)
+
+    now = 300
+    const configEdit = await updateSiteBranding('tenant-1', { siteName: 'Version B' })
+    assert.equal(configEdit.hasUnpublishedChanges, true)
+    assert.equal(configEdit.lastPublishedAt, 200)
+
+    now = 400
+    const republished = await publishSite('tenant-1', 'republisher')
+    assert.equal(republished.hasUnpublishedChanges, false)
+    assert.equal(republished.lastPublishedAt, 400)
+
+    now = 500
+    const homeEdit = await updateHomeHero('tenant-1', { title: 'Version C' })
+    assert.equal(homeEdit.hasUnpublishedChanges, true)
+    assert.equal(homeEdit.lastPublishedAt, 400)
+  } finally {
+    Date.now = originalNow
+  }
+})
+
+test('published legacy data without a usable publication timestamp fails conservatively', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Legacy' })
+  await initializeSite('tenant-1', 'admin')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  const home = fakeDb.data('tenants/tenant-1/site/config/pages/home')
+  delete config.lastPublishedAt
+  fakeDb.seed('tenants/tenant-1/site/config', { ...config, status: 'PUBLISHED', updatedAt: 900 })
+  fakeDb.seed('tenants/tenant-1/site/config/pages/home', { ...home, updatedAt: 1000 })
+
+  const legacy = await getSite('tenant-1')
+  assert.equal(legacy.status, 'PUBLISHED')
+  assert.equal(legacy.hasUnpublishedChanges, false)
+  assert.equal(Object.hasOwn(legacy, 'lastPublishedAt'), false)
 })
 
 test('published snapshot isolates live content until an explicit republish', async () => {
@@ -219,6 +282,7 @@ test('preview always returns current working content labeled DRAFT', async () =>
 
   const preview = await getPublicSite('tenant-1', previewEnv)
   assert.equal(preview.status, 'DRAFT')
+  assert.equal(preview.hasUnpublishedChanges, false)
   assert.equal(preview.pages[0].sections[0].content.title, 'Version B')
 
   const strictPublished = await getPublishedSiteDefinition('tenant-1')

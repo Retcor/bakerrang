@@ -91,4 +91,13 @@ describe('AppShell mobile drawer', () => {
     expect(signIn.querySelector('[data-image-src="/google-g.svg"]')).toBeInTheDocument()
   })
 
+  it('lets the business workspace block surrounding navigation before the router follows it', () => {
+    navigation.pathname = '/businesses/tenant-1/website'
+    const request = vi.fn(() => false)
+    render(<AppShell contextNav={[{ href: '/businesses/tenant-1/leads', label: 'Leads' }]} onNavigateRequest={request}><h1>Website</h1></AppShell>)
+    const followed = fireEvent.click(screen.getByRole('link', { name: 'Leads' }))
+    expect(followed).toBe(false)
+    expect(request).toHaveBeenCalledWith('/businesses/tenant-1/leads')
+  })
+
 })

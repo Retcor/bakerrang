@@ -56,7 +56,7 @@ describe('About editor', () => {
     render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('')
     expect(screen.getByLabelText('Body')).toHaveValue('')
-    fireEvent.click(screen.getByRole('button', { name: 'Save About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Heading must be between 1 and 120 characters.')
     expect(mocks.upsertHomeAbout).not.toHaveBeenCalled()
     await waitFor(() => expect(mocks.getMedia).toHaveBeenCalledWith('tenant-1'))
@@ -69,7 +69,7 @@ describe('About editor', () => {
     expect(screen.getByLabelText('Heading')).toHaveValue('Our story')
     expect(screen.getByLabelText('Body')).toHaveValue('First.\n\nSecond.')
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Updated one.\n\nUpdated two.' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', {
       eyebrow: 'Who we are', heading: 'Our story', body: 'Updated one.\n\nUpdated two.'
     }))
@@ -84,10 +84,10 @@ describe('About editor', () => {
     const file = new File(['image'], 'team.jpg', { type: 'image/jpeg' })
     fireEvent.change(screen.getByLabelText('Choose image'), { target: { files: [file] } })
     await waitFor(() => expect(mocks.uploadMedia).toHaveBeenCalledWith('tenant-1', file))
-    fireEvent.click(screen.getByRole('button', { name: 'Save About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Image alt text is required')
     fireEvent.change(screen.getByLabelText('Image alt text'), { target: { value: 'The bakery team' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', {
       heading: 'Our team',
       body: 'Meet the people behind the work.',

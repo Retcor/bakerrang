@@ -5,6 +5,8 @@ import { findHomePage, isServicesSection, type SiteDefinition } from '@bakerrang
 import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { upsertHomeServices } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 interface EditorRow {
   key: string
@@ -18,9 +20,10 @@ export interface ServicesEditorProps {
   site: SiteDefinition
   onCancel: () => void
   onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function ServicesEditor ({ tenantId, site, onCancel, onSaved }: ServicesEditorProps) {
+export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
   const home = findHomePage(site)
   const services = home?.sections.find(isServicesSection)
   const nextKey = useRef(1)
@@ -73,7 +76,7 @@ export function ServicesEditor ({ tenantId, site, onCancel, onSaved }: ServicesE
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
+    <WebsiteEditorShell dirtyValue={{ title: title.trim(), items: rows.map(({ id, name, description }) => ({ id, name: name.trim(), description })) }} editor="services" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void handleSubmit(event)} saving={saving} width="wide">
       <label className="text-sm font-semibold text-fg" htmlFor={`services-title-${tenantId}`}>
         Section Heading
       </label>
@@ -87,17 +90,12 @@ export function ServicesEditor ({ tenantId, site, onCancel, onSaved }: ServicesE
             <Input className="mt-2" id={`service-name-${tenantId}-${row.key}`} maxLength={120} onChange={(event) => updateRow(row.key, { name: event.target.value })} value={row.name} />
             <label className="mt-4 block text-sm text-fg" htmlFor={`service-description-${tenantId}-${row.key}`}>Description</label>
             <Textarea className="mt-2 min-h-24" id={`service-description-${tenantId}-${row.key}`} maxLength={500} onChange={(event) => updateRow(row.key, { description: event.target.value })} value={row.description} />
-            <Button className="mt-3" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} size="sm" type="button" variant="secondary">Remove</Button>
+            <RowActions className="mt-3" remove={{ label: 'Remove service', onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)) }} />
           </fieldset>
         ))}
       </div>
 
       <Button className="mt-4" disabled={saving || rows.length >= 20} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, name: '', description: '' }])} size="sm" type="button" variant="secondary">Add Service</Button>
-      {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button disabled={saving} onClick={onCancel} type="button" variant="secondary">Cancel</Button>
-        <Button disabled={saving} type="submit">{saving ? 'Saving…' : 'Save Changes'}</Button>
-      </div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

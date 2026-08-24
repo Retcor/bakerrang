@@ -104,9 +104,27 @@ const siteSectionResponse = (section) => {
   }
 }
 
+const validTimestamp = (value) => Number.isSafeInteger(value) && value >= 0
+
+const publicationState = (config, home) => {
+  const lastPublishedAt = validTimestamp(config.lastPublishedAt) ? config.lastPublishedAt : undefined
+  if (config.status !== 'PUBLISHED' || lastPublishedAt === undefined) {
+    return {
+      hasUnpublishedChanges: false,
+      ...(lastPublishedAt !== undefined ? { lastPublishedAt } : {})
+    }
+  }
+  const workingTimestamps = [config.updatedAt, home.updatedAt].filter(validTimestamp)
+  return {
+    hasUnpublishedChanges: workingTimestamps.some((updatedAt) => updatedAt > lastPublishedAt),
+    lastPublishedAt
+  }
+}
+
 const toSiteDefinition = (config, home) => {
   const definition = {
     status: config.status,
+    ...publicationState(config, home),
     pages: [{
       id: home.id,
       slug: home.slug,
@@ -865,7 +883,7 @@ export const getPublicSite = async (tenantId, env = process.env) => {
   if (draftPreviewEnabled(env)) {
     try {
       const working = await getSite(tenantId)
-      return { ...working, status: 'DRAFT' }
+      return { ...working, status: 'DRAFT', hasUnpublishedChanges: false }
     } catch (error) {
       if (error.status === 404) throw httpError(404, 'Site not found')
       throw error
@@ -889,20 +907,28 @@ export const publishSite = async (tenantId, actorUserId) => {
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
 
-    const workingDefinition = toSiteDefinition(configSnapshot.data(), homeSnapshot.data())
-    publishedDefinition = { ...workingDefinition, status: 'PUBLISHED' }
-
-    transaction.set(refs.published, {
-      siteDefinition: publishedDefinition,
-      publishedAt: now,
-      publishedByUserId: actorUserId
-    })
-    transaction.set(refs.config, {
+    const config = configSnapshot.data()
+    const home = homeSnapshot.data()
+    const workingDefinition = toSiteDefinition(config, home)
+    const canonicalWorkingDefinition = { ...workingDefinition }
+    delete canonicalWorkingDefinition.hasUnpublishedChanges
+    delete canonicalWorkingDefinition.lastPublishedAt
+    const storedPublishedDefinition = { ...canonicalWorkingDefinition, status: 'PUBLISHED' }
+    const nextConfig = {
+      ...config,
       status: 'PUBLISHED',
       updatedAt: now,
       lastPublishedAt: now,
       lastPublishedByUserId: actorUserId
-    }, { merge: true })
+    }
+    publishedDefinition = toSiteDefinition(nextConfig, home)
+
+    transaction.set(refs.published, {
+      siteDefinition: storedPublishedDefinition,
+      publishedAt: now,
+      publishedByUserId: actorUserId
+    })
+    transaction.set(refs.config, nextConfig)
   })
 
   return finalizeSiteDefinitionRead(tenantId, publishedDefinition)
@@ -922,17 +948,16 @@ export const unpublishSite = async (tenantId, actorUserId) => {
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
 
-    draftDefinition = {
-      ...toSiteDefinition(configSnapshot.data(), homeSnapshot.data()),
-      status: 'DRAFT'
-    }
-
-    transaction.set(refs.config, {
+    const nextConfig = {
+      ...configSnapshot.data(),
       status: 'DRAFT',
       updatedAt: now,
       lastUnpublishedAt: now,
       lastUnpublishedByUserId: actorUserId
-    }, { merge: true })
+    }
+    draftDefinition = toSiteDefinition(nextConfig, homeSnapshot.data())
+
+    transaction.set(refs.config, nextConfig)
   })
 
   return finalizeSiteDefinitionRead(tenantId, draftDefinition)

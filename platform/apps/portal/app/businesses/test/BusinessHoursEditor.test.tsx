@@ -53,8 +53,8 @@ describe('Business Hours editor', () => {
     render(<BusinessHoursEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true, true)} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Monday opening time')).toHaveValue('08:00')
     expect(screen.getByRole('checkbox', { name: 'Show business hours on homepage' })).toBeChecked()
-    expect(screen.getByLabelText('Section heading Optional')).toHaveValue('Visit')
-    expect(screen.getByLabelText('Intro Optional')).toHaveValue('Come by.')
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Visit')
+    expect(screen.getByLabelText(/Intro/)).toHaveValue('Come by.')
   })
 
   it('toggles closed days and copies Monday only through Friday in local state', () => {
@@ -75,14 +75,14 @@ describe('Business Hours editor', () => {
     const onSaved = vi.fn()
     render(<BusinessHoursEditor onCancel={() => undefined} onSaved={onSaved} site={site()} tenantId="tenant-1" />)
     fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '08:00' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Business Hours' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Monday closing time must be later')
     expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
     fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '17:00' } })
     fireEvent.click(screen.getByRole('checkbox', { name: 'Show business hours on homepage' }))
-    fireEvent.change(screen.getByLabelText('Section heading Optional'), { target: { value: ' Our hours ' } })
-    fireEvent.change(screen.getByLabelText('Intro Optional'), { target: { value: ' Visit this week. ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Business Hours' }))
+    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: ' Our hours ' } })
+    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: ' Visit this week. ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateBusinessHours).toHaveBeenCalledWith('tenant-1', {
       businessHours: {
         monday: { open: '09:00', close: '17:00' }, tuesday: { open: '09:00', close: '17:00' },
@@ -107,7 +107,7 @@ describe('Business Hours editor', () => {
   it('appears in generic Manage Sections with the canonical readable label', () => {
     render(<SectionCompositionEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true, true)} tenantId="tenant-1" />)
     expect(screen.getByText('Business Hours')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Move Business Hours up' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove Business Hours' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move homepage section up' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove homepage section' })).toBeInTheDocument()
   })
 })

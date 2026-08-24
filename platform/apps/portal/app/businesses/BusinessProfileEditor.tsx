@@ -6,11 +6,13 @@ import { Button, FileInput, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { updateBusinessProfile } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 const blankAddress = { line1: '', line2: '', city: '', region: '', postalCode: '', country: '' }
 
-export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
+export function BusinessProfileEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -103,9 +105,8 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
   ] as const
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
-      <h3 className="text-lg font-semibold text-fg">Business Profile</h3>
-      <p className="mt-2 text-sm leading-6 text-fg-muted">These details may appear on your public website and in search-engine listings. Only enter information you want to be public.</p>
+    <WebsiteEditorShell dirtyValue={{ description, phone, email, address, serviceAreas: serviceAreas.map((area) => area.trim()).filter(Boolean), socialImageMediaId }} editor="businessProfile" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploading} saving={saving}>
+      <p className="text-sm leading-6 text-fg-muted">These details may appear on your public website and in search-engine listings. Only enter information you want to be public.</p>
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`profile-description-${tenantId}`}>Description</label>
       <Textarea className="mt-2" disabled={saving} id={`profile-description-${tenantId}`} maxLength={300} onChange={(event) => setDescription(event.target.value)} value={description} />
@@ -150,8 +151,6 @@ export function BusinessProfileEditor ({ onCancel, onSaved, site, tenantId }: {
         )}
       </section>
 
-      {error && <p className="mt-4 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Business Profile'}</Button></div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

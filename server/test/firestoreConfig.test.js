@@ -1,20 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  PRODUCTION_FIRESTORE_PROJECT_ID,
-  resolveFirestoreProject
-} from '../config/firestoreConfig.js'
+import { resolveFirestoreProject } from '../config/firestoreConfig.js'
 import { db } from '../client/firestoreClient.js'
 import { FirestoreSessionStore } from '../client/firestoreSessionStore.js'
 
-test('non-production requires an explicit Firestore project', () => {
+test('every environment requires an explicit Firestore project', () => {
+  for (const NODE_ENV of [undefined, 'development', 'test', 'production']) {
+    assert.throws(
+      () => resolveFirestoreProject({ NODE_ENV }),
+      /FIRESTORE_PROJECT_ID is required\. Set it explicitly/
+    )
+  }
   assert.throws(
-    () => resolveFirestoreProject({}),
-    /FIRESTORE_PROJECT_ID=bakerrang-dev/
-  )
-  assert.throws(
-    () => resolveFirestoreProject({ NODE_ENV: 'development' }),
-    /required outside production/
+    () => resolveFirestoreProject({ FIRESTORE_PROJECT_ID: '   ' }),
+    /FIRESTORE_PROJECT_ID is required/
   )
 })
 
@@ -25,19 +24,23 @@ test('explicit development project resolves to bakerrang-dev', () => {
   )
 })
 
-test('production without an override retains the existing project', () => {
-  assert.equal(
-    resolveFirestoreProject({ NODE_ENV: 'production' }),
-    PRODUCTION_FIRESTORE_PROJECT_ID
-  )
-  assert.equal(PRODUCTION_FIRESTORE_PROJECT_ID, 'avian-cable-379805')
-})
-
-test('production honors an explicit Firestore project override', () => {
+test('production honors an explicit Firestore project', () => {
   assert.equal(resolveFirestoreProject({
     NODE_ENV: 'production',
     FIRESTORE_PROJECT_ID: 'explicit-production-project'
   }), 'explicit-production-project')
+})
+
+test('Firestore project values are normalized without consulting discovery variables', () => {
+  assert.equal(resolveFirestoreProject({
+    FIRESTORE_PROJECT_ID: ' explicit-project ',
+    GOOGLE_CLOUD_PROJECT: 'discovered-project',
+    GCLOUD_PROJECT: 'legacy-project'
+  }), 'explicit-project')
+  assert.throws(
+    () => resolveFirestoreProject({ GOOGLE_CLOUD_PROJECT: 'discovered-project' }),
+    /FIRESTORE_PROJECT_ID is required/
+  )
 })
 
 test('session storage and application data use the same Firestore client', () => {

@@ -1,15 +1,27 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, type ReactNode } from 'react'
-import { Badge, Card, StatusMessage } from '@bakerrang/ui'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { Badge, Card, ConfirmDialog, StatusMessage } from '@bakerrang/ui'
 import { listBusinesses, type Business } from '../../lib/businesses'
 import { AppShell, type ContextNav } from '../_shell/AppShell'
 import { PageHeader } from '../_shell/PageHeader'
+import { BusinessNavigationGuardContext } from './BusinessNavigationGuard'
 
 export function BusinessWorkspace ({ children, description, tenantId, title }: { children: ReactNode, description: string, tenantId: string, title: string }) {
+  const router = useRouter()
   const [business, setBusiness] = useState<Business | null>(null)
   const [failed, setFailed] = useState(false)
+  const [websiteDirty, setWebsiteDirty] = useState(false)
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const reportDirty = useCallback((dirty: boolean) => setWebsiteDirty(dirty), [])
+  const requestNavigation = useCallback((href: string) => {
+    if (!websiteDirty) return true
+    setPendingHref(href)
+    return false
+  }, [websiteDirty])
+  const followLink = (event: MouseEvent<HTMLAnchorElement>, href: string) => { if (!requestNavigation(href)) event.preventDefault() }
   useEffect(() => {
     let cancelled = false
     void listBusinesses().then((items) => { if (!cancelled) setBusiness(items.find((item) => item.id === tenantId) ?? null) }).catch(() => { if (!cancelled) setFailed(true) })
@@ -23,12 +35,15 @@ export function BusinessWorkspace ({ children, description, tenantId, title }: {
     { href: `${base}/domain`, label: 'Domain' }
   ]
   return (
-    <AppShell contextNav={nav}>
-      <Link className="mb-5 inline-flex min-h-10 items-center text-sm font-semibold text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" href="/">← All businesses</Link>
-      <PageHeader description={description} eyebrow={business?.name ?? 'Business workspace'} title={title} actions={business && <Badge tone={business.status === 'ACTIVE' ? 'success' : 'neutral'}>{business.status}</Badge>} />
-      {failed && <StatusMessage tone="error">Business context could not be loaded. Workspace tools are still available.</StatusMessage>}
-      {children}
-    </AppShell>
+    <BusinessNavigationGuardContext.Provider value={reportDirty}>
+      <AppShell contextNav={nav} onNavigateRequest={requestNavigation}>
+        <Link className="mb-5 inline-flex min-h-10 items-center text-sm font-semibold text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" href="/" onClick={(event) => followLink(event, '/')}>← All businesses</Link>
+        <PageHeader description={description} eyebrow={business?.name ?? 'Business workspace'} title={title} actions={business && <Badge tone={business.status === 'ACTIVE' ? 'success' : 'neutral'}>{business.status}</Badge>} />
+        {failed && <StatusMessage tone="error">Business context could not be loaded. Workspace tools are still available.</StatusMessage>}
+        {children}
+        <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description="Your current website editor changes haven't been saved." onCancel={() => setPendingHref(null)} onConfirm={() => { const href = pendingHref; setPendingHref(null); setWebsiteDirty(false); if (href) router.push(href) }} open={pendingHref !== null} title="Discard unsaved changes?" />
+      </AppShell>
+    </BusinessNavigationGuardContext.Provider>
   )
 }
 

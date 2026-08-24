@@ -6,9 +6,11 @@ import { Button, FileInput, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { updateSiteBranding } from '../../lib/site'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
 
-export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
+export function BrandingEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -77,9 +79,8 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
   }
 
   return (
-    <form className="w-full rounded-lg border border-border bg-surface p-5 text-left shadow-xs sm:p-6" onSubmit={(event) => void submit(event)}>
-      <h3 className="text-lg font-semibold text-fg">Website Branding</h3>
-      <label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`site-name-${tenantId}`}>Site Name</label>
+    <WebsiteEditorShell dirtyValue={{ siteName: siteName.trim(), logoMediaId }} editor="branding" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploading} saving={saving}>
+      <label className="block text-sm font-semibold text-fg" htmlFor={`site-name-${tenantId}`}>Site Name</label>
       <Input className="mt-2" disabled={saving} id={`site-name-${tenantId}`} maxLength={80} onChange={(event) => setSiteName(event.target.value)} value={siteName} />
       <section className="mt-6" aria-labelledby={`logo-heading-${tenantId}`}>
         <h4 className="text-sm font-semibold text-fg" id={`logo-heading-${tenantId}`}>Logo (optional)</h4>
@@ -107,8 +108,6 @@ export function BrandingEditor ({ onCancel, onSaved, site, tenantId }: {
           </ul>
         )}
       </section>
-      {error && <p className="mt-3 text-sm text-fg" role="alert">{error}</p>}
-      <div className="mt-5 flex flex-wrap justify-end gap-2"><Button disabled={saving || uploading} onClick={onCancel} type="button" variant="secondary">Cancel</Button><Button disabled={saving || uploading} type="submit">{saving ? 'Saving…' : 'Save Branding'}</Button></div>
-    </form>
+    </WebsiteEditorShell>
   )
 }

@@ -37,8 +37,8 @@ describe('FAQ editor', () => {
     render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('Frequently Asked Questions')
     expect(screen.getAllByLabelText('Question')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Remove question' })).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: 'Save FAQ' }))
+    expect(screen.getByRole('button', { name: 'Remove FAQ item' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('at least one complete question and answer')
     expect(mocks.upsertHomeFaq).not.toHaveBeenCalled()
   })
@@ -46,17 +46,17 @@ describe('FAQ editor', () => {
   it('loads existing content and exposes accessible disabled ordering controls', () => {
     render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true)} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('Questions')
-    expect(screen.getByLabelText('Intro Optional')).toHaveValue('Start here.')
+    expect(screen.getByLabelText(/Intro/)).toHaveValue('Start here.')
     expect(screen.getAllByLabelText('Question')[0]).toHaveValue('First?')
-    expect(screen.getAllByRole('button', { name: 'Move question up' })[0]).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Move question down' })[1]).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Remove question' })[0]).toHaveClass('min-h-11')
+    expect(screen.getAllByRole('button', { name: 'Move FAQ item up' })[0]).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: 'Move FAQ item down' })[1]).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: 'Remove FAQ item' })[0]).toHaveClass('min-h-11')
   })
 
   it('adds, edits, removes, reorders, preserves persisted IDs, and saves canonical input', async () => {
     const onSaved = vi.fn()
     render(<FaqEditor onCancel={() => undefined} onSaved={onSaved} site={site(true)} tenantId="tenant-1" />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move question up' })[1])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Move FAQ item up' })[1])
     let groups = screen.getAllByRole('group')
     expect(within(groups[0]).getByLabelText('Question')).toHaveValue('Second?')
 
@@ -64,8 +64,8 @@ describe('FAQ editor', () => {
     groups = screen.getAllByRole('group')
     fireEvent.change(within(groups[2]).getByLabelText('Question'), { target: { value: 'Third?' } })
     fireEvent.change(within(groups[2]).getByLabelText('Answer'), { target: { value: 'Third answer.' } })
-    fireEvent.click(within(groups[1]).getByRole('button', { name: 'Remove question' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save FAQ' }))
+    fireEvent.click(within(groups[1]).getByRole('button', { name: 'Remove FAQ item' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(mocks.upsertHomeFaq).toHaveBeenCalledWith('tenant-1', {
       heading: 'Questions', intro: 'Start here.', items: [

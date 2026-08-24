@@ -34,7 +34,7 @@ describe('Custom CSS editor', () => {
     render(<CustomCssEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Custom CSS')).toHaveValue('')
     expect(screen.getByText('0 bytes / 20 KB')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save Custom CSS' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('loads only canonical raw CSS and never the derived scoped CSS', () => {
@@ -52,7 +52,7 @@ describe('Custom CSS editor', () => {
     const onSaved = vi.fn()
     render(<CustomCssEditor onCancel={() => undefined} onSaved={onSaved} site={site()} tenantId="tenant/one" />)
     fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: raw } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Custom CSS' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(mocks.updateCustomCss).toHaveBeenCalledWith('tenant/one', { customCss: raw }))
     expect(onSaved).toHaveBeenCalledWith(returned)
@@ -70,7 +70,7 @@ describe('Custom CSS editor', () => {
     expect(screen.getByText('Cleared locally. Save Custom CSS to remove it from Preview.')).toBeInTheDocument()
     expect(mocks.updateCustomCss).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save Custom CSS' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateCustomCss).toHaveBeenCalledWith('tenant-1', { customCss: null }))
   })
 
@@ -79,7 +79,7 @@ describe('Custom CSS editor', () => {
     mocks.updateCustomCss.mockRejectedValue(new ApiError(400, { error: 'Remote CSS resources are not allowed.' }))
     render(<CustomCssEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
     fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: raw } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Custom CSS' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Remote CSS resources are not allowed.')
     expect(screen.getByLabelText('Custom CSS')).toHaveValue(raw)
@@ -94,12 +94,12 @@ describe('Custom CSS editor', () => {
     render(<CustomCssEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
     fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: withinLimit } })
     expect(screen.getByText(`${CUSTOM_CSS_MAX_BYTES} bytes / 20 KB`)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save Custom CSS' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
 
     fireEvent.change(screen.getByLabelText('Custom CSS'), { target: { value: overLimit } })
     expect(screen.getByText(`${CUSTOM_CSS_MAX_BYTES + 2} bytes / 20 KB — Limit exceeded`)).toBeInTheDocument()
     expect(screen.getByText('Custom CSS exceeds the 20 KB UTF-8 limit. Reduce it before saving.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save Custom CSS' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('documents supported stable selectors and keeps long content contained', () => {
