@@ -1,0 +1,101 @@
+'use client'
+
+import { useRef, useState, type FormEvent } from 'react'
+import { findHomePage, isServicesSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { Button, Input, Textarea } from '@bakerrang/ui'
+import { ApiError } from '../../lib/api'
+import { upsertHomeServices } from '../../lib/site'
+import { RowActions } from './RowActions'
+import { WebsiteEditorShell } from './WebsiteEditorShell'
+
+interface EditorRow {
+  key: string
+  id?: string
+  name: string
+  description: string
+}
+
+export interface ServicesEditorProps {
+  tenantId: string
+  site: SiteDefinition
+  onCancel: () => void
+  onSaved: (site: SiteDefinition) => void
+  onDirtyChange?: (dirty: boolean) => void
+}
+
+export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
+  const home = findHomePage(site)
+  const services = home?.sections.find(isServicesSection)
+  const nextKey = useRef(1)
+  const [title, setTitle] = useState(services?.content.title ?? 'Services')
+  const [rows, setRows] = useState<EditorRow[]>(() => services
+    ? services.content.items.map((item) => ({
+      key: `existing-${item.id}`,
+      id: item.id,
+      name: item.name,
+      description: item.description ?? ''
+    }))
+    : [{ key: 'new-0', name: '', description: '' }])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const updateRow = (key: string, values: Partial<Pick<EditorRow, 'name' | 'description'>>) => {
+    setRows((current) => current.map((row) => row.key === key ? { ...row, ...values } : row))
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (saving) return
+
+    const trimmedTitle = title.trim()
+    if (!trimmedTitle) return setError('Section heading is required.')
+    if (trimmedTitle.length > 100) return setError('Section heading must be 100 characters or fewer.')
+    if (rows.length === 0) return setError('Add at least one service.')
+    if (rows.length > 20) return setError('Services cannot exceed 20 items.')
+    if (rows.some((row) => !row.name.trim())) return setError('Every service needs a name.')
+    if (rows.some((row) => row.name.trim().length > 120)) return setError('Service names must be 120 characters or fewer.')
+    if (rows.some((row) => row.description.length > 500)) return setError('Service descriptions must be 500 characters or fewer.')
+
+    setSaving(true)
+    setError(null)
+    try {
+      onSaved(await upsertHomeServices(tenantId, {
+        title: trimmedTitle,
+        items: rows.map(({ id, name, description }) => ({
+          ...(id ? { id } : {}),
+          name: name.trim(),
+          description
+        }))
+      }))
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save Services. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <WebsiteEditorShell dirtyValue={{ title: title.trim(), items: rows.map(({ id, name, description }) => ({ id, name: name.trim(), description })) }} editor="services" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void handleSubmit(event)} saving={saving} width="wide">
+      <label className="text-sm font-semibold text-fg" htmlFor={`services-title-${tenantId}`}>
+        Section Heading
+      </label>
+      <Input className="mt-2" disabled={saving} id={`services-title-${tenantId}`} maxLength={100} onChange={(event) => setTitle(event.target.value)} value={title} />
+
+      <div className="mt-5 space-y-4">
+        {rows.map((row, index) => (
+          <fieldset className="rounded-md border border-border p-4" disabled={saving} key={row.key}>
+            <legend className="px-1 text-sm font-semibold text-fg">Service {index + 1}</legend>
+            <label className="text-sm text-fg" htmlFor={`service-name-${tenantId}-${row.key}`}>Service Name</label>
+            <Input className="mt-2" id={`service-name-${tenantId}-${row.key}`} maxLength={120} onChange={(event) => updateRow(row.key, { name: event.target.value })} value={row.name} />
+            <label className="mt-4 block text-sm text-fg" htmlFor={`service-description-${tenantId}-${row.key}`}>Description</label>
+            <Textarea className="mt-2 min-h-24" id={`service-description-${tenantId}-${row.key}`} maxLength={500} onChange={(event) => updateRow(row.key, { description: event.target.value })} value={row.description} />
+            <RowActions className="mt-3" remove={{ label: 'Remove service', onClick: () => setRows((current) => current.filter((item) => item.key !== row.key)) }} />
+          </fieldset>
+        ))}
+      </div>
+
+      <Button className="mt-4" disabled={saving || rows.length >= 20} onClick={() => setRows((current) => [...current, { key: `new-${nextKey.current++}`, name: '', description: '' }])} size="sm" type="button" variant="secondary">Add Service</Button>
+    </WebsiteEditorShell>
+  )
+}

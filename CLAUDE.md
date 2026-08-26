@@ -9,6 +9,291 @@ Full-stack learning playground with React frontend and Express backend. Features
 - Google OAuth authentication
 - **Zero-knowledge Password Vault** (`/passwords`) — KeePass-style, client-side encrypted
 
+## Planning Docs — Marketing Site Platform (`docs/marketing-site/`)
+Planning/reference docs for extending BakerRang into a reusable multi-tenant platform for local
+businesses (public marketing sites built on the BakerRang API). A living folder — more docs will
+be added as the plan develops.
+- [Phase 0 — Architecture Review](docs/marketing-site/Step0-ArchitectureReview.md) — read-only
+  technical inventory of the existing system (backend, DB, auth, frontend, infra), reuse-capability
+  table, multi-tenant readiness assessment, risks, and open questions for the platform architect.
+  The baseline the other planning docs build on. **Note:** its GKE references are stale — the apps
+  run on **Cloud Run** (see Phase 1).
+- [Phase 1 — Architecture Validation](docs/marketing-site/Step1-ArchitectureValidation.md) —
+  validates the agreed platform design (path-based Firestore tenancy; `platform/` Next.js+TS
+  workspace with `apps/portal` + `apps/site-renderer` and `packages/{ui,site-components,site-schema}`;
+  PLATFORM_ADMIN + tenant OWNER/ADMIN/STAFF roles) against the actual repo. Verdict: **APPROVE WITH
+  CHANGES**. Key constraints: read roles/membership fresh from Firestore (never the 1-week session
+  snapshot); keep the portal under `*.bakerrang.com` for the `SameSite=lax` session cookie; make the
+  OAuth post-login redirect return-to-aware; reuse the existing `users` collection; root npm
+  workspaces at `platform/`. Smallest first change = Tenant + Membership + authz middleware only.
+- [Step 1.2 — Tenant Foundation Implementation Plan](docs/marketing-site/Step1.2-TenantFoundation-ImplementationPlan.md)
+  — Codex-ready backend plan for Tenant + Membership + authorization. Adds `services/tenantService.js`,
+  `middleware/tenantAuth.js` (`requirePlatformAdmin` / `requireTenantRole`, both reading Firestore
+  fresh — never the session; PLATFORM_ADMIN bypasses tenant checks), `routes/tenants.js` (mounted
+  `/tenants`), plus `node:test` suites (zero new deps). Modifies `app.js` (mount), `security.js`
+  (`tenantLimiter`), and hardens `authService.checkAndStoreUser` to a merge-write so login sync can
+  never erase `platformRole`. Firestore shapes: `tenants/{tenantId}` + `tenants/{tenantId}/members/{userId}`.
+  Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.4 — Platform Workspace Scaffold Implementation Plan](docs/marketing-site/Step1.4-PlatformWorkspaceScaffold-ImplementationPlan.md)
+  — Codex-ready plan to scaffold the isolated `platform/` npm-workspaces frontend: apps
+  `@bakerrang/{portal,site-renderer}` (Next.js 15 App Router + React 19 + TS) and packages
+  `@bakerrang/{ui,site-components,site-schema}`. Scaffold-only proof (portal imports a `ui` Button;
+  site-renderer renders `Hero` from site-components, which uses `ui` primitives + a minimal
+  `HeroContent` type from site-schema). Tailwind v4 CSS-variable tokens (neutral, no gold/black);
+  Next `transpilePackages` for the raw-TS packages; zero changes outside `platform/` (own
+  `.gitignore`, no repo-root `package.json`). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.5 — Portal Authentication Implementation Plan](docs/marketing-site/Step1.5-PortalAuthentication-ImplementationPlan.md)
+  — Codex-ready plan to authenticate `apps/portal` against the existing Express/Passport/Google-OAuth/
+  Firestore-session API (no new auth system). Server: symbolic OAuth `?target=client|portal` remembered
+  in the Express session and consumed+cleared in the callback (invalid → 400; never redirects to a raw
+  query URL) via new `config/oauthTargets.js`; add `PORTAL_DOMAIN` to CORS via new `config/origins.js`;
+  `node:test` suites reuse the Step 1.2 harness. Portal: tiny client `AuthProvider`
+  (LOADING/ANONYMOUS/AUTHENTICATED) hitting `GET /auth/check` with `credentials:'include'`; login =
+  full navigation to `${NEXT_PUBLIC_API_BASE_URL}/auth/google?target=portal`; **logout is a CSRF-free
+  GET** `/auth/logout`. No cookie-domain broadening (portal↔API stay same-site under `sameSite:lax`);
+  no Firestore/roles in portal state. Nested app `AGENTS.md`/`CLAUDE.md` are Next-generated boilerplate
+  (no conflict). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.5.5B — Development Firestore Isolation Implementation Plan](docs/marketing-site/Step1.5.5B-DevFirestoreIsolation-ImplementationPlan.md)
+  — Codex-ready plan to make **local** dev use a separate GCP project (`bakerrang-dev`, `(default)` db)
+  so it can never touch production Firestore. There is exactly one `new Firestore(...)`
+  (`server/client/firestoreClient.js`) and the session store **shares** it, so one env-aware change
+  redirects all app data **and** sessions. Adds pure resolver `config/firestoreConfig.js`
+  (`resolveFirestoreProject`): explicit `FIRESTORE_PROJECT_ID` wins everywhere; **non-prod + missing →
+  fail fast at startup** (no ADC auto-discovery); **prod + missing → keeps today's hardcoded pin
+  `avian-cable-379805`** (production unchanged — Option A, since prod currently depends on the hardcoded
+  id, not discovery). One-time startup log names the project; `node:test` via a `--import test/setup.js`
+  preload so existing suites don't trip the fail-fast. No `FIRESTORE_DATABASE_ID`, no data copy, no
+  index deploys (current flows use only automatic indexes). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.6 — Business Management Implementation Plan](docs/marketing-site/Step1.6-BusinessManagement-ImplementationPlan.md)
+  — Codex-ready plan for the portal's first feature: PLATFORM_ADMIN lists all tenants as "Businesses"
+  and creates one, over the **existing** `GET`/`POST /tenants` (both `requirePlatformAdmin`) — **no
+  backend changes**. Adds a small shared portal API client `lib/api.ts` (`apiGet`/`apiSend` +
+  `ApiError`; centralizes `NEXT_PUBLIC_API_BASE_URL`, `credentials:'include'`, and CSRF-token
+  fetch/cache/single-403-retry mirroring the logout flow); `lib/businesses.ts`; and
+  `app/businesses/{BusinessManager,BusinessList,CreateBusinessForm}.tsx`. `GET /tenants → 403` is the
+  authorization boundary (portal never infers PLATFORM_ADMIN) → access-denied state. Only optional UI
+  addition = a generic `Input` primitive; no Card/Dialog. Verify via typecheck/lint/build + manual E2E
+  (no new FE test framework). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.7 — Site Definition Foundation Implementation Plan](docs/marketing-site/Step1.7-SiteDefinitionFoundation-ImplementationPlan.md)
+  — Codex-ready plan for a per-tenant **DRAFT site** (Home page + Hero section). New
+  `server/services/siteService.js` (`initializeSite`/`getSite`) using `runTransaction` (reads-before-writes,
+  duplicate-safe 409), two routes added to `createTenantRouter` — `POST /tenants/:id/site`
+  (`requirePlatformAdmin`, 201) and `GET /tenants/:id/site` (`requireTenantRole`, admin bypass). **⚠️
+  Firestore path correction:** the proposed `tenants/{id}/site/pages/home` is an invalid (odd-segment)
+  path; use sibling docs `tenants/{id}/site/config` + `tenants/{id}/site/home` (sections inline). Additive
+  `site-schema` types (`HeroSection`/`SiteSection`/`SitePage`/`SiteStatus`/`SiteDefinition`); response maps
+  to `SiteDefinition` with no Firestore metadata leaked. Portal gains `lib/site.ts` + a per-row
+  `BusinessWebsite` control (on-demand init/status, handles 409, no N+1, no tenant-API change) and a new
+  `@bakerrang/site-schema` dep + transpile. Existing fakeDb/`node:test` suffices (no emulator). Renderer
+  stays Firestore-free. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.8 — Public Site Rendering Foundation Implementation Plan](docs/marketing-site/Step1.8-PublicSiteRendering-ImplementationPlan.md)
+  — Codex-ready plan for the first public vertical slice: `Firestore → sanitized Express public API →
+  Next site-renderer`. Adds a **separate unauthenticated** router `routes/publicSites.js`
+  (`GET /public/sites/:tenantId`, own `publicSiteLimiter`, no auth inheritance) backed by
+  `siteService.getPublicSite` which **reuses `getSite`** (already sanitized: only `{status, pages[...]}`).
+  Fail-safe DRAFT gate via pure `config/publicSite.js` `draftPreviewEnabled` = explicit
+  `ALLOW_DRAFT_PUBLIC_SITES==='true'` **and** `NODE_ENV!=='production'` (production ceiling; hidden draft
+  and missing both → 404). Renderer: server-side `lib/api.ts` fetch (`SITE_API_BASE_URL`, **not**
+  NEXT_PUBLIC) with **`cache:'no-store'`** (Next 16 fetch is uncached by default — confirmed in installed
+  docs), dynamic route `app/site/[tenantId]/page.tsx` (**Next 16 async `params` Promise**), `SectionRenderer`
+  (hero→`Hero`, unknown→null), `notFound()` on 404. Renderer stays Firestore-free (only `SITE_API_BASE_URL`
+  + tenantId). ⚠️ No publish path yet, so dev must set `ALLOW_DRAFT_PUBLIC_SITES=true` to see anything.
+  Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.9 — Publishing & Site Lifecycle Implementation Plan](docs/marketing-site/Step1.9-PublishingSiteLifecycle-ImplementationPlan.md)
+  — Codex-ready plan for the **working-copy → published-snapshot** boundary (edits to working pages must
+  not change the live site until republish). Adds `siteService.publishSite`/`unpublishSite` +
+  `POST /tenants/:id/site/{publish,unpublish}` (`requirePlatformAdmin`). Snapshot doc
+  `tenants/{id}/site/config/published/current` = `{ siteDefinition (status forced PUBLISHED, sanitized),
+  publishedAt, publishedByUserId }` (valid 6-segment path; `published` is a 2nd subcollection of the
+  `config` doc). `getPublicSite` refactor: **normal traffic reads the snapshot** (status!==PUBLISHED or
+  missing snapshot → 404 fail-closed); **preview** (`draftPreviewEnabled`) returns the **working** copy.
+  Publish/republish always allowed (no 409); unpublish sets config DRAFT but **retains** the snapshot.
+  Portal `BusinessWebsite` becomes a Manage→GET lifecycle control (Initialize/Publish/Republish/Unpublish,
+  no N+1). fakeDb already supports the snapshot path + merge-in-transaction (no test-infra change);
+  load-bearing isolation test (A→publish→edit→still A→republish→B). Renderer + shared schema unchanged.
+  Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.10 — Hero Editor Implementation Plan](docs/marketing-site/Step1.10-HeroEditor-ImplementationPlan.md)
+  — Codex-ready plan for the **first working-site editor**: edit the Home Hero's `title`/`subtitle` only,
+  preserving the Step 1.9 snapshot boundary. Adds `siteService.updateHomeHero` +
+  `PATCH /tenants/:id/site/pages/home/sections/hero` (`requirePlatformAdmin`) inside the **existing**
+  tenant router (inherits `tenantLimiter`/`isAuthenticated`/global `csrfProtection` — PATCH is covered;
+  no new mount/wiring). Single transaction reads `config`+`home` only (**never touches
+  `published/current`**), finds the section by `id==='hero' && type==='hero'`, replaces it **in place** via
+  spreads so `ctaLabel`/`id`/`type`/`position`/`createdAt` survive, bumps `home.updatedAt` +
+  merge-`{updatedAt}` on config (**status untouched**). Server-authoritative validation: title required,
+  trimmed, 1..200; subtitle optional, trimmed, ≤500, **blank ⇒ deleted from content** (never stored `''`);
+  no HTML/rich content; `ctaLabel` never read from the body. **Shared schema + `site-components` +
+  `site-renderer` unchanged** (`subtitle`/`ctaLabel` already optional/conditional). Portal editor is
+  **inline** in `BusinessWebsite` (no new route), seeded from the already-loaded `SiteDefinition` (no
+  redundant GET, no persistent dirty-state), reusing `@bakerrang/ui` `Input`/`Button` (no new primitive);
+  PUBLISHED save message says *"Republish to change the public site."* Backend tests extend the existing
+  `siteService.test.js`/`tenantRoutes.test.js` (node:test + FakeDb, no emulator) incl. a mandatory
+  snapshot-isolation test (publish A → PATCH B → getSite=B, public=A, snapshot bytes unchanged → republish
+  → public=B). ⚠️ FakeDb buffers transaction writes, so reads-before-writes is mandatory. Verdict:
+  **READY FOR IMPLEMENTATION**.
+- [Step 1.11 — Services Section Implementation Plan](docs/marketing-site/Step1.11-ServicesSection-ImplementationPlan.md)
+  — Codex-ready plan for the **first reusable multi-item section** (`services`) on the Home page,
+  editable from Manage Website, isolated from `published/current` until Publish. Widens the shared
+  `SiteSection` union to `HeroSection | ServicesSection` (adds `ServiceItem`/`ServicesContent`), adds a
+  neutral `@bakerrang/site-components` `Services` (renders nothing on zero items) + `SectionRenderer`
+  `case 'services'`. Backend `siteService.upsertHomeServices` + **full-state**
+  `PUT /tenants/:id/site/pages/home/sections/services` (`requirePlatformAdmin`, existing router/CSRF/limiter).
+  Services stays **inline** in the working `home.sections` (no subcollections). One transaction reads
+  `config`+`home` only, requires Hero, **inserts services immediately after Hero** (`id:'services'`,
+  server-set, never from body) or replaces it **in place**; **server generates item ids via
+  `node:crypto.randomUUID`** (Node 24, no dep); items matched by id (spread-preserve unknown fields),
+  **omission ⇒ removal, request order ⇒ display order**, unknown/duplicate supplied id ⇒ 400. Validation:
+  title 1..100; 1..20 items; name 1..120; description ≤500 blank⇒absent; no HTML. Never touches
+  `published/current` → **publish snapshots it verbatim, no publish-code change**. Inline `ServicesEditor`
+  seeded from loaded `SiteDefinition` (temp React keys **never persisted/sent**); Add Services seeds
+  `title:'Services'` + one empty row, writes nothing until Save. ⚠️ Union-widening **breaks HeroEditor's
+  boolean-predicate `.find` narrowing** → must type-guard it. Full-state PUT design **APPROVED** (no CRUD
+  framework). Mandatory snapshot-isolation + ID round-trip tests (node:test + FakeDb). Verdict:
+  **READY FOR IMPLEMENTATION**.
+- [Step 1.12 — Section Editing Foundation (Consolidation) Implementation Plan](docs/marketing-site/Step1.12-SectionEditingFoundation-ImplementationPlan.md)
+  — **Behavior-preserving** refactor of the Hero (1.10) + Services (1.11) working-copy mechanics; no new
+  sections, no generic CMS, no route/API/data changes. Extracts a non-exported `mutateWorkingHome(tenantId,
+  transformSections)` in `siteService.js` that owns the transaction, `config`+`home` reads, 404/500 errors,
+  reads-before-writes, the `home`+`config.updatedAt` writes (**only** editor-owned field), and
+  `toSiteDefinition` mapping; the section mutator is a **pure `sections ⇒ sections`** transform with **no
+  Firestore/transaction/published handle** — so a content mutator structurally **cannot** touch
+  `published/current` or lifecycle fields (publish/unpublish keep sole `refs.published` access). `updateHomeHero`
+  keeps PATCH-subtitle semantics; `upsertHomeServices` keeps full-state PUT + the **reserved-identity corruption
+  scan verbatim** (must not weaken). Extract `requireHeroIndex` (2 callers). Add **runtime** guards
+  `isHeroSection`/`isServicesSection` + `getHomePage` to `@bakerrang/site-schema` (safe: ships raw `./src/index.ts`,
+  both apps `transpilePackages` it) and adopt in the 3 portal files (renderer/`SectionRenderer` unchanged;
+  `switch(type)` stays). **Zero new files.** Existing node:test/FakeDb suites are the regression contract (they
+  already prove the helper transitively); only optional new test = audit-field-preservation. Byte-compatible
+  persistence apart from `updatedAt`. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.13 — Contact / CTA Section Implementation Plan](docs/marketing-site/Step1.13-ContactCTASection-ImplementationPlan.md)
+  — Codex-ready plan for the **first section with a visitor action** (`contact`): a Home CTA with a
+  title/text/buttonLabel and a **discriminated `ContactAction` union** (`email`/`phone`/`url`), editable from
+  Manage Website, isolated from `published/current` until Publish. Widens `SiteSection` to add
+  `ContactSection` + `isContactSection`; adds a neutral `@bakerrang/site-components` `Contact` (renders a
+  styled **`<a>`**, not a Button — no `asChild` refactor) + `SectionRenderer` `case 'contact'`. Backend
+  `siteService.upsertHomeContact` + **full-state PUT** `/tenants/:id/site/pages/home/sections/contact`
+  (`requirePlatformAdmin`) reusing `mutateWorkingHome` (pure section transform; no publish handle). **PUT**
+  chosen on merits (editor owns whole Contact object; `action` is a wholesale replacement — reconstructed
+  `{type,value}`, arbitrary client keys dropped). Reserved-identity corruption scan like Services (`500 'Home
+  contact section invalid'`); **appended LAST** on first add, position preserved on edit. **URL policy:
+  absolute `http(s)` only** (`new URL` + protocol check; `javascript:`/`data:` rejected server-side; component
+  builds hrefs by `switch(type)`, external URLs get `target=_blank rel=noopener noreferrer`; no
+  `dangerouslySetInnerHTML`). Validation: title 1..150; text ≤500 blank⇒absent; buttonLabel 1..80; per-type
+  value checks. Neutral Add defaults (`Contact Us`), no fabricated claims, no write until Save. Discriminated
+  action union = clean extension point for a future `{type:'leadForm'}` (Step 1.14). Mandatory
+  snapshot-isolation + URL-scheme-rejection tests (node:test + FakeDb). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.14 — Lead Form + Secure Lead Capture Implementation Plan](docs/marketing-site/Step1.14-LeadCapture-ImplementationPlan.md)
+  — Codex-ready plan for the **first public conversion flow that creates tenant business data**: a valueless
+  `{type:'leadForm'}` `ContactAction` → dedicated public form page → **anonymous** `POST /public/sites/:tenantId/leads`
+  → `tenants/{tenantId}/leads/{leadId}` (`{name,email?,phone?,message,status:'NEW',source:'WEBSITE',createdAt,updatedAt}`,
+  server `randomUUID` id, structural ownership, **plaintext** tenant data — not vault-encrypted). No CRM UI.
+  **Eligibility = the PUBLISHED snapshot contains a `leadForm` Contact action** (not mere `status`, and **never**
+  preview — `getPublishedSiteDefinition` extracted from `getPublicSite`'s normal branch); every ineligible case →
+  fail-closed `404 'Site not found'`. Anonymous route needs **no CSRF/session** (`csrfProtection` already skips
+  unauthenticated; add `/public/` skip as hardening) but a **new route-level per-IP+tenant `publicLeadLimiter`**
+  (10/hr; `trust proxy:1` set — verify `req.ip` on Cloud Run). Leads = first non-`site` tenant domain → **own
+  `leadService.js` + `publicLeads.js`** (not in siteService). Email/phone validators **extracted** to
+  `server/validation/contactMethods.js` (now earned; siteService's `validateContactAction` refactored to use them,
+  behavior-preserving). Honeypot `website` field → **silent-accept-no-persist 201**. Response `201 {success:true}`
+  only. Shared `Contact` stays framework-light — gets a `leadFormHref` **prop** derived by the renderer (page →
+  SectionRenderer), so persisted content stays semantic (custom-domain-ready). `ContactEditor` gains a Lead Form
+  type (no value input). FakeDb-compatible (`doc(uuid).set`, no `.add`). Tests: lead validation/eligibility/
+  persistence + working-leadForm-but-published-non-leadForm denial + preview-doesn't-enable-writes. Sets up a future
+  authed Leads Inbox (Step 1.15) with no public-contract change. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.15 — Leads Inbox + Lead Detail Implementation Plan](docs/marketing-site/Step1.15-LeadsInbox-ImplementationPlan.md)
+  — Codex-ready plan for the **first authenticated reader of the Lead domain**: a **read-only** portal Leads
+  inbox + Lead detail over new `GET /tenants/:id/leads` and `GET /tenants/:id/leads/:leadId`
+  (`requireTenantRole(OWNER/ADMIN/STAFF)` + PLATFORM_ADMIN bypass — STAFF included). No mutations. Extends
+  `leadService.js` (`listTenantLeads`/`getTenantLead`; keeps `createPublicLead`). **Bounded query**
+  `orderBy('createdAt','desc').limit(51)` → 50 summaries + `hasMore` (single-field auto-index, no composite;
+  future `nextCursor`-ready). ⚠️ **FakeDb has zero query support** → add a minimal faithful `FakeQuery`
+  (`orderBy`+`limit`); **do not** degrade production to fetch-all-sort-in-Node. `LeadSummary` **excludes
+  `message`** (PII → detail only); responses built **field-by-field** (never raw-spread; malformed docs
+  sanitized, not skipped/fatal). **Tenant-existence check on list** so a PLATFORM_ADMIN hitting a missing
+  tenant gets 404, not a masquerading empty inbox; detail missing → `404 'Lead not found'`. `Cache-Control:
+  no-store` on both (via a small `noStore` middleware, not global). Portal: new `lib/leads.ts` (not
+  `lib/site.ts`) + lazy per-row `BusinessLeads.tsx` (Leads button → GET on click, **no N+1, no count badge**),
+  inline detail with Back (no modal/drawer/route). Public API stays **write-only** (no `GET /public/.../leads`).
+  Sets up Step 1.16 workflow (`PATCH` status; enum/optimistic-concurrency/notes decided **then**). Verdict:
+  **READY FOR IMPLEMENTATION**.
+- [Step 1.16 — Lead Workflow Foundation Implementation Plan](docs/marketing-site/Step1.16-LeadWorkflow-ImplementationPlan.md)
+  — Codex-ready plan for the **first authenticated tenant business-data mutation**: **status-only** Lead
+  workflow via new `PATCH /tenants/:id/leads/:leadId` (`requireTenantRole(OWNER/ADMIN/STAFF)` — STAFF
+  respond to leads). **Notes deferred to 1.17** (append-only subcollection = different pattern; don't
+  bundle). Status enum `NEW|CONTACTED|QUOTED|WON|LOST` (local-service-tuned; `QUOTED` over generic
+  `QUALIFIED`) in new `server/domain/leadStatus.js` (server authoritative; portal `lib/leads.ts` mirrors —
+  drift only affects dropdown, not safety). **Unrestricted valid transitions** (WON/LOST reopenable, no
+  workflow engine). **Optimistic concurrency**: caller sends `expectedUpdatedAt`; transaction reads →
+  verifies `updatedAt===expected` → merge-writes → else **409 'Lead has changed…'** (no last-write-wins).
+  ⚠️ **Same-ms fix**: `updatedAt = Math.max(Date.now(), prev+1)` so the token is strictly monotonic per
+  lead. **FakeDb needs no change** — `runTransaction` already has `get`+merge-`set` (buffered writes; no
+  `update` needed). Store `updatedByUserId` from **session** (`req.user.id`, never body) — cheap
+  accountability + seeds future audit; expose optional in `LeadDetail`. Audit events **deferred**.
+  `createdAt` frozen; existing `status:'NEW'` docs already valid (no migration). Response = sanitized
+  `detailFrom` (no raw spread); unknown request fields ignored; only status is client-mutable. Portal:
+  Save-Status control + 409 Refresh-Lead UX + local list-row patch (no refetch). `no-store` maintained;
+  public Lead API untouched. Tests incl. STAFF-allowed, stale-token 409, two-mutations-distinct-version.
+  Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.17 — Lead Notes Implementation Plan](docs/marketing-site/Step1.17-LeadNotes-ImplementationPlan.md)
+  — Codex-ready plan for **internal, append-only Lead notes** (read + create only, no edit/delete): new
+  `GET`/`POST /tenants/:id/leads/:leadId/notes` (`requireTenantRole(OWNER/ADMIN/STAFF)` — STAFF add notes).
+  Notes stay in `leadService.js` (subresource reuses tenant/lead existence + `firestore`/`_setDb`; not
+  unwieldy — no separate service). Doc `tenants/{tid}/leads/{leadId}/notes/{noteId}` = `{text, createdAt,
+  createdByUserId}` (structural ownership, no redundant ids). Server `randomUUID` id; **`createdByUserId`
+  from session `req.user.id`, never body**. Validation: text 1..2000, unknown fields dropped. **Load-bearing
+  invariant: creating a note writes ONLY the note doc — never the Lead — so `Lead.updatedAt` (the 1.16 status
+  concurrency token) is untouched and an open status editor stays valid** (tested: note-create → lead
+  unchanged → status PATCH with old token still succeeds). **Transactional create** (read tenant+lead → 404s
+  → write note) mirrors 1.16, closes TOCTOU; lead need only *exist*, not be well-formed (don't block
+  note-taking on a corrupt lead). List: `orderBy('createdAt','desc').limit(51)` → 50 newest + `hasMore`;
+  **API newest-first, UI reverses to oldest→newest** (new note appends at bottom). `noteFrom` sanitizer skips
+  malformed rows. Author display = **"You" vs "Team member"** from `useAuth().user.id` (zero fetches, no N+1,
+  no raw id; `createdByUserId` preserved for a future Activity feed). `no-store` on both; **FakeDb needs no
+  change** (orderBy/limit + tx get/set already present). Portal: extend `lib/leads.ts` + new isolated
+  `LeadNotes.tsx` (parallel fetch on select, own error state — 1.16 status UI untouched). Public API: no note
+  route. Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.18 — Media Foundation + Gallery Section Implementation Plan](docs/marketing-site/Step1.18-MediaFoundation-ImplementationPlan.md)
+  — Codex-ready plan for the **first tenant-owned binary media** + a Gallery section referencing it. **Upload
+  = API-streamed multipart** (portal → Express **multer**, already installed → GCS) — chosen over signed URLs
+  (server validates bytes; no `signBlob` IAM / browser→GCS CORS / finalize step). Add `@google-cloud/storage`
+  + `image-size` (not installed). **Public-read objects** in a private-but-public-read bucket (UBLA +
+  `allUsers:objectViewer`, **not listable**; opaque `tenants/{tid}/media/{uuid}` names, original filename
+  never in path). Media **immutable** (new upload = new mediaId; no overwrite), **no deletion in V1**. Firestore
+  `tenants/{tid}/media/{mediaId}` = `{originalFilename,objectName,contentType,sizeBytes,width,height,createdAt,
+  createdByUserId}`; no binary in Firestore. MIME allowlist jpeg/png/webp (reject svg/gif); validate **magic
+  bytes via `image-size`** (also yields w/h) + 10 MB multer cap. `MEDIA_BUCKET_NAME` **required everywhere,
+  fail-fast** (mirrors `resolveFirestoreProject`; new `config/mediaConfig.js`). Object-first→metadata→
+  cleanup-on-failure (bounded orphan, no janitor). Media + Gallery routes are **PLATFORM_ADMIN-only** (CMS not
+  broadened to STAFF). Gallery schema **provider-neutral**: persists `{id(server uuid),mediaId,altText?}`;
+  `src`/`width`/`height` are **public-only**, added by `getPublicSite` resolution (**batched `firestore.getAll`**,
+  read-time, internal metadata stripped) — so `publishSite`/`toSiteDefinition`/`mutateWorkingHome` stay
+  **section-agnostic** (Gallery snapshots verbatim). `upsertHomeGallery` PUT reuses `mutateWorkingHome` +
+  pre-validates media existence (safe outside the tx since media is immutable/non-deletable); reserved-identity
+  corruption scan; insert **before Contact / else append**; dup/foreign mediaId → 400. Shared `Gallery`
+  component = plain `<img>` responsive grid (no Next/Image → no `remotePatterns`; renders null on zero items).
+  **FakeDb gains `getAll`**; new `fakeStorage` `_setStorage` seam (no real GCS in tests). Mandatory
+  snapshot-isolation + cross-tenant + immutability tests. Manual GCP bucket/IAM setup documented as a **live-E2E
+  prerequisite** (not a build blocker). Verdict: **READY FOR IMPLEMENTATION**.
+- [Step 1.19 — Testimonials Section Implementation Plan](docs/marketing-site/Step1.19-Testimonials-ImplementationPlan.md)
+  — Codex-ready plan for a **manually-curated Testimonials** Home section — the **second multi-item text
+  section** (a Services twin). Recommends internal type **`testimonials`** (not "reviews" — avoids implying
+  verified third-party reviews; keeps a future provider-sourced `reviews` domain distinct), item =
+  **`{id, customerName, quote}`**, and **NO rating + NO media in V1** (a manual 5-star implies a fake review;
+  a name+quote is complete without a photo) — so it touches **zero media code** and Gallery/Media/Lead behavior
+  is provably unchanged. Mirrors the shipped Gallery/Services template: `validateTestimonialsInput` +
+  `upsertHomeTestimonials` via `mutateWorkingHome`; reserved-identity + stored-id corruption scans (→ `500 'Home
+  testimonials section invalid'`); full-state PUT `/tenants/:id/site/pages/home/sections/testimonials`
+  (`requirePlatformAdmin`); server `randomUUID` item ids (unknown/dup → 400); insert **before Contact / else
+  append** (lands after Gallery; add-order caveat → canonical ordering is 1.20). Because text sections pass
+  through `hydrateSiteMedia` verbatim, **no publish/media change**. Shared `Testimonials` component uses
+  `<figure><blockquote>…<figcaption>` (**not `<cite>`** for a person), renders null on zero valid items, skips
+  malformed items (read-time defense). Widen `SiteSection` + `isTestimonialsSection` (guards already used →
+  no narrowing breakage). Answer to §14/§40: **do NOT generalize the media hydrator** — a text section isn't a
+  media consumer, so no real duplication yet. **Appendix A** fully scopes an optional media/rating opt-in
+  (would justify renaming `requireGalleryMedia`→`requireTenantMedia`, generalizing `hydrateSiteMedia` to one
+  batched gallery+testimonial pass, and extracting a `MediaPicker`). Step 1.20 = section composition/ordering +
+  removal. Verdict: **READY FOR IMPLEMENTATION**.
+
 ## Password Vault + Security Hardening (2026-07)
 
 ### Zero-Knowledge Password Vault ✅

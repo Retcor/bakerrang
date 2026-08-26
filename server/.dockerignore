@@ -1,7 +1,8 @@
 node_modules
-npm-debug.log
-.git
-.DS_Store
 .env
 .env.*
-!.env.example
+test
+coverage
+.git
+.gitignore
+npm-debug.log*

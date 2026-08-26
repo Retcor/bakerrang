@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@bakerrang/ui/tokens.css";
+@import "@bakerrang/ui/tokens-portal.css";
+@source "../../../packages/ui/src";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-inter), Inter, Arial, Helvetica, sans-serif;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
