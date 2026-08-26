@@ -26,7 +26,7 @@ jobs:
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
     steps:
       - name: Check out PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -59,7 +59,7 @@ jobs:
         working-directory: server
     steps:
       - name: Check out PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -90,7 +90,7 @@ jobs:
       NEXT_PUBLIC_SITE_API_BASE_URL: https://api.ci.invalid
     steps:
       - name: Check out PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
