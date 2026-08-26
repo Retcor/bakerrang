@@ -69,41 +69,41 @@ router.post('/v1/voice', multipart.array('files', 3), async (req, res, next) => 
 
 router.put('/v1/voices', async (req, res, next) => {
   if (!req.body.voices || !Array.isArray(req.body.voices)) {
-    return res.status(400).json({ error: 'Invalid input, expected an array of voices.' });
+    return res.status(400).json({ error: 'Invalid input, expected an array of voices.' })
   }
 
   const results = await Promise.allSettled(req.body.voices.map(voice => {
-    return processVoiceUpdate(req.user.id, voice);
-  }));
+    return processVoiceUpdate(req.user.id, voice)
+  }))
 
-  const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
-  const successes = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+  const errors = results.filter(result => result.status === 'rejected').map(result => result.reason)
+  const successes = results.filter(result => result.status === 'fulfilled').map(result => result.value)
 
   if (errors.length > 0) {
-    console.error('Errors encountered:', errors);
+    console.error('Errors encountered:', errors)
   }
 
   res.json({
-    successes: successes,
+    successes,
     warnings: errors.length > 0 ? errors : undefined
-  });
-});
+  })
+})
 
 const processVoiceUpdate = async (userId, voice) => {
   if (!voice.id) {
-    throw new Error(`Voice record ${voice.name} is missing an identifier.`);
+    throw new Error(`Voice record ${voice.name} is missing an identifier.`)
   }
 
-  const canModify = await userCanAccess(userId, voice.id, 'voices');
+  const canModify = await userCanAccess(userId, voice.id, 'voices')
   if (!canModify) {
-    throw new Error(`Not authorized to access voice record ${voice.name}.`);
+    throw new Error(`Not authorized to access voice record ${voice.name}.`)
   }
 
   try {
-    return await postVoice(userId, voice);
+    return await postVoice(userId, voice)
   } catch (error) {
-    console.error(`Failed to process voice ${voice.name}:`, error);
-    throw error;
+    console.error(`Failed to process voice ${voice.name}:`, error)
+    throw error
   }
 }
 

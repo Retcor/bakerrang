@@ -8,7 +8,7 @@ const openai = new OpenAI({ apiKey: process.env.CHAT_GPT_API_KEY })
 let blizzardToken = null
 let blizzardTokenExpiry = 0
 
-async function getBlizzardToken() {
+async function getBlizzardToken () {
   if (blizzardToken && Date.now() < blizzardTokenExpiry) return blizzardToken
 
   const credentials = Buffer.from(
@@ -36,11 +36,11 @@ async function getBlizzardToken() {
   return blizzardToken
 }
 
-function realmSlug(realm) {
+function realmSlug (realm) {
   return realm.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '')
 }
 
-async function blizzardFetch(path, region, token, namespace = null) {
+async function blizzardFetch (path, region, token, namespace = null) {
   const ns = namespace || `profile-${region}`
   const url = `https://${region}.api.blizzard.com${path}?namespace=${ns}&locale=en_US`
   const res = await fetch(url, {
@@ -56,7 +56,7 @@ async function blizzardFetch(path, region, token, namespace = null) {
 
 // Simple in-process cache for static game data (rarely changes — 1 hour TTL)
 const staticCache = {}
-async function blizzardStaticFetch(path, region, token) {
+async function blizzardStaticFetch (path, region, token) {
   const key = `${region}:${path}`
   const cached = staticCache[key]
   if (cached && Date.now() < cached.expiry) return cached.data
@@ -67,19 +67,8 @@ async function blizzardStaticFetch(path, region, token) {
 
 // ─── Game data fetchers ──────────────────────────────────────────────────────
 
-// Fetch full details for a list of achievement IDs in parallel (batched)
-async function fetchAchievementDetails(ids, region, token) {
-  const unique = [...new Set(ids)]
-  const results = await Promise.all(
-    unique.map(id =>
-      blizzardStaticFetch(`/data/wow/achievement/${id}`, region, token).catch(() => null)
-    )
-  )
-  return results.filter(Boolean)
-}
-
 // Returns { expansionName, dungeons, raids } for the current expansion
-export async function getExpansionJournal(region = 'us') {
+export async function getExpansionJournal (region = 'us') {
   const token = await getBlizzardToken()
 
   // Fetch the expansion index to find the latest one
@@ -103,7 +92,7 @@ export async function getExpansionJournal(region = 'us') {
 }
 
 // Returns current M+ season info: season name + dungeon pool
-export async function getCurrentMythicSeason(region = 'us') {
+export async function getCurrentMythicSeason (region = 'us') {
   const token = await getBlizzardToken()
   const index = await blizzardStaticFetch('/data/wow/mythic-keystone/season/index', region, token)
   if (!index?.current_season?.id) return null
@@ -121,7 +110,7 @@ export async function getCurrentMythicSeason(region = 'us') {
 }
 
 // Returns all achievement categories + achievements with mount/title reward flags
-export async function getAchievementIndex(region = 'us') {
+export async function getAchievementIndex (region = 'us') {
   const token = await getBlizzardToken()
   const index = await blizzardStaticFetch('/data/wow/achievement-category/index', region, token)
   if (!index?.root_categories) return []
@@ -163,7 +152,7 @@ export async function getAchievementIndex(region = 'us') {
 // ─── Character data fetchers ─────────────────────────────────────────────────
 
 // Returns completed achievements for a character with timestamps
-export async function getCharacterAchievements(name, realm, region = 'us') {
+export async function getCharacterAchievements (name, realm, region = 'us') {
   const token = await getBlizzardToken()
   const slug = realmSlug(realm)
   const data = await blizzardFetch(
@@ -182,7 +171,7 @@ export async function getCharacterAchievements(name, realm, region = 'us') {
 }
 
 // Returns mounts collected by the character
-export async function getCharacterMounts(name, realm, region = 'us') {
+export async function getCharacterMounts (name, realm, region = 'us') {
   const token = await getBlizzardToken()
   const slug = realmSlug(realm)
   const data = await blizzardFetch(
@@ -201,14 +190,25 @@ const SLOT_ORDER = [
 ]
 
 const SLOT_LABELS = {
-  HEAD: 'Head', NECK: 'Neck', SHOULDER: 'Shoulders', BACK: 'Back',
-  CHEST: 'Chest', WRIST: 'Wrist', HANDS: 'Hands', WAIST: 'Waist',
-  LEGS: 'Legs', FEET: 'Feet', FINGER_1: 'Ring 1', FINGER_2: 'Ring 2',
-  TRINKET_1: 'Trinket 1', TRINKET_2: 'Trinket 2',
-  MAIN_HAND: 'Main Hand', OFF_HAND: 'Off Hand'
+  HEAD: 'Head',
+  NECK: 'Neck',
+  SHOULDER: 'Shoulders',
+  BACK: 'Back',
+  CHEST: 'Chest',
+  WRIST: 'Wrist',
+  HANDS: 'Hands',
+  WAIST: 'Waist',
+  LEGS: 'Legs',
+  FEET: 'Feet',
+  FINGER_1: 'Ring 1',
+  FINGER_2: 'Ring 2',
+  TRINKET_1: 'Trinket 1',
+  TRINKET_2: 'Trinket 2',
+  MAIN_HAND: 'Main Hand',
+  OFF_HAND: 'Off Hand'
 }
 
-function parseEquipment(equipData) {
+function parseEquipment (equipData) {
   if (!equipData?.equipped_items) return { slots: [], avgEquipped: 0 }
 
   const slots = equipData.equipped_items.map(item => ({
@@ -232,7 +232,7 @@ function parseEquipment(equipData) {
   return { slots, avgEquipped }
 }
 
-function parseSpecializations(specData) {
+function parseSpecializations (specData) {
   if (!specData?.specializations) return null
   const active = specData.specializations.find(s => s.specialization)
   if (!active) return null
@@ -242,7 +242,7 @@ function parseSpecializations(specData) {
   }
 }
 
-async function getRaiderIOData(region, realm, name) {
+async function getRaiderIOData (region, realm, name) {
   const fields = [
     'mythic_plus_scores_by_season:current',
     'raid_progression',
@@ -260,7 +260,7 @@ async function getRaiderIOData(region, realm, name) {
   }
 }
 
-export async function getCharacterData(name, realm, region = 'us') {
+export async function getCharacterData (name, realm, region = 'us') {
   const token = await getBlizzardToken()
   const slug = realmSlug(realm)
   const nameLower = name.toLowerCase()
@@ -301,9 +301,9 @@ export async function getCharacterData(name, realm, region = 'us') {
   // Raid progress
   const raidProgress = raiderIO?.raid_progression
     ? Object.entries(raiderIO.raid_progression).map(([raid, data]) => ({
-        raid,
-        summary: data.summary
-      }))
+      raid,
+      summary: data.summary
+    }))
     : []
 
   return {
@@ -325,7 +325,7 @@ export async function getCharacterData(name, realm, region = 'us') {
   }
 }
 
-function buildSystemPrompt(characterData) {
+function buildSystemPrompt (characterData) {
   const { name, realm, region, level, class: cls, race, spec, avgIlvl, equippedIlvl, slots, weakSlots, mPlusScore, recentRuns, raidProgress } = characterData
 
   const slotTable = slots.map(s => `  ${s.label.padEnd(12)} ${s.ilvl}`).join('\n')
@@ -378,7 +378,7 @@ When giving advice:
 - Keep responses concise and practical`
 }
 
-export async function streamWoWChat(message, characterData, history, userId, res) {
+export async function streamWoWChat (message, characterData, history, userId, res) {
   const region = (characterData.region || 'us').toLowerCase()
 
   const charKey = makeCharKey(characterData.region, characterData.realm, characterData.name)
