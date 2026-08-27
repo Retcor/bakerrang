@@ -74,6 +74,10 @@ jobs:
       - run: npm run lint
       - run: npm test
 
+      - name: Validate API Docker packaging
+        if: needs.changes.outputs.deploy_api == 'true'
+        run: docker build --tag bakerrang-api:pr-${{ github.event.pull_request.head.sha }} .
+
   platform-ci:
     name: Platform CI
     needs: changes
@@ -113,6 +117,25 @@ jobs:
       - name: Build Renderer
         if: needs.changes.outputs.renderer == 'true'
         run: npm run build -w @bakerrang/site-renderer
+
+      - name: Validate Portal Docker packaging
+        if: needs.changes.outputs.deploy_portal == 'true'
+        run: |
+          docker build \
+            --file apps/portal/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.ci.invalid \
+            --build-arg NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=https://sites.ci.invalid \
+            --tag bakerrang-portal:pr-${{ github.event.pull_request.head.sha }} \
+            .
+
+      - name: Validate Renderer Docker packaging
+        if: needs.changes.outputs.deploy_renderer == 'true'
+        run: |
+          docker build \
+            --file apps/site-renderer/Dockerfile \
+            --build-arg NEXT_PUBLIC_SITE_API_BASE_URL=https://api.ci.invalid \
+            --tag bakerrang-site-renderer:pr-${{ github.event.pull_request.head.sha }} \
+            .
 
   ci-passed:
     name: ci-passed

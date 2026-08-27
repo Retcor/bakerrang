@@ -1,0 +1,311 @@
+name: Reusable Cloud Run deployment
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Logical service (api, portal, or renderer)
+        required: true
+        type: string
+      environment:
+        description: GitHub Environment containing deployment variables
+        required: true
+        type: string
+      image_tag:
+        description: Immutable image tag for this source revision
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.service }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-${{ inputs.environment }}-${{ inputs.service }}
+      cancel-in-progress: false
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      DEPLOYER_SA: ${{ vars.GCP_DEPLOYER_SA }}
+      AR_REPOSITORY: ${{ vars.AR_REPOSITORY }}
+      API_SERVICE: ${{ vars.API_SERVICE }}
+      PORTAL_SERVICE: ${{ vars.PORTAL_SERVICE }}
+      RENDERER_SERVICE: ${{ vars.RENDERER_SERVICE }}
+      NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+      NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
+      NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
+      CUSTOM_DOMAIN_IPV4_ADDRESS: ${{ vars.CUSTOM_DOMAIN_IPV4_ADDRESS }}
+      CUSTOM_DOMAIN_CNAME_TARGET: ${{ vars.CUSTOM_DOMAIN_CNAME_TARGET }}
+      PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
+    steps:
+      - name: Check out triggering commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js for deployment policy
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Guard against a superseded deployment
+        id: stale
+        shell: bash
+        env:
+          SERVICE: ${{ inputs.service }}
+          TRIGGER_SHA: ${{ github.sha }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$IMAGE_TAG" != "git-$TRIGGER_SHA" ]]; then
+            echo "Image tag must be git-$TRIGGER_SHA, received $IMAGE_TAG." >&2
+            exit 1
+          fi
+          node --test scripts/ci/classify-changes.test.mjs scripts/ci/stale-deploy-guard.test.mjs
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          node scripts/ci/stale-deploy-guard.mjs \
+            --service "$SERVICE" \
+            --trigger-sha "$TRIGGER_SHA" \
+            --current-ref origin/main \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Summarize superseded deployment
+        if: steps.stale.outputs.should_deploy == 'false'
+        shell: bash
+        env:
+          CURRENT_SHA: ${{ steps.stale.outputs.current_sha }}
+        run: |
+          {
+            echo "### ${{ inputs.service }} DEV deployment"
+            echo
+            echo "Skipped — newer main commit affects this service."
+            echo
+            echo "Superseded by newer main commit \`$CURRENT_SHA\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Authenticate to Google Cloud
+        if: steps.stale.outputs.should_deploy == 'true'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - name: Set up Google Cloud CLI
+        if: steps.stale.outputs.should_deploy == 'true'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker authentication
+        if: steps.stale.outputs.should_deploy == 'true'
+        shell: bash
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Resolve service configuration
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: config
+        shell: bash
+        env:
+          LOGICAL_SERVICE: ${{ inputs.service }}
+        run: |
+          set -euo pipefail
+          for required in PROJECT REGION AR_REPOSITORY; do
+            if [[ -z "${!required:-}" ]]; then echo "Missing required GitHub Environment variable: $required" >&2; exit 1; fi
+          done
+          case "$LOGICAL_SERVICE" in
+            api)
+              service_name="$API_SERVICE"
+              image_name="api"
+              smoke_url="${NEXT_PUBLIC_API_BASE_URL%/}/health"
+              ;;
+            portal)
+              service_name="$PORTAL_SERVICE"
+              image_name="portal"
+              smoke_url="${PORTAL_BASE_URL%/}/"
+              ;;
+            renderer)
+              service_name="$RENDERER_SERVICE"
+              image_name="site-renderer"
+              smoke_url="${NEXT_PUBLIC_SITE_PREVIEW_ORIGIN%/}/robots.txt"
+              ;;
+            *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
+          esac
+          if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
+          if [[ ! "$smoke_url" =~ ^https:// ]]; then echo "Smoke URL is missing or is not HTTPS: $smoke_url" >&2; exit 1; fi
+          image_repository="${REGION}-docker.pkg.dev/${PROJECT}/${AR_REPOSITORY}/${image_name}"
+          echo "service_name=$service_name" >> "$GITHUB_OUTPUT"
+          echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
+          echo "image_repository=$image_repository" >> "$GITHUB_OUTPUT"
+          echo "smoke_url=$smoke_url" >> "$GITHUB_OUTPUT"
+
+      - name: Capture previous Cloud Run state
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: previous
+        shell: bash
+        env:
+          SERVICE_NAME: ${{ steps.config.outputs.service_name }}
+        run: |
+          set -euo pipefail
+          echo "revision=$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(status.latestReadyRevisionName)')" >> "$GITHUB_OUTPUT"
+          echo "image=$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(spec.template.spec.containers[0].image)')" >> "$GITHUB_OUTPUT"
+          echo "runtime_sa=$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(spec.template.spec.serviceAccountName)')" >> "$GITHUB_OUTPUT"
+
+      - name: Reuse or build immutable image
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: image
+        shell: bash
+        env:
+          LOGICAL_SERVICE: ${{ inputs.service }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_REPOSITORY: ${{ steps.config.outputs.image_repository }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tagged_image="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+          error_file="$RUNNER_TEMP/image-describe-error"
+          if digest="$(gcloud artifacts docker images describe "$tagged_image" --project "$PROJECT" --format='value(image_summary.digest)' 2>"$error_file")"; then
+            echo "Reusing existing write-once image tag $tagged_image"
+          else
+            if ! grep -Eqi 'NOT_FOUND|not found' "$error_file"; then
+              cat "$error_file" >&2
+              echo "Unable to safely determine whether $tagged_image already exists." >&2
+              exit 1
+            fi
+            common_args=(--label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.source=$SOURCE_URL" --tag "$tagged_image")
+            case "$LOGICAL_SERVICE" in
+              api)
+                docker build "${common_args[@]}" server
+                ;;
+              portal)
+                [[ -n "$NEXT_PUBLIC_API_BASE_URL" && -n "$NEXT_PUBLIC_SITE_PREVIEW_ORIGIN" && -n "$CUSTOM_DOMAIN_IPV4_ADDRESS" ]]
+                build_args=(
+                  --file platform/apps/portal/Dockerfile
+                  --build-arg "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+                  --build-arg "NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=$NEXT_PUBLIC_SITE_PREVIEW_ORIGIN"
+                  --build-arg "CUSTOM_DOMAIN_IPV4_ADDRESS=$CUSTOM_DOMAIN_IPV4_ADDRESS"
+                )
+                if [[ -n "$CUSTOM_DOMAIN_CNAME_TARGET" ]]; then
+                  build_args+=(--build-arg "CUSTOM_DOMAIN_CNAME_TARGET=$CUSTOM_DOMAIN_CNAME_TARGET")
+                fi
+                docker build "${common_args[@]}" "${build_args[@]}" platform
+                ;;
+              renderer)
+                [[ -n "$NEXT_PUBLIC_SITE_API_BASE_URL" ]]
+                docker build "${common_args[@]}" \
+                  --file platform/apps/site-renderer/Dockerfile \
+                  --build-arg "NEXT_PUBLIC_SITE_API_BASE_URL=$NEXT_PUBLIC_SITE_API_BASE_URL" \
+                  platform
+                ;;
+            esac
+            docker push "$tagged_image"
+            digest=""
+            for attempt in {1..6}; do
+              digest="$(gcloud artifacts docker images describe "$tagged_image" --project "$PROJECT" --format='value(image_summary.digest)' 2>/dev/null || true)"
+              [[ -n "$digest" ]] && break
+              sleep 5
+            done
+          fi
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "Artifact Registry returned an invalid or empty digest: $digest" >&2
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "image_with_digest=${IMAGE_REPOSITORY}@${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Cloud Run image
+        if: steps.stale.outputs.should_deploy == 'true'
+        shell: bash
+        env:
+          SERVICE_NAME: ${{ steps.config.outputs.service_name }}
+          IMAGE_WITH_DIGEST: ${{ steps.image.outputs.image_with_digest }}
+        run: |
+          gcloud run services update "$SERVICE_NAME" \
+            --image "$IMAGE_WITH_DIGEST" \
+            --project "$PROJECT" \
+            --region "$REGION" \
+            --quiet
+
+      - name: Verify ready revision, digest, and runtime identity
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: verify
+        shell: bash
+        env:
+          SERVICE_NAME: ${{ steps.config.outputs.service_name }}
+          EXPECTED_IMAGE: ${{ steps.image.outputs.image_with_digest }}
+          PREVIOUS_RUNTIME_SA: ${{ steps.previous.outputs.runtime_sa }}
+        run: |
+          set -euo pipefail
+          revision="$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(status.latestReadyRevisionName)')"
+          image="$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(spec.template.spec.containers[0].image)')"
+          runtime_sa="$(gcloud run services describe "$SERVICE_NAME" --project "$PROJECT" --region "$REGION" --format='value(spec.template.spec.serviceAccountName)')"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "runtime_sa=$runtime_sa" >> "$GITHUB_OUTPUT"
+          [[ -n "$revision" ]]
+          if [[ "$image" != "$EXPECTED_IMAGE" ]]; then echo "Deployed image mismatch: expected $EXPECTED_IMAGE, found $image" >&2; exit 1; fi
+          if [[ -z "$PREVIOUS_RUNTIME_SA" || "$runtime_sa" != "$PREVIOUS_RUNTIME_SA" ]]; then
+            echo "Runtime service account changed: before=$PREVIOUS_RUNTIME_SA after=$runtime_sa" >&2
+            exit 1
+          fi
+          echo "runtime_sa_unchanged=yes" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test stable DEV endpoint
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: smoke
+        shell: bash
+        env:
+          LOGICAL_SERVICE: ${{ inputs.service }}
+          SMOKE_URL: ${{ steps.config.outputs.smoke_url }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            body_file="$RUNNER_TEMP/smoke-body"
+            status="$(curl --silent --show-error --location --max-time 20 --output "$body_file" --write-out '%{http_code}' "$SMOKE_URL" || true)"
+            valid=false
+            if [[ "$status" == "200" ]]; then
+              case "$LOGICAL_SERVICE" in
+                api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
+                portal) valid=true ;;
+                renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
+              esac
+            fi
+            if [[ "$valid" == "true" ]]; then
+              echo "result=passed" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Smoke attempt $attempt failed with HTTP $status; retrying."
+            sleep 5
+          done
+          echo "Smoke test failed for $SMOKE_URL" >&2
+          exit 1
+
+      - name: Write deployment summary
+        if: always() && steps.stale.outputs.should_deploy == 'true'
+        shell: bash
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+          PREVIOUS_REVISION: ${{ steps.previous.outputs.revision }}
+          PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
+          NEW_REVISION: ${{ steps.verify.outputs.revision }}
+          RUNTIME_SA_UNCHANGED: ${{ steps.verify.outputs.runtime_sa_unchanged }}
+          SMOKE_RESULT: ${{ steps.smoke.outputs.result }}
+        run: |
+          {
+            echo "### ${{ inputs.service }} DEV deployment"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Service | \`${{ steps.config.outputs.service_name }}\` |"
+            echo "| Trigger SHA | \`${GITHUB_SHA}\` |"
+            echo "| Image digest | \`${DIGEST:-unavailable}\` |"
+            echo "| Previous revision | \`${PREVIOUS_REVISION:-unavailable}\` |"
+            echo "| Previous image | \`${PREVIOUS_IMAGE:-unavailable}\` |"
+            echo "| New ready revision | \`${NEW_REVISION:-unavailable}\` |"
+            echo "| Runtime SA unchanged | \`${RUNTIME_SA_UNCHANGED:-not verified}\` |"
+            echo "| Smoke | \`${SMOKE_RESULT:-failed or not reached}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

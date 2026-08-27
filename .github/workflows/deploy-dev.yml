@@ -1,0 +1,181 @@
+name: Deploy DEV
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Classify push changes
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_api: ${{ steps.classify.outputs.deploy_api }}
+      deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
+      deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
+    steps:
+      - name: Check out pushed commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Test change-classification policy
+        run: node --test scripts/ci/classify-changes.test.mjs
+
+      - name: Validate push ancestry and collect changed files
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
+            echo "The push before SHA is empty or all zeros; refusing to classify an invalid range." >&2
+            exit 1
+          fi
+          git cat-file -e "${BEFORE}^{commit}"
+          git cat-file -e "${AFTER}^{commit}"
+          if ! git merge-base --is-ancestor "$BEFORE" "$AFTER"; then
+            echo "$BEFORE is not an ancestor of $AFTER; refusing to classify non-linear history." >&2
+            exit 1
+          fi
+          git diff --name-only --diff-filter=ACDMRTUXB -z "$BEFORE..$AFTER" > "$RUNNER_TEMP/changed-files.z"
+
+      - name: Classify changed files
+        id: classify
+        run: node scripts/ci/classify-changes.mjs --input "$RUNNER_TEMP/changed-files.z" --github-output "$GITHUB_OUTPUT"
+
+  validate-api:
+    name: Validate API
+    needs: changes
+    if: needs.changes.outputs.deploy_api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  validate-platform:
+    name: Validate Platform
+    needs: changes
+    if: needs.changes.outputs.deploy_portal == 'true' || needs.changes.outputs.deploy_renderer == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  deploy-api:
+    name: Deploy API
+    needs: [changes, validate-api]
+    if: needs.changes.outputs.deploy_api == 'true' && needs.validate-api.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: api
+      environment: development
+      image_tag: git-${{ github.sha }}
+
+  deploy-portal:
+    name: Deploy Portal
+    needs: [changes, validate-platform]
+    if: needs.changes.outputs.deploy_portal == 'true' && needs.validate-platform.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: portal
+      environment: development
+      image_tag: git-${{ github.sha }}
+
+  deploy-renderer:
+    name: Deploy Renderer
+    needs: [changes, validate-platform]
+    if: needs.changes.outputs.deploy_renderer == 'true' && needs.validate-platform.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: renderer
+      environment: development
+      image_tag: git-${{ github.sha }}
+
+  dev-deploy-passed:
+    name: dev-deploy-passed
+    if: always()
+    needs:
+      - changes
+      - validate-api
+      - validate-platform
+      - deploy-api
+      - deploy-portal
+      - deploy-renderer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify affected validations and deployments
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          DEPLOY_API: ${{ needs.changes.outputs.deploy_api }}
+          DEPLOY_PORTAL: ${{ needs.changes.outputs.deploy_portal }}
+          DEPLOY_RENDERER: ${{ needs.changes.outputs.deploy_renderer }}
+          VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
+          VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
+          API_RESULT: ${{ needs.deploy-api.result }}
+          PORTAL_RESULT: ${{ needs.deploy-portal.result }}
+          RENDERER_RESULT: ${{ needs.deploy-renderer.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            echo "Push classification failed or did not complete: $CHANGES_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_API" == "true" && ( "$VALIDATE_API_RESULT" != "success" || "$API_RESULT" != "success" ) ]]; then
+            echo "Affected API validation/deployment did not succeed: validation=$VALIDATE_API_RESULT deployment=$API_RESULT" >&2
+            exit 1
+          fi
+          if [[ ( "$DEPLOY_PORTAL" == "true" || "$DEPLOY_RENDERER" == "true" ) && "$VALIDATE_PLATFORM_RESULT" != "success" ]]; then
+            echo "Affected Platform validation did not succeed: $VALIDATE_PLATFORM_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_PORTAL" == "true" && "$PORTAL_RESULT" != "success" ]]; then
+            echo "Affected Portal deployment did not succeed: $PORTAL_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_RENDERER" == "true" && "$RENDERER_RESULT" != "success" ]]; then
+            echo "Affected Renderer deployment did not succeed: $RENDERER_RESULT" >&2
+            exit 1
+          fi
+          echo "All affected DEV validations and deployments passed."
