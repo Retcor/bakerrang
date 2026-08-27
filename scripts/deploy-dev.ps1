@@ -9,6 +9,7 @@ $Region = 'us-west1'
 $ApiService = 'bakerrang-api-dev'
 $PortalService = 'bakerrang-portal-dev'
 $RendererService = 'bakerrang-site-renderer-dev'
+$ImageRegistry = 'us-west1-docker.pkg.dev/bakerrang-dev/bakerrang-dev'
 
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $ServerPath = Join-Path $RepositoryRoot 'server'
@@ -19,26 +20,6 @@ function Assert-NativeSuccess {
     if ($LASTEXITCODE -ne 0) {
         throw "$Operation failed with exit code $LASTEXITCODE."
     }
-}
-
-function Get-ImageRepository {
-    param([Parameter(Mandatory)][string]$Service)
-
-    $Current = (& gcloud run services describe $Service `
-        --project $Project `
-        --region $Region `
-        --format 'value(spec.template.spec.containers[0].image)' | Out-String).Trim()
-    Assert-NativeSuccess "Reading Cloud Run service $Service"
-
-    if ([string]::IsNullOrWhiteSpace($Current)) {
-        throw "Cloud Run service $Service returned no image reference."
-    }
-
-    $Repository = $Current -replace '(@sha256:[A-Fa-f0-9]+|:[^/:]+)$', ''
-    if ([string]::IsNullOrWhiteSpace($Repository) -or $Repository -eq $Current -or $Repository -notmatch '^[^/]+/.+/.+$') {
-        throw "Unable to derive an image repository from service $Service."
-    }
-    return $Repository
 }
 
 foreach ($RequiredPath in @(
@@ -53,9 +34,9 @@ foreach ($RequiredPath in @(
 
 Write-Host "Preparing BakerRang DEV images with tag: $Tag"
 
-$ApiImage = "$(Get-ImageRepository $ApiService):$Tag"
-$PortalImage = "$(Get-ImageRepository $PortalService):$Tag"
-$RendererImage = "$(Get-ImageRepository $RendererService):$Tag"
+$ApiImage = "$ImageRegistry/api:$Tag"
+$PortalImage = "$ImageRegistry/portal:$Tag"
+$RendererImage = "$ImageRegistry/site-renderer:$Tag"
 
 Write-Host "API image:      $ApiImage"
 Write-Host "Portal image:   $PortalImage"
