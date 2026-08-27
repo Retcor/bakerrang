@@ -6,3 +6,6 @@ coverage
 .git
 .gitignore
 npm-debug.log*
+
+# Generated temporary credentials from google-github-actions/auth
+gha-creds-*.json
