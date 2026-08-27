@@ -1,0 +1,144 @@
+name: PR CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.classify.outputs.api }}
+      portal: ${{ steps.classify.outputs.portal }}
+      renderer: ${{ steps.classify.outputs.renderer }}
+      deploy_api: ${{ steps.classify.outputs.deploy_api }}
+      deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
+      deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Test change-classification policy
+        run: node --test scripts/ci/classify-changes.test.mjs
+
+      - name: Collect changed files from PR base to head
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --name-only --diff-filter=ACDMRTUXB -z "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/changed-files.z"
+
+      - name: Classify changed files
+        id: classify
+        run: node scripts/ci/classify-changes.mjs --input "$RUNNER_TEMP/changed-files.z" --github-output "$GITHUB_OUTPUT"
+
+  api-ci:
+    name: API CI
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  platform-ci:
+    name: Platform CI
+    needs: changes
+    if: needs.changes.outputs.portal == 'true' || needs.changes.outputs.renderer == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    # Reserved .invalid origins are syntactically valid, non-secret, and cannot
+    # accidentally target a DEV or production environment.
+    env:
+      NEXT_PUBLIC_API_BASE_URL: https://api.ci.invalid
+      NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: https://sites.ci.invalid
+      NEXT_PUBLIC_SITE_API_BASE_URL: https://api.ci.invalid
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build Portal
+        if: needs.changes.outputs.portal == 'true'
+        run: npm run build -w @bakerrang/portal
+
+      - name: Build Renderer
+        if: needs.changes.outputs.renderer == 'true'
+        run: npm run build -w @bakerrang/site-renderer
+
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs:
+      - changes
+      - api-ci
+      - platform-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required CI jobs
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          API_RESULT: ${{ needs.api-ci.result }}
+          PLATFORM_RESULT: ${{ needs.platform-ci.result }}
+        run: |
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            echo "Change classification failed or did not complete: $CHANGES_RESULT"
+            exit 1
+          fi
+
+          for result in "$API_RESULT" "$PLATFORM_RESULT"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "A required service validation job failed or did not complete: $result"
+              exit 1
+            fi
+          done
+
+          echo "All affected-service validations passed."

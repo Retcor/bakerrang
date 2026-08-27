@@ -254,36 +254,6 @@ async function populateReputationFactions (region, force = false) {
   await storeGameChunks('reputationFactions', region, chunks)
 }
 
-async function populateItemSets (region, force = false) {
-  const lastUpdated = await getLastUpdated('itemSets', region)
-  if (!force && !isStale(lastUpdated)) {
-    console.log(`[WoW Game Data] itemSets (${region}) is fresh — skipping`)
-    return
-  }
-
-  console.log(`[WoW Game Data] Fetching item sets (${region})...`)
-  const sets = await getItemSets(region)
-  if (!sets.length) return
-
-  // One chunk per set for precise vector retrieval — asking about a specific set
-  // should pull exactly that set's chunk, not a giant list containing hundreds of sets.
-  const chunks = sets
-    .filter(s => s.effects.length > 0)
-    .map(s => {
-      const bonusLines = s.effects.map(e => `  ${e.pieces}-piece bonus: ${e.description}`)
-      const itemLine = s.items.length ? `Items: ${s.items.join(', ')}` : ''
-      return ['Item Set: ' + s.name, ...bonusLines, ...(itemLine ? [itemLine] : [])].join('\n')
-    })
-
-  if (!chunks.length) {
-    console.log(`[WoW Game Data] No item sets with bonus descriptions found (${region}) — skipping`)
-    return
-  }
-
-  await deleteGameChunks('itemSets', region)
-  await storeGameChunks('itemSets', region, chunks)
-}
-
 async function populateProfessions (region, force = false) {
   const lastUpdated = await getLastUpdated('professions', region)
   if (!force && !isStale(lastUpdated)) {
