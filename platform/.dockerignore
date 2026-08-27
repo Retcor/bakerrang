@@ -8,3 +8,6 @@
 **/.DS_Store
 **/Dockerfile
 .dockerignore
+
+# Generated temporary credentials from google-github-actions/auth
+gha-creds-*.json
