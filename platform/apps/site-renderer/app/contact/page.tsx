@@ -8,6 +8,7 @@ import { resolveRequestDomain } from '../../lib/domains'
 import { contactMetadata } from '../../lib/seo'
 
 const customContact = async () => {
+  // Test for CI/CD
   const domain = await resolveRequestDomain()
   if (!domain) return null
   const site = publishedSiteOrNull(await getPublishedSite(domain.tenantId))
