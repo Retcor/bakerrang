@@ -15,6 +15,11 @@ on:
         description: Immutable image tag for this source revision
         required: true
         type: string
+      smoke_via_service_url:
+        description: Smoke the deployed Cloud Run status.url instead of the stable public hostname
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   deploy:
@@ -69,7 +74,10 @@ jobs:
             echo "Image tag must be git-$TRIGGER_SHA, received $IMAGE_TAG." >&2
             exit 1
           fi
-          node --test scripts/ci/classify-changes.test.mjs scripts/ci/stale-deploy-guard.test.mjs
+          node --test \
+            scripts/ci/classify-changes.test.mjs \
+            scripts/ci/deployment-workflows.test.mjs \
+            scripts/ci/stale-deploy-guard.test.mjs
           git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
           node scripts/ci/stale-deploy-guard.mjs \
             --service "$SERVICE" \
@@ -114,6 +122,7 @@ jobs:
         shell: bash
         env:
           LOGICAL_SERVICE: ${{ inputs.service }}
+          SMOKE_VIA_SERVICE_URL: ${{ inputs.smoke_via_service_url }}
         run: |
           set -euo pipefail
           for required in PROJECT REGION AR_REPOSITORY; do
@@ -123,31 +132,39 @@ jobs:
             api)
               service_name="$API_SERVICE"
               image_name="api"
+              smoke_path="/health"
               smoke_url="${NEXT_PUBLIC_API_BASE_URL%/}/health"
               ;;
             portal)
               service_name="$PORTAL_SERVICE"
               image_name="portal"
+              smoke_path="/"
               smoke_url="${PORTAL_BASE_URL%/}/"
               ;;
             renderer)
               service_name="$RENDERER_SERVICE"
               image_name="site-renderer"
+              smoke_path="/robots.txt"
               smoke_url="${NEXT_PUBLIC_SITE_PREVIEW_ORIGIN%/}/robots.txt"
               ;;
             client)
               service_name="$CLIENT_SERVICE"
               image_name="client"
+              smoke_path="/"
               smoke_url="${CLIENT_BASE_URL%/}/"
               ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
-          if [[ ! "$smoke_url" =~ ^https:// ]]; then echo "Smoke URL is missing or is not HTTPS: $smoke_url" >&2; exit 1; fi
+          if [[ "$SMOKE_VIA_SERVICE_URL" != "true" && ! "$smoke_url" =~ ^https:// ]]; then
+            echo "Smoke URL is missing or is not HTTPS: $smoke_url" >&2
+            exit 1
+          fi
           image_repository="${REGION}-docker.pkg.dev/${PROJECT}/${AR_REPOSITORY}/${image_name}"
           echo "service_name=$service_name" >> "$GITHUB_OUTPUT"
           echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
           echo "image_repository=$image_repository" >> "$GITHUB_OUTPUT"
+          echo "smoke_path=$smoke_path" >> "$GITHUB_OUTPUT"
           echo "smoke_url=$smoke_url" >> "$GITHUB_OUTPUT"
 
       - name: Capture previous Cloud Run state
@@ -264,13 +281,39 @@ jobs:
           fi
           echo "runtime_sa_unchanged=yes" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test stable service endpoint
+      - name: Resolve smoke target
+        if: steps.stale.outputs.should_deploy == 'true'
+        id: smoke-target
+        shell: bash
+        env:
+          SERVICE_NAME: ${{ steps.config.outputs.service_name }}
+          SMOKE_PATH: ${{ steps.config.outputs.smoke_path }}
+          STABLE_SMOKE_URL: ${{ steps.config.outputs.smoke_url }}
+          SMOKE_VIA_SERVICE_URL: ${{ inputs.smoke_via_service_url }}
+        run: |
+          set -euo pipefail
+          if [[ "$SMOKE_VIA_SERVICE_URL" == "true" ]]; then
+            service_url="$(gcloud run services describe "$SERVICE_NAME" \
+              --project "$PROJECT" \
+              --region "$REGION" \
+              --format='value(status.url)')"
+            if [[ ! "$service_url" =~ ^https://[^[:space:]]+$ ]]; then
+              echo "Cloud Run status.url is missing or is not HTTPS: $service_url" >&2
+              exit 1
+            fi
+            smoke_url="${service_url%/}${SMOKE_PATH}"
+          else
+            smoke_url="$STABLE_SMOKE_URL"
+          fi
+          echo "smoke_url=$smoke_url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test service endpoint
         if: steps.stale.outputs.should_deploy == 'true'
         id: smoke
         shell: bash
         env:
           LOGICAL_SERVICE: ${{ inputs.service }}
-          SMOKE_URL: ${{ steps.config.outputs.smoke_url }}
+          SMOKE_URL: ${{ steps.smoke-target.outputs.smoke_url }}
         run: |
           set -euo pipefail
           for attempt in {1..12}; do

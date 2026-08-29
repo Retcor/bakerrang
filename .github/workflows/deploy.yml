@@ -45,6 +45,7 @@ jobs:
       service: ${{ inputs.service }}
       environment: production
       image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
 
   live-deploy-passed:
     name: live-deploy-passed
