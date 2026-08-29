@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import ContentWrapper from './ContentWrapper.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -13,13 +13,6 @@ const CATEGORY_COLORS = {
   debt: '#EF4444',
   utility: '#8B5CF6',
   payday: '#10B981'
-}
-
-const CATEGORY_BG = {
-  'one-time': 'bg-blue-500',
-  debt: 'bg-red-500',
-  utility: 'bg-purple-500',
-  payday: 'bg-emerald-500'
 }
 
 const CATEGORY_LIGHT_BG = {
@@ -364,7 +357,8 @@ const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
               )
             : (
               <FormField label='First Occurrence Date' isDark={isDark}>
-                <input type='date' value={startDate} onChange={e => setStartDate(e.target.value)}
+                <input
+                  type='date' value={startDate} onChange={e => setStartDate(e.target.value)}
                   className={inputClass}
                 />
               </FormField>
@@ -387,7 +381,8 @@ const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
 
       {category === 'one-time' && (
         <FormField label='Date' isDark={isDark}>
-          <input type='date' value={day} onChange={e => setDay(e.target.value)}
+          <input
+            type='date' value={day} onChange={e => setDay(e.target.value)}
             className={inputClass}
           />
         </FormField>
@@ -399,7 +394,8 @@ const ItemForm = ({ category, initial, onSave, isDark, paydays }) => {
             <TextInput value={balance} onChange={setBalance} placeholder='0.00' type='number' isDark={isDark} />
           </FormField>
           <FormField label='End Date (optional)' isDark={isDark}>
-            <input type='date' value={endDate} onChange={e => setEndDate(e.target.value)}
+            <input
+              type='date' value={endDate} onChange={e => setEndDate(e.target.value)}
               className={inputClass}
             />
           </FormField>
@@ -772,8 +768,10 @@ const Budget = () => {
                           ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
                       >
                         <span>Existing ({items.filter(i => i.category === activeTab).length})</span>
-                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
-                          className={`w-3.5 h-3.5 transition-transform duration-200 ${showExisting ? 'rotate-180' : ''}`}>
+                        <svg
+                          xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${showExisting ? 'rotate-180' : ''}`}
+                        >
                           <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
                         </svg>
                       </button>
@@ -806,8 +804,10 @@ const Budget = () => {
                           ${isDark ? 'text-theme-secondary-dark hover:text-theme-dark' : 'text-theme-secondary-light hover:text-theme-light'}`}
                       >
                         <span>Existing ({paydays.length})</span>
-                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
-                          className={`w-3.5 h-3.5 transition-transform duration-200 ${showExisting ? 'rotate-180' : ''}`}>
+                        <svg
+                          xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${showExisting ? 'rotate-180' : ''}`}
+                        >
                           <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
                         </svg>
                       </button>
@@ -856,8 +856,10 @@ const Budget = () => {
                 {/* Day headers */}
                 <div className='grid grid-cols-7'>
                   {DAY_NAMES.map(d => (
-                    <div key={d} className={`py-2 text-center text-xs font-semibold border-b border-r
-                      ${isDark ? 'border-white/5 text-theme-secondary-dark' : 'border-black/5 text-theme-secondary-light'}`}>
+                    <div
+                      key={d} className={`py-2 text-center text-xs font-semibold border-b border-r
+                      ${isDark ? 'border-white/5 text-theme-secondary-dark' : 'border-black/5 text-theme-secondary-light'}`}
+                    >
                       <span className='hidden sm:inline'>{d}</span>
                       <span className='sm:hidden'>{d[0]}</span>
                     </div>
@@ -911,7 +913,7 @@ const Budget = () => {
                     const leftover = group.payday.amount - groupTotal
                     const isExpanded = collapsedGroups.has(group.payday.id)
                     const ordinal = group.payday._day
-                      ? `${group.payday._day}${['st','nd','rd'][((group.payday._day + 90) % 100 - 10 + 9) % 9] || 'th'}`
+                      ? `${group.payday._day}${['st', 'nd', 'rd'][((group.payday._day + 90) % 100 - 10 + 9) % 9] || 'th'}`
                       : ''
                     return (
                       <div key={`${group.payday.id}-${gi}`} className={`rounded-xl overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
@@ -928,7 +930,8 @@ const Budget = () => {
                               {ordinal ? `${ordinal} — ` : ''}<span className={`font-medium ${leftover >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>${leftover.toFixed(2)}</span> left
                             </p>
                           </div>
-                          <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='2' stroke='currentColor'
                             className={`w-3 h-3 flex-shrink-0 ml-2 transition-transform duration-200 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'} ${isExpanded ? 'rotate-180' : ''}`}
                           >
                             <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
@@ -988,11 +991,11 @@ const Budget = () => {
                   <div className={`mt-4 pt-4 border-t space-y-1 ${isDark ? 'border-white/10' : 'border-black/10'}`}>
                     <div className='flex justify-between'>
                       <span className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Total Income</span>
-                      <span className={`text-xs font-semibold text-emerald-500`}>${totalIncome.toFixed(2)}</span>
+                      <span className='text-xs font-semibold text-emerald-500'>${totalIncome.toFixed(2)}</span>
                     </div>
                     <div className='flex justify-between'>
                       <span className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>Total Expenses</span>
-                      <span className={`text-xs font-semibold text-red-500`}>${totalExpenses.toFixed(2)}</span>
+                      <span className='text-xs font-semibold text-red-500'>${totalExpenses.toFixed(2)}</span>
                     </div>
                     <div className={`flex justify-between pt-1 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
                       <span className={`text-xs font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Net</span>

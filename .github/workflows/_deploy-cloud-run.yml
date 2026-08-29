@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, or renderer)
+        description: Logical service (api, portal, renderer, or client)
         required: true
         type: string
       environment:
@@ -36,12 +36,14 @@ jobs:
       API_SERVICE: ${{ vars.API_SERVICE }}
       PORTAL_SERVICE: ${{ vars.PORTAL_SERVICE }}
       RENDERER_SERVICE: ${{ vars.RENDERER_SERVICE }}
+      CLIENT_SERVICE: ${{ vars.CLIENT_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
       CUSTOM_DOMAIN_IPV4_ADDRESS: ${{ vars.CUSTOM_DOMAIN_IPV4_ADDRESS }}
       CUSTOM_DOMAIN_CNAME_TARGET: ${{ vars.CUSTOM_DOMAIN_CNAME_TARGET }}
       PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
+      CLIENT_BASE_URL: ${{ vars.CLIENT_BASE_URL }}
     steps:
       - name: Check out triggering commit
         uses: actions/checkout@v7
@@ -82,7 +84,7 @@ jobs:
           CURRENT_SHA: ${{ steps.stale.outputs.current_sha }}
         run: |
           {
-            echo "### ${{ inputs.service }} DEV deployment"
+            echo "### ${{ inputs.service }} ${{ inputs.environment }} deployment"
             echo
             echo "Skipped — newer main commit affects this service."
             echo
@@ -132,6 +134,11 @@ jobs:
               service_name="$RENDERER_SERVICE"
               image_name="site-renderer"
               smoke_url="${NEXT_PUBLIC_SITE_PREVIEW_ORIGIN%/}/robots.txt"
+              ;;
+            client)
+              service_name="$CLIENT_SERVICE"
+              image_name="client"
+              smoke_url="${CLIENT_BASE_URL%/}/"
               ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
@@ -201,6 +208,9 @@ jobs:
                   --build-arg "NEXT_PUBLIC_SITE_API_BASE_URL=$NEXT_PUBLIC_SITE_API_BASE_URL" \
                   platform
                 ;;
+              client)
+                docker build "${common_args[@]}" client
+                ;;
             esac
             docker push "$tagged_image"
             digest=""
@@ -254,7 +264,7 @@ jobs:
           fi
           echo "runtime_sa_unchanged=yes" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test stable DEV endpoint
+      - name: Smoke test stable service endpoint
         if: steps.stale.outputs.should_deploy == 'true'
         id: smoke
         shell: bash
@@ -272,6 +282,7 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
+                client) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then
@@ -296,7 +307,7 @@ jobs:
           SMOKE_RESULT: ${{ steps.smoke.outputs.result }}
         run: |
           {
-            echo "### ${{ inputs.service }} DEV deployment"
+            echo "### ${{ inputs.service }} ${{ inputs.environment }} deployment"
             echo
             echo "| Field | Value |"
             echo "|---|---|"

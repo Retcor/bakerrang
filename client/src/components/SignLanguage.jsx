@@ -63,7 +63,7 @@ const SignLanguage = () => {
     const drawingUtils = new DrawingUtils(ctx)
 
     const loop = () => {
-      animFrameRef.current = requestAnimationFrame(loop)
+      animFrameRef.current = window.requestAnimationFrame(loop)
       if (video.readyState < 2) return
 
       canvas.width = video.videoWidth
@@ -183,7 +183,7 @@ const SignLanguage = () => {
   }, [startLoop])
 
   const stopCamera = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    if (animFrameRef.current) window.cancelAnimationFrame(animFrameRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
     const canvas = canvasRef.current
@@ -196,7 +196,7 @@ const SignLanguage = () => {
 
   useEffect(() => {
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (animFrameRef.current) window.cancelAnimationFrame(animFrameRef.current)
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     }
   }, [])

@@ -1,0 +1,74 @@
+name: Deploy MAIN
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to deploy deliberately to MAIN/live
+        required: true
+        type: choice
+        options:
+          - api
+          - portal
+          - renderer
+          - client
+
+permissions:
+  contents: read
+
+jobs:
+  guard-main:
+    name: Require main branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Reject non-main dispatches
+        shell: bash
+        env:
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then
+            echo "Live deployments must be dispatched from refs/heads/main; received $DISPATCH_REF." >&2
+            exit 1
+          fi
+
+  deploy-selected-service:
+    name: Deploy selected service
+    needs: guard-main
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: ${{ inputs.service }}
+      environment: production
+      image_tag: git-${{ github.sha }}
+
+  live-deploy-passed:
+    name: live-deploy-passed
+    if: always()
+    needs:
+      - guard-main
+      - deploy-selected-service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify guard and selected deployment
+        shell: bash
+        env:
+          GUARD_RESULT: ${{ needs.guard-main.result }}
+          DEPLOY_RESULT: ${{ needs.deploy-selected-service.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$GUARD_RESULT" != "success" ]]; then
+            echo "Main-branch guard did not succeed: $GUARD_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_RESULT" != "success" ]]; then
+            echo "Selected live deployment did not succeed: $DEPLOY_RESULT" >&2
+            exit 1
+          fi
+          echo "Selected MAIN/live deployment passed."

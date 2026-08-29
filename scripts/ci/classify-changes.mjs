@@ -8,6 +8,7 @@ const BOTH_PLATFORM_SERVICES = ['portal', 'renderer']
 // workflows. Keep CI-only inputs distinct from deploy/build inputs.
 const PATH_RULES = [
   { prefix: 'server/', ci: ['api'], deploy: ['api'] },
+  { prefix: 'client/', ci: ['client'], deploy: ['client'] },
   { prefix: 'platform/apps/portal/', ci: ['portal'], deploy: ['portal'] },
   { prefix: 'platform/apps/site-renderer/', ci: ['renderer'], deploy: ['renderer'] },
   { prefix: 'platform/packages/site-schema/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
@@ -24,9 +25,8 @@ const PATH_RULES = [
   { exact: 'platform/.gitignore', ci: [], deploy: [] },
   { exact: 'platform/.nvmrc', ci: [], deploy: [] },
 
-  // Known repository areas outside API/Portal/Renderer CI and deployment.
+  // Known repository areas outside service CI and deployment.
   { prefix: 'docs/', ci: [], deploy: [] },
-  { prefix: 'client/', ci: [], deploy: [] },
   { prefix: 'extension/', ci: [], deploy: [] },
   { prefix: 'addon/', ci: [], deploy: [] },
   { prefix: '.github/', ci: [], deploy: [] },
@@ -73,12 +73,14 @@ export function classifyChanges (repositoryPaths) {
     ci: {
       api: ci.has('api'),
       portal: ci.has('portal'),
-      renderer: ci.has('renderer')
+      renderer: ci.has('renderer'),
+      client: ci.has('client')
     },
     deploy: {
       api: deploy.has('api'),
       portal: deploy.has('portal'),
-      renderer: deploy.has('renderer')
+      renderer: deploy.has('renderer'),
+      client: deploy.has('client')
     },
     unknown: unknown.sort()
   }
@@ -95,9 +97,11 @@ function writeGitHubOutputs (outputPath, result) {
     api: result.ci.api,
     portal: result.ci.portal,
     renderer: result.ci.renderer,
+    client: result.ci.client,
     deploy_api: result.deploy.api,
     deploy_portal: result.deploy.portal,
-    deploy_renderer: result.deploy.renderer
+    deploy_renderer: result.deploy.renderer,
+    deploy_client: result.deploy.client
   }
   fs.appendFileSync(outputPath, Object.entries(outputs).map(([name, value]) => `${name}=${value}\n`).join(''))
 }

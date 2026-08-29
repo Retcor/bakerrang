@@ -67,26 +67,6 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
     }
   }
 
-  const calculateModalPosition = (anchorEl) => {
-    const modalWidth = 192 // w-48 width used for modal
-    const viewportWidth = window.innerWidth
-    const buttonRect = anchorEl.getBoundingClientRect()
-    let right = null
-    let left = null
-
-    // Calculate space available on the right side
-    const buttonToScreenEdgeWidth = viewportWidth - buttonRect.right
-
-    // If there's not enough space on the right, position from the right edge
-    if (modalWidth > buttonToScreenEdgeWidth) {
-      right = 0 // Align to the right edge of the button
-    } else {
-      left = 0 // Default left alignment
-    }
-
-    return { right, left }
-  }
-
   const handlePlayButton = (event) => {
     event.stopPropagation()
     if (anchorEl) {
@@ -127,7 +107,7 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
   const open = Boolean(anchorEl)
 
   return (
-    <div className="relative">
+    <div className='relative'>
       <AudioStreamPlayer audioSrc={audioSrc} handleAudioEnded={handleAudioEnded} controlTrigger={controlTrigger} />
 
       {isPlaying
@@ -144,24 +124,24 @@ const AudioStreamPlayerSelector = ({ prompt }) => {
           </button>
           )
         : (
-            <button className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20 border border-white/20' : 'glass-light text-theme-light hover:bg-black/20 border border-black/20'}`} onClick={handlePlayButton}>
-              <svg
-                className='w-4 h-4 fill-current'
-                viewBox='0 0 24 24'
-                xmlns='http://www.w3.org/2000/svg'
-              >
-                <path d='M8 5v14l11-7z' />
-              </svg>
-              <span>Narrate</span>
-              <svg className='w-4 h-4 fill-current opacity-60' viewBox='0 0 24 24'>
-                <path d='M7 10l5 5 5-5z' />
-              </svg>
-            </button>
-            )}
+          <button className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2 ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20 border border-white/20' : 'glass-light text-theme-light hover:bg-black/20 border border-black/20'}`} onClick={handlePlayButton}>
+            <svg
+              className='w-4 h-4 fill-current'
+              viewBox='0 0 24 24'
+              xmlns='http://www.w3.org/2000/svg'
+            >
+              <path d='M8 5v14l11-7z' />
+            </svg>
+            <span>Narrate</span>
+            <svg className='w-4 h-4 fill-current opacity-60' viewBox='0 0 24 24'>
+              <path d='M7 10l5 5 5-5z' />
+            </svg>
+          </button>
+          )}
       {open && (
         <div ref={playModalRef} className='absolute right-0 top-full mt-2 z-50'>
           <div className={`shadow-xl py-2 rounded-xl w-48 font-medium transition-all duration-200 ${isDark ? 'glass-dropdown-dark' : 'glass-dropdown-light'}`}>
-            <ul className="space-y-1 px-2">
+            <ul className='space-y-1 px-2'>
               {voices.map((voice) => (
                 <li
                   key={voice.id}

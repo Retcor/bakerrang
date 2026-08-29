@@ -40,6 +40,14 @@ test('skips when a newer commit affects the same service', t => {
   assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'api', triggerSha, currentRef: 'main' }).shouldDeploy, false)
 })
 
+test('supports Client deployments and skips for newer Client changes', t => {
+  const repository = fixture()
+  t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))
+  const triggerSha = repository.commit('client/src/App.jsx', 'a')
+  repository.commit('client/src/main.jsx', 'newer client')
+  assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'client', triggerSha, currentRef: 'main' }).shouldDeploy, false)
+})
+
 test('deploys when newer commits affect a different service or only docs', t => {
   const repository = fixture()
   t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))

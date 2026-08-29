@@ -47,7 +47,7 @@ const VoiceRow = ({ voice }) => {
         <InputWrapper value={description} setValue={setDescription} label='Description' />
       </div>
       <div className='mr-4 mb-4 md:mb-0'>
-        <div className="flex flex-col items-center space-y-1">
+        <div className='flex flex-col items-center space-y-1'>
           <span className={`text-xs font-medium ${isDark ? 'text-brand-dark' : 'text-brand-light'}`}>Primary</span>
           <div
             className={`p-1 cursor-pointer rounded-md w-6 h-6 transition-all duration-200 ${
@@ -61,13 +61,15 @@ const VoiceRow = ({ voice }) => {
             }`}
             onClick={handleMarkAsPrimary}
           >
-            {voice.isPrimary ? (
-              <svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' stroke='currentColor' className={`w-4 h-4 ${isDark ? 'text-gray-900' : 'text-gray-900'} stroke-2`}>
-                <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
-              </svg>
-            ) : (
-              <div className="w-4 h-4" />
-            )}
+            {voice.isPrimary
+              ? (
+                <svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' stroke='currentColor' className={`w-4 h-4 ${isDark ? 'text-gray-900' : 'text-gray-900'} stroke-2`}>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
+                </svg>
+                )
+              : (
+                <div className='w-4 h-4' />
+                )}
           </div>
         </div>
       </div>
@@ -75,7 +77,7 @@ const VoiceRow = ({ voice }) => {
         <button
           onClick={() => setConfirmOpen(true)}
           disabled={deleteLoading}
-          className="px-4 py-2 font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 shadow-lg hover:shadow-xl"
+          className='px-4 py-2 font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 shadow-lg hover:shadow-xl'
         >
           {deleteLoading ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Delete'}
         </button>
