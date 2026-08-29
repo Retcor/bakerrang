@@ -4,14 +4,19 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, ...deploy },
+  ci: { api: false, portal: false, renderer: false, client: false, ...ci },
+  deploy: { api: false, portal: false, renderer: false, client: false, ...deploy },
   unknown: []
 })
 
 test('classifies API-only source and lockfile changes', () => {
   assert.deepEqual(classifyChanges(['server/routes/tenants.js']), expected({ api: true }))
   assert.deepEqual(classifyChanges(['server/package-lock.json']), expected({ api: true }))
+})
+
+test('classifies Client source for Client CI and deployment only', () => {
+  assert.deepEqual(classifyChanges(['client/src/App.jsx']), expected({ client: true }))
+  assert.deepEqual(classifyChanges(['client/package-lock.json']), expected({ client: true }))
 })
 
 test('classifies app-only paths', () => {
@@ -50,11 +55,10 @@ test('keeps lint and declaration inputs CI-only', () => {
   }
 })
 
-test('explicitly classifies docs, legacy applications, workflows, and ops as no-service', () => {
+test('explicitly classifies docs, non-service applications, workflows, and ops as no-service', () => {
   for (const repositoryPath of [
     'README.md',
     'docs/CI-CD.md',
-    'client/src/App.jsx',
     'extension/src/background.js',
     'addon/WoWAdvisor/WoWAdvisor.lua',
     '.github/workflows/ci.yml',
@@ -85,6 +89,18 @@ test('combines all three services', () => {
   assert.deepEqual(
     classifyChanges(['server/app.js', 'platform/packages/ui/src/Button.tsx']),
     expected({ api: true, portal: true, renderer: true })
+  )
+})
+
+test('keeps Client independent from API and Platform dependency fan-out', () => {
+  assert.deepEqual(
+    classifyChanges([
+      'client/src/App.jsx',
+      'platform/packages/site-schema/src/index.ts',
+      'platform/packages/ui/src/Button.tsx',
+      'platform/packages/site-components/src/Hero.tsx'
+    ]),
+    expected({ client: true, portal: true, renderer: true })
   )
 })
 

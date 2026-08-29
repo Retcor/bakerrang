@@ -17,7 +17,7 @@ import {
   Passwords
 } from './components'
 
-export const SERVER_PREFIX = 'https://api.bakerrang.com'
+export const SERVER_PREFIX = import.meta.env.VITE_API_BASE_URL || 'https://api.bakerrang.com'
 
 const App = () => {
   return (

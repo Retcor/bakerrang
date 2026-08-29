@@ -4,6 +4,8 @@ client/node_modules/
 server/.env
 /.playwright-mcp/
 client/dist/
+client/.env.local
+client/.env.*.local
 
 # Generated temporary credentials from google-github-actions/auth
 gha-creds-*.json

@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - production
 
 permissions:
   contents: read
@@ -21,9 +20,11 @@ jobs:
       api: ${{ steps.classify.outputs.api }}
       portal: ${{ steps.classify.outputs.portal }}
       renderer: ${{ steps.classify.outputs.renderer }}
+      client: ${{ steps.classify.outputs.client }}
       deploy_api: ${{ steps.classify.outputs.deploy_api }}
       deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
+      deploy_client: ${{ steps.classify.outputs.deploy_client }}
     steps:
       - name: Check out PR head
         uses: actions/checkout@v7
@@ -137,6 +138,35 @@ jobs:
             --tag bakerrang-site-renderer:pr-${{ github.event.pull_request.head.sha }} \
             .
 
+  client-ci:
+    name: Client CI
+    needs: changes
+    if: needs.changes.outputs.client == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Validate Client Docker packaging
+        if: needs.changes.outputs.deploy_client == 'true'
+        run: docker build --tag bakerrang-client:pr-${{ github.event.pull_request.head.sha }} .
+
   ci-passed:
     name: ci-passed
     if: always()
@@ -144,6 +174,7 @@ jobs:
       - changes
       - api-ci
       - platform-ci
+      - client-ci
     runs-on: ubuntu-latest
     steps:
       - name: Verify required CI jobs
@@ -151,13 +182,14 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           API_RESULT: ${{ needs.api-ci.result }}
           PLATFORM_RESULT: ${{ needs.platform-ci.result }}
+          CLIENT_RESULT: ${{ needs.client-ci.result }}
         run: |
           if [[ "$CHANGES_RESULT" != "success" ]]; then
             echo "Change classification failed or did not complete: $CHANGES_RESULT"
             exit 1
           fi
 
-          for result in "$API_RESULT" "$PLATFORM_RESULT"; do
+          for result in "$API_RESULT" "$PLATFORM_RESULT" "$CLIENT_RESULT"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               echo "A required service validation job failed or did not complete: $result"
               exit 1

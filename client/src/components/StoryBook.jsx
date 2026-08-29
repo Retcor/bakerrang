@@ -9,7 +9,7 @@ import { AudioStreamPlayerSelector, LoadingSpinner, ContentWrapper, InputWrapper
 
 const compressImage = (base64, maxWidth = 400, quality = 0.82) =>
   new Promise(resolve => {
-    const img = new Image()
+    const img = new window.Image()
     img.onload = () => {
       const ratio = img.height / img.width
       const canvas = document.createElement('canvas')
@@ -148,9 +148,9 @@ const StoryBook = () => {
       const compressedPages = isLoadedStory
         ? storyBookPages.map(p => ({ reply: p.reply, image: p.image || null }))
         : await Promise.all(storyBookPages.map(async (p) => ({
-            reply: p.reply,
-            image: p.image ? await compressImage(p.image) : null
-          })))
+          reply: p.reply,
+          image: p.image ? await compressImage(p.image) : null
+        })))
 
       const thumbnail = isLoadedStory
         ? (storyBookPages[0]?.image || null)
@@ -243,7 +243,7 @@ const StoryBook = () => {
     return `data:${mime};base64,${p.image}`
   }
 
-  const btnBase = `px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border`
+  const btnBase = 'px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border'
   const btnGlass = `${btnBase} ${isDark ? 'glass-dark text-theme-dark hover:bg-white/20 border-white/20' : 'glass-light text-theme-light hover:bg-black/20 border-black/20'}`
 
   return (
@@ -267,7 +267,8 @@ const StoryBook = () => {
               <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>{savedStories.length} {savedStories.length === 1 ? 'story' : 'stories'} saved</p>
             </div>
           </div>
-          <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' strokeWidth='2' stroke='currentColor'
+          <svg
+            xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' strokeWidth='2' stroke='currentColor'
             className={`w-4 h-4 transition-transform duration-200 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'} ${libraryOpen ? 'rotate-180' : ''}`}
           >
             <path strokeLinecap='round' strokeLinejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' />
@@ -378,12 +379,13 @@ const StoryBook = () => {
                 <button type='button' className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 shadow-lg disabled:opacity-50 ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateStory() }} disabled={loading || !prompt.trim()}>
                   {loading
                     ? <div className='flex items-center space-x-1 sm:space-x-2'><LoadingSpinner svgClassName='!h-4 !w-4' /><span className='hidden sm:inline'>Generating...</span><span className='sm:hidden'>...</span></div>
-                    : <div className='flex items-center space-x-1 sm:space-x-2'>
+                    : (
+                      <div className='flex items-center space-x-1 sm:space-x-2'>
                         <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='w-4 h-4'><path d='M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z' /></svg>
                         <span className='hidden sm:inline'>Generate Story</span>
                         <span className='sm:hidden'>Generate</span>
                       </div>
-                  }
+                      )}
                 </button>
               </div>
             )}
@@ -397,8 +399,7 @@ const StoryBook = () => {
         title={confirmAction === 'newStory' ? 'New Story' : 'Generate New Story'}
         message={confirmAction === 'newStory'
           ? 'Are you sure you want to start a new story? This will clear the current story.'
-          : 'Are you sure you want to generate a new story? This will replace the current story.'
-        }
+          : 'Are you sure you want to generate a new story? This will replace the current story.'}
         confirmFunc={handleConfirm}
         cancelFunc={() => { setConfirmOpen(false); setConfirmAction(null) }}
       />

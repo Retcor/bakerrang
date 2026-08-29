@@ -16,7 +16,7 @@ const MAX_RECENTS = 10
 
 function loadRecents () {
   try {
-    return JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]')
+    return JSON.parse(window.localStorage.getItem(RECENTS_KEY) || '[]')
   } catch {
     return []
   }
@@ -28,7 +28,7 @@ function saveRecent (name, realm, region) {
     `${r.name.toLowerCase()}-${r.realm.toLowerCase()}-${r.region}` !== key
   )
   const updated = [{ name, realm, region }, ...existing].slice(0, MAX_RECENTS)
-  localStorage.setItem(RECENTS_KEY, JSON.stringify(updated))
+  window.localStorage.setItem(RECENTS_KEY, JSON.stringify(updated))
   return updated
 }
 
@@ -37,7 +37,7 @@ function removeRecent (name, realm, region) {
   const updated = loadRecents().filter(r =>
     `${r.name.toLowerCase()}-${r.realm.toLowerCase()}-${r.region}` !== key
   )
-  localStorage.setItem(RECENTS_KEY, JSON.stringify(updated))
+  window.localStorage.setItem(RECENTS_KEY, JSON.stringify(updated))
   return updated
 }
 
@@ -52,7 +52,6 @@ const WoWAdvisor = () => {
   const [addonData, setAddonData] = useState(null)
   const [recents, setRecents] = useState(loadRecents)
   const [savedState, setSavedState] = useState('idle') // 'idle' | 'saving' | 'saved'
-  const [savedAt, setSavedAt] = useState(null)
 
   const cardClass = isDark ? 'glass-card-dark text-white' : 'glass-card-light text-gray-900'
   const inputClass = isDark
@@ -73,7 +72,6 @@ const WoWAdvisor = () => {
       const data = await res.json()
       if (data.saved) {
         setSavedState('saved')
-        setSavedAt(data.saved.updatedAt)
       }
     } catch {
       // non-fatal — user may not be logged in
@@ -106,7 +104,6 @@ const WoWAdvisor = () => {
       setState('loaded')
       setRecents(saveRecent(trimmedName, trimmedRealm, charRegion))
       setSavedState('idle')
-      setSavedAt(null)
       checkSaved(trimmedName, trimmedRealm, charRegion)
     } catch {
       setError('Could not connect to the server. Please try again.')
@@ -140,7 +137,6 @@ const WoWAdvisor = () => {
       setState('loaded')
       setRecents(saveRecent(trimmedName, trimmedRealm, region))
       setSavedState('idle')
-      setSavedAt(null)
       checkSaved(trimmedName, trimmedRealm, region)
     } catch {
       setError('Could not connect to the server. Please try again.')
@@ -154,7 +150,6 @@ const WoWAdvisor = () => {
     setError('')
     setAddonData(null)
     setSavedState('idle')
-    setSavedAt(null)
   }
 
   function handleRecentClick (recent) {
@@ -186,16 +181,15 @@ const WoWAdvisor = () => {
               body: JSON.stringify({ characterData: character, addonData: parsed })
             })
             setSavedState('saved')
-            setSavedAt(new Date().toISOString())
           } catch {
             setSavedState('idle')
           }
         }
       } else {
-        alert('Clipboard does not contain valid addon data. Run /wowadvisor in-game first.')
+        window.alert('Clipboard does not contain valid addon data. Run /wowadvisor in-game first.')
       }
     } catch {
-      alert('Could not read clipboard. Make sure you ran /wowadvisor in-game first.')
+      window.alert('Could not read clipboard. Make sure you ran /wowadvisor in-game first.')
     }
   }
 
@@ -235,9 +229,9 @@ const WoWAdvisor = () => {
                     <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth='1.5' stroke='currentColor' className='w-4 h-4'>
                       <path strokeLinecap='round' strokeLinejoin='round' d='M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184' />
                     </svg>
-                  )}
+                    )}
                 {addonData
-                  ? `Addon Data Loaded`
+                  ? 'Addon Data Loaded'
                   : 'Paste Addon Data'}
               </button>
             </div>
@@ -325,12 +319,14 @@ const WoWAdvisor = () => {
                   : isDark ? 'bg-accent-dark text-gray-900 hover:opacity-90' : 'bg-accent-light text-gray-900 hover:opacity-90'
               }`}
             >
-              {state === 'loading' ? (
-                <span className='flex items-center justify-center gap-2'>
-                  <span className='inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin' />
-                  Loading character...
-                </span>
-              ) : 'Look Up Character'}
+              {state === 'loading'
+                ? (
+                  <span className='flex items-center justify-center gap-2'>
+                    <span className='inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin' />
+                    Loading character...
+                  </span>
+                  )
+                : 'Look Up Character'}
             </button>
           </form>
         </div>

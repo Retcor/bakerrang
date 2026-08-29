@@ -3,7 +3,7 @@ import { SERVER_PREFIX } from '../App.jsx'
 import { languages } from '../constants/index.js'
 import { request } from '../utils/index.js'
 import { useTheme } from '../providers/ThemeProvider.jsx'
-import { Dropdown, LoadingSpinner, SpeechToText } from './index.js'
+import { Dropdown, SpeechToText } from './index.js'
 import ContentWrapper from './ContentWrapper.jsx'
 import AudioStreamPlayerSelector from './AudioStreamPlayerSelector.jsx'
 
@@ -59,7 +59,7 @@ const Polyglot = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
             <div className={`text-2xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
               {langNameList.length}
@@ -138,22 +138,24 @@ const Polyglot = () => {
                 isDark ? 'bg-accent-dark text-gray-900 hover:bg-accent-dark/90 shadow-accent-dark/20' : 'bg-accent-light text-gray-900 hover:bg-accent-light/90 shadow-accent-light/20'
               }`}
             >
-              {translationLoading ? (
-                <div className='flex items-center space-x-3'>
-                  <svg className='w-6 h-6 animate-spin' fill='none' viewBox='0 0 24 24'>
-                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
-                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
-                  </svg>
-                  <span>Translating...</span>
-                </div>
-              ) : (
-                <div className='flex items-center space-x-3'>
-                  <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' strokeWidth='2'>
-                    <path strokeLinecap='round' strokeLinejoin='round' d='M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z'/>
-                  </svg>
-                  <span>Translate</span>
-                </div>
-              )}
+              {translationLoading
+                ? (
+                  <div className='flex items-center space-x-3'>
+                    <svg className='w-6 h-6 animate-spin' fill='none' viewBox='0 0 24 24'>
+                      <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                      <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' />
+                    </svg>
+                    <span>Translating...</span>
+                  </div>
+                  )
+                : (
+                  <div className='flex items-center space-x-3'>
+                    <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' strokeWidth='2'>
+                      <path strokeLinecap='round' strokeLinejoin='round' d='M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' />
+                    </svg>
+                    <span>Translate</span>
+                  </div>
+                  )}
             </button>
           </div>
 
@@ -164,16 +166,18 @@ const Polyglot = () => {
                 {selectedOutputOption} Translation
               </h4>
               <div className='flex items-center space-x-3'>
-                {translation ? (
-                  <>
-                    <span className={`text-xs px-3 py-1 rounded-full ${isDark ? 'bg-accent-dark/20 text-accent-dark' : 'bg-accent-light/20 text-accent-light'}`}>
-                      Ready to listen
-                    </span>
-                    <AudioStreamPlayerSelector prompt={translation} />
-                  </>
-                ) : (
-                  <div className='h-8'></div>
-                )}
+                {translation
+                  ? (
+                    <>
+                      <span className={`text-xs px-3 py-1 rounded-full ${isDark ? 'bg-accent-dark/20 text-accent-dark' : 'bg-accent-light/20 text-accent-light'}`}>
+                        Ready to listen
+                      </span>
+                      <AudioStreamPlayerSelector prompt={translation} />
+                    </>
+                    )
+                  : (
+                    <div className='h-8' />
+                    )}
               </div>
             </div>
             <div className={`rounded-xl border-2 transition-all duration-300 ${isDark ? 'border-white/20 bg-white/15' : 'border-black/20 bg-black/15'}`}>

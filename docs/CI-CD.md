@@ -1,57 +1,53 @@
 # CI/CD operations
 
-## Pull requests
+Step 2.5b is a transitional four-service model. PR validation covers API, Portal, Site Renderer, and Client; DEV still deploys automatically; MAIN/live deployment is an explicit manual action.
 
-`.github/workflows/ci.yml` classifies the PR's three-dot base-to-head diff with
-`scripts/ci/classify-changes.mjs`. Unknown paths fail closed. It runs API and/or shared
-Platform validation only when affected, and builds each affected deployable Docker image
-without authenticating to Google Cloud or pushing it. `ci-passed` remains the aggregate PR
-status.
+## Pull requests to main
 
-## Automatic DEV deployment
+`.github/workflows/ci.yml` runs only for pull requests targeting `main`. There is no `production` branch.
 
-A push to `main` starts `.github/workflows/deploy-dev.yml`. The workflow validates that
-`github.event.before` is a real ancestor of `github.sha`, classifies the two-dot push diff,
-and validates only services selected by the classifier's `deploy_*` outputs. A known
-docs/operations-only push performs no Google authentication and finishes green.
+`scripts/ci/classify-changes.mjs` is the single authoritative dependency graph. It classifies the PR's three-dot base-to-head diff and fails closed on unknown paths:
 
-Affected services call the shared `.github/workflows/_deploy-cloud-run.yml` workflow. Each
-service has non-cancelling, environment-and-service-specific concurrency. Before obtaining
-Google credentials, a stale-job guard fetches current `origin/main`: it skips an older job
-only when newer commits affect that same service and fails closed for rewritten history or
-unknown paths.
+- `server/**` → API;
+- `client/**` → Client only;
+- `platform/apps/portal/**` → Portal;
+- `platform/apps/site-renderer/**` → Renderer;
+- `platform/packages/site-schema/**` and `platform/packages/ui/**` → Portal and Renderer;
+- `platform/packages/site-components/**` → Renderer only;
+- shared Platform build/config inputs → Portal and Renderer as explicitly defined in the classifier.
 
-Deployment authentication uses GitHub OIDC and Google Workload Identity Federation. There
-are no stored Google credential keys. Images use write-once `git-<commit SHA>` tags and are
-resolved to immutable digests under:
+Workflow YAML consumes classifier outputs and does not duplicate this map. API CI runs lint, tests, and Docker packaging. Platform CI runs lint, typecheck, tests, affected builds, and affected Docker packaging. Client CI uses its own lockfile/package root and Node 20, then runs lint, build, and `docker build client`. Docker checks neither push nor authenticate. `ci-passed` accepts unaffected jobs only when skipped and fails on an affected validation failure.
+
+PR CI has `contents: read` only: no `id-token: write`, registry login, GCP authentication, or long-lived credential.
+
+## Temporary automatic DEV deployment
+
+A push to `main` still starts the existing `.github/workflows/deploy-dev.yml` temporarily. It validates `before..after` ancestry and continues validating/deploying affected API, Portal, and Renderer services. A Client-only change is classified but does not expand the retained DEV deployment stack. A docs/operations-only push obtains no Google credentials.
+
+`.github/workflows/_deploy-cloud-run.yml` supports `api`, `portal`, `renderer`, and `client`. Before OIDC authentication, its stale guard fetches current `origin/main`; it skips an old job only when a newer main commit affects that service. Unknown paths and rewritten/non-linear history fail closed.
+
+Deployments use WIF, immutable `git-<SHA>` tags, existing digest reuse, and image-only Cloud Run updates. The workflow records the previous revision/image/runtime service account, deploys by digest, and asserts the runtime identity is unchanged. It does not alter traffic, environment variables, secrets, resources, networking, or runtime service accounts.
+
+DEV smoke checks are API HTTP 200 plus `Healthy`, Portal HTTP 200, Renderer `robots.txt` HTTP 200 plus `User-agent`, and Client HTTP 200 plus the stable `<div id="root"` SPA shell. Failures are visible and not automatically rolled back; use the prior revision/image in the job summary for a separately reviewed image-only rollback.
+
+## Manual MAIN/live deployment
+
+`.github/workflows/deploy.yml` has `workflow_dispatch` only—no `push` or `pull_request`. The operator selects exactly one of `api`, `portal`, `renderer`, or `client`; there is intentionally no `all` option.
 
 ```text
-us-west1-docker.pkg.dev/bakerrang-dev/bakerrang-dev/api
-us-west1-docker.pkg.dev/bakerrang-dev/bakerrang-dev/portal
-us-west1-docker.pkg.dev/bakerrang-dev/bakerrang-dev/site-renderer
+guard-main -> deploy-selected-service -> live-deploy-passed
 ```
 
-Cloud Run is updated by image digest only. The workflow captures the previous ready revision,
-image, and runtime service account, then confirms the ready service uses the expected digest
-and the same runtime identity. It does not alter traffic, environment variables, secrets,
-resources, networking, or runtime service accounts.
+`guard-main` visibly fails unless `github.ref` is `refs/heads/main`. It has only `contents: read` and executes before the selected deploy caller receives `id-token: write`. The production WIF provider independently restricts immutable repository owner ID, repository ID, and main ref. The caller passes GitHub Environment `production` and `git-${{ github.sha }}`. Only the selected service authenticates or deploys.
 
-DEV smoke checks are:
+The Environment name `production` is not a branch. Do not run live deployment while implementing or reviewing Step 2.5b.
 
-- API: `https://api-dev.bakerrang.com/health` returns HTTP 200 and `Healthy`.
-- Portal: `https://portal-dev.bakerrang.com/` returns HTTP 200.
-- Renderer: `https://sites-dev.bakerrang.com/robots.txt` returns HTTP 200 and contains
-  `User-agent`.
+## Next transition
 
-Failures are visible and are not rolled back automatically. For a manual rollback, use the
-previous revision/image recorded in the deployment job summary and perform an explicitly
-reviewed image-only Cloud Run update.
+Automatic `main` → live deployment is **not enabled**. Step 2.5d will remove DEV auto-deploy and may enable automatic live deployment after live cutover/audit.
 
 ## Manual DEV fallback
 
-`scripts/deploy-dev.ps1` remains the emergency full-DEV deployment path. It builds and pushes
-all three services to the same Artifact Registry repositories and performs image-only Cloud
-Run updates while preserving the services' existing runtime configuration.
+`scripts/deploy-dev.ps1` remains the emergency full-DEV path and requires an explicit operational decision.
 
-Production automation is not implemented. The reusable workflow contract is intentionally
-small so a future production caller can reuse it with a separate GitHub Environment.
+See [live-environment-bootstrap.md](infra/live-environment-bootstrap.md) for reconstruction, scoped IAM, and live-impact boundaries, and [local-development.md](infra/local-development.md) for local configuration.

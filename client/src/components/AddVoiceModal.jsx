@@ -98,7 +98,6 @@ const AddVoiceModal = ({ open, success, cancel }) => {
 
     // Allow more freedom - just prevent modal from going completely off screen
     const modalWidth = 512 // max-w-lg is approximately 512px
-    const modalHeight = 600 // approximate modal height
     const buffer = 50 // minimum visible area
 
     const minX = -(modalWidth - buffer)
@@ -135,7 +134,6 @@ const AddVoiceModal = ({ open, success, cancel }) => {
 
     // Allow more freedom - just prevent modal from going completely off screen
     const modalWidth = 512 // max-w-lg is approximately 512px
-    const modalHeight = 600 // approximate modal height
     const buffer = 50 // minimum visible area
 
     const minX = -(modalWidth - buffer)

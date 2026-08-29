@@ -19,7 +19,7 @@ const WoWChat = ({ character, savedState }) => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function sendMessage() {
+  async function sendMessage () {
     const text = input.trim()
     if (!text || isStreaming) return
 
@@ -103,7 +103,7 @@ const WoWChat = ({ character, savedState }) => {
     }
   }
 
-  function handleKeyDown(e) {
+  function handleKeyDown (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -152,8 +152,7 @@ const WoWChat = ({ character, savedState }) => {
                     <span className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-white/60' : 'bg-gray-400'}`} style={{ animationDelay: '150ms' }} />
                     <span className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-white/60' : 'bg-gray-400'}`} style={{ animationDelay: '300ms' }} />
                   </span>
-                )
-              }
+                  )}
             </div>
           </div>
         ))}
@@ -178,11 +177,13 @@ const WoWChat = ({ character, savedState }) => {
             disabled={isStreaming || !input.trim()}
             className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${sendBtnClass}`}
           >
-            {isStreaming ? (
-              <span className='inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin' />
-            ) : (
-              'Send'
-            )}
+            {isStreaming
+              ? (
+                <span className='inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin' />
+                )
+              : (
+                  'Send'
+                )}
           </button>
         </div>
         <p className={`text-xs mt-2 ${secondaryText}`}>Press Enter to send · Shift+Enter for new line</p>
@@ -192,7 +193,7 @@ const WoWChat = ({ character, savedState }) => {
 }
 
 // Simple markdown-ish renderer for bold and line breaks
-function renderMessage(text) {
+function renderMessage (text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {

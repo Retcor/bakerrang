@@ -2,22 +2,22 @@ import React from 'react'
 import { useTheme } from '../../providers/ThemeProvider.jsx'
 
 const CLASS_COLORS = {
-  'Warrior': '#C69B3A',
-  'Paladin': '#F48CBA',
-  'Hunter': '#AAD372',
-  'Rogue': '#FFF468',
-  'Priest': '#FFFFFF',
+  Warrior: '#C69B3A',
+  Paladin: '#F48CBA',
+  Hunter: '#AAD372',
+  Rogue: '#FFF468',
+  Priest: '#FFFFFF',
   'Death Knight': '#C41E3A',
-  'Shaman': '#0070DD',
-  'Mage': '#3FC7EB',
-  'Warlock': '#8788EE',
-  'Monk': '#00FF98',
-  'Druid': '#FF7C0A',
+  Shaman: '#0070DD',
+  Mage: '#3FC7EB',
+  Warlock: '#8788EE',
+  Monk: '#00FF98',
+  Druid: '#FF7C0A',
   'Demon Hunter': '#A330C9',
-  'Evoker': '#33937F'
+  Evoker: '#33937F'
 }
 
-function getMPlusColor(score) {
+function getMPlusColor (score) {
   if (score >= 3000) return '#ff8c00'
   if (score >= 2500) return '#a335ee'
   if (score >= 2000) return '#0070dd'
@@ -25,17 +25,11 @@ function getMPlusColor(score) {
   return '#9d9d9d'
 }
 
-function getIlvlColor(ilvl, avg) {
+function getIlvlColor (ilvl, avg) {
   if (ilvl <= 0) return '#4b5563'
   if (ilvl >= avg + 10) return '#1eff00'
   if (ilvl < avg - 10) return '#ff4040'
   return '#ffffff'
-}
-
-function formatDate(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const CharacterPanel = ({ character, onReset }) => {
@@ -128,7 +122,7 @@ const CharacterPanel = ({ character, onReset }) => {
             {character.recentRuns.map((run, i) => (
               <div key={i} className='flex justify-between items-center'>
                 <span className={`text-xs truncate ${isDark ? 'text-white/70' : 'text-gray-600'}`}>{run.dungeon}</span>
-                <span className={`text-xs font-bold shrink-0 ml-2`} style={{ color: '#3FC7EB' }}>+{run.keystoneLevel}</span>
+                <span className='text-xs font-bold shrink-0 ml-2' style={{ color: '#3FC7EB' }}>+{run.keystoneLevel}</span>
               </div>
             ))}
           </div>
