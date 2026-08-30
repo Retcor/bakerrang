@@ -22,7 +22,7 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 ## Architecture
 
 - MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. Cloud Run services are `bakerrang-api`, `bakerrang-client`, `bakerrang-portal`, and `bakerrang-site-renderer`.
-- DEV: `bakerrang-dev`. Its current Cloud Run/LB/WIF stack remains intact during Step 2.5b. After later decommissioning it will retain only Firestore, `bakerrang-dev-media-marketing`, and minimal developer IAM.
+- Local data backing: `bakerrang-dev` retains only Firestore `(default)`, `bakerrang-dev-media-marketing`, and the developer IAM needed for ADC. Its former Cloud Run/LB/WIF deployment stack is historical inventory below.
 - Live images use the `bakerrang` Artifact Registry repository. The global external Application Load Balancer uses static IPv4 `34.8.236.85` (`bakerrang-web-ip`).
 
 ## APIs
@@ -231,7 +231,7 @@ Never expose the value in source, logs, shell history, or GitHub variables. If a
 
 ## Cloud Run bootstrap
 
-Portal and Renderer were bootstrapped as service skeletons so IAM could be scoped before production CI. Placeholder images are temporary and later replaced by digest-pinned CI images. A reconstruction pattern is:
+Portal and Renderer were bootstrapped as service skeletons so IAM could be scoped before production CI. Their placeholder images were temporary and were later replaced by digest-pinned CI images. A reconstruction pattern is:
 
 ```powershell
 $BootstrapImage = "us-docker.pkg.dev/cloudrun/container/hello"
@@ -246,7 +246,7 @@ gcloud run deploy bakerrang-site-renderer `
   --set-env-vars "SITE_API_BASE_URL=https://api.bakerrang.com,SITE_PUBLIC_ORIGIN=https://sites.bakerrang.com,SITE_PUBLIC_INDEXING_ENABLED=true" --quiet
 ```
 
-Confirm the placeholder image is still available. Do not run these against existing services without a reviewed plan: `gcloud run deploy` changes live state. Normal CI later updates only the image digest and asserts the runtime service account is unchanged.
+Confirm the placeholder image is still available. Do not run these against existing services without a reviewed plan: `gcloud run deploy` changes live state. Normal CI updates only the image digest and asserts the runtime service account is unchanged.
 
 ## MAIN WIF
 
@@ -335,8 +335,35 @@ Do not read secret version data during an audit. Do not blindly replace existing
 
 **CURRENT LIVE PATH:** the global load balancer, DNS/TLS cutover, Client runtime-SA migration, and selective automatic MAIN deployment are complete. Future changes to Cloud Run configuration, runtime identities, load-balancer resources, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
 
-## DEV retention
+## Historical DEV deployment inventory
 
-Keep during the Step 2.5e decommission window: `bakerrang-dev`, Firestore, `bakerrang-dev-media-marketing`, retained DEV services, the `development` GitHub Environment, and minimal developer IAM. DEV deployment is manual-only; pushes to `main` no longer deploy DEV.
+The following names were verified and captured before infrastructure deletion. They are retained for audit and reconstruction history only; their presence here does not mean the resources still exist and is not authorization to recreate them.
 
-Remove only during a later approved decommission: DEV Cloud Run; DEV LB/IP; DEV WIF; DEV deployer/runtime deployment SAs; deployment AR; deployment secrets; DEV domains; and the `development` GitHub Environment/workflows. Inventory dependencies and preserve recoverable backups first.
+| Category | Historical DEV resources |
+|---|---|
+| Project | `bakerrang-dev` |
+| Cloud Run | `bakerrang-api-dev`, `bakerrang-portal-dev`, `bakerrang-site-renderer-dev` |
+| Load-balancer frontend | `bakerrang-web-dev-https-rule`, `bakerrang-web-dev-https-proxy`, `bakerrang-web-dev-map` |
+| Backend services | `bakerrang-api-dev-backend`, `bakerrang-portal-dev-backend`, `bakerrang-renderer-dev-backend` |
+| Serverless NEGs | `bakerrang-api-dev-neg`, `bakerrang-portal-dev-neg`, `bakerrang-renderer-dev-neg` |
+| Static IPv4 | `bakerrang-web-dev-ip` → `8.232.231.135` |
+| Certificate Manager | `bakerrang-dev-wildcard`, `bakerrang-web-dev-cert-map`, `bakerrang-dev-cert`, `bakerrang-dev-auth` |
+| Workload Identity Federation | pool `github`, provider `bakerrang-dev` |
+| Service accounts | `bakerrang-api-dev@bakerrang-dev.iam.gserviceaccount.com`, `bakerrang-frontend-dev@bakerrang-dev.iam.gserviceaccount.com`, `bakerrang-github-dev-deployer@bakerrang-dev.iam.gserviceaccount.com` |
+| Artifact Registry | `bakerrang-dev`, `cloud-run-source-deploy` |
+| Source staging bucket | `run-sources-bakerrang-dev-us-west1` |
+
+The eight verified Secret Manager resource names were:
+
+- `bakerrang-dev-blizzard-client-secret`
+- `bakerrang-dev-chat-gpt-api-key`
+- `bakerrang-dev-csrf-secret`
+- `bakerrang-dev-deepgram-api-key`
+- `bakerrang-dev-eleven-labs-api-key`
+- `bakerrang-dev-google-oauth-client-secret`
+- `bakerrang-dev-preview-token-secret`
+- `bakerrang-dev-session-secret`
+
+No secret values were read or recorded.
+
+**DEV deployment infrastructure was retired in Step 2.5e. The `bakerrang-dev` project remains as local-development data backing only.** Retained state is Firestore `(default)`, `gs://bakerrang-dev-media-marketing`, and the developer IAM needed to access those resources through ADC. There is no repository or GitHub workflow path for deploying DEV.

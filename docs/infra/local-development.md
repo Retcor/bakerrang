@@ -1,6 +1,6 @@
 # Local development infrastructure
 
-Local development uses DEV data services directly. It requires no local load balancer, WIF, or Cloud Run.
+Local development uses DEV data services directly. Application processes run locally; there is no DEV Cloud Run, load balancer, WIF deployment identity, or public DNS requirement.
 
 ## API and Google authentication
 
@@ -23,9 +23,30 @@ VITE_API_BASE_URL=http://localhost:8080
 
 Vite reads this at start/build time. Without an override, Client falls back to `https://api.bakerrang.com`, so verify the local file before tests that mutate data.
 
+## Portal
+
+Copy the checked-in example to the ignored local file:
+
+```powershell
+Set-Location platform
+Copy-Item apps/portal/.env.local.example apps/portal/.env.local
+npm run dev:portal
+```
+
+The current local contract is:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=http://localhost:3002
+CUSTOM_DOMAIN_IPV4_ADDRESS=
+CUSTOM_DOMAIN_CNAME_TARGET=
+```
+
+Leave the load-balancer targets empty for local development. Portal runs at `http://localhost:3001`, calls the local API, and opens preview against the local Renderer. Configure local Google OAuth browser/callback origins consistently with the API configuration; never reuse a deployed secret in a committed env file.
+
 ## Site Renderer
 
-Replace `<renderer-port>` with the actual local port:
+Start Renderer from `platform/` with `npm run dev:sites`; it listens on port `3002`. Replace `<renderer-port>` below with the actual local port if overridden:
 
 ```powershell
 $env:SITE_API_BASE_URL = "http://localhost:8080"
