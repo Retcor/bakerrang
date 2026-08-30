@@ -69,6 +69,11 @@ Run `scripts/verify-live.ps1` from an operator workstation with readable product
 
 `.github/workflows/verify-live.yml` performs only credential-free fixed-host HTTP checks. It runs manually, once daily, and after every completed `Deploy MAIN` workflow. It still runs after a failed deployment as diagnostic evidence and does not change or retroactively determine the deployment workflow's conclusion. The workflow has `contents: read` only and no OIDC permission.
 
+## Manual rollback
+
+For operator-initiated per-service recovery, see the [MAIN rollback runbook](operations/rollback.md).
+`Rollback MAIN` is manual and main-only in `production`, shares the forward per-service lock, and does not use the forward stale guard. Image rollback requires LATEST traffic and preserves current config; historical revision rollback pins traffic and requires explicit operator unpin recovery.
+
 ## Local development data backing
 
 DEV deployment infrastructure was retired in Step 2.5e. There is no DEV deployment workflow, GitHub deployment path, WIF authentication path, Cloud Run service, or load balancer in the repository's active operating model.
