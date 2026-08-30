@@ -1,0 +1,103 @@
+name: Rollback MAIN
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to roll back
+        required: true
+        type: choice
+        options:
+          - api
+          - portal
+          - renderer
+          - client
+      mechanism:
+        description: Image keeps current config; revision pins historical code and config
+        required: true
+        type: choice
+        default: image
+        options:
+          - image
+          - revision
+      target:
+        description: Full lowercase 40-character git SHA (image) or exact revision name (revision)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  guard-main:
+    name: Validate main-only rollback request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Reject non-main dispatches
+        shell: bash
+        env:
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then
+            echo "Rollback must be dispatched from refs/heads/main." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate fixed service and target before cloud authentication
+        shell: pwsh
+        env:
+          ROLLBACK_SERVICE: ${{ inputs.service }}
+          ROLLBACK_MECHANISM: ${{ inputs.mechanism }}
+          ROLLBACK_TARGET: ${{ inputs.target }}
+        run: ./scripts/ci/rollback.ps1 -Service $env:ROLLBACK_SERVICE -Mechanism $env:ROLLBACK_MECHANISM -Target $env:ROLLBACK_TARGET -ValidateOnly
+
+  rollback:
+    name: Roll back ${{ inputs.service }} using ${{ inputs.mechanism }}
+    needs: guard-main
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-production-${{ inputs.service }}
+      cancel-in-progress: false
+    env:
+      PROJECT: avian-cable-379805
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      DEPLOYER_SA: ${{ vars.GCP_DEPLOYER_SA }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Test rollback safety without cloud credentials
+        shell: pwsh
+        run: ./scripts/ci/rollback.test.ps1
+
+      - name: Authenticate with existing MAIN deployment identity
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Preflight, roll back, and verify only the selected service
+        shell: pwsh
+        env:
+          ROLLBACK_SERVICE: ${{ inputs.service }}
+          ROLLBACK_MECHANISM: ${{ inputs.mechanism }}
+          ROLLBACK_TARGET: ${{ inputs.target }}
+        run: ./scripts/ci/rollback.ps1 -Service $env:ROLLBACK_SERVICE -Mechanism $env:ROLLBACK_MECHANISM -Target $env:ROLLBACK_TARGET

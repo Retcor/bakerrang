@@ -9,6 +9,7 @@ const reusablePath = new URL('_deploy-cloud-run.yml', workflowDir)
 const mainPath = new URL('deploy.yml', workflowDir)
 const prPath = new URL('ci.yml', workflowDir)
 const verifyPath = new URL('verify-live.yml', workflowDir)
+const rollbackPath = new URL('rollback.yml', workflowDir)
 const retiredPaths = [
   new URL('deploy-dev.yml', workflowDir),
   new URL('verify-gcp-auth-dev.yml', workflowDir),
@@ -24,6 +25,7 @@ const reusable = (await readFile(reusablePath, 'utf8')).replaceAll('\r\n', '\n')
 const main = (await readFile(mainPath, 'utf8')).replaceAll('\r\n', '\n')
 const pr = (await readFile(prPath, 'utf8')).replaceAll('\r\n', '\n')
 const verify = (await readFile(verifyPath, 'utf8')).replaceAll('\r\n', '\n')
+const rollback = (await readFile(rollbackPath, 'utf8')).replaceAll('\r\n', '\n')
 
 const job = (workflow, id) => {
   const match = workflow.match(new RegExp(`^  ${id}:\\n[\\s\\S]*?(?=^  [a-z][a-z0-9-]*:\\n|(?![\\s\\S]))`, 'm'))
@@ -35,7 +37,7 @@ test('DEV cloud deployment entrypoints are retired', async () => {
   for (const retiredPath of retiredPaths) {
     await assert.rejects(access(retiredPath), error => error?.code === 'ENOENT')
   }
-  assert.deepEqual(workflowNames, ['_deploy-cloud-run.yml', 'ci.yml', 'deploy.yml', 'verify-live.yml'])
+  assert.deepEqual(workflowNames, ['_deploy-cloud-run.yml', 'ci.yml', 'deploy.yml', 'rollback.yml', 'verify-live.yml'])
 })
 
 test('MAIN remains automatic on main and manually dispatchable', () => {
@@ -117,6 +119,78 @@ test('failed Deploy MAIN runs still trigger diagnostic public verification', () 
   assert.match(verify, /Deploy MAIN concluded '\$DEPLOY_CONCLUSION'/)
   assert.match(verify, /Public verification is still running as diagnostic evidence/)
   assert.doesNotMatch(job(verify, 'public-ingress'), /if: github\.event\.workflow_run\.conclusion == 'success'/)
+})
+
+test('rollback is manual-only with a fixed service/mechanism enum and exact-target validation', () => {
+  const triggers = rollback.match(/^on:\n([\s\S]*?)(?=^permissions:)/m)?.[1] ?? ''
+  assert.deepEqual([...triggers.matchAll(/^  ([a-z_]+):/gm)].map(match => match[1]), ['workflow_dispatch'])
+  assert.deepEqual([...triggers.matchAll(/^      ([a-z_]+):/gm)].map(match => match[1]), ['service', 'mechanism', 'target'])
+  assert.match(triggers, /service:\n[\s\S]*?type: choice\n        options:\n          - api\n          - portal\n          - renderer\n          - client/)
+  assert.match(triggers, /mechanism:\n[\s\S]*?type: choice\n        default: image\n        options:\n          - image\n          - revision/)
+  assert.match(triggers, /target:\n[\s\S]*?required: true\n        type: string/)
+  assert.match(job(rollback, 'guard-main'), /rollback\.ps1[^\n]+-ValidateOnly/)
+  assert.match(job(rollback, 'rollback'), /rollback\.test\.ps1/)
+  assert.doesNotMatch(rollback, /^\s*run:.*\$\{\{ inputs\./m)
+})
+
+test('rollback credentials are production-only behind the main guard; no PR gains OIDC', () => {
+  assert.match(rollback, /^permissions:\n  contents: read$/m)
+  const guard = job(rollback, 'guard-main')
+  assert.doesNotMatch(guard, /id-token|google-github-actions\/auth/)
+  assert.match(guard, /if \[\[ "\$DISPATCH_REF" != "refs\/heads\/main" \]\]; then/)
+  assert.ok(guard.indexOf('Reject non-main dispatches') < guard.indexOf('actions/checkout'))
+  const mutation = job(rollback, 'rollback')
+  assert.match(mutation, /needs: guard-main/)
+  assert.match(mutation, /if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/)
+  assert.match(mutation, /environment: production/)
+  assert.match(mutation, /permissions:\n      contents: read\n      id-token: write/)
+  assert.equal((rollback.match(/id-token: write/g) ?? []).length, 1)
+  assert.match(mutation, /WIF_PROVIDER: \$\{\{ vars\.WIF_PROVIDER \}\}/)
+  assert.match(mutation, /DEPLOYER_SA: \$\{\{ vars\.GCP_DEPLOYER_SA \}\}/)
+  assert.match(mutation, /uses: google-github-actions\/auth@v3/)
+  assert.match(mutation, /workload_identity_provider: \$\{\{ env\.WIF_PROVIDER \}\}/)
+  assert.match(mutation, /service_account: \$\{\{ env\.DEPLOYER_SA \}\}/)
+  assert.doesNotMatch(pr, /id-token/)
+  assert.doesNotMatch(verify, /id-token/)
+})
+
+test('rollback shares the forward service lock without cancellation or stale-guard behavior', () => {
+  assert.match(rollback, /group: deploy-production-\$\{\{ inputs\.service \}\}\n      cancel-in-progress: false/)
+  assert.match(reusable, /group: deploy-\$\{\{ inputs\.environment \}\}-\$\{\{ inputs\.service \}\}\n      cancel-in-progress: false/)
+  assert.match(job(main, 'deploy-selected-service'), /environment: production/)
+  assert.doesNotMatch(rollback, /stale-deploy-guard|should_deploy|_deploy-cloud-run|cancel-in-progress: true/)
+  assert.match(reusable, /stale-deploy-guard\.mjs/)
+})
+
+test('rollback implementation keeps helpers shared and has only image/traffic mutation surfaces', async () => {
+  const helper = await readFile(new URL('../../scripts/ci/rollback.ps1', import.meta.url), 'utf8')
+  assert.match(helper, /'verify-live\.ps1'/)
+  assert.match(helper, /Get-TrafficAnalysis/)
+  assert.match(helper, /Test-PublicEndpoint/)
+  assert.doesNotMatch(helper, /Invoke-VerifyLive|stale-deploy-guard|--to-latest|--set-env-vars|--update-env-vars|--set-secrets|--update-secrets|--service-account|--memory|--cpu|--concurrency|--ingress/)
+  assert.match(helper, /'run', 'services', 'update', \$config\.Service, '--image', \$expectedImage/)
+  assert.match(helper, /'run', 'services', 'update-traffic', \$config\.Service, '--to-revisions', "\$\{expectedRevision\}=100"/)
+  assert.match(helper, /REVISION ROLLBACK ACTIVE/)
+  assert.match(helper, /ROLLBACK REQUEST/)
+  assert.match(helper, /ROLLBACK RESULT/)
+})
+
+test('Step 2.6b exact changed paths classify as no-service without broadening rules', () => {
+  const paths = [
+    '.github/workflows/rollback.yml',
+    'scripts/ci/rollback.ps1',
+    'scripts/ci/rollback.test.ps1',
+    'scripts/ci/deployment-workflows.test.mjs',
+    'docs/operations/rollback.md',
+    'docs/CI-CD.md'
+  ]
+  assert.deepEqual(classifyChanges(paths), {
+    ci: { api: false, portal: false, renderer: false, client: false },
+    deploy: { api: false, portal: false, renderer: false, client: false },
+    unknown: []
+  })
+  assert.deepEqual(classifyChanges(['scripts/deploy-dev.ps1']).unknown, [])
+  assert.deepEqual(classifyChanges(['scripts/unrecognized-ops.ps1']).unknown, ['scripts/unrecognized-ops.ps1'])
 })
 
 test('each classifier output independently controls its MAIN service deployment', () => {
