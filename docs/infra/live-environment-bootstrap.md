@@ -23,7 +23,7 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 
 - MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. Cloud Run services are `bakerrang-api`, `bakerrang-client`, `bakerrang-portal`, and `bakerrang-site-renderer`.
 - DEV: `bakerrang-dev`. Its current Cloud Run/LB/WIF stack remains intact during Step 2.5b. After later decommissioning it will retain only Firestore, `bakerrang-dev-media-marketing`, and minimal developer IAM.
-- Live images use the `bakerrang` Artifact Registry repository. The reserved future load-balancer IPv4 is `34.8.236.85`.
+- Live images use the `bakerrang` Artifact Registry repository. The global external Application Load Balancer uses static IPv4 `34.8.236.85` (`bakerrang-web-ip`).
 
 ## APIs
 
@@ -61,6 +61,121 @@ gcloud compute addresses describe bakerrang-web-ip --project $ProjectId --global
 
 The current address is `34.8.236.85`. Reserve it before the Portal build because `CUSTOM_DOMAIN_IPV4_ADDRESS` is baked into that artifact.
 
+## MAIN global external Application Load Balancer
+
+The MAIN load balancer is live on `34.8.236.85`. It uses four regional serverless NEGs and four global `EXTERNAL_MANAGED` backend services:
+
+| Cloud Run service | Serverless NEG | Backend service |
+|---|---|---|
+| `bakerrang-api` | `bakerrang-api-neg` | `bakerrang-api-backend` |
+| `bakerrang-client` | `bakerrang-client-neg` | `bakerrang-client-backend` |
+| `bakerrang-portal` | `bakerrang-portal-neg` | `bakerrang-portal-backend` |
+| `bakerrang-site-renderer` | `bakerrang-renderer-neg` | `bakerrang-renderer-backend` |
+
+The URL map `bakerrang-web-urlmap` routes `bakerrang.com` and `www.bakerrang.com` to Client, `api.bakerrang.com` to API, `portal.bakerrang.com` to Portal, and `sites.bakerrang.com` to Renderer. Its default backend is Renderer, so unmatched hosts—including verified customer domains—reach the multi-tenant renderer without a per-tenant URL-map rule.
+
+These are the reconstruction commands for the NEG, backend, and host-routing topology. They are not idempotent; describe existing resources before using them and do not run them as an update procedure.
+
+```powershell
+$P = "avian-cable-379805"
+$R = "us-west1"
+
+foreach ($m in @(
+  @{neg="bakerrang-api-neg";      svc="bakerrang-api"},
+  @{neg="bakerrang-client-neg";   svc="bakerrang-client"},
+  @{neg="bakerrang-portal-neg";   svc="bakerrang-portal"},
+  @{neg="bakerrang-renderer-neg"; svc="bakerrang-site-renderer"})) {
+  gcloud compute network-endpoint-groups create $($m.neg) `
+    --project=$P --region=$R --network-endpoint-type=serverless `
+    --cloud-run-service=$($m.svc)
+}
+
+foreach ($m in @(
+  @{be="bakerrang-api-backend";      neg="bakerrang-api-neg"},
+  @{be="bakerrang-client-backend";   neg="bakerrang-client-neg"},
+  @{be="bakerrang-portal-backend";   neg="bakerrang-portal-neg"},
+  @{be="bakerrang-renderer-backend"; neg="bakerrang-renderer-neg"})) {
+  gcloud compute backend-services create $($m.be) `
+    --project=$P --global --load-balancing-scheme=EXTERNAL_MANAGED
+  gcloud compute backend-services add-backend $($m.be) `
+    --project=$P --global --network-endpoint-group=$($m.neg) `
+    --network-endpoint-group-region=$R
+}
+
+gcloud compute url-maps create bakerrang-web-urlmap `
+  --project=$P --global --default-service=bakerrang-renderer-backend
+gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
+  --path-matcher-name=client-matcher --default-service=bakerrang-client-backend `
+  --new-hosts="bakerrang.com,www.bakerrang.com"
+gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
+  --path-matcher-name=api-matcher --default-service=bakerrang-api-backend `
+  --new-hosts="api.bakerrang.com"
+gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
+  --path-matcher-name=portal-matcher --default-service=bakerrang-portal-backend `
+  --new-hosts="portal.bakerrang.com"
+gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
+  --path-matcher-name=sites-matcher --default-service=bakerrang-renderer-backend `
+  --new-hosts="sites.bakerrang.com"
+```
+
+### MAIN TLS and frontends
+
+Certificate Manager uses one `PER_PROJECT_RECORD` DNS authorization, `bakerrang-main-auth`, for `bakerrang.com`. Its generated project-unique `_acme-challenge_<id>.bakerrang.com` CNAME coexists with DEV's fixed `_acme-challenge.bakerrang.com` record; never replace or hand-craft either authorization record.
+
+The active managed certificate `bakerrang-web-cert` covers both `bakerrang.com` and `*.bakerrang.com`. Certificate map `bakerrang-web-cert-map` has explicit entries `bakerrang-apex-entry` and `bakerrang-wildcard-entry`. The HTTPS frontend is `bakerrang-web-https-proxy` plus global forwarding rule `bakerrang-web-https` on port 443. The HTTP frontend (`bakerrang-web-redirect`, `bakerrang-web-http-proxy`, and `bakerrang-web-http`) redirects port 80 requests to HTTPS.
+
+```powershell
+gcloud certificate-manager dns-authorizations create bakerrang-main-auth --project=$P `
+  --domain="bakerrang.com" --type=PER_PROJECT_RECORD
+gcloud certificate-manager dns-authorizations describe bakerrang-main-auth --project=$P `
+  --format="value(dnsResourceRecord.name,dnsResourceRecord.type,dnsResourceRecord.data)"
+# Add the exact printed CNAME to the authoritative zone before requesting the certificate.
+
+gcloud certificate-manager certificates create bakerrang-web-cert --project=$P `
+  --domains="bakerrang.com,*.bakerrang.com" --dns-authorizations="bakerrang-main-auth"
+gcloud certificate-manager maps create bakerrang-web-cert-map --project=$P
+gcloud certificate-manager maps entries create bakerrang-apex-entry --project=$P `
+  --map=bakerrang-web-cert-map --certificates=bakerrang-web-cert --hostname="bakerrang.com"
+gcloud certificate-manager maps entries create bakerrang-wildcard-entry --project=$P `
+  --map=bakerrang-web-cert-map --certificates=bakerrang-web-cert --hostname="*.bakerrang.com"
+
+gcloud compute target-https-proxies create bakerrang-web-https-proxy --project=$P `
+  --url-map=bakerrang-web-urlmap --certificate-map=bakerrang-web-cert-map
+gcloud compute forwarding-rules create bakerrang-web-https --project=$P --global `
+  --load-balancing-scheme=EXTERNAL_MANAGED --network-tier=PREMIUM `
+  --address=bakerrang-web-ip --target-https-proxy=bakerrang-web-https-proxy --ports=443
+```
+
+Use read-only descriptions to reconstruct the exact deployed HTTP redirect configuration rather than replacing it from memory:
+
+```powershell
+gcloud compute url-maps describe bakerrang-web-redirect --project=$P --global
+gcloud compute target-http-proxies describe bakerrang-web-http-proxy --project=$P
+gcloud compute forwarding-rules describe bakerrang-web-http --project=$P --global
+```
+
+### Public DNS cutover
+
+Public DNS now points `portal.bakerrang.com`, `sites.bakerrang.com`, `custom.bakerrang.com` (the BakerRang-owned custom-domain test path), `api.bakerrang.com`, and apex `bakerrang.com` to `34.8.236.85`. The API's former Cloud Run domain-mapping CNAME and the former apex target were replaced during controlled DNS transactions. The apex has no AAAA record because this frontend is IPv4-only.
+
+For reconstruction in a fresh zone, the desired A records are:
+
+```powershell
+foreach ($HostName in @(
+  "portal.bakerrang.com.",
+  "sites.bakerrang.com.",
+  "custom.bakerrang.com.",
+  "api.bakerrang.com.",
+  "bakerrang.com.")) {
+  gcloud dns record-sets create $HostName --zone=bakerrang-client --project=$P `
+    --type=A --ttl=300 --rrdatas="34.8.236.85"
+}
+```
+
+Against an existing zone, use a reviewed `gcloud dns record-sets transaction` that removes the exact current record and adds the desired A record atomically; do not issue the fresh-zone commands blindly. Direct Cloud Run domain mappings are no longer the product ingress architecture. Retire a legacy mapping only after the corresponding LB path, certificate, DNS propagation, and rollback window have all been verified.
+
+Deployment smoke intentionally uses each Cloud Run service's `status.url`. Public hostname smoke is a separate ingress check for DNS, load balancer, certificate, and routing health.
+
 ## Media bucket
 
 ```powershell
@@ -81,7 +196,7 @@ UBLA is required. Public `objectViewer` is intentional for published marketing m
 gcloud iam service-accounts create bakerrang-frontend --project $ProjectId --display-name="BakerRang frontend runtime"
 ```
 
-The live Client currently uses the default Compute service account. Moving it is a later controlled live operation, not Step 2.5b.
+Client, Portal, and Site Renderer now use `bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com`. The Client migration from the default Compute service account is complete. Normal CI does not pass `--service-account`; its runtime-SA-unchanged assertion protects this state.
 
 ## Preview token
 
@@ -218,10 +333,10 @@ Do not read secret version data during an audit. Do not blindly replace existing
 
 **SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, bucket, WIF, service skeletons, and IP reservation. They are still infrastructure changes requiring operator review.
 
-**LIVE IMPACT:** updating the API configuration/image; updating Client; swapping the Client runtime SA; API or apex DNS changes; and enabling automatic live deployment. Step 2.5b does none of these.
+**CURRENT LIVE PATH:** the global load balancer, DNS/TLS cutover, Client runtime-SA migration, and selective automatic MAIN deployment are complete. Future changes to Cloud Run configuration, runtime identities, load-balancer resources, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
 
 ## DEV retention
 
-Keep: `bakerrang-dev`, Firestore, `bakerrang-dev-media-marketing`, and minimal developer IAM.
+Keep during the Step 2.5e decommission window: `bakerrang-dev`, Firestore, `bakerrang-dev-media-marketing`, retained DEV services, the `development` GitHub Environment, and minimal developer IAM. DEV deployment is manual-only; pushes to `main` no longer deploy DEV.
 
 Remove only during a later approved decommission: DEV Cloud Run; DEV LB/IP; DEV WIF; DEV deployer/runtime deployment SAs; deployment AR; deployment secrets; DEV domains; and the `development` GitHub Environment/workflows. Inventory dependencies and preserve recoverable backups first.
