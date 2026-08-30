@@ -1,6 +1,6 @@
 # CI/CD operations
 
-Step 2.5b is a transitional four-service model. PR validation covers API, Portal, Site Renderer, and Client; DEV still deploys automatically; MAIN/live deployment is an explicit manual action.
+The steady-state deployment model has four services: API, Portal, Site Renderer, and Client. Pull requests validate only, pushes to `main` selectively deploy affected services to MAIN/live, and DEV is manual-only during its decommission window.
 
 ## Pull requests to main
 
@@ -20,34 +20,53 @@ Workflow YAML consumes classifier outputs and does not duplicate this map. API C
 
 PR CI has `contents: read` only: no `id-token: write`, registry login, GCP authentication, or long-lived credential.
 
-## Temporary automatic DEV deployment
+## Automatic MAIN/live deployment
 
-A push to `main` still starts the existing `.github/workflows/deploy-dev.yml` temporarily. It validates `before..after` ancestry and continues validating/deploying affected API, Portal, and Renderer services. A Client-only change is classified but does not expand the retained DEV deployment stack. A docs/operations-only push obtains no Google credentials.
+A push to `main` starts `.github/workflows/deploy.yml`. Its credential-free `changes` job validates the actual `github.event.before..github.sha` range, requires linear ancestry, rejects an empty/all-zero `before` SHA, and runs the authoritative classifier. Unknown paths fail closed.
 
-`.github/workflows/_deploy-cloud-run.yml` supports `api`, `portal`, `renderer`, and `client`. Before OIDC authentication, its stale guard fetches current `origin/main`; it skips an old job only when a newer main commit affects that service. Unknown paths and rewritten/non-linear history fail closed.
+Affected services validate and call `.github/workflows/_deploy-cloud-run.yml` independently:
 
-Deployments use WIF, immutable `git-<SHA>` tags, existing digest reuse, and image-only Cloud Run updates. The workflow records the previous revision/image/runtime service account, deploys by digest, and asserts the runtime identity is unchanged. It does not alter traffic, environment variables, secrets, resources, networking, or runtime service accounts.
+```text
+changes
+  ├─ validate-api      → deploy-api
+  ├─ validate-platform → deploy-portal
+  │                    → deploy-renderer
+  └─ validate-client   → deploy-client
+```
 
-DEV smoke checks are API HTTP 200 plus `Healthy`, Portal HTTP 200, Renderer `robots.txt` HTTP 200 plus `User-agent`, and Client HTTP 200 plus the stable `<div id="root"` SPA shell. Failures are visible and not automatically rolled back; use the prior revision/image in the job summary for a separately reviewed image-only rollback.
+Every deployment caller uses GitHub Environment `production`, immutable `git-${{ github.sha }}` image identity, and `smoke_via_service_url: true`. Only deployment callers receive `id-token: write`; classification, validation, guards, and aggregate status have `contents: read` only. Each reusable call retains service-specific concurrency, so unrelated services can proceed independently while two deployments of the same environment/service serialize with `cancel-in-progress: false`.
+
+`live-deploy-passed` is the stable aggregate status. A classifier failure, affected validation failure, or affected deployment failure is red. Unaffected service jobs may be skipped. A no-service push is green without authenticating to Google Cloud or deploying anything.
+
+Before OIDC authentication, each reusable deployment fetches current `origin/main`. An older job is skipped only when a newer main commit affects the same service; unknown paths and rewritten/non-linear history fail closed. This prevents an older relevant revision from winning during rapid pushes without unnecessarily blocking unrelated services.
 
 ## Manual MAIN/live deployment
 
-`.github/workflows/deploy.yml` has `workflow_dispatch` only—no `push` or `pull_request`. The operator selects exactly one of `api`, `portal`, `renderer`, or `client`; there is intentionally no `all` option.
+The same `.github/workflows/deploy.yml` retains `workflow_dispatch`. The operator must select exactly one of `api`, `portal`, `renderer`, or `client`; there is intentionally no `all` option.
 
 ```text
-guard-main -> deploy-selected-service -> live-deploy-passed
+guard-main → deploy-selected-service → live-deploy-passed
 ```
 
-`guard-main` visibly fails unless `github.ref` is `refs/heads/main`. It has only `contents: read` and executes before the selected deploy caller receives `id-token: write`. The production WIF provider independently restricts immutable repository owner ID, repository ID, and main ref. The caller passes GitHub Environment `production` and `git-${{ github.sha }}`. Only the selected service authenticates or deploys.
+`guard-main` visibly fails unless `github.ref` is `refs/heads/main`. It has only `contents: read` and completes before the selected deploy caller can receive `id-token: write`. The production WIF provider independently restricts the immutable repository owner ID, repository ID, and main ref. The caller deploys the current SHA through the same production reusable workflow and remains image-only.
 
-The Environment name `production` is not a branch. Do not run live deployment while implementing or reviewing Step 2.5b.
+## Deployment mechanics and smoke
 
-## Next transition
+The reusable workflow authenticates through WIF, builds a missing write-once `git-<SHA>` image or reuses that exact existing tag/digest, and updates Cloud Run with `repository@sha256:...`. It records the previous revision/image/runtime service account, updates only the image, and asserts that the runtime identity did not change. It never deploys `latest` and does not alter traffic, environment variables, secrets, resources, networking, or service accounts.
 
-Automatic `main` → live deployment is **not enabled**. Step 2.5d will remove DEV auto-deploy and may enable automatic live deployment after live cutover/audit.
+MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` after the update:
 
-## Manual DEV fallback
+- API: `<status.url>/health` → HTTP 200 and body `Healthy`;
+- Portal: `<status.url>/` → HTTP 200;
+- Renderer: `<status.url>/robots.txt` → HTTP 200 and `User-agent`;
+- Client: `<status.url>/` → HTTP 200 and the `<div id="root"` SPA shell.
 
-`scripts/deploy-dev.ps1` remains the emergency full-DEV path and requires an explicit operational decision.
+This proves the revision, image, and runtime work. Public ingress verification for `portal.bakerrang.com`, `sites.bakerrang.com`, `api.bakerrang.com`, `bakerrang.com`, or a customer domain is separate because it proves DNS, load balancing, TLS, and host routing.
 
-See [live-environment-bootstrap.md](infra/live-environment-bootstrap.md) for reconstruction, scoped IAM, and live-impact boundaries, and [local-development.md](infra/local-development.md) for local configuration.
+## Manual DEV during decommission
+
+`.github/workflows/deploy-dev.yml` has `workflow_dispatch` only. It can manually deploy one retained DEV service (`api`, `portal`, or `renderer`) from `main` through the same reusable workflow and the `development` Environment. It has no `push` trigger, so a push to `main` cannot deploy DEV.
+
+DEV continues using its established stable-domain smoke targets because `smoke_via_service_url` defaults to `false`. `scripts/deploy-dev.ps1` also remains the emergency full-DEV operator path. DEV infrastructure and the `development` GitHub Environment remain intact until Step 2.5e.
+
+See [live-environment-bootstrap.md](infra/live-environment-bootstrap.md) for reconstruction, scoped IAM, MAIN ingress, and live-impact boundaries, [Step1.23-CustomDomains-OperatorRunbook.md](marketing-site/Step1/Step1.23-CustomDomains-OperatorRunbook.md) for customer-domain certificate onboarding, and [local-development.md](infra/local-development.md) for local configuration.
