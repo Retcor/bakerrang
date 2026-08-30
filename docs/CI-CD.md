@@ -63,6 +63,12 @@ MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` af
 
 This proves the revision, image, and runtime work. Public ingress verification for `portal.bakerrang.com`, `sites.bakerrang.com`, `api.bakerrang.com`, `bakerrang.com`, or a customer domain is separate because it proves DNS, load balancing, TLS, and host routing.
 
+## Read-only live verification
+
+Run `scripts/verify-live.ps1` from an operator workstation with readable production gcloud credentials to inspect the four services without mutating them. It reports configured traffic intent, actual serving revisions, latest ready/created revisions, serving image and resolvable `git-<SHA>` tag, serving-revision runtime identity, readiness, and fixed public ingress health. `-Deep` additionally checks `custom.bakerrang.com`. Traffic is healthy only when one 100% `latestRevision: true` target resolves to the latest ready revision; PINNED, SPLIT, UNKNOWN, readiness failures, identity mismatches, and required public-check failures produce a non-zero exit.
+
+`.github/workflows/verify-live.yml` performs only credential-free fixed-host HTTP checks. It runs manually, once daily, and after every completed `Deploy MAIN` workflow. It still runs after a failed deployment as diagnostic evidence and does not change or retroactively determine the deployment workflow's conclusion. The workflow has `contents: read` only and no OIDC permission.
+
 ## Local development data backing
 
 DEV deployment infrastructure was retired in Step 2.5e. There is no DEV deployment workflow, GitHub deployment path, WIF authentication path, Cloud Run service, or load balancer in the repository's active operating model.

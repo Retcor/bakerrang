@@ -1,0 +1,89 @@
+name: Verify live public ingress
+
+on:
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: Also verify the fixed custom.bakerrang.com test host
+        required: false
+        default: false
+        type: boolean
+  workflow_run:
+    workflows:
+      - Deploy MAIN
+    types:
+      - completed
+  schedule:
+    - cron: '17 13 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  public-ingress:
+    name: live-public-ingress
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Record triggering deployment outcome
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        env:
+          DEPLOY_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DEPLOY_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [[ "$DEPLOY_CONCLUSION" == "success" ]]; then
+            echo "Deploy MAIN succeeded; running independent public-ingress verification."
+          else
+            echo "::warning::Deploy MAIN concluded '$DEPLOY_CONCLUSION'. Public verification is still running as diagnostic evidence; it does not imply deployment success."
+          fi
+          {
+            echo "### Triggering Deploy MAIN run"
+            echo
+            echo "Conclusion: **$DEPLOY_CONCLUSION**"
+            echo
+            echo "Run: $DEPLOY_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify fixed public endpoints
+        shell: bash
+        env:
+          DEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.deep }}
+        run: |
+          set -euo pipefail
+
+          check_endpoint() {
+            local name="$1"
+            local url="$2"
+            local assertion="$3"
+            local body_file="$RUNNER_TEMP/verify-live-${name}.body"
+            local status=""
+
+            for attempt in {1..3}; do
+              status="$(curl --silent --show-error --location --max-time 20 \
+                --output "$body_file" --write-out '%{http_code}' "$url" || true)"
+              if [[ "$status" == "200" ]]; then
+                case "$assertion" in
+                  healthy) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && return 0 ;;
+                  user-agent) grep -qi 'User-agent' "$body_file" && return 0 ;;
+                  client-root) grep -Fq '<div id="root"' "$body_file" && return 0 ;;
+                  status-only) return 0 ;;
+                esac
+              fi
+              echo "$name attempt $attempt failed with HTTP $status."
+              sleep 3
+            done
+            echo "::error::$name public verification failed."
+            return 1
+          }
+
+          failed=0
+          check_endpoint api https://api.bakerrang.com/health healthy || failed=1
+          check_endpoint portal https://portal.bakerrang.com/ status-only || failed=1
+          check_endpoint renderer https://sites.bakerrang.com/robots.txt user-agent || failed=1
+          check_endpoint client https://bakerrang.com/ client-root || failed=1
+          if [[ "$DEEP" == "true" ]]; then
+            check_endpoint custom https://custom.bakerrang.com/ status-only || failed=1
+          fi
+          exit "$failed"

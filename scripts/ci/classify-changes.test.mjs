@@ -64,6 +64,7 @@ test('explicitly classifies docs, non-service applications, workflows, and ops a
     '.github/workflows/ci.yml',
     'platform/.gitignore',
     'platform/.nvmrc',
+    'scripts/verify-live.ps1',
     'scripts/deploy-dev.ps1',
     'firebase.json'
   ]) {
