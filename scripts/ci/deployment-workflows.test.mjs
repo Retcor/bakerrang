@@ -8,6 +8,7 @@ const workflowDir = new URL('../../.github/workflows/', import.meta.url)
 const reusablePath = new URL('_deploy-cloud-run.yml', workflowDir)
 const mainPath = new URL('deploy.yml', workflowDir)
 const prPath = new URL('ci.yml', workflowDir)
+const verifyPath = new URL('verify-live.yml', workflowDir)
 const retiredPaths = [
   new URL('deploy-dev.yml', workflowDir),
   new URL('verify-gcp-auth-dev.yml', workflowDir),
@@ -22,6 +23,7 @@ const workflowText = activeWorkflows.map(([, contents]) => contents).join('\n')
 const reusable = (await readFile(reusablePath, 'utf8')).replaceAll('\r\n', '\n')
 const main = (await readFile(mainPath, 'utf8')).replaceAll('\r\n', '\n')
 const pr = (await readFile(prPath, 'utf8')).replaceAll('\r\n', '\n')
+const verify = (await readFile(verifyPath, 'utf8')).replaceAll('\r\n', '\n')
 
 const job = (workflow, id) => {
   const match = workflow.match(new RegExp(`^  ${id}:\\n[\\s\\S]*?(?=^  [a-z][a-z0-9-]*:\\n|(?![\\s\\S]))`, 'm'))
@@ -33,7 +35,7 @@ test('DEV cloud deployment entrypoints are retired', async () => {
   for (const retiredPath of retiredPaths) {
     await assert.rejects(access(retiredPath), error => error?.code === 'ENOENT')
   }
-  assert.deepEqual(workflowNames, ['_deploy-cloud-run.yml', 'ci.yml', 'deploy.yml'])
+  assert.deepEqual(workflowNames, ['_deploy-cloud-run.yml', 'ci.yml', 'deploy.yml', 'verify-live.yml'])
 })
 
 test('MAIN remains automatic on main and manually dispatchable', () => {
@@ -89,6 +91,34 @@ test('no active workflow contains a DEV deployment path or development Environme
   assert.doesNotMatch(workflowText, /deploy-dev\.ps1/)
 })
 
+test('public verification workflow is credential-free and uses fixed hosts only', () => {
+  assert.doesNotMatch(verify, /id-token/)
+  assert.match(verify, /^permissions:\n  contents: read$/m)
+  assert.match(verify, /^  workflow_dispatch:$/m)
+  assert.match(verify, /^  workflow_run:\n    workflows:\n      - Deploy MAIN\n    types:\n      - completed$/m)
+  assert.match(verify, /^  schedule:\n    - cron: '[^']+'$/m)
+
+  const dispatch = verify.match(/^  workflow_dispatch:\n[\s\S]*?(?=^  workflow_run:)/m)?.[0] ?? ''
+  assert.match(dispatch, /deep:\n        description: [^\n]+\n        required: false\n        default: false\n        type: boolean/)
+  assert.doesNotMatch(dispatch, /(?:url|host):/i)
+
+  const urls = [...new Set(verify.match(/https:\/\/[^\s"']+/g) ?? [])].sort()
+  assert.deepEqual(urls, [
+    'https://api.bakerrang.com/health',
+    'https://bakerrang.com/',
+    'https://custom.bakerrang.com/',
+    'https://portal.bakerrang.com/',
+    'https://sites.bakerrang.com/robots.txt'
+  ])
+  assert.match(verify, /if \[\[ "\$DEEP" == "true" \]\]; then\n            check_endpoint custom https:\/\/custom\.bakerrang\.com\//)
+})
+
+test('failed Deploy MAIN runs still trigger diagnostic public verification', () => {
+  assert.match(verify, /Deploy MAIN concluded '\$DEPLOY_CONCLUSION'/)
+  assert.match(verify, /Public verification is still running as diagnostic evidence/)
+  assert.doesNotMatch(job(verify, 'public-ingress'), /if: github\.event\.workflow_run\.conclusion == 'success'/)
+})
+
 test('each classifier output independently controls its MAIN service deployment', () => {
   const validation = {
     api: 'validate-api',
@@ -119,6 +149,25 @@ test('Phase B changed paths classify as no-service with no unknown paths', () =>
     'docs/marketing-site/Step2/Step2.5e-DecommissionDevInfra-Plan.md'
   ]
   assert.deepEqual(classifyChanges(phaseBPaths), {
+    ci: { api: false, portal: false, renderer: false, client: false },
+    deploy: { api: false, portal: false, renderer: false, client: false },
+    unknown: []
+  })
+})
+
+test('Step 2.6a changed paths classify as no-service with no unknown paths', () => {
+  const step26aPaths = [
+    '.github/workflows/verify-live.yml',
+    'scripts/verify-live.ps1',
+    'scripts/ci/verify-live.test.ps1',
+    'scripts/ci/classify-changes.mjs',
+    'scripts/ci/classify-changes.test.mjs',
+    'scripts/ci/deployment-workflows.test.mjs',
+    'docs/CI-CD.md',
+    'docs/marketing-site/Step2/Step2.6-DeployHardening-Spec.md',
+    'docs/marketing-site/Step2/Step2.6-DeployHardening-Plan.md'
+  ]
+  assert.deepEqual(classifyChanges(step26aPaths), {
     ci: { api: false, portal: false, renderer: false, client: false },
     deploy: { api: false, portal: false, renderer: false, client: false },
     unknown: []
