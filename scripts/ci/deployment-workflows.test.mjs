@@ -1,19 +1,27 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import test from 'node:test'
 
-const reusablePath = new URL('../../.github/workflows/_deploy-cloud-run.yml', import.meta.url)
-const mainPath = new URL('../../.github/workflows/deploy.yml', import.meta.url)
-const devPath = new URL('../../.github/workflows/deploy-dev.yml', import.meta.url)
-const prPath = new URL('../../.github/workflows/ci.yml', import.meta.url)
+import { classifyChanges } from './classify-changes.mjs'
 
-const workflows = await Promise.all([
-  readFile(reusablePath, 'utf8'),
-  readFile(mainPath, 'utf8'),
-  readFile(devPath, 'utf8'),
-  readFile(prPath, 'utf8')
-])
-const [reusable, main, dev, pr] = workflows.map(workflow => workflow.replaceAll('\r\n', '\n'))
+const workflowDir = new URL('../../.github/workflows/', import.meta.url)
+const reusablePath = new URL('_deploy-cloud-run.yml', workflowDir)
+const mainPath = new URL('deploy.yml', workflowDir)
+const prPath = new URL('ci.yml', workflowDir)
+const retiredPaths = [
+  new URL('deploy-dev.yml', workflowDir),
+  new URL('verify-gcp-auth-dev.yml', workflowDir),
+  new URL('../../scripts/deploy-dev.ps1', import.meta.url)
+]
+
+const workflowNames = (await readdir(workflowDir)).filter(name => name.endsWith('.yml')).sort()
+const activeWorkflows = await Promise.all(
+  workflowNames.map(async name => [name, (await readFile(new URL(name, workflowDir), 'utf8')).replaceAll('\r\n', '\n')])
+)
+const workflowText = activeWorkflows.map(([, contents]) => contents).join('\n')
+const reusable = (await readFile(reusablePath, 'utf8')).replaceAll('\r\n', '\n')
+const main = (await readFile(mainPath, 'utf8')).replaceAll('\r\n', '\n')
+const pr = (await readFile(prPath, 'utf8')).replaceAll('\r\n', '\n')
 
 const job = (workflow, id) => {
   const match = workflow.match(new RegExp(`^  ${id}:\\n[\\s\\S]*?(?=^  [a-z][a-z0-9-]*:\\n|(?![\\s\\S]))`, 'm'))
@@ -21,15 +29,18 @@ const job = (workflow, id) => {
   return match[0]
 }
 
-test('automatic deployment moves atomically from DEV to MAIN', () => {
+test('DEV cloud deployment entrypoints are retired', async () => {
+  for (const retiredPath of retiredPaths) {
+    await assert.rejects(access(retiredPath), error => error?.code === 'ENOENT')
+  }
+  assert.deepEqual(workflowNames, ['_deploy-cloud-run.yml', 'ci.yml', 'deploy.yml'])
+})
+
+test('MAIN remains automatic on main and manually dispatchable', () => {
   assert.match(main, /^  push:\n    branches:\n      - main$/m)
   assert.match(main, /^  workflow_dispatch:$/m)
   assert.doesNotMatch(main, /^      - production$/m)
-  assert.doesNotMatch(dev, /^  push:$/m)
-  assert.match(dev, /^  workflow_dispatch:$/m)
-})
 
-test('manual MAIN retains the exact four-service selector and main-ref guard', () => {
   const dispatch = main.match(/^  workflow_dispatch:\n[\s\S]*?(?=^permissions:)/m)?.[0] ?? ''
   assert.match(dispatch, /required: true/)
   assert.match(dispatch, /options:\n          - api\n          - portal\n          - renderer\n          - client/)
@@ -52,7 +63,7 @@ test('push classification uses the authoritative classifier and actual push rang
   }
 })
 
-test('only deployment callers receive OIDC and all use production', () => {
+test('only MAIN deployment callers receive OIDC and all use production', () => {
   assert.doesNotMatch(job(main, 'changes'), /id-token/)
   assert.doesNotMatch(job(main, 'validate-api'), /id-token/)
   assert.doesNotMatch(job(main, 'validate-platform'), /id-token/)
@@ -70,7 +81,15 @@ test('only deployment callers receive OIDC and all use production', () => {
   assert.equal((main.match(/id-token: write/g) ?? []).length, 5)
 })
 
-test('each classifier output independently controls its service deployment', () => {
+test('no active workflow contains a DEV deployment path or development Environment', () => {
+  assert.doesNotMatch(workflowText, /environment: development/)
+  assert.doesNotMatch(workflowText, /bakerrang-(?:api|portal|site-renderer)-dev/)
+  assert.doesNotMatch(workflowText, /bakerrang-dev/)
+  assert.doesNotMatch(workflowText, /verify DEV Workload Identity Federation/i)
+  assert.doesNotMatch(workflowText, /deploy-dev\.ps1/)
+})
+
+test('each classifier output independently controls its MAIN service deployment', () => {
   const validation = {
     api: 'validate-api',
     portal: 'validate-platform',
@@ -83,6 +102,27 @@ test('each classifier output independently controls its service deployment', () 
     assert.match(deployment, new RegExp(`needs\\.${validation[service]}\\.result == 'success'`))
     assert.match(deployment, new RegExp(`service: ${service}`))
   }
+})
+
+test('Phase B changed paths classify as no-service with no unknown paths', () => {
+  const phaseBPaths = [
+    '.github/workflows/deploy-dev.yml',
+    '.github/workflows/verify-gcp-auth-dev.yml',
+    'scripts/deploy-dev.ps1',
+    'scripts/ci/classify-changes.mjs',
+    'scripts/ci/deployment-workflows.test.mjs',
+    'docs/CI-CD.md',
+    'docs/DEV-DEPLOYMENT.md',
+    'docs/infra/live-environment-bootstrap.md',
+    'docs/infra/local-development.md',
+    'docs/marketing-site/Step2/Step2.5e-DecommissionDevInfra-Spec.md',
+    'docs/marketing-site/Step2/Step2.5e-DecommissionDevInfra-Plan.md'
+  ]
+  assert.deepEqual(classifyChanges(phaseBPaths), {
+    ci: { api: false, portal: false, renderer: false, client: false },
+    deploy: { api: false, portal: false, renderer: false, client: false },
+    unknown: []
+  })
 })
 
 test('aggregate status handles manual, affected, skipped, and no-service paths', () => {
@@ -119,13 +159,4 @@ test('MAIN deployment smoke resolves and validates Cloud Run status.url', () => 
   assert.equal((reusable.match(/tr -d '\\r\\n'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -qi 'User-agent'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -Fq '<div id="root"'/g) ?? []).length, 1)
-})
-
-test('DEV is manual-only and retains stable-domain smoke behavior', () => {
-  assert.doesNotMatch(dev, /smoke_via_service_url/)
-  assert.match(dev, /environment: development/)
-  assert.match(reusable, /smoke_via_service_url:\s*[\s\S]*?default: false\s*[\s\S]*?type: boolean/)
-  assert.match(reusable, /smoke_url="\$\{NEXT_PUBLIC_API_BASE_URL%\/\}\/health"/)
-  assert.match(reusable, /smoke_url="\$\{PORTAL_BASE_URL%\/\}\/"/)
-  assert.match(reusable, /smoke_url="\$\{NEXT_PUBLIC_SITE_PREVIEW_ORIGIN%\/\}\/robots\.txt"/)
 })

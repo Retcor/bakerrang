@@ -1,6 +1,8 @@
-# BakerRang DEV deployment and smoke runbook
+# RETIRED / HISTORICAL — BakerRang DEV deployment and smoke runbook
 
-Use this runbook to build, deploy, and verify the existing BakerRang DEV services. It is DEV-only: do not adapt these commands for production.
+> **Retired in Step 2.5e. Do not run these commands as a current deployment procedure.** The DEV Cloud Run, load-balancer, certificate, WIF, and image-deployment infrastructure was retired. This document preserves the former deployment contract for audit and reconstruction history only. MAIN is the sole deployed environment.
+
+The `bakerrang-dev` project remains only as local-development data backing: Firestore `(default)`, `gs://bakerrang-dev-media-marketing`, and developer ADC. Current local setup is documented in [local-development.md](infra/local-development.md).
 
 ## Environment
 
@@ -28,7 +30,7 @@ Editors mutate the working site. Preview reads that working copy. Publish create
 
 For deeper context, see [Step 1.23 DEV Platform Architecture](marketing-site/Step1.23-DevPlatform-Architecture.md).
 
-## Prerequisites
+## Historical prerequisites
 
 - Node.js 24 and npm
 - Docker running locally
@@ -148,7 +150,7 @@ gcloud run services update <service> `
 
 This preserves the service's existing runtime environment, secrets, IAM, routing, and infrastructure configuration.
 
-## Deploy DEV
+## Historical deployment procedure
 
 From any working directory, run:
 
@@ -246,7 +248,7 @@ npm run build
 
 Focused workspace tests are also available through `npm test -w @bakerrang/portal`, `npm test -w @bakerrang/site-renderer`, and `npm test -w @bakerrang/ui` from `platform/`.
 
-## Final DEV smoke checklist
+## Historical final DEV smoke checklist
 
 Allow 15–30 minutes. Reuse the designated **Smoke Test** tenant; do not create a new business for every run.
 
@@ -310,8 +312,8 @@ Smoke leads may accumulate and can be removed manually from DEV Firestore if the
 - [ ] Leave `custom-dev.bakerrang.com` ACTIVE.
 - [ ] Do not leave intentionally broken content or configuration behind.
 
-## Known DEV deferrals
+## Historical DEV deferrals
 
 - **Tenant favicon:** `/favicon.ico` may return 404. The intended future implementation is tenant-configurable, media-backed, working/published-aware, and shared/custom-domain capable. Do not add a global favicon or 204 workaround.
-- **Browser E2E:** Playwright remains deferred until a clean test-auth strategy exists. Manual DEV smoke is the final gate.
-- **Production and operations:** production deployment, production DNS/OAuth, Terraform/IaC, distributed rate limiting, advanced monitoring, load testing, backup/restore, secret rotation, formal penetration testing, and formal WCAG certification are outside this runbook.
+- **Browser E2E:** Playwright was deferred; manual DEV smoke was the final gate for the retired environment.
+- **Production and operations:** production deployment, production DNS/OAuth, Terraform/IaC, distributed rate limiting, advanced monitoring, load testing, backup/restore, secret rotation, formal penetration testing, and formal WCAG certification were outside this historical runbook.

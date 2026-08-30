@@ -1,6 +1,6 @@
 # CI/CD operations
 
-The steady-state deployment model has four services: API, Portal, Site Renderer, and Client. Pull requests validate only, pushes to `main` selectively deploy affected services to MAIN/live, and DEV is manual-only during its decommission window.
+MAIN/live is the sole deployed environment and has four services: API, Portal, Site Renderer, and Client. Pull requests validate only, and pushes to `main` selectively deploy affected services to MAIN/live. DEV has no cloud deployment path; the `bakerrang-dev` project remains only as local-development data backing.
 
 ## Pull requests to main
 
@@ -63,10 +63,17 @@ MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` af
 
 This proves the revision, image, and runtime work. Public ingress verification for `portal.bakerrang.com`, `sites.bakerrang.com`, `api.bakerrang.com`, `bakerrang.com`, or a customer domain is separate because it proves DNS, load balancing, TLS, and host routing.
 
-## Manual DEV during decommission
+## Local development data backing
 
-`.github/workflows/deploy-dev.yml` has `workflow_dispatch` only. It can manually deploy one retained DEV service (`api`, `portal`, or `renderer`) from `main` through the same reusable workflow and the `development` Environment. It has no `push` trigger, so a push to `main` cannot deploy DEV.
+DEV deployment infrastructure was retired in Step 2.5e. There is no DEV deployment workflow, GitHub deployment path, WIF authentication path, Cloud Run service, or load balancer in the repository's active operating model.
 
-DEV continues using its established stable-domain smoke targets because `smoke_via_service_url` defaults to `false`. `scripts/deploy-dev.ps1` also remains the emergency full-DEV operator path. DEV infrastructure and the `development` GitHub Environment remain intact until Step 2.5e.
+Local processes run on the developer machine and use Application Default Credentials where Google access is required:
+
+- Firestore: project `bakerrang-dev`, database `(default)`;
+- media: `gs://bakerrang-dev-media-marketing`;
+- API, Portal, Renderer, and Client: local processes and localhost origins;
+- authentication: developer ADC, never GitHub WIF.
+
+No public DEV DNS is required. Historical deployment details remain in [DEV-DEPLOYMENT.md](DEV-DEPLOYMENT.md), clearly marked retired, for audit and reconstruction only.
 
 See [live-environment-bootstrap.md](infra/live-environment-bootstrap.md) for reconstruction, scoped IAM, MAIN ingress, and live-impact boundaries, [Step1.23-CustomDomains-OperatorRunbook.md](marketing-site/Step1/Step1.23-CustomDomains-OperatorRunbook.md) for customer-domain certificate onboarding, and [local-development.md](infra/local-development.md) for local configuration.
