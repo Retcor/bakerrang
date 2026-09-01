@@ -51,6 +51,9 @@ gcloud artifacts repositories describe $Repository --project $ProjectId --locati
 ```
 
 Immutable tags make each CI `git-<SHA>` identity write-once.
+The steady-state policy keeps immutable tags enabled, intentionally retains tagged
+`git-<SHA>` rollback images at the current scale, and configures no cleanup policy.
+See the [MAIN/live operations guide](../operations/live-ops.md#artifact-registry-retention).
 
 ## Global static IP
 

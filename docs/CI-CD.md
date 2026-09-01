@@ -2,6 +2,8 @@
 
 MAIN/live is the sole deployed environment and has four services: API, Portal, Site Renderer, and Client. Pull requests validate only, and pushes to `main` selectively deploy affected services to MAIN/live. DEV has no cloud deployment path; the `bakerrang-dev` project remains only as local-development data backing.
 
+For routine release, verification, compatibility, and retention policy, see the [MAIN/live operations guide](operations/live-ops.md). For emergency recovery, see the [MAIN rollback runbook](operations/rollback.md).
+
 ## Pull requests to main
 
 `.github/workflows/ci.yml` runs only for pull requests targeting `main`. There is no `production` branch.
@@ -17,6 +19,8 @@ MAIN/live is the sole deployed environment and has four services: API, Portal, S
 - shared Platform build/config inputs → Portal and Renderer as explicitly defined in the classifier.
 
 Workflow YAML consumes classifier outputs and does not duplicate this map. API CI runs lint, tests, and Docker packaging. Platform CI runs lint, typecheck, tests, affected builds, and affected Docker packaging. Client CI uses its own lockfile/package root and Node 20, then runs lint, build, and `docker build client`. Docker checks neither push nor authenticate. `ci-passed` accepts unaffected jobs only when skipped and fails on an affected validation failure.
+
+Branch protection for `main` must require **`ci-passed`** for pull-request merge. Do not require `live-deploy-passed`, `verify-live`/`live-public-ingress`, or any `rollback`/`Rollback MAIN` job: these are post-merge or operator signals and cannot serve as pre-merge gates.
 
 PR CI has `contents: read` only: no `id-token: write`, registry login, GCP authentication, or long-lived credential.
 
@@ -72,7 +76,7 @@ Run `scripts/verify-live.ps1` from an operator workstation with readable product
 ## Manual rollback
 
 For operator-initiated per-service recovery, see the [MAIN rollback runbook](operations/rollback.md).
-`Rollback MAIN` is manual and main-only in `production`, shares the forward per-service lock, and does not use the forward stale guard. Image rollback requires LATEST traffic and preserves current config; historical revision rollback pins traffic and requires explicit operator unpin recovery.
+`Rollback MAIN` is manual and main-only in `production`, authenticates with production WIF, shares the forward same-service deployment concurrency lock, and intentionally does not use the forward stale-deploy guard. Primary rollback is image-only: it requires LATEST traffic and preserves current config. Historical revision rollback pins traffic and requires explicit operator unpin recovery.
 
 ## Local development data backing
 
