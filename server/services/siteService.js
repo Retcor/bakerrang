@@ -689,6 +689,9 @@ export const updateSiteBranding = async (tenantId, input) => {
   if (identity.logoMediaId) {
     await requireTenantMedia(tenantId, [identity.logoMediaId], 'Logo image not found')
   }
+  if (identity.faviconMediaId) {
+    await requireTenantMedia(tenantId, [identity.faviconMediaId], 'Favicon image not found')
+  }
   const refs = refsFor(tenantId)
   const now = Date.now()
   let definition
@@ -706,10 +709,11 @@ export const updateSiteBranding = async (tenantId, input) => {
       ...(typeof storedBranding.accentColor === 'string' ? { accentColor: storedBranding.accentColor } : {}),
       ...(identity.primaryColor ? { primaryColor: identity.primaryColor } : {}),
       ...(identity.accentColor ? { accentColor: identity.accentColor } : {}),
-      ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {})
+      ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {}),
+      ...(identity.faviconMediaId ? { faviconMediaId: identity.faviconMediaId } : {})
     }
     const nextConfig = { ...configSnapshot.data(), branding, updatedAt: now }
-    transaction.set(refs.config, { branding, updatedAt: now }, { merge: true })
+    transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
   return finalizeSiteDefinitionRead(tenantId, definition)

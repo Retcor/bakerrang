@@ -23,6 +23,19 @@ const handle = (fn, successStatus = 200) => async (req, res) => {
   }
 }
 
+const handleNoContent = (fn) => async (req, res) => {
+  try {
+    await fn(req)
+    res.status(204).end()
+  } catch (error) {
+    const status = error.status || 500
+    if (status >= 500) console.error(error)
+    res.status(status).json({
+      error: status >= 500 ? 'Tenant operation failed' : error.message
+    })
+  }
+}
+
 const noStore = (req, res, next) => {
   res.set('Cache-Control', 'no-store')
   next()
@@ -163,6 +176,10 @@ export const createTenantRouter = (deps = {}) => {
     201
   ))
 
+  router.delete('/:tenantId/media/:mediaId', platformAdmin, noStore, handleNoContent(
+    (req) => media.deleteUnusedMedia(req.params.tenantId, req.params.mediaId)
+  ))
+
   router.get('/:tenantId/site', tenantRole(allTenantRoles), handle(
     (req) => sites.getSite(req.params.tenantId)
   ))
@@ -190,6 +207,10 @@ export const createTenantRouter = (deps = {}) => {
 
   router.patch('/:tenantId/leads/:leadId', tenantRole(allTenantRoles), noStore, handle(
     (req) => leads.updateLeadStatus(req.params.tenantId, req.params.leadId, req.body)
+  ))
+
+  router.delete('/:tenantId/leads/:leadId', platformAdmin, noStore, handleNoContent(
+    (req) => leads.deleteTenantLead(req.params.tenantId, req.params.leadId)
   ))
 
   router.get('/:tenantId', tenantRole(allTenantRoles), handle(

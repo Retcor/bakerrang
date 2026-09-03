@@ -95,6 +95,13 @@ const mediaResponse = (snapshot) => {
 
 const tenantRef = (tenantId) => firestore.collection(TENANTS).doc(tenantId)
 const mediaRef = (tenantId, mediaId) => tenantRef(tenantId).collection('media').doc(mediaId)
+const siteRefsFor = (tenantId) => {
+  const tenant = tenantRef(tenantId)
+  const config = tenant.collection('site').doc('config')
+  const home = config.collection('pages').doc('home')
+  const published = config.collection('published').doc('current')
+  return { tenant, config, home, published }
+}
 
 const requireTenant = async (tenantId) => {
   const snapshot = await tenantRef(tenantId).get()
@@ -186,7 +193,7 @@ export const requireTenantMedia = async (tenantId, mediaIds, message = 'Media no
 export const requireGalleryMedia = (tenantId, mediaIds) =>
   requireTenantMedia(tenantId, mediaIds, 'Gallery image not found')
 
-export const hydrateSiteMedia = async (tenantId, definition) => {
+export const collectSiteMediaIds = (definition) => {
   const galleryItems = []
   const aboutSections = []
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
@@ -200,15 +207,123 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
   const logoMediaId = nonEmptyString(definition?.branding?.logoMediaId)
     ? definition.branding.logoMediaId
     : null
+  const faviconMediaId = nonEmptyString(definition?.branding?.faviconMediaId)
+    ? definition.branding.faviconMediaId
+    : null
   const socialImageMediaId = nonEmptyString(definition?.businessProfile?.socialImageMediaId)
     ? definition.businessProfile.socialImageMediaId
     : null
-  const mediaIds = [...new Set([
+  return [...new Set([
     ...(logoMediaId ? [logoMediaId] : []),
+    ...(faviconMediaId ? [faviconMediaId] : []),
     ...(socialImageMediaId ? [socialImageMediaId] : []),
     ...aboutSections.map((section) => section.content?.imageMediaId).filter(nonEmptyString),
     ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString)
   ])]
+}
+
+const MEDIA_USAGE_ORDER = [
+  ['working', 'logo'],
+  ['working', 'favicon'],
+  ['working', 'social image'],
+  ['working', 'about image'],
+  ['working', 'gallery'],
+  ['published', 'logo'],
+  ['published', 'favicon'],
+  ['published', 'social image'],
+  ['published', 'about image'],
+  ['published', 'gallery']
+]
+
+const collectMediaLocations = (definition, mediaId, surface) => {
+  const found = new Set()
+  if (definition?.branding?.logoMediaId === mediaId) found.add('logo')
+  if (definition?.branding?.faviconMediaId === mediaId) found.add('favicon')
+  if (definition?.businessProfile?.socialImageMediaId === mediaId) found.add('social image')
+  for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
+    for (const section of Array.isArray(page?.sections) ? page.sections : []) {
+      if (section?.id === 'about' && section?.type === 'about' && section.content?.imageMediaId === mediaId) {
+        found.add('about image')
+      }
+      if (section?.id === 'gallery' && section?.type === 'gallery' && Array.isArray(section.content?.items)) {
+        if (section.content.items.some((item) => item?.mediaId === mediaId)) found.add('gallery')
+      }
+    }
+  }
+  return [...found].map((field) => [surface, field])
+}
+
+export const formatMediaInUseMessage = (locations) => {
+  const selected = new Set((locations || []).map(([surface, field]) => `${surface}|${field}`))
+  const labels = MEDIA_USAGE_ORDER
+    .filter(([surface, field]) => selected.has(`${surface}|${field}`))
+    .map(([surface, field]) => `${surface} ${field}`)
+  if (labels.length === 1) return `Image is still used as the ${labels[0]}`
+  if (labels.length === 2) return `Image is still used as the ${labels[0]} and ${labels[1]}`
+  return `Image is still used as the ${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}`
+}
+
+const readWorkingAndPublishedDefinitions = async (tenantId) => {
+  const refs = siteRefsFor(tenantId)
+  const [configSnapshot, homeSnapshot, publishedSnapshot] = await Promise.all([
+    refs.config.get(),
+    refs.home.get(),
+    refs.published.get()
+  ])
+
+  const working = configSnapshot.exists
+    ? {
+        branding: configSnapshot.data().branding,
+        businessProfile: configSnapshot.data().businessProfile,
+        pages: [{
+          sections: homeSnapshot.exists && Array.isArray(homeSnapshot.data().sections)
+            ? homeSnapshot.data().sections
+            : []
+        }]
+      }
+    : null
+
+  const publishedData = publishedSnapshot.exists ? publishedSnapshot.data() : null
+  const published = publishedData && publishedData.siteDefinition && typeof publishedData.siteDefinition === 'object'
+    ? publishedData.siteDefinition
+    : null
+
+  return { working, published }
+}
+
+export const findMediaUsage = async (tenantId, mediaId) => {
+  const { working, published } = await readWorkingAndPublishedDefinitions(tenantId)
+  return [
+    ...(working ? collectMediaLocations(working, mediaId, 'working') : []),
+    ...(published ? collectMediaLocations(published, mediaId, 'published') : [])
+  ]
+}
+
+export const deleteUnusedMedia = async (tenantId, mediaId) => {
+  await requireTenant(tenantId)
+  const ref = mediaRef(tenantId, mediaId)
+  const snapshot = await ref.get()
+  if (!snapshot.exists) throw httpError(404, 'Media not found')
+  const stored = snapshot.data() || {}
+  const locations = await findMediaUsage(tenantId, mediaId)
+  if (locations.length > 0) throw httpError(400, formatMediaInUseMessage(locations))
+  await ref.delete()
+  if (nonEmptyString(stored.objectName)) {
+    await objectStorage.deleteObject(stored.objectName).catch(() => {})
+  }
+}
+
+export const hydrateSiteMedia = async (tenantId, definition) => {
+  const logoMediaId = nonEmptyString(definition?.branding?.logoMediaId)
+    ? definition.branding.logoMediaId
+    : null
+  const faviconMediaId = nonEmptyString(definition?.branding?.faviconMediaId)
+    ? definition.branding.faviconMediaId
+    : null
+  const socialImageMediaId = nonEmptyString(definition?.businessProfile?.socialImageMediaId)
+    ? definition.businessProfile.socialImageMediaId
+    : null
+  const mediaIds = collectSiteMediaIds(definition)
   const snapshots = mediaIds.length > 0
     ? await firestore.getAll(...mediaIds.map((id) => mediaRef(tenantId, id)))
     : []
@@ -227,6 +342,11 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
             logoSrc: objectStorage.publicUrl(resolved.get(logoMediaId).objectName),
             logoWidth: resolved.get(logoMediaId).width,
             logoHeight: resolved.get(logoMediaId).height
+          }
+        : {}),
+      ...(faviconMediaId && resolved.has(faviconMediaId)
+        ? {
+            faviconSrc: objectStorage.publicUrl(resolved.get(faviconMediaId).objectName)
           }
         : {})
     },

@@ -156,6 +156,15 @@ const media = {
       createdAt: 20,
       src: 'https://media.test/media-1'
     }
+  },
+  deleteUnusedMedia: async (tenantId, mediaId) => {
+    calls.push({ operation: 'deleteUnusedMedia', tenantId, mediaId })
+    if (mediaId === 'missing') {
+      throw Object.assign(new Error('Media not found'), { status: 404 })
+    }
+    if (mediaId === 'in-use') {
+      throw Object.assign(new Error('Image is still used as the working logo'), { status: 400 })
+    }
   }
 }
 
@@ -237,6 +246,13 @@ const leads = {
       throw Object.assign(new Error('Lead not found'), { status: 404 })
     }
     return { id: 'note-1', text: body.text, createdAt: 20, createdByUserId: actorUserId }
+  },
+  deleteTenantLead: async (tenantId, leadId) => {
+    calls.push({ operation: 'deleteTenantLead', tenantId, leadId })
+    if (tenantId === 'missing') throw notFound()
+    if (leadId === 'missing') {
+      throw Object.assign(new Error('Lead not found'), { status: 404 })
+    }
   }
 }
 
@@ -822,4 +838,64 @@ test('lead Note routes preserve tenant and lead not-found distinctions', async (
     assert.equal(missingLead.status, 404)
     assert.deepEqual(await missingLead.json(), { error: 'Lead not found' })
   }
+})
+
+test('lead DELETE is PLATFORM_ADMIN-only and returns 204', async () => {
+  const path = '/tenants/tenant-1/leads/lead-1'
+  const unauthenticated = await request(path, { method: 'DELETE' })
+  assert.equal(unauthenticated.status, 401)
+  assert.equal((await unauthenticated.json()).message, 'User not authenticated')
+
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    const denied = await request(path, { userId, method: 'DELETE' })
+    assert.equal(denied.status, 403)
+    assert.deepEqual(await denied.json(), { error: 'Platform administrator access required' })
+  }
+
+  const listed = await request('/tenants/tenant-1/leads', { userId: 'owner' })
+  assert.equal(listed.status, 200)
+
+  const response = await request(path, { userId: 'platform', method: 'DELETE' })
+  assert.equal(response.status, 204)
+  assert.equal(response.headers.get('cache-control'), 'no-store')
+  assert.equal(await response.text(), '')
+  assert.deepEqual(calls.at(-1), {
+    operation: 'deleteTenantLead', tenantId: 'tenant-1', leadId: 'lead-1'
+  })
+})
+
+test('media DELETE is PLATFORM_ADMIN-only with no-store', async () => {
+  const path = '/tenants/tenant-1/media/media-1'
+  const unauthenticated = await request(path, { method: 'DELETE' })
+  assert.equal(unauthenticated.status, 401)
+
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    const denied = await request(path, { userId, method: 'DELETE' })
+    assert.equal(denied.status, 403)
+    assert.deepEqual(await denied.json(), { error: 'Platform administrator access required' })
+  }
+
+  const response = await request(path, { userId: 'platform', method: 'DELETE' })
+  assert.equal(response.status, 204)
+  assert.equal(response.headers.get('cache-control'), 'no-store')
+  assert.equal(await response.text(), '')
+  assert.deepEqual(calls.at(-1), {
+    operation: 'deleteUnusedMedia', tenantId: 'tenant-1', mediaId: 'media-1'
+  })
+})
+
+test('media DELETE returns locked in-use copy and 404s unknown ids', async () => {
+  const inUse = await request('/tenants/tenant-1/media/in-use', {
+    userId: 'platform', method: 'DELETE'
+  })
+  assert.equal(inUse.status, 400)
+  assert.deepEqual(await inUse.json(), {
+    error: 'Image is still used as the working logo'
+  })
+
+  const missing = await request('/tenants/tenant-1/media/missing', {
+    userId: 'platform', method: 'DELETE'
+  })
+  assert.equal(missing.status, 404)
+  assert.deepEqual(await missing.json(), { error: 'Media not found' })
 })

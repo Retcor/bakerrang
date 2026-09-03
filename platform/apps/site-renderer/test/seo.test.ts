@@ -150,6 +150,20 @@ test('LocalBusiness requires an explicit operational fact and omits empty fields
   assert.equal(data?.image, 'https://media.example.com/social.png')
 })
 
+test('home and contact metadata include icons only when faviconSrc is present', () => {
+  const withIcon = site({ phone: '+1 303 555 0123' })
+  withIcon.branding.faviconSrc = 'https://media.example.com/favicon.png'
+  assert.deepEqual(homeMetadata(withIcon, 'abc', indexedEnv).icons, {
+    icon: 'https://media.example.com/favicon.png'
+  })
+  assert.deepEqual(contactMetadata(withIcon, 'abc', indexedEnv).icons, {
+    icon: 'https://media.example.com/favicon.png'
+  })
+  const without = site()
+  assert.equal(Object.hasOwn(homeMetadata(without, 'abc', indexedEnv), 'icons'), false)
+  assert.equal(Object.hasOwn(contactMetadata(without, 'abc', indexedEnv), 'icons'), false)
+})
+
 test('JSON-LD serialization escapes script-breaking characters without losing quotes', () => {
   const serialized = serializeJsonLd({ value: '</script><tag>&"quoted"' })
   assert.equal(serialized.includes('</script>'), false)

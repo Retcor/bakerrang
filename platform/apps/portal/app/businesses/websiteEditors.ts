@@ -3,7 +3,7 @@ export const websiteEditorGroups = ['Site setup', 'Homepage', 'Advanced'] as con
 export type WebsiteEditorGroup = typeof websiteEditorGroups[number]
 
 export const websiteEditors = [
-  { id: 'branding', label: 'Branding', group: 'Site setup', description: 'Manage the site name, logo, and brand colors.' },
+  { id: 'branding', label: 'Branding', group: 'Site setup', description: 'Manage the site name, logo, and favicon.' },
   { id: 'theme', label: 'Theme', group: 'Site setup', description: 'Set the visual style, typography, spacing, and colors.' },
   { id: 'businessProfile', label: 'Business Profile', group: 'Site setup', description: 'Maintain the business details used across the website.' },
   { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set weekly hours and their homepage presentation.' },

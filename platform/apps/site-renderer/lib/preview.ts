@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import type { SiteDefinition } from '@bakerrang/site-schema'
+import { brandingIcons } from './seo.ts'
 import { requestMatchesSharedOrigin } from './requestHost.ts'
 import { resolveSharedPublicOrigin, type PublicSiteEnvironment } from './siteUrl.ts'
 
@@ -14,10 +16,31 @@ export function previewPath (tenantId: string, token: string, contact = false): 
   return `${base}?${new URLSearchParams({ token }).toString()}`
 }
 
-export function previewMetadata (title = 'Website Preview'): Metadata {
+export function previewMetadata (title = 'Website Preview', site?: SiteDefinition | null): Metadata {
   return {
     title,
     robots: { index: false, follow: false },
-    referrer: 'no-referrer'
+    referrer: 'no-referrer',
+    ...brandingIcons(site)
+  }
+}
+
+export async function resolvePreviewMetadata (
+  props: {
+    params: Promise<{ tenantId: string }>
+    searchParams: Promise<{ token?: string | string[] }>
+  },
+  title?: string
+): Promise<Metadata> {
+  const query = await props.searchParams
+  const token = typeof query.token === 'string' && query.token ? query.token : null
+  if (!token) return previewMetadata(title)
+  try {
+    const { tenantId } = await props.params
+    const { getPreviewSite } = await import('./api.ts')
+    const site = await getPreviewSite(tenantId, token)
+    return previewMetadata(title, site)
+  } catch {
+    return previewMetadata(title)
   }
 }

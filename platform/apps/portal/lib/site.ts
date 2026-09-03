@@ -80,6 +80,7 @@ export interface CompositionInput {
 export interface BrandingInput {
   siteName: string
   logoMediaId?: string
+  faviconMediaId?: string
 }
 
 export interface BusinessProfileInput {

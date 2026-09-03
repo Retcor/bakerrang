@@ -1,4 +1,4 @@
-import { apiGet, apiUpload } from './api'
+import { apiGet, apiSend, apiUpload } from './api'
 
 export interface MediaItem {
   id: string
@@ -24,3 +24,9 @@ export const uploadMedia = (tenantId: string, file: File) => {
   formData.append('file', file)
   return apiUpload<MediaItem>(`/tenants/${encodeURIComponent(tenantId)}/media`, formData)
 }
+
+export const deleteMedia = (tenantId: string, mediaId: string) =>
+  apiSend<void>(
+    'DELETE',
+    `/tenants/${encodeURIComponent(tenantId)}/media/${encodeURIComponent(mediaId)}`
+  )

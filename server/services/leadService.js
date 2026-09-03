@@ -274,6 +274,27 @@ export const createLeadNote = async (tenantId, leadId, input, actorUserId) => {
   return { id: noteId, text, createdAt, createdByUserId: actorUserId }
 }
 
+export const deleteTenantLead = async (tenantId, leadId) => {
+  const tenantRef = firestore.collection(TENANTS).doc(tenantId)
+  const leadRef = tenantRef.collection('leads').doc(leadId)
+  const notesCollection = leadRef.collection('notes')
+
+  await firestore.runTransaction(async (transaction) => {
+    const [tenantSnapshot, leadSnapshot] = await Promise.all([
+      transaction.get(tenantRef),
+      transaction.get(leadRef)
+    ])
+    if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
+
+    const notesSnapshot = await notesCollection.get()
+    for (const note of notesSnapshot.docs) {
+      transaction.delete(note.ref)
+    }
+    transaction.delete(leadRef)
+  })
+}
+
 export const listLeadNotes = async (tenantId, leadId) => {
   const tenantRef = firestore.collection(TENANTS).doc(tenantId)
   const leadRef = tenantRef.collection('leads').doc(leadId)

@@ -31,6 +31,7 @@ export function BusinessWorkspace ({ children, description, tenantId, title }: {
   const nav: ContextNav[] = [
     { href: base, label: 'Overview' },
     { href: `${base}/website`, label: 'Website' },
+    { href: `${base}/media`, label: 'Media' },
     { href: `${base}/leads`, label: 'Leads' },
     { href: `${base}/domain`, label: 'Domain' }
   ]

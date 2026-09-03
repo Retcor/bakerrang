@@ -296,15 +296,15 @@ The TXT/DNS ownership lifecycle does not need repeating during routine smoke run
 - [ ] Verify it appears in Portal and its detail opens.
 - [ ] Change its status and add a note.
 - [ ] Verify Preview cannot create real leads.
-
-Smoke leads may accumulate and can be removed manually from DEV Firestore if they become noisy; this runbook intentionally performs no automated cleanup.
+- [ ] Confirm-delete the smoke lead from Portal (the lead and its notes). It disappears from the inbox.
+- [ ] Confirm-delete an unused image from Media. Images still referenced by the working site or leftover `published/current` after Unpublish cannot be deleted until a later publish whose snapshot no longer includes that id.
 
 ### Responsive, console, and network
 
 - [ ] At approximately 375px, 768px, and desktop, spot-check Business list, workspace navigation, Leads, and Domain.
 - [ ] Check for horizontal overflow, unreachable controls, broken dialogs, or hidden critical content.
 - [ ] Check the browser console/network for unexpected 404, 500, CORS, hydration, mixed-content, or media failures.
-- [ ] Ignore browser-extension noise. The known tenant-site `/favicon.ico` 404 is acceptable for now.
+- [ ] Ignore browser-extension noise. Shared origin-root `/favicon.ico` is 204 by design; a missing tenant favicon is also 204, never 404. The tab icon on `/site/{id}` comes from `rel=icon`.
 
 ### Restore the baseline
 
@@ -314,6 +314,6 @@ Smoke leads may accumulate and can be removed manually from DEV Firestore if the
 
 ## Historical DEV deferrals
 
-- **Tenant favicon:** `/favicon.ico` may return 404. The intended future implementation is tenant-configurable, media-backed, working/published-aware, and shared/custom-domain capable. Do not add a global favicon or 204 workaround.
+- **Tenant favicon:** PLATFORM_ADMIN sets or clears a tenant favicon in Branding using existing JPEG/PNG/WebP media. Preview uses the working faviconSrc via Metadata.icons; custom-domain origin and sites.bakerrang.com/site/{tenantId} use the published one. Custom-domain GET /favicon.ico 302s to the published GCS URL or returns 204. Shared origin-root /favicon.ico is 204 by design (it cannot know the tenant). Shared GET /site/{tenantId}/favicon.ico 302s to the public favicon or returns 204. Missing favicon is a quiet 204, never a 404. There is no global BakerRang icon; the tab icon on /site/{id} comes from rel=icon.
 - **Browser E2E:** Playwright was deferred; manual DEV smoke was the final gate for the retired environment.
 - **Production and operations:** production deployment, production DNS/OAuth, Terraform/IaC, distributed rate limiting, advanced monitoring, load testing, backup/restore, secret rotation, formal penetration testing, and formal WCAG certification were outside this historical runbook.

@@ -31,6 +31,10 @@ class FakeDocumentReference {
   async set (value, options = {}) {
     this.database.write(this.path, value, options)
   }
+
+  async delete () {
+    this.database.records.delete(this.path)
+  }
 }
 
 class FakeCollectionReference {

@@ -64,3 +64,9 @@ export const addLeadNote = (tenantId: string, leadId: string, text: string) =>
     `/tenants/${encodeURIComponent(tenantId)}/leads/${encodeURIComponent(leadId)}/notes`,
     { text }
   )
+
+export const deleteLead = (tenantId: string, leadId: string) =>
+  apiSend<void>(
+    'DELETE',
+    `/tenants/${encodeURIComponent(tenantId)}/leads/${encodeURIComponent(leadId)}`
+  )

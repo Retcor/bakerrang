@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Badge, Button, Card, EmptyState, Select, StatusMessage } from '@bakerrang/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, Select, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { LeadNotes } from './LeadNotes'
 import {
+  deleteLead,
   getLead,
   getLeads,
   LEAD_STATUSES,
@@ -58,6 +59,9 @@ export function BusinessLeads ({ autoLoad = false, tenantId }: BusinessLeadsProp
   const [detail, setDetail] = useState<LeadDetail | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus>('NEW')
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!autoLoad) return
@@ -87,6 +91,8 @@ export function BusinessLeads ({ autoLoad = false, tenantId }: BusinessLeadsProp
     setSelectedId(leadId)
     setDetail(null)
     setDetailState('loading')
+    setConfirmingDelete(false)
+    setDeleteError(null)
     try {
       const nextDetail = await getLead(tenantId, leadId)
       setDetail(nextDetail)
@@ -142,6 +148,26 @@ export function BusinessLeads ({ autoLoad = false, tenantId }: BusinessLeadsProp
     setSelectedId(null)
     setDetail(null)
     setDetailState('idle')
+    setConfirmingDelete(false)
+    setDeleteError(null)
+  }
+
+  const removeLead = async () => {
+    if (!detail || deleting) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteLead(tenantId, detail.id)
+      setLeads((current) => current.filter((lead) => lead.id !== detail.id))
+      setConfirmingDelete(false)
+      backToInbox()
+    } catch (error) {
+      setDeleteError(error instanceof ApiError && error.message
+        ? error.message
+        : 'Lead could not be deleted. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (listState === 'initial') {
@@ -212,8 +238,21 @@ export function BusinessLeads ({ autoLoad = false, tenantId }: BusinessLeadsProp
               {saveState === 'forbidden' && <p className="mt-4 text-sm text-fg" role="alert">You do not have access to update this lead.</p>}
               {saveState === 'not-found' && <p className="mt-4 text-sm text-fg" role="alert">Lead not found.</p>}
               {saveState === 'error' && <p className="mt-4 text-sm text-fg" role="alert">Lead status could not be saved. Please try again.</p>}
+              <Button className="mt-4" disabled={deleting} onClick={() => { setConfirmingDelete(true); setDeleteError(null) }} size="sm" type="button" variant="danger">
+                Delete
+              </Button>
+              {deleteError && <p className="mt-2 text-sm text-fg" role="alert">{deleteError}</p>}
             </Card>
             <LeadNotes key={detail.id} leadId={detail.id} tenantId={tenantId} />
+            <ConfirmDialog
+              busy={deleting}
+              confirmLabel="Delete lead"
+              description="This lead and its notes will be removed. This cannot be undone."
+              onCancel={() => setConfirmingDelete(false)}
+              onConfirm={() => void removeLead()}
+              open={confirmingDelete}
+              title="Delete this lead?"
+            />
           </>
         )}
       </div>

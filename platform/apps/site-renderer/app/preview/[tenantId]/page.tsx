@@ -5,7 +5,7 @@ import { findHomePage } from '@bakerrang/site-schema'
 import { PreviewFrame } from '../../../components/PreviewFrame'
 import { PublicHome } from '../../../components/PublicHome'
 import { getPreviewSite } from '../../../lib/api'
-import { previewHostAllowed, previewMetadata } from '../../../lib/preview'
+import { previewHostAllowed, resolvePreviewMetadata } from '../../../lib/preview'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +14,8 @@ export interface PreviewPageProps {
   searchParams: Promise<{ token?: string | string[] }>
 }
 
-export function generateMetadata (): Metadata {
-  return previewMetadata()
+export async function generateMetadata (props: PreviewPageProps): Promise<Metadata> {
+  return resolvePreviewMetadata(props)
 }
 
 export default async function PreviewPage ({ params, searchParams }: PreviewPageProps) {
