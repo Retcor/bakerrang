@@ -204,6 +204,9 @@ export interface SiteBranding {
   logoSrc?: string
   logoWidth?: number
   logoHeight?: number
+  faviconMediaId?: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  faviconSrc?: string
 }
 
 export interface PostalAddress {

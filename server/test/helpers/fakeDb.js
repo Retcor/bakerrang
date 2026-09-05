@@ -5,7 +5,7 @@ class FakeDocumentSnapshot {
     this.id = ref.id
     this.ref = ref
     this.exists = value !== undefined
-    this.value = value
+    this.value = clone(value)
   }
 
   data () {
@@ -31,6 +31,10 @@ class FakeDocumentReference {
   async set (value, options = {}) {
     this.database.write(this.path, value, options)
   }
+
+  async delete () {
+    this.database.remove(this.path)
+  }
 }
 
 class FakeCollectionReference {
@@ -41,6 +45,10 @@ class FakeCollectionReference {
 
   doc (id) {
     return new FakeDocumentReference(this.database, `${this.path}/${id}`)
+  }
+
+  where (field, operator, value) {
+    return new FakeQuery(this.database, this.path).where(field, operator, value)
   }
 
   orderBy (field, direction) {
@@ -60,16 +68,22 @@ class FakeCollectionReference {
 }
 
 class FakeQuery {
-  constructor (database, path, orderField, direction = 'asc', max = null) {
+  constructor (database, path, orderField, direction = 'asc', max = null, filters = []) {
     this.database = database
     this.path = path
     this.orderField = orderField
     this.direction = direction
     this.max = max
+    this.filters = filters
+  }
+
+  where (field, operator, value) {
+    if (operator !== '==') throw new Error('FakeQuery supports equality only')
+    return new FakeQuery(this.database, this.path, this.orderField, this.direction, this.max, [...this.filters, { field, value }])
   }
 
   limit (max) {
-    return new FakeQuery(this.database, this.path, this.orderField, this.direction, max)
+    return new FakeQuery(this.database, this.path, this.orderField, this.direction, max, this.filters)
   }
 
   async get () {
@@ -78,7 +92,8 @@ class FakeQuery {
       .filter(([path, value]) =>
         path.startsWith(`${this.path}/`) &&
         path.split('/').length === depth &&
-        Object.prototype.hasOwnProperty.call(value, this.orderField)
+        (!this.orderField || Object.prototype.hasOwnProperty.call(value, this.orderField)) &&
+        this.filters.every((filter) => filter.field.split('.').reduce((v, key) => v?.[key], value) === filter.value)
       )
       .sort(([, left], [, right]) => {
         const comparison = left[this.orderField] < right[this.orderField]
@@ -98,6 +113,11 @@ class FakeQuery {
 export class FakeDb {
   constructor () {
     this.records = new Map()
+    this.versions = new Map()
+    this.beforeCommit = null
+    this.afterCommit = null
+    this.maxAttempts = 5
+    this.transactionAttempts = 0
   }
 
   collection (name) {
@@ -109,7 +129,7 @@ export class FakeDb {
   }
 
   seed (path, value) {
-    this.records.set(path, clone(value))
+    this.write(path, value)
     return this
   }
 
@@ -127,20 +147,41 @@ export class FakeDb {
       ? { ...existing, ...clone(value) }
       : clone(value)
     this.records.set(path, next)
+    this.versions.set(path, (this.versions.get(path) || 0) + 1)
+  }
+
+  remove (path) {
+    this.records.delete(path)
+    this.versions.set(path, (this.versions.get(path) || 0) + 1)
   }
 
   async runTransaction (callback) {
-    const writes = []
-    const transaction = {
-      get: (ref) => ref.get(),
-      set: (ref, value, options) => writes.push({ type: 'set', ref, value, options }),
-      delete: (ref) => writes.push({ type: 'delete', ref })
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+      this.transactionAttempts++
+      const reads = new Map()
+      const writes = []
+      const get = async (ref) => {
+        if (writes.length) throw new Error('Transaction reads must precede writes')
+        if (!reads.has(ref.path)) reads.set(ref.path, this.versions.get(ref.path) || 0)
+        return ref.get()
+      }
+      const transaction = {
+        get,
+        getAll: (...refs) => Promise.all(refs.map(get)),
+        set: (ref, value, options) => writes.push({ type: 'set', ref, value: clone(value), options }),
+        delete: (ref) => writes.push({ type: 'delete', ref })
+      }
+      const result = await callback(transaction)
+      if (this.beforeCommit) await this.beforeCommit({ attempt, reads, writes })
+      if ([...reads].some(([path, version]) => (this.versions.get(path) || 0) !== version)) continue
+      // No await or hook between validation and application: atomic commit.
+      for (const write of writes) {
+        if (write.type === 'delete') this.remove(write.ref.path)
+        else this.write(write.ref.path, write.value, write.options)
+      }
+      if (this.afterCommit) await this.afterCommit({ attempt, reads, writes })
+      return result
     }
-    const result = await callback(transaction)
-    for (const write of writes) {
-      if (write.type === 'delete') this.records.delete(write.ref.path)
-      else this.write(write.ref.path, write.value, write.options)
-    }
-    return result
+    throw Object.assign(new Error('Transaction contention exhausted retries'), { code: 10 })
   }
 }

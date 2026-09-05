@@ -7,7 +7,7 @@ import {
   isValidEmail,
   isValidPhone
 } from '../validation/contactMethods.js'
-import { hydrateSiteMedia, requireGalleryMedia, requireTenantMedia } from './mediaService.js'
+import { hydrateSiteMedia, requireTenantMediaInTransaction } from './mediaService.js'
 import {
   DEFAULT_SITE_ACCENT_COLOR,
   DEFAULT_SITE_PRIMARY_COLOR,
@@ -572,12 +572,15 @@ const requireHeroIndex = (sections) => {
   return heroIndex
 }
 
-const mutateWorkingHome = async (tenantId, transformSections) => {
+const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) => {
   const { config: configRef, home: homeRef } = refsFor(tenantId)
   const now = Date.now()
   let definition
 
   await firestore.runTransaction(async (transaction) => {
+    if (mediaRequirement) {
+      await requireTenantMediaInTransaction(transaction, tenantId, mediaRequirement.mediaIds, mediaRequirement.message)
+    }
     const [configSnapshot, homeSnapshot] = await Promise.all([
       transaction.get(configRef),
       transaction.get(homeRef)
@@ -686,13 +689,16 @@ export const getPublishedSiteDefinition = async (tenantId) => {
 
 export const updateSiteBranding = async (tenantId, input) => {
   const identity = validateSiteBranding(input)
-  if (identity.logoMediaId) {
-    await requireTenantMedia(tenantId, [identity.logoMediaId], 'Logo image not found')
-  }
   const refs = refsFor(tenantId)
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
+    if (identity.logoMediaId) {
+      await requireTenantMediaInTransaction(transaction, tenantId, [identity.logoMediaId], 'Logo image not found')
+    }
+    if (identity.faviconMediaId) {
+      await requireTenantMediaInTransaction(transaction, tenantId, [identity.faviconMediaId], 'Favicon image not found')
+    }
     const [configSnapshot, homeSnapshot] = await Promise.all([
       transaction.get(refs.config),
       transaction.get(refs.home)
@@ -706,10 +712,11 @@ export const updateSiteBranding = async (tenantId, input) => {
       ...(typeof storedBranding.accentColor === 'string' ? { accentColor: storedBranding.accentColor } : {}),
       ...(identity.primaryColor ? { primaryColor: identity.primaryColor } : {}),
       ...(identity.accentColor ? { accentColor: identity.accentColor } : {}),
-      ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {})
+      ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {}),
+      ...(identity.faviconMediaId ? { faviconMediaId: identity.faviconMediaId } : {})
     }
     const nextConfig = { ...configSnapshot.data(), branding, updatedAt: now }
-    transaction.set(refs.config, { branding, updatedAt: now }, { merge: true })
+    transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, homeSnapshot.data())
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
@@ -736,13 +743,13 @@ export const updateSiteTheme = async (tenantId, input) => {
 
 export const updateBusinessProfile = async (tenantId, input) => {
   const businessProfile = validateBusinessProfile(input)
-  if (businessProfile.socialImageMediaId) {
-    await requireTenantMedia(tenantId, [businessProfile.socialImageMediaId], 'Social image not found')
-  }
   const refs = refsFor(tenantId)
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
+    if (businessProfile.socialImageMediaId) {
+      await requireTenantMediaInTransaction(transaction, tenantId, [businessProfile.socialImageMediaId], 'Social image not found')
+    }
     const [configSnapshot, homeSnapshot] = await Promise.all([
       transaction.get(refs.config),
       transaction.get(refs.home)
@@ -1045,9 +1052,6 @@ export const upsertHomeServices = async (tenantId, input) => {
 
 export const upsertHomeAbout = async (tenantId, input) => {
   const content = validateAboutInput(input)
-  if (content.imageMediaId) {
-    await requireTenantMedia(tenantId, [content.imageMediaId], 'About image not found')
-  }
   return mutateWorkingHome(tenantId, (sections) => {
     const aboutIndexes = sections
       .map((section, index) => ({ section, index }))
@@ -1067,7 +1071,7 @@ export const upsertHomeAbout = async (tenantId, input) => {
       nextSections.splice(heroIndex + 1, 0, { id: 'about', type: 'about', content })
     }
     return nextSections
-  })
+  }, { mediaIds: content.imageMediaId ? [content.imageMediaId] : [], message: 'About image not found' })
 }
 
 export const upsertHomeContact = async (tenantId, input) => {
@@ -1108,7 +1112,6 @@ export const upsertHomeContact = async (tenantId, input) => {
 
 export const upsertHomeGallery = async (tenantId, input) => {
   const { title, items } = validateGalleryInput(input)
-  await requireGalleryMedia(tenantId, items.map((item) => item.mediaId))
 
   return mutateWorkingHome(tenantId, (sections) => {
     const galleryIndexes = sections
@@ -1172,7 +1175,7 @@ export const upsertHomeGallery = async (tenantId, input) => {
       else nextSections.splice(contactIndex, 0, gallery)
     }
     return nextSections
-  })
+  }, { mediaIds: items.map((item) => item.mediaId), message: 'Gallery image not found' })
 }
 
 export const upsertHomeTestimonials = async (tenantId, input) => {

@@ -1,10 +1,10 @@
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { PREVIEW_FORM_MESSAGE, submitLeadForContext } from '../lib/leadPreview.ts'
 import { fetchPreviewSite } from '../lib/siteApi.ts'
-import { previewHostAllowed, previewMetadata, previewPath } from '../lib/preview.ts'
+import { previewHostAllowed, previewMetadata, previewPath, resolvePreviewMetadata } from '../lib/preview.ts'
 
 test('preview host gate accepts only the configured shared renderer origin', () => {
   const env = { SITE_PUBLIC_ORIGIN: 'https://sites.example.com' }
@@ -53,6 +53,23 @@ test('preview metadata is noindex, nofollow, no-referrer, and has no canonical o
   assert.equal(metadata.referrer, 'no-referrer')
   assert.equal(metadata.alternates, undefined)
   assert.equal(metadata.openGraph, undefined)
+  assert.equal(Object.hasOwn(metadata, 'icons'), false)
+})
+
+const workingFaviconSite = {
+  status: 'DRAFT',
+  branding: { siteName: 'Working', faviconSrc: 'https://media.example.com/working-favicon.png' },
+  pages: []
+} as never
+
+const previewProps = (token?: string) => ({
+  params: Promise.resolve({ tenantId: 'tenant-1' }),
+  searchParams: Promise.resolve(token ? { token } : {})
+})
+
+test('previewMetadata includes working icons when faviconSrc is set', () => {
+  const metadata = previewMetadata('Website Preview', workingFaviconSite)
+  assert.deepEqual(metadata.icons, { icon: 'https://media.example.com/working-favicon.png' })
 })
 
 test('preview navigation paths preserve the token on home and contact', () => {
@@ -83,4 +100,66 @@ test('preview routes are dynamic, use the preview API, and contain no domain red
     assert.match(source, /getPreviewSite/)
     assert.doesNotMatch(source, /Redirect|getTenantDomain|resolveRequestDomain/)
   }
+})
+
+const previewSiteState: { impl: (tenantId: string, token: string) => Promise<unknown> } = {
+  impl: async () => null
+}
+
+mock.module('../lib/api.ts', {
+  namedExports: {
+    getPreviewSite: (tenantId: string, token: string) => previewSiteState.impl(tenantId, token),
+    getPublicSite: async () => null,
+    getPublishedSite: async () => null
+  }
+})
+mock.module('../components/PreviewFrame.tsx', {
+  namedExports: { PreviewFrame: () => null }
+})
+mock.module('../components/PublicHome.tsx', {
+  namedExports: { PublicHome: () => null }
+})
+mock.module('../components/PublicContact.tsx', {
+  namedExports: { PublicContact: () => null }
+})
+
+test('resolvePreviewMetadata includes working favicon icons and swallows missing or failed preview loads', async () => {
+  previewSiteState.impl = async () => workingFaviconSite
+  const withIcons = await resolvePreviewMetadata(previewProps('secret'))
+  assert.deepEqual(withIcons.icons, { icon: 'https://media.example.com/working-favicon.png' })
+
+  const missingToken = await resolvePreviewMetadata(previewProps())
+  assert.equal(Object.hasOwn(missingToken, 'icons'), false)
+
+  previewSiteState.impl = async () => null
+  const missingSite = await resolvePreviewMetadata(previewProps('secret'))
+  assert.equal(Object.hasOwn(missingSite, 'icons'), false)
+
+  previewSiteState.impl = async () => { throw new Error('Unable to load site preview') }
+  const failed = await resolvePreviewMetadata(previewProps('secret'))
+  assert.equal(Object.hasOwn(failed, 'icons'), false)
+})
+
+test('preview page generateMetadata functions use working faviconSrc and do not throw', async () => {
+  const { generateMetadata: homeGenerateMetadata } = await import('../app/preview/[tenantId]/page.tsx')
+  const { generateMetadata: contactGenerateMetadata } = await import('../app/preview/[tenantId]/contact/page.tsx')
+
+  previewSiteState.impl = async () => workingFaviconSite
+  const home = await homeGenerateMetadata(previewProps('secret'))
+  assert.deepEqual(home.icons, { icon: 'https://media.example.com/working-favicon.png' })
+  const contact = await contactGenerateMetadata(previewProps('secret'))
+  assert.deepEqual(contact.icons, { icon: 'https://media.example.com/working-favicon.png' })
+  assert.equal(contact.title, 'Contact Preview')
+
+  const homeMissingToken = await homeGenerateMetadata(previewProps())
+  assert.equal(Object.hasOwn(homeMissingToken, 'icons'), false)
+  const contactMissingToken = await contactGenerateMetadata(previewProps())
+  assert.equal(Object.hasOwn(contactMissingToken, 'icons'), false)
+  assert.equal(contactMissingToken.title, 'Contact Preview')
+
+  previewSiteState.impl = async () => null
+  const homeNull = await homeGenerateMetadata(previewProps('secret'))
+  assert.equal(Object.hasOwn(homeNull, 'icons'), false)
+  const contactNull = await contactGenerateMetadata(previewProps('secret'))
+  assert.equal(Object.hasOwn(contactNull, 'icons'), false)
 })

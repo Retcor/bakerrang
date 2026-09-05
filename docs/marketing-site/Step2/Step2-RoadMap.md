@@ -7,8 +7,14 @@ STEP 2 — Production & Product Maturity
 2.5  Automatic selective PROD deployments from production
 2.6  Production verification / rollback / release process
 
-2.7  Deferred Step 1 items
-- tenant-configurable favicon
+2.7  Tenant favicon (this work)
+- PLATFORM_ADMIN branding picker for optional faviconMediaId (JPEG/PNG/WebP, existing media)
+- working vs published isolation; preview uses working faviconSrc in Metadata.icons
+- custom-domain /favicon.ico 302 to published GCS URL or 204; shared origin-root always 204
+- shared /site/{tenantId}/favicon.ico uses getPublicSite; missing/unknown is 204, never 404
+- no global BakerRang icon, no ICO conversion, no byte-proxy
+
+2.7b Deferred Step 1 items
 - other intentional deferrals
 
 2.8  Product Operations & Data Management

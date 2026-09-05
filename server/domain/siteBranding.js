@@ -38,6 +38,9 @@ export const siteBrandingResponse = (branding, definition) => {
       : DEFAULT_SITE_ACCENT_COLOR,
     ...(typeof branding?.logoMediaId === 'string' && branding.logoMediaId.trim()
       ? { logoMediaId: branding.logoMediaId.trim() }
+      : {}),
+    ...(typeof branding?.faviconMediaId === 'string' && branding.faviconMediaId.trim()
+      ? { faviconMediaId: branding.faviconMediaId.trim() }
       : {})
   }
 }
@@ -71,10 +74,18 @@ export const validateSiteBranding = (input) => {
     error.status = 400
     throw error
   }
+  if (Object.prototype.hasOwnProperty.call(body, 'faviconMediaId') && body.faviconMediaId !== null && (
+    typeof body.faviconMediaId !== 'string' || !body.faviconMediaId.trim()
+  )) {
+    const error = new Error('Favicon image is invalid')
+    error.status = 400
+    throw error
+  }
   return {
     siteName,
     ...(typeof body.primaryColor === 'string' ? { primaryColor: body.primaryColor.toLowerCase() } : {}),
     ...(typeof body.accentColor === 'string' ? { accentColor: body.accentColor.toLowerCase() } : {}),
-    ...(typeof body.logoMediaId === 'string' ? { logoMediaId: body.logoMediaId.trim() } : {})
+    ...(typeof body.logoMediaId === 'string' ? { logoMediaId: body.logoMediaId.trim() } : {}),
+    ...(typeof body.faviconMediaId === 'string' ? { faviconMediaId: body.faviconMediaId.trim() } : {})
   }
 }

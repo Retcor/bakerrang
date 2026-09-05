@@ -7,6 +7,7 @@ export class FakeStorage {
     this.objects = new Map()
     this.putError = null
     this.deleteError = null
+    this.afterDeleteError = null
   }
 
   async putObject (input) {
@@ -22,6 +23,7 @@ export class FakeStorage {
     this.deletes.push(objectName)
     if (this.deleteError) throw this.deleteError
     this.objects.delete(objectName)
+    if (this.afterDeleteError) throw this.afterDeleteError
   }
 
   publicUrl (objectName) {

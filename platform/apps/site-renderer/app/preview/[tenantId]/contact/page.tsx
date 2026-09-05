@@ -5,7 +5,7 @@ import { findHomePage, isContactSection } from '@bakerrang/site-schema'
 import { PreviewFrame } from '../../../../components/PreviewFrame'
 import { PublicContact } from '../../../../components/PublicContact'
 import { getPreviewSite } from '../../../../lib/api'
-import { previewHostAllowed, previewMetadata } from '../../../../lib/preview'
+import { previewHostAllowed, resolvePreviewMetadata } from '../../../../lib/preview'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +14,8 @@ export interface PreviewContactPageProps {
   searchParams: Promise<{ token?: string | string[] }>
 }
 
-export function generateMetadata (): Metadata {
-  return previewMetadata('Contact Preview')
+export async function generateMetadata (props: PreviewContactPageProps): Promise<Metadata> {
+  return resolvePreviewMetadata(props, 'Contact Preview')
 }
 
 export default async function PreviewContactPage ({ params, searchParams }: PreviewContactPageProps) {

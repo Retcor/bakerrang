@@ -4,6 +4,7 @@ import {
   _setDb,
   _setStorage,
   createMedia,
+  deleteUnusedMedia,
   listMedia
 } from '../services/mediaService.js'
 import { FakeDb } from './helpers/fakeDb.js'
@@ -180,4 +181,191 @@ test('listMedia handles empty, exact-bound, malformed, and missing-tenant cases'
   assert.equal(result.hasMore, true)
   assert.equal(result.media.length, 49)
   await assert.rejects(listMedia('missing'), { status: 404, message: 'Tenant not found' })
+})
+
+test('deleteUnusedMedia removes unused metadata and the object', async () => {
+  const objectName = 'tenants/tenant-1/media/media-1'
+  fakeDb.seed(mediaPath('media-1'), {
+    originalFilename: 'image.png',
+    objectName,
+    contentType: 'image/png',
+    sizeBytes: images.png.length,
+    width: 2,
+    height: 3,
+    createdAt: 1,
+    createdByUserId: 'platform'
+  })
+  fakeStorage.objects.set(objectName, Buffer.from('x'))
+  await deleteUnusedMedia('tenant-1', 'media-1')
+  assert.equal(fakeDb.data(mediaPath('media-1')), undefined)
+  assert.deepEqual(fakeStorage.deletes, [objectName])
+})
+
+const mediaRecord = (id = 'media-1') => ({
+  originalFilename: 'image.png',
+  objectName: `tenants/tenant-1/media/${id}`,
+  contentType: 'image/png',
+  sizeBytes: images.png.length,
+  width: 2,
+  height: 3,
+  createdAt: 1,
+  createdByUserId: 'platform'
+})
+
+const seedMedia = (id = 'media-1') => {
+  const record = mediaRecord(id)
+  fakeDb.seed(mediaPath(id), record)
+  fakeStorage.objects.set(record.objectName, Buffer.from('x'))
+  return record.objectName
+}
+
+const seedWorking = ({ branding = {}, businessProfile, sections = [], status = 'DRAFT' } = {}) => {
+  fakeDb.seed(`${tenantPath()}/site/config`, {
+    status,
+    branding,
+    ...(businessProfile ? { businessProfile } : {})
+  })
+  fakeDb.seed(`${tenantPath()}/site/config/pages/home`, {
+    id: 'home',
+    slug: '/',
+    title: 'Home',
+    sections
+  })
+}
+
+const seedPublished = (siteDefinition) => {
+  fakeDb.seed(`${tenantPath()}/site/config/published/current`, {
+    siteDefinition,
+    publishedAt: 1,
+    publishedByUserId: 'platform'
+  })
+}
+
+const assertBlocked = async (message) => {
+  const objectName = 'tenants/tenant-1/media/media-1'
+  await assert.rejects(deleteUnusedMedia('tenant-1', 'media-1'), { status: 400, message })
+  assert.ok(fakeDb.data(mediaPath('media-1')))
+  assert.equal(fakeStorage.deletes.length, 0)
+  assert.equal(fakeStorage.objects.has(objectName), true)
+}
+
+test('deleteUnusedMedia blocks working logo with locked copy', async () => {
+  seedMedia()
+  seedWorking({ branding: { logoMediaId: 'media-1' } })
+  await assertBlocked('Image is still used as the working logo')
+})
+
+test('deleteUnusedMedia blocks published gallery only with locked copy', async () => {
+  seedMedia()
+  seedWorking()
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: {},
+    pages: [{
+      id: 'home',
+      slug: '/',
+      sections: [{
+        id: 'gallery',
+        type: 'gallery',
+        content: { items: [{ id: 'g1', mediaId: 'media-1', altText: 'One' }] }
+      }]
+    }]
+  })
+  await assertBlocked('Image is still used as the published gallery')
+})
+
+test('deleteUnusedMedia joins working logo, working favicon, and published gallery', async () => {
+  seedMedia()
+  seedWorking({ branding: { logoMediaId: 'media-1', faviconMediaId: 'media-1' } })
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: {},
+    pages: [{
+      id: 'home',
+      slug: '/',
+      sections: [{
+        id: 'gallery',
+        type: 'gallery',
+        content: { items: [{ id: 'g1', mediaId: 'media-1', altText: 'One' }] }
+      }]
+    }]
+  })
+  await assertBlocked('Image is still used as the working logo, working favicon, and published gallery')
+})
+
+test('deleteUnusedMedia unique-pairs two working gallery items with the same id', async () => {
+  seedMedia()
+  seedWorking({
+    sections: [{
+      id: 'gallery',
+      type: 'gallery',
+      content: {
+        items: [
+          { id: 'g1', mediaId: 'media-1', altText: 'One' },
+          { id: 'g2', mediaId: 'media-1', altText: 'Two' }
+        ]
+      }
+    }]
+  })
+  await assertBlocked('Image is still used as the working gallery')
+})
+
+test('deleteUnusedMedia blocks working social image only', async () => {
+  seedMedia()
+  seedWorking({ businessProfile: { socialImageMediaId: 'media-1' } })
+  await assertBlocked('Image is still used as the working social image')
+})
+
+test('deleteUnusedMedia blocks working about image only', async () => {
+  seedMedia()
+  seedWorking({
+    sections: [{
+      id: 'about',
+      type: 'about',
+      content: { heading: 'About', body: 'Story', imageMediaId: 'media-1', imageAlt: 'Team' }
+    }]
+  })
+  await assertBlocked('Image is still used as the working about image')
+})
+
+test('deleteUnusedMedia blocks published favicon only', async () => {
+  seedMedia()
+  seedWorking()
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: { faviconMediaId: 'media-1' },
+    pages: [{ id: 'home', slug: '/', sections: [] }]
+  })
+  await assertBlocked('Image is still used as the published favicon')
+})
+
+test('deleteUnusedMedia blocks leftover published snapshot after unpublish', async () => {
+  seedMedia()
+  seedWorking({ status: 'DRAFT' })
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: { logoMediaId: 'media-1' },
+    pages: [{ id: 'home', slug: '/', sections: [] }]
+  })
+  await assertBlocked('Image is still used as the published logo')
+})
+
+test('deleteUnusedMedia succeeds after a publish snapshot drops the id', async () => {
+  const objectName = seedMedia()
+  seedWorking({ branding: { siteName: 'Business' } })
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: { siteName: 'Business' },
+    pages: [{ id: 'home', slug: '/', sections: [] }]
+  })
+  await deleteUnusedMedia('tenant-1', 'media-1')
+  assert.equal(fakeDb.data(mediaPath('media-1')), undefined)
+  assert.deepEqual(fakeStorage.deletes, [objectName])
+})
+
+test('deleteUnusedMedia 404s unknown media', async () => {
+  await assert.rejects(deleteUnusedMedia('tenant-1', 'missing'), {
+    status: 404, message: 'Media not found'
+  })
+  assert.equal(fakeStorage.deletes.length, 0)
 })

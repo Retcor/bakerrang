@@ -22,6 +22,11 @@ const safeSocialUrl = (value: unknown): value is string => {
   }
 }
 
+export function brandingIcons (site?: SiteDefinition | null): Pick<Metadata, 'icons'> {
+  const src = site?.branding?.faviconSrc
+  return src ? { icons: { icon: src } } : {}
+}
+
 const socialImage = (profile: BusinessProfile | undefined) => {
   if (!profile?.socialImageMediaId || !profile.socialImageSrc) return undefined
   return {
@@ -62,7 +67,8 @@ export function homeMetadata (
       ...(description ? { description } : {}),
       card: image ? 'summary_large_image' : 'summary',
       ...(image ? { images: [image.url] } : {})
-    }
+    },
+    ...brandingIcons(site)
   }
 }
 
@@ -76,7 +82,8 @@ export function contactMetadata (
   return {
     title: `Contact | ${site.branding.siteName}`,
     robots: { index: false, follow: site.status !== 'DRAFT' && baseUrl !== null },
-    ...(baseUrl ? { alternates: { canonical: appendSitePath(baseUrl, 'contact') } } : {})
+    ...(baseUrl ? { alternates: { canonical: appendSitePath(baseUrl, 'contact') } } : {}),
+    ...brandingIcons(site)
   }
 }
 
