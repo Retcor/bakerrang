@@ -1,11 +1,12 @@
 import type { SiteDefinition } from '@bakerrang/site-schema'
+import type { MediaListResponse } from '../../../lib/media'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   updateSiteTheme: vi.fn(),
   updateSiteBranding: vi.fn(),
-  getMedia: vi.fn(async () => ({ media: [], hasMore: false })),
+  getMedia: vi.fn(async (): Promise<MediaListResponse> => ({ media: [], hasMore: false })),
   uploadMedia: vi.fn()
 }))
 

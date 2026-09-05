@@ -50,7 +50,6 @@ const summaryFromDetail = (lead: LeadDetail): LeadSummary => ({
 })
 
 export function BusinessLeads ({ autoLoad = false, tenantId }: BusinessLeadsProps) {
-    // comment to test out CI/CD
   const [listState, setListState] = useState<ListState>(autoLoad ? 'loading' : 'initial')
   const [leads, setLeads] = useState<LeadSummary[]>([])
   const [hasMore, setHasMore] = useState(false)

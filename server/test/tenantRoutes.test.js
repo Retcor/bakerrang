@@ -159,6 +159,13 @@ const media = {
   },
   deleteUnusedMedia: async (tenantId, mediaId) => {
     calls.push({ operation: 'deleteUnusedMedia', tenantId, mediaId })
+    if (mediaId === 'storage-failure') {
+      throw Object.assign(new Error('Image bytes were not deleted. Retry the deletion.'), { status: 502, expose: true })
+    }
+    if (mediaId === 'cleanup-failure') {
+      throw Object.assign(new Error('Image cleanup did not finish. Retry the deletion.'), { status: 502, expose: true })
+    }
+    if (mediaId === 'internal-failure') throw new Error('private provider detail')
     if (mediaId === 'missing') {
       throw Object.assign(new Error('Media not found'), { status: 404 })
     }
@@ -898,4 +905,18 @@ test('media DELETE returns locked in-use copy and 404s unknown ids', async () =>
   })
   assert.equal(missing.status, 404)
   assert.deepEqual(await missing.json(), { error: 'Media not found' })
+})
+
+test('media DELETE exposes only deliberate recovery errors and masks internal failures', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  for (const [id, status, message] of [
+    ['storage-failure', 502, 'Image bytes were not deleted. Retry the deletion.'],
+    ['cleanup-failure', 502, 'Image cleanup did not finish. Retry the deletion.'],
+    ['internal-failure', 500, 'Tenant operation failed']
+  ]) {
+    const response = await request('/tenants/tenant-1/media/' + id, { userId: 'platform', method: 'DELETE' })
+    assert.equal(response.status, status)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.deepEqual(await response.json(), { error: message })
+  }
 })

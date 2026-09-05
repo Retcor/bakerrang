@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, ConfirmDialog, EmptyState, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { deleteMedia, getMedia, type MediaItem } from '../../lib/media'
+import { deleteMedia, getMedia, type MediaItem, type MediaListResponse, type PendingMediaItem } from '../../lib/media'
 
 type ListState = 'loading' | 'ready' | 'forbidden' | 'error'
 
@@ -15,16 +15,29 @@ export function BusinessMedia ({ tenantId }: BusinessMediaProps) {
   const [listState, setListState] = useState<ListState>('loading')
   const [media, setMedia] = useState<MediaItem[]>([])
   const [hasMore, setHasMore] = useState(false)
+  const [pending, setPending] = useState<PendingMediaItem[]>([])
+  const [pendingHasMore, setPendingHasMore] = useState(false)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [rowError, setRowError] = useState<{ id: string, message: string } | null>(null)
+
+  const applyList = (response: MediaListResponse) => {
+    setMedia(response.media)
+    setHasMore(response.hasMore)
+    setPending(response.pendingDeletions ?? [])
+    setPendingHasMore(response.pendingHasMore ?? false)
+  }
+
+  // A recovery refresh must not hide the existing row if the network is unavailable.
+  const refreshRecovery = async () => {
+    try { applyList(await getMedia(tenantId)) } catch { /* Keep the visible retry action. */ }
+  }
 
   const loadList = async () => {
     setListState('loading')
     try {
       const response = await getMedia(tenantId)
-      setMedia(response.media)
-      setHasMore(response.hasMore)
+      applyList(response)
       setListState('ready')
     } catch (error) {
       setListState(error instanceof ApiError && error.status === 403 ? 'forbidden' : 'error')
@@ -37,6 +50,8 @@ export function BusinessMedia ({ tenantId }: BusinessMediaProps) {
       if (cancelled) return
       setMedia(response.media)
       setHasMore(response.hasMore)
+      setPending(response.pendingDeletions ?? [])
+      setPendingHasMore(response.pendingHasMore ?? false)
       setListState('ready')
     }).catch((error: unknown) => {
       if (!cancelled) setListState(error instanceof ApiError && error.status === 403 ? 'forbidden' : 'error')
@@ -60,6 +75,28 @@ export function BusinessMedia ({ tenantId }: BusinessMediaProps) {
         : 'Image could not be deleted. Please try again.'
       setRowError({ id: confirming.id, message })
       setConfirmingId(null)
+      if (!(error instanceof ApiError && error.status === 404)) await refreshRecovery()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const retryDeletion = async (item: PendingMediaItem) => {
+    if (deleting) return
+    setDeleting(true)
+    setRowError(null)
+    try {
+      try {
+        await deleteMedia(tenantId, item.id)
+      } catch (error) {
+        // A stale recovery ticket may have been completed by another request.
+        if (!(error instanceof ApiError && error.status === 404)) throw error
+      }
+      setPending((current) => current.filter((entry) => entry.id !== item.id))
+      await refreshRecovery()
+    } catch (error) {
+      setRowError({ id: item.id, message: error instanceof ApiError && error.message
+        ? error.message : 'Image could not be deleted. Please try again.' })
     } finally {
       setDeleting(false)
     }
@@ -80,7 +117,7 @@ export function BusinessMedia ({ tenantId }: BusinessMediaProps) {
     )
   }
 
-  if (media.length === 0) {
+  if (media.length === 0 && pending.length === 0) {
     return <EmptyState description="Images uploaded from Website editors appear here." title="No images yet" />
   }
 
@@ -104,6 +141,24 @@ export function BusinessMedia ({ tenantId }: BusinessMediaProps) {
         ))}
       </ul>
       {hasMore && <p className="mt-2 text-xs text-fg-muted">Showing the 50 most recent images.</p>}
+      {pending.length > 0 && (
+        <section aria-label="Incomplete deletions" className="mt-4">
+          <h3 className="text-sm font-semibold">Incomplete deletions</h3>
+          <p className="text-sm text-fg-muted">These images cannot be selected. Retry to finish removing them.</p>
+          {pendingHasMore && <p className="text-xs text-fg-muted">Showing the first 25 incomplete deletions; more exist — retrying these will reveal the rest.</p>}
+          <ul className="mt-2 space-y-2">
+            {pending.map((item) => (
+              <li key={item.id}>
+                <Card className="p-3" aria-label={item.originalFilename}>
+                  <p className="text-sm text-fg">{item.originalFilename}</p>
+                  <Button className="mt-2" disabled={deleting} onClick={() => void retryDeletion(item)} size="sm" type="button">Retry deletion</Button>
+                  {rowError?.id === item.id && <p className="mt-2 text-sm text-fg" role="alert">{rowError.message}</p>}
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ConfirmDialog
         busy={deleting}
         confirmLabel="Delete image"

@@ -242,7 +242,7 @@ const seedPublished = (siteDefinition) => {
 }
 
 const assertBlocked = async (message) => {
-  const objectName = `tenants/tenant-1/media/media-1`
+  const objectName = 'tenants/tenant-1/media/media-1'
   await assert.rejects(deleteUnusedMedia('tenant-1', 'media-1'), { status: 400, message })
   assert.ok(fakeDb.data(mediaPath('media-1')))
   assert.equal(fakeStorage.deletes.length, 0)

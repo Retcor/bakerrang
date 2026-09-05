@@ -1,10 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import type { SiteDefinition } from '@bakerrang/site-schema'
+import { DEFAULT_SITE_THEME } from '../../../packages/site-components/src/theme.ts'
 import { contactMetadata, homeMetadata, localBusinessData, serializeJsonLd } from '../lib/seo.ts'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSharedPublicOrigin, resolveSiteBaseUrl } from '../lib/siteUrl.ts'
 
-const site = (businessProfile: Record<string, unknown> | undefined = undefined, status = 'PUBLISHED') => ({
+const site = (businessProfile: SiteDefinition['businessProfile'] = undefined, status: SiteDefinition['status'] = 'PUBLISHED'): SiteDefinition => ({
   status,
+  theme: DEFAULT_SITE_THEME,
   branding: {
     siteName: 'Acme & Sons',
     primaryColor: '#112233',
@@ -24,7 +27,7 @@ const site = (businessProfile: Record<string, unknown> | undefined = undefined, 
       { id: 'contact', type: 'contact', content: { title: 'Contact', buttonLabel: 'Call', action: { type: 'phone', value: '+1 303 555 0123' } } }
     ]
   }]
-}) as never
+})
 
 const indexedEnv = {
   SITE_PUBLIC_ORIGIN: 'https://sites.example.com',

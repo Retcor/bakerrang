@@ -1,9 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+const testGlobal = globalThis as typeof globalThis & { __rendererTestHost: string }
 const headerStore = {
-  set host (value: string) { globalThis.__rendererTestHost = value },
-  get host () { return globalThis.__rendererTestHost as string }
+  set host (value: string) { testGlobal.__rendererTestHost = value },
+  get host () { return testGlobal.__rendererTestHost }
 }
 headerStore.host = ''
 

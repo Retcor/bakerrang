@@ -18,7 +18,7 @@ const handle = (fn, successStatus = 200) => async (req, res) => {
     const status = error.status || 500
     if (status >= 500) console.error(error)
     res.status(status).json({
-      error: status >= 500 ? 'Tenant operation failed' : error.message
+      error: status >= 500 && !error.expose ? 'Tenant operation failed' : error.message
     })
   }
 }
@@ -31,7 +31,7 @@ const handleNoContent = (fn) => async (req, res) => {
     const status = error.status || 500
     if (status >= 500) console.error(error)
     res.status(status).json({
-      error: status >= 500 ? 'Tenant operation failed' : error.message
+      error: status >= 500 && !error.expose ? 'Tenant operation failed' : error.message
     })
   }
 }

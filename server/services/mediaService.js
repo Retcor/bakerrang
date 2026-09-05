@@ -78,6 +78,8 @@ const mediaData = (snapshot) => {
   return value
 }
 
+const isPendingDeletion = (value) => value?.deletion?.state === 'PENDING'
+
 const mediaResponse = (snapshot) => {
   const value = mediaData(snapshot)
   if (!value) return null
@@ -177,15 +179,34 @@ export const listMedia = async (tenantId) => {
     .orderBy('createdAt', 'desc')
     .limit(51)
     .get()
+  const pending = await tenantRef(tenantId).collection('media')
+    .where('deletion.state', '==', 'PENDING').limit(26).get()
+  const pendingIds = new Set(pending.docs.map((doc) => doc.id))
   return {
-    media: snapshot.docs.slice(0, 50).map(mediaResponse).filter(Boolean),
-    hasMore: snapshot.docs.length > 50
+    media: snapshot.docs.slice(0, 50).filter((doc) => !isPendingDeletion(doc.data()) && !pendingIds.has(doc.id)).map(mediaResponse).filter(Boolean),
+    hasMore: snapshot.docs.length > 50,
+    ...(pending.docs.length
+      ? {
+          pendingDeletions: pending.docs.slice(0, 25).map((doc) => ({
+            id: doc.id, originalFilename: doc.data().originalFilename, createdAt: doc.data().createdAt
+          })),
+          pendingHasMore: pending.docs.length > 25
+        }
+      : {})
   }
 }
 
 export const requireTenantMedia = async (tenantId, mediaIds, message = 'Media not found') => {
   const snapshots = await firestore.getAll(...mediaIds.map((id) => mediaRef(tenantId, id)))
-  if (snapshots.some((snapshot) => !snapshot.exists || !mediaData(snapshot))) {
+  if (snapshots.some((snapshot) => !snapshot.exists || !mediaData(snapshot) || isPendingDeletion(snapshot.data()))) {
+    throw httpError(400, message)
+  }
+}
+
+export const requireTenantMediaInTransaction = async (transaction, tenantId, mediaIds, message = 'Media not found') => {
+  if (mediaIds.length === 0) return
+  const snapshots = await transaction.getAll(...mediaIds.map((id) => mediaRef(tenantId, id)))
+  if (snapshots.some((snapshot) => !snapshot.exists || !mediaData(snapshot) || isPendingDeletion(snapshot.data()))) {
     throw httpError(400, message)
   }
 }
@@ -263,12 +284,12 @@ export const formatMediaInUseMessage = (locations) => {
   return `Image is still used as the ${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}`
 }
 
-const readWorkingAndPublishedDefinitions = async (tenantId) => {
+const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
   const refs = siteRefsFor(tenantId)
   const [configSnapshot, homeSnapshot, publishedSnapshot] = await Promise.all([
-    refs.config.get(),
-    refs.home.get(),
-    refs.published.get()
+    transaction ? transaction.get(refs.config) : refs.config.get(),
+    transaction ? transaction.get(refs.home) : refs.home.get(),
+    transaction ? transaction.get(refs.published) : refs.published.get()
   ])
 
   const working = configSnapshot.exists
@@ -291,8 +312,8 @@ const readWorkingAndPublishedDefinitions = async (tenantId) => {
   return { working, published }
 }
 
-export const findMediaUsage = async (tenantId, mediaId) => {
-  const { working, published } = await readWorkingAndPublishedDefinitions(tenantId)
+export const findMediaUsage = async (tenantId, mediaId, transaction) => {
+  const { working, published } = await readWorkingAndPublishedDefinitions(tenantId, transaction)
   return [
     ...(working ? collectMediaLocations(working, mediaId, 'working') : []),
     ...(published ? collectMediaLocations(published, mediaId, 'published') : [])
@@ -302,14 +323,29 @@ export const findMediaUsage = async (tenantId, mediaId) => {
 export const deleteUnusedMedia = async (tenantId, mediaId) => {
   await requireTenant(tenantId)
   const ref = mediaRef(tenantId, mediaId)
-  const snapshot = await ref.get()
-  if (!snapshot.exists) throw httpError(404, 'Media not found')
-  const stored = snapshot.data() || {}
-  const locations = await findMediaUsage(tenantId, mediaId)
-  if (locations.length > 0) throw httpError(400, formatMediaInUseMessage(locations))
-  await ref.delete()
-  if (nonEmptyString(stored.objectName)) {
-    await objectStorage.deleteObject(stored.objectName).catch(() => {})
+  // All reference writers read this same media document in their write transaction.
+  // A terminal marker commits before any non-transactional storage effects.
+  const stored = await firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref)
+    if (!snapshot.exists) throw httpError(404, 'Media not found')
+    const value = snapshot.data() || {}
+    const locations = await findMediaUsage(tenantId, mediaId, transaction)
+    if (locations.length > 0) throw httpError(400, formatMediaInUseMessage(locations))
+    if (!isPendingDeletion(value)) {
+      transaction.set(ref, { deletion: { state: 'PENDING', requestedAt: Date.now() } }, { merge: true })
+    }
+    return value
+  })
+  try {
+    if (nonEmptyString(stored.objectName)) await objectStorage.deleteObject(stored.objectName)
+  } catch {
+    throw Object.assign(httpError(502, 'Image bytes were not deleted. Retry the deletion.'), { expose: true })
+  }
+  try {
+    // IDs/object names are immutable and never reused; duplicate retries converge.
+    await ref.delete()
+  } catch {
+    throw Object.assign(httpError(502, 'Image cleanup did not finish. Retry the deletion.'), { expose: true })
   }
 }
 
@@ -330,7 +366,7 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
   const resolved = new Map()
   snapshots.forEach((snapshot) => {
     const value = snapshot.exists && mediaData(snapshot)
-    if (value) resolved.set(snapshot.id, value)
+    if (value && !isPendingDeletion(value)) resolved.set(snapshot.id, value)
   })
 
   return {

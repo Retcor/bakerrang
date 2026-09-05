@@ -11,9 +11,17 @@ export interface MediaItem {
   src: string
 }
 
+export interface PendingMediaItem {
+  id: string
+  originalFilename: string
+  createdAt: number
+}
+
 export interface MediaListResponse {
   media: MediaItem[]
   hasMore: boolean
+  pendingDeletions?: PendingMediaItem[]
+  pendingHasMore?: boolean
 }
 
 export const getMedia = (tenantId: string) =>
