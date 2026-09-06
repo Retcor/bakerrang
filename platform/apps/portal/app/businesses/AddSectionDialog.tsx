@@ -7,6 +7,8 @@ import { addSection } from '../../lib/site'
 import type { SectionType, SiteDefinition } from '@bakerrang/site-schema'
 import { sectionDefinitions, sectionTypes, homeSections } from './sectionDefinitions'
 
+const groups = ['Core', 'Content', 'Media', 'Trust', 'Conversion', 'Business'] as const
+
 export function AddSectionDialog ({ onAdded, onClose, onRefresh, open, site, tenantId }: {
   onAdded: (site: SiteDefinition, sectionId: string) => void
   onClose: () => void
@@ -33,8 +35,8 @@ export function AddSectionDialog ({ onAdded, onClose, onRefresh, open, site, ten
     } finally { setPending(null) }
   }
   return <Dialog description="Add a section to the homepage. The new section opens in its exact editor after it is created." onClose={onClose} open={open} title="Add homepage section">
-    <div className="space-y-3">
-      {sectionTypes.map((type) => {
+    <div className="space-y-5">
+      {groups.map((group) => <section key={group}><h3 className="text-sm font-semibold text-fg">{group}</h3><div className="mt-2 space-y-3">{sectionTypes.filter((type) => sectionDefinitions[type].group === group).map((type) => {
         const definition = sectionDefinitions[type]
         const exists = sections.some((section) => section.type === type)
         const blocked = definition.singleton && exists
@@ -47,7 +49,7 @@ export function AddSectionDialog ({ onAdded, onClose, onRefresh, open, site, ten
             <Button disabled={disabled} onClick={() => void add(type)} size="sm" type="button">{pending === type ? 'Adding…' : 'Add'}</Button>
           </div>
         </div>
-      })}
+      })}</div></section>)}
       {error && <StatusMessage tone="error">{error}</StatusMessage>}
     </div>
   </Dialog>

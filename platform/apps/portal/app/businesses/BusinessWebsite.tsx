@@ -13,9 +13,13 @@ import { BrandingEditor } from './BrandingEditor'
 import { BusinessHoursEditor } from './BusinessHoursEditor'
 import { BusinessProfileEditor } from './BusinessProfileEditor'
 import { ContactEditor } from './ContactEditor'
+import { CtaEditor } from './CtaEditor'
 import { CustomCssEditor } from './CustomCssEditor'
 import { FaqEditor } from './FaqEditor'
 import { GalleryEditor } from './GalleryEditor'
+import { LogosEditor } from './LogosEditor'
+import { ProcessEditor } from './ProcessEditor'
+import { StatsEditor } from './StatsEditor'
 import { HeroEditor } from './HeroEditor'
 import { BusinessHoursSectionEditor } from './BusinessHoursSectionEditor'
 import { HomepageSectionManager } from './HomepageSectionManager'
@@ -63,6 +67,10 @@ function ActiveWebsiteEditor ({ editor, onBackToHomepage, onCancel, onDirtyChang
     switch (sectionEditor) {
       case 'hero': return <HeroEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'about': return <AboutEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
+      case 'process': return <ProcessEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
+      case 'stats': return <StatsEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
+      case 'cta': return <CtaEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
+      case 'logos': return <LogosEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'services': return <ServicesEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'gallery': return <GalleryEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'testimonials': return <TestimonialsEditor onCancel={onBackToHomepage} onDirtyChange={onDirtyChange} onSaved={onSaved} sectionId={sectionId} site={site} tenantId={tenantId} />

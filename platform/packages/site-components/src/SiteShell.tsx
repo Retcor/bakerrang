@@ -5,7 +5,7 @@ import { SiteHeader, type SiteNavItem } from './SiteHeader'
 import { SiteFooter } from './SiteFooter'
 import { siteNavigationPaths } from './sitePath'
 
-const labels: Record<string, string> = { about: 'About', services: 'Services', gallery: 'Gallery', testimonials: 'Testimonials', faq: 'FAQ', businessHours: 'Hours', contact: 'Contact' }
+const labels: Record<string, string> = { about: 'About', services: 'Services', gallery: 'Gallery', process: 'Steps', stats: 'Highlights', testimonials: 'Testimonials', faq: 'FAQ', cta: 'Call to Action', logos: 'Logos', businessHours: 'Hours', contact: 'Contact' }
 
 export function SiteShell ({ children, currentPage, site, sitePath }: {
   children: ReactNode

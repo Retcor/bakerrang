@@ -216,6 +216,7 @@ export const requireGalleryMedia = (tenantId, mediaIds) =>
 
 export const collectSiteMediaIds = (definition) => {
   const galleryItems = []
+  const logoItems = []
   const aboutSections = []
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
     for (const section of Array.isArray(page?.sections) ? page.sections : []) {
@@ -223,6 +224,7 @@ export const collectSiteMediaIds = (definition) => {
       if (section?.type === 'gallery' && Array.isArray(section.content?.items)) {
         galleryItems.push(...section.content.items)
       }
+      if (section?.type === 'logos' && Array.isArray(section.content?.items)) logoItems.push(...section.content.items)
     }
   }
   const logoMediaId = nonEmptyString(definition?.branding?.logoMediaId)
@@ -239,7 +241,8 @@ export const collectSiteMediaIds = (definition) => {
     ...(faviconMediaId ? [faviconMediaId] : []),
     ...(socialImageMediaId ? [socialImageMediaId] : []),
     ...aboutSections.map((section) => section.content?.imageMediaId).filter(nonEmptyString),
-    ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString)
+    ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString),
+    ...logoItems.map((item) => item?.mediaId).filter(nonEmptyString)
   ])]
 }
 
@@ -249,11 +252,13 @@ const MEDIA_USAGE_ORDER = [
   ['working', 'social image'],
   ['working', 'about image'],
   ['working', 'gallery'],
+  ['working', 'logos'],
   ['published', 'logo'],
   ['published', 'favicon'],
   ['published', 'social image'],
   ['published', 'about image'],
-  ['published', 'gallery']
+  ['published', 'gallery'],
+  ['published', 'logos']
 ]
 
 const collectMediaLocations = (definition, mediaId, surface) => {
@@ -268,6 +273,9 @@ const collectMediaLocations = (definition, mediaId, surface) => {
       }
       if (section?.type === 'gallery' && Array.isArray(section.content?.items)) {
         if (section.content.items.some((item) => item?.mediaId === mediaId)) found.add('gallery')
+      }
+      if (section?.type === 'logos' && Array.isArray(section.content?.items)) {
+        if (section.content.items.some((item) => item?.mediaId === mediaId)) found.add('logos')
       }
     }
   }
@@ -417,7 +425,7 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
           }
           return { ...section, content }
         }
-        if (section?.type !== 'gallery') return section
+        if (section?.type !== 'gallery' && section?.type !== 'logos') return section
         const items = (Array.isArray(section.content?.items) ? section.content.items : [])
           .map((item) => {
             const media = item && resolved.get(item.mediaId)

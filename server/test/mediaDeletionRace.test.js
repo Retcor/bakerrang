@@ -37,7 +37,8 @@ const writers = [
   ['Favicon', (id = 'image') => sites.updateSiteBranding(tenant, { siteName: 'Business', faviconMediaId: id })],
   ['Social', (id = 'image') => sites.updateBusinessProfile(tenant, { socialImageMediaId: id })],
   ['About', (id = 'image') => updateType('about', { heading: 'About', body: 'Body', imageMediaId: id, imageAlt: 'Image' })],
-  ['Gallery', (id = 'image') => updateType('gallery', { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })]
+  ['Gallery', (id = 'image') => updateType('gallery', { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })],
+  ['Logos', (id = 'image') => updateType('logos', { heading: 'Trusted by', items: [{ mediaId: id, altText: 'Logo' }] })]
 ]
 const refs = () => [...media.collectSiteMediaIds({ ...db.data(configPath), pages: [db.data(homePath)] }), ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)]
 const assertIntact = () => {
@@ -58,17 +59,17 @@ for (const [name, write] of writers) {
     onceBeforeCommit(write)
     await assert.rejects(remove(), { status: 400 })
     assertIntact()
-    assert.equal(db.transactionAttempts - attempts, ['About', 'Gallery'].includes(name) ? 4 : 3)
+    assert.equal(db.transactionAttempts - attempts, ['About', 'Gallery', 'Logos'].includes(name) ? 4 : 3)
   })
   test(`${name}: deletion commits in writer gap; writer rejects`, async () => {
     onceBeforeCommit(remove)
-    await assert.rejects(write(), { status: 400, message: `${name} image not found` })
+    await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : `${name} image not found` })
     assertRemoved()
   })
   test(`${name}: pending media rejects references with storage retained`, async () => {
     storage.deleteError = new Error('unavailable')
     await assert.rejects(remove(), { status: 502 })
-    await assert.rejects(write(), { status: 400, message: `${name} image not found` })
+    await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : `${name} image not found` })
     assert.equal(refs().includes('image'), false)
     assert.ok(storage.objects.has(mediaPath))
     assert.equal(db.data(mediaPath).deletion.state, 'PENDING')
@@ -165,7 +166,7 @@ test('retry exhaustion does not persist buffered marker or touch storage', async
   assert.equal(db.data(mediaPath).deletion, undefined)
   assert.ok(storage.objects.has(mediaPath))
 })
-test('pending hydration removes URLs and gallery items from working and published reads', async () => {
+test('pending hydration removes URLs and Gallery/Logo items from working and published reads', async () => {
   for (const [, write] of writers) await write()
   await sites.updateSiteBranding(tenant, { siteName: 'Business', logoMediaId: 'image', faviconMediaId: 'image' })
   const before = await sites.getSite(tenant)
@@ -179,6 +180,7 @@ test('pending hydration removes URLs and gallery items from working and publishe
     assert.equal(definition.businessProfile.socialImageSrc, undefined)
     assert.equal(definition.pages[0].sections.find((s) => s.type === 'about').content.imageSrc, undefined)
     assert.deepEqual(definition.pages[0].sections.find((s) => s.type === 'gallery').content.items, [])
+    assert.deepEqual(definition.pages[0].sections.find((s) => s.type === 'logos').content.items, [])
   }
 })
 test('pending query finds old items beyond newest50 and is bounded and tenant scoped', async () => {
@@ -229,7 +231,7 @@ for (const [name, write] of writers) {
       assert.ok(refs().includes('other'))
       if (deletionFirst) {
         onceBeforeCommit(remove)
-        await assert.rejects(write(), { status: 400, message: name + ' image not found' })
+        await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : name + ' image not found' })
         assert.ok(refs().includes('other'))
         assertRemoved()
       } else {

@@ -70,7 +70,7 @@ test('instance commands allow repeated galleries and services while enforcing si
 
 test('server-owned defaults add every optional type without fabricating media', async () => {
   let site
-  for (const type of ['about', 'services', 'gallery', 'testimonials', 'faq', 'contact']) {
+  for (const type of ['about', 'services', 'gallery', 'testimonials', 'faq', 'contact', 'process', 'stats', 'cta', 'logos']) {
     site = await addSection('tenant-1', 'home', type)
     const added = byType(site, type)[0]
     assert.match(added.id, /^[0-9a-f-]{36}$/)
@@ -83,6 +83,35 @@ test('server-owned defaults add every optional type without fabricating media', 
   })
   site = await addSection('tenant-1', 'home', 'businessHours')
   assert.equal(byType(site, 'businessHours')[0].hidden, false)
+})
+
+test('new repeatable sections validate content, actions, nested IDs, and Logo media references', async () => {
+  db.seed('tenants/tenant-1/media/logo-1', { originalFilename: 'logo.png', objectName: 'logo', contentType: 'image/png', sizeBytes: 1, width: 8, height: 4, createdAt: 1, createdByUserId: 'admin' })
+  let site = await addSection('tenant-1', 'home', 'process')
+  site = await addSection('tenant-1', 'home', 'stats')
+  site = await addSection('tenant-1', 'home', 'cta')
+  site = await addSection('tenant-1', 'home', 'logos')
+  const process = byType(site, 'process')[0]; const stats = byType(site, 'stats')[0]; const cta = byType(site, 'cta')[0]; const logos = byType(site, 'logos')[0]
+  assert.equal(process.content.items[0].title, 'Add your first step')
+  assert.equal(stats.content.items[0].value, '—')
+  assert.deepEqual(cta.content, { heading: 'Ready to get started?' })
+  await updateSectionContent('tenant-1', 'home', process.id, { items: [{ id: process.content.items[0].id, title: 'Plan', description: 'First' }] })
+  await updateSectionContent('tenant-1', 'home', stats.id, { items: [{ id: stats.content.items[0].id, value: '24/7', label: 'Support' }] })
+  await updateSectionContent('tenant-1', 'home', cta.id, { heading: 'Talk to us', buttonLabel: 'Email us', action: { type: 'email', value: 'hello@example.com' } })
+  site = await updateSectionContent('tenant-1', 'home', logos.id, { items: [{ mediaId: 'logo-1', altText: 'Example partner' }] })
+  assert.deepEqual(collectSiteMediaIds(site), ['logo-1'])
+  await assert.rejects(updateSectionContent('tenant-1', 'home', cta.id, { heading: 'No', buttonLabel: 'Half configured' }), { status: 400 })
+  await assert.rejects(updateSectionContent('tenant-1', 'home', cta.id, { heading: 'No', buttonLabel: 'Bad', action: { type: 'leadForm' } }), { status: 400 })
+  await assert.rejects(deleteUnusedMedia('tenant-1', 'logo-1'), { status: 400, message: 'Image is still used as the working logos' })
+  site = await duplicateSection('tenant-1', 'home', logos.id)
+  const logoSections = byType(site, 'logos')
+  assert.equal(logoSections.length, 2)
+  assert.equal(logoSections[0].content.items[0].mediaId, logoSections[1].content.items[0].mediaId)
+  assert.notEqual(logoSections[0].content.items[0].id, logoSections[1].content.items[0].id)
+  await setSectionVisibility('tenant-1', 'home', logoSections[1].id, true)
+  site = await removeSection('tenant-1', 'home', logoSections[0].id)
+  assert.equal(byType(site, 'logos').length, 1)
+  await assert.rejects(deleteUnusedMedia('tenant-1', 'logo-1'), { status: 400, message: 'Image is still used as the working logos' })
 })
 
 test('duplicate owns a new section id and nested ids but preserves media references', async () => {

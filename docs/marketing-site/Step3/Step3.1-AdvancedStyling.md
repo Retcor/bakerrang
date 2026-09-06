@@ -25,6 +25,13 @@ These are the supported advanced hooks for the current BakerRang site system.
 Prefer them to generated utility class names, DOM structure selectors, or other
 implementation details, which are not stability promises.
 
+The expanded section library also exposes meaningful role hooks where needed:
+`[data-br-role="step"]`, `[data-br-role="cta-button"]`, and
+`[data-br-role="logo"]`.
+`[data-br-role="button"]` remains the intentionally shared hook for ordinary
+buttons, including About; `cta-button` is reserved for the CTA section's
+specific primary action.
+
 ## Theme variables
 
 `[data-br-site]` receives the following Theme variables:

@@ -1,5 +1,5 @@
 import type { BusinessHours as BusinessHoursValue, SiteSection } from '@bakerrang/site-schema'
-import { About, BusinessHours, Contact, Faq, Gallery, Hero, Services, Testimonials } from '@bakerrang/site-components'
+import { About, BusinessHours, Contact, Cta, Faq, Gallery, Hero, Logos, Process, Services, Stats, Testimonials } from '@bakerrang/site-components'
 
 export interface SectionRendererProps {
   section: SiteSection
@@ -15,6 +15,10 @@ export function SectionRenderer ({ businessHours, heroContactHref, previewToken,
       return <Hero anchorId={section.id} contactHref={heroContactHref} content={section.content} />
     case 'about':
       return <About anchorId={section.id} content={section.content} />
+    case 'process': return <Process anchorId={section.id} content={section.content} />
+    case 'stats': return <Stats anchorId={section.id} content={section.content} />
+    case 'cta': return <Cta anchorId={section.id} content={section.content} />
+    case 'logos': return <Logos anchorId={section.id} content={section.content} />
     case 'services':
       return <Services anchorId={section.id} content={section.content} />
     case 'gallery':

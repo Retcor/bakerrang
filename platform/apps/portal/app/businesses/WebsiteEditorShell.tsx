@@ -41,7 +41,7 @@ export function WebsiteEditorShell ({ children, dirtyValue, editor, error, onCan
   return (
     <form className={`min-w-0 w-full ${width === 'wide' ? 'max-w-5xl' : 'max-w-3xl'} rounded-lg border border-border bg-surface text-left shadow-xs`} noValidate onSubmit={onSubmit}>
       <header className="border-b border-border px-5 py-5 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-fg-subtle">{'group' in metadata ? metadata.group : 'Homepage'}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.1em] text-fg-subtle">{websiteEditorById.has(editor as WebsiteEditorId) ? ('group' in metadata ? metadata.group : 'Homepage') : 'Homepage'}</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-fg">{metadata.label}</h2>
         <p className="mt-1 text-sm leading-6 text-fg-muted">{metadata.description}</p>
       </header>

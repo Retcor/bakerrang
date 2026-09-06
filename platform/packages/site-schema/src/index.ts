@@ -21,7 +21,15 @@ export interface AboutContent {
   imageSrc?: string
   imageWidth?: number
   imageHeight?: number
+  imagePosition?: 'left' | 'right'
+  buttonLabel?: string
+  action?: LinkAction
 }
+
+export type LinkAction =
+  | { type: 'email', value: string }
+  | { type: 'phone', value: string }
+  | { type: 'url', value: string }
 
 export interface AboutSection {
   id: string
@@ -49,9 +57,7 @@ export interface ServicesSection {
 }
 
 export type ContactAction =
-  | { type: 'email', value: string }
-  | { type: 'phone', value: string }
-  | { type: 'url', value: string }
+  | LinkAction
   | { type: 'leadForm' }
 
 export interface ContactContent {
@@ -67,6 +73,29 @@ export interface ContactSection {
   hidden: boolean
   content: ContactContent
 }
+
+export interface ProcessStep { id: string, title: string, description?: string }
+export interface ProcessContent { heading?: string, intro?: string, items: ProcessStep[] }
+export interface ProcessSection { id: string, type: 'process', hidden: boolean, content: ProcessContent }
+
+export interface StatItem { id: string, value: string, label: string }
+export interface StatsContent { heading?: string, intro?: string, items: StatItem[] }
+export interface StatsSection { id: string, type: 'stats', hidden: boolean, content: StatsContent }
+
+export interface CtaContent { heading: string, body?: string, buttonLabel?: string, action?: LinkAction }
+export interface CtaSection { id: string, type: 'cta', hidden: boolean, content: CtaContent }
+
+export interface LogoItem {
+  id: string
+  mediaId: string
+  altText: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  src?: string
+  width?: number
+  height?: number
+}
+export interface LogosContent { heading?: string, items: LogoItem[] }
+export interface LogosSection { id: string, type: 'logos', hidden: boolean, content: LogosContent }
 
 export interface GalleryItem {
   id: string
@@ -162,7 +191,7 @@ export interface BusinessHoursSection {
   content: BusinessHoursContent
 }
 
-export type SiteSection = HeroSection | AboutSection | ServicesSection | GallerySection | TestimonialsSection | FaqSection | BusinessHoursSection | ContactSection
+export type SiteSection = HeroSection | AboutSection | ServicesSection | GallerySection | TestimonialsSection | FaqSection | BusinessHoursSection | ContactSection | ProcessSection | StatsSection | CtaSection | LogosSection
 export type SectionType = SiteSection['type']
 
 export interface SitePage {
@@ -280,6 +309,11 @@ export const isServicesSection = (section: SiteSection): section is ServicesSect
 
 export const isContactSection = (section: SiteSection): section is ContactSection =>
   section.type === 'contact'
+
+export const isProcessSection = (section: SiteSection): section is ProcessSection => section.type === 'process'
+export const isStatsSection = (section: SiteSection): section is StatsSection => section.type === 'stats'
+export const isCtaSection = (section: SiteSection): section is CtaSection => section.type === 'cta'
+export const isLogosSection = (section: SiteSection): section is LogosSection => section.type === 'logos'
 
 export const isGallerySection = (section: SiteSection): section is GallerySection =>
   section.type === 'gallery'

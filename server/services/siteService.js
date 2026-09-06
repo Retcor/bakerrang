@@ -280,56 +280,78 @@ const validateAboutInput = (input) => {
       throw httpError(400, 'About image alt text must be 250 characters or fewer')
     }
   }
+  let imagePosition
+  if (Object.prototype.hasOwnProperty.call(value, 'imagePosition')) {
+    if (!['left', 'right'].includes(value.imagePosition)) throw httpError(400, 'About image position is not supported')
+    imagePosition = value.imagePosition
+  }
+  const actionFields = validateOptionalSectionAction(value, 'About')
   return {
     ...(eyebrow ? { eyebrow } : {}),
     heading,
     body,
-    ...(imageMediaId ? { imageMediaId, imageAlt } : {})
+    ...(imageMediaId ? { imageMediaId, imageAlt } : {}),
+    ...(imagePosition ? { imagePosition } : {}),
+    ...actionFields
   }
 }
 
-const validateContactAction = (action) => {
+const validateLinkAction = (action, label = 'Link') => {
   if (!action || typeof action !== 'object' || Array.isArray(action)) {
-    throw httpError(400, 'Contact action is required')
+    throw httpError(400, `${label} action is required`)
   }
-  if (!['email', 'phone', 'url', 'leadForm'].includes(action.type)) {
-    throw httpError(400, 'Contact action type is not supported')
-  }
-  if (action.type === 'leadForm') return { type: 'leadForm' }
+  if (!['email', 'phone', 'url'].includes(action.type)) throw httpError(400, `${label} action type is not supported`)
   if (typeof action.value !== 'string' || !action.value.trim()) {
-    throw httpError(400, 'Contact action value is required')
+    throw httpError(400, `${label} action value is required`)
   }
 
   const value = action.value.trim()
   if (action.type === 'email') {
     if (value.length > EMAIL_MAX) {
-      throw httpError(400, 'Contact email must be 254 characters or fewer')
+      throw httpError(400, `${label} email must be 254 characters or fewer`)
     }
-    if (!isValidEmail(value)) throw httpError(400, 'Contact email is invalid')
+    if (!isValidEmail(value)) throw httpError(400, `${label} email is invalid`)
     return { type: 'email', value }
   }
 
   if (action.type === 'phone') {
     if (value.length > PHONE_MAX) {
-      throw httpError(400, 'Contact phone must be 50 characters or fewer')
+      throw httpError(400, `${label} phone must be 50 characters or fewer`)
     }
-    if (!isValidPhone(value)) throw httpError(400, 'Contact phone is invalid')
+    if (!isValidPhone(value)) throw httpError(400, `${label} phone is invalid`)
     return { type: 'phone', value }
   }
 
   if (value.length > 2048) {
-    throw httpError(400, 'Contact URL must be 2048 characters or fewer')
+    throw httpError(400, `${label} URL must be 2048 characters or fewer`)
   }
   try {
     const parsedUrl = new URL(value)
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-      throw httpError(400, 'Contact URL must use http or https')
+      throw httpError(400, `${label} URL must use http or https`)
     }
     return { type: 'url', value: parsedUrl.toString() }
   } catch (error) {
     if (error.status === 400) throw error
-    throw httpError(400, 'Contact URL must use http or https')
+    throw httpError(400, `${label} URL must use http or https`)
   }
+}
+
+const validateContactAction = (action) => {
+  if (action?.type === 'leadForm') return { type: 'leadForm' }
+  return validateLinkAction(action, 'Contact')
+}
+
+const validateOptionalSectionAction = (body, label) => {
+  const hasLabel = Object.prototype.hasOwnProperty.call(body, 'buttonLabel')
+  const hasAction = Object.prototype.hasOwnProperty.call(body, 'action')
+  if (hasLabel !== hasAction) throw httpError(400, `${label} button label and action must be provided together`)
+  if (!hasLabel) return {}
+  if (typeof body.buttonLabel !== 'string') throw httpError(400, `${label} button label must be a string`)
+  const buttonLabel = body.buttonLabel.trim()
+  if (!buttonLabel) throw httpError(400, `${label} button label is required`)
+  if (buttonLabel.length > 60) throw httpError(400, `${label} button label must be 60 characters or fewer`)
+  return { buttonLabel, action: validateLinkAction(body.action, label) }
 }
 
 const validateContactInput = (input) => {
@@ -510,6 +532,86 @@ const validateFaqInput = (input) => {
   return { heading, ...(intro ? { intro } : {}), items }
 }
 
+const optionalText = (body, field, label, max) => {
+  if (!Object.prototype.hasOwnProperty.call(body, field)) return undefined
+  if (typeof body[field] !== 'string') throw httpError(400, `${label} must be a string`)
+  const value = body[field].trim()
+  if (value.length > max) throw httpError(400, `${label} must be ${max} characters or fewer`)
+  return value || undefined
+}
+
+const validateProcessInput = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 8) throw httpError(400, 'Steps must include between 1 and 8 items')
+  const ids = new Set()
+  const items = body.items.map((item) => {
+    const value = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+    const supplied = Object.prototype.hasOwnProperty.call(value, 'id')
+    if (supplied && (typeof value.id !== 'string' || !value.id.trim() || ids.has(value.id))) throw httpError(400, 'Step item id is invalid')
+    if (supplied) ids.add(value.id)
+    if (typeof value.title !== 'string' || !value.title.trim()) throw httpError(400, 'Step title is required')
+    const title = value.title.trim()
+    if (title.length > 80) throw httpError(400, 'Step title must be 80 characters or fewer')
+    const description = optionalText(value, 'description', 'Step description', 300)
+    return { ...(supplied ? { id: value.id } : {}), title, ...(description ? { description } : {}) }
+  })
+  const heading = optionalText(body, 'heading', 'Steps heading', 120)
+  const intro = optionalText(body, 'intro', 'Steps intro', 300)
+  return { ...(heading ? { heading } : {}), ...(intro ? { intro } : {}), items }
+}
+
+const validateStatsInput = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 8) throw httpError(400, 'Highlights must include between 1 and 8 items')
+  const ids = new Set()
+  const items = body.items.map((item) => {
+    const value = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+    const supplied = Object.prototype.hasOwnProperty.call(value, 'id')
+    if (supplied && (typeof value.id !== 'string' || !value.id.trim() || ids.has(value.id))) throw httpError(400, 'Highlight item id is invalid')
+    if (supplied) ids.add(value.id)
+    for (const [field, label, max] of [['value', 'Highlight value', 16], ['label', 'Highlight label', 60]]) {
+      if (typeof value[field] !== 'string' || !value[field].trim()) throw httpError(400, `${label} is required`)
+      if (value[field].trim().length > max) throw httpError(400, `${label} must be ${max} characters or fewer`)
+    }
+    return { ...(supplied ? { id: value.id } : {}), value: value.value.trim(), label: value.label.trim() }
+  })
+  const heading = optionalText(body, 'heading', 'Highlights heading', 120)
+  const intro = optionalText(body, 'intro', 'Highlights intro', 300)
+  return { ...(heading ? { heading } : {}), ...(intro ? { intro } : {}), items }
+}
+
+const validateCtaInput = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (typeof body.heading !== 'string' || !body.heading.trim()) throw httpError(400, 'Call to Action heading is required')
+  const heading = body.heading.trim()
+  if (heading.length > 120) throw httpError(400, 'Call to Action heading must be 120 characters or fewer')
+  const text = optionalText(body, 'body', 'Call to Action body', 300)
+  return { heading, ...(text ? { body: text } : {}), ...validateOptionalSectionAction(body, 'Call to Action') }
+}
+
+const validateLogosInput = (input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  if (!Array.isArray(body.items) || body.items.length > 24) throw httpError(400, 'Logos cannot exceed 24 items')
+  const ids = new Set()
+  const mediaIds = new Set()
+  const items = body.items.map((item) => {
+    const value = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+    const supplied = Object.prototype.hasOwnProperty.call(value, 'id')
+    if (supplied && (typeof value.id !== 'string' || !value.id.trim() || ids.has(value.id))) throw httpError(400, 'Logo item id is invalid')
+    if (supplied) ids.add(value.id)
+    if (typeof value.mediaId !== 'string' || !value.mediaId.trim()) throw httpError(400, 'Logo image is required')
+    const mediaId = value.mediaId.trim()
+    if (mediaIds.has(mediaId)) throw httpError(400, 'Duplicate logo image')
+    mediaIds.add(mediaId)
+    if (typeof value.altText !== 'string' || !value.altText.trim()) throw httpError(400, 'Logo image alt text is required')
+    const altText = value.altText.trim()
+    if (altText.length > 250) throw httpError(400, 'Logo image alt text must be 250 characters or fewer')
+    return { ...(supplied ? { id: value.id } : {}), mediaId, altText }
+  })
+  const heading = optionalText(body, 'heading', 'Logos heading', 120)
+  return { ...(heading ? { heading } : {}), items }
+}
+
 const contentValidators = {
   hero: validateHeroInput,
   about: validateAboutInput,
@@ -517,6 +619,10 @@ const contentValidators = {
   gallery: validateGalleryInput,
   testimonials: validateTestimonialsInput,
   faq: validateFaqInput,
+  process: validateProcessInput,
+  stats: validateStatsInput,
+  cta: validateCtaInput,
+  logos: validateLogosInput,
   contact: validateContactInput,
   businessHours: (content) => {
     if (!content || typeof content !== 'object' || Array.isArray(content)) throw httpError(400, 'Business Hours content is invalid')
@@ -558,7 +664,7 @@ export const validateSectionComposition = (sections, status = 500) => {
     if (typeof section.hidden !== 'boolean') invalid()
     ids.add(section.id)
     counts.set(section.type, (counts.get(section.type) || 0) + 1)
-    if (['services', 'gallery', 'testimonials', 'faq'].includes(section.type) && Array.isArray(section.content?.items)) {
+    if (['services', 'gallery', 'testimonials', 'faq', 'process', 'stats', 'logos'].includes(section.type) && Array.isArray(section.content?.items)) {
       const itemIds = new Set()
       for (const item of section.content.items) {
         if (!item || typeof item.id !== 'string' || !item.id.trim() || itemIds.has(item.id)) invalid()
@@ -964,11 +1070,12 @@ export const unpublishSite = async (tenantId, actorUserId) => {
 const sectionMediaIds = (section) => {
   if (section.type === 'about') return section.content.imageMediaId ? [section.content.imageMediaId] : []
   if (section.type === 'gallery') return section.content.items.map((item) => item.mediaId)
+  if (section.type === 'logos') return section.content.items.map((item) => item.mediaId)
   return []
 }
 
 const resolveItemIds = (type, content, storedContent) => {
-  if (!['services', 'gallery', 'testimonials', 'faq'].includes(type)) return content
+  if (!['services', 'gallery', 'testimonials', 'faq', 'process', 'stats', 'logos'].includes(type)) return content
   const storedIds = new Set((storedContent?.items || []).map((item) => item.id))
   return {
     ...content,
@@ -1075,6 +1182,7 @@ export const updateSectionContent = async (tenantId, pageId, sectionId, input) =
     mediaIds = sectionMediaIds(nextSection)
     if (section.type === 'about') mediaMessage = 'About image not found'
     if (section.type === 'gallery') mediaMessage = 'Gallery image not found'
+    if (section.type === 'logos') mediaMessage = 'Logo image not found'
     const next = [...sections]
     next[index] = nextSection
     return next

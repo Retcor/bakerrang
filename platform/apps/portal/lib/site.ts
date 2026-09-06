@@ -24,12 +24,18 @@ export interface AboutInput {
   body: string
   imageMediaId?: string
   imageAlt?: string
+  imagePosition?: 'left' | 'right'
+  buttonLabel?: string
+  action?: LinkActionInput
 }
 
-export type ContactActionInput =
+export type LinkActionInput =
   | { type: 'email', value: string }
   | { type: 'phone', value: string }
   | { type: 'url', value: string }
+
+export type ContactActionInput =
+  | LinkActionInput
   | { type: 'leadForm' }
 
 export interface ContactInput {
@@ -72,6 +78,11 @@ export interface FaqInput {
   intro?: string
   items: FaqItemInput[]
 }
+
+export interface ProcessInput { heading?: string, intro?: string, items: Array<{ id?: string, title: string, description?: string }> }
+export interface StatsInput { heading?: string, intro?: string, items: Array<{ id?: string, value: string, label: string }> }
+export interface CtaInput { heading: string, body?: string, buttonLabel?: string, action?: LinkActionInput }
+export interface LogosInput { heading?: string, items: Array<{ id?: string, mediaId: string, altText: string }> }
 
 export interface BrandingInput {
   siteName: string
@@ -210,6 +221,11 @@ export const upsertHomeTestimonials = (tenantId: string, sectionId: string | und
 
 export const upsertHomeFaq = (tenantId: string, sectionId: string | undefined, input: FaqInput) =>
   saveSectionContent(tenantId, sectionId, 'faq', input)
+
+export const upsertHomeProcess = (tenantId: string, sectionId: string, input: ProcessInput) => saveSectionContent(tenantId, sectionId, 'process', input)
+export const upsertHomeStats = (tenantId: string, sectionId: string, input: StatsInput) => saveSectionContent(tenantId, sectionId, 'stats', input)
+export const upsertHomeCta = (tenantId: string, sectionId: string, input: CtaInput) => saveSectionContent(tenantId, sectionId, 'cta', input)
+export const upsertHomeLogos = (tenantId: string, sectionId: string, input: LogosInput) => saveSectionContent(tenantId, sectionId, 'logos', input)
 
 export const removeSection = (tenantId: string, sectionId: string) =>
   apiSend<SiteDefinition>('DELETE', sectionPath(tenantId, sectionId))

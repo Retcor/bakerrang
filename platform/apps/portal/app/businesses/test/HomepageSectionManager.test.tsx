@@ -95,6 +95,27 @@ describe('Homepage section manager', () => {
     expect(screen.getByRole('button', { name: 'Edit Gallery 1' })).toBeInTheDocument()
   })
 
+  it('summarizes and independently addresses every new repeatable section type', () => {
+    const current = site()
+    const home = current.pages[0]
+    home.sections.push(
+      { id: 'process-a', type: 'process', hidden: false, content: { heading: 'Steps one', items: [{ id: 'step-a', title: 'Choose' }] } },
+      { id: 'process-b', type: 'process', hidden: false, content: { heading: 'Steps two', items: [{ id: 'step-b', title: 'Choose' }, { id: 'step-c', title: 'Book' }] } },
+      { id: 'stats-a', type: 'stats', hidden: false, content: { items: [{ id: 'stat-a', value: '25+', label: 'Years' }] } },
+      { id: 'stats-b', type: 'stats', hidden: false, content: { items: [{ id: 'stat-b', value: '24/7', label: 'Support' }, { id: 'stat-c', value: '1,200+', label: 'Orders' }] } },
+      { id: 'cta-a', type: 'cta', hidden: false, content: { heading: 'Talk to us' } },
+      { id: 'cta-b', type: 'cta', hidden: false, content: { heading: '' } },
+      { id: 'logos-a', type: 'logos', hidden: false, content: { items: [] } },
+      { id: 'logos-b', type: 'logos', hidden: false, content: { items: [{ id: 'logo-a', mediaId: 'media-a', altText: 'Partner' }, { id: 'logo-b', mediaId: 'media-b', altText: 'Sponsor' }] } }
+    )
+    const { props } = renderManager(current)
+    for (const summary of ['1 step', '2 steps', '1 highlight', '2 highlights', 'Talk to us', 'Call to action', 'No logos yet', '2 logos']) expect(screen.getByText(summary)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Steps 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Logos 2' }))
+    expect(props.onEditSection).toHaveBeenNthCalledWith(1, 'process-b')
+    expect(props.onEditSection).toHaveBeenNthCalledWith(2, 'logos-b')
+  })
+
   it('keeps Hero pinned and removes its composition/destructive controls', () => {
     renderManager()
     const hero = screen.getAllByRole('listitem')[0]
@@ -186,7 +207,8 @@ describe('Homepage section manager', () => {
     renderManager(site({ hours: true, contact: true, businessHoursSection: true }))
     fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
     const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
-    expect(within(dialog).getAllByRole('button', { name: 'Add' })).toHaveLength(8)
+    expect(within(dialog).getAllByRole('button', { name: 'Add' })).toHaveLength(12)
+    for (const group of ['Core', 'Content', 'Media', 'Trust', 'Conversion', 'Business']) expect(within(dialog).getByText(group)).toBeInTheDocument()
     expect(within(dialog).getAllByText('Already added').length).toBeGreaterThan(1)
     expect(within(dialog).getAllByRole('button', { name: 'Add' })[0]).toBeDisabled()
     expect(within(dialog).getAllByRole('button', { name: 'Add' })[1]).toBeEnabled()
@@ -201,16 +223,31 @@ describe('Homepage section manager', () => {
     const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
     let buttons = within(dialog).getAllByRole('button', { name: 'Add' })
     expect(buttons[0]).toBeDisabled()
-    expect(buttons.slice(1, 6).every((button) => !button.hasAttribute('disabled'))).toBe(true)
-    expect(buttons[6]).toBeDisabled()
-    expect(buttons[7]).toBeEnabled()
+    expect(buttons.slice(1, 11).every((button) => !button.hasAttribute('disabled'))).toBe(true)
+    expect(buttons[11]).toBeDisabled()
     rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open site={site({ hours: true })} tenantId="tenant-1" />)
     buttons = within(screen.getByRole('dialog', { name: 'Add homepage section' })).getAllByRole('button', { name: 'Add' })
-    expect(buttons[6]).toBeEnabled()
+    expect(buttons[11]).toBeEnabled()
     rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open site={site({ hours: true, contact: true, businessHoursSection: true })} tenantId="tenant-1" />)
     buttons = within(screen.getByRole('dialog', { name: 'Add homepage section' })).getAllByRole('button', { name: 'Add' })
-    expect(buttons[6]).toBeDisabled()
-    expect(buttons[7]).toBeDisabled()
+    expect(buttons[9]).toBeDisabled()
+    expect(buttons[11]).toBeDisabled()
+  })
+
+  it('keeps every new type addable after an instance already exists', () => {
+    const current = site()
+    current.pages[0].sections.push(
+      { id: 'process-id', type: 'process', hidden: false, content: { items: [] } },
+      { id: 'stats-id', type: 'stats', hidden: false, content: { items: [] } },
+      { id: 'cta-id', type: 'cta', hidden: false, content: { heading: 'Ready?' } },
+      { id: 'logos-id', type: 'logos', hidden: false, content: { items: [] } }
+    )
+    render(<AddSectionDialog onAdded={() => undefined} onClose={() => undefined} onRefresh={vi.fn()} open site={current} tenantId="tenant-1" />)
+    for (const label of ['Steps', 'Highlights', 'Call to Action', 'Logos']) {
+      const card = screen.getByText(label).closest('div.rounded-md')
+      expect(card).not.toBeNull()
+      expect(within(card as HTMLElement).getByRole('button', { name: 'Add' })).toBeEnabled()
+    }
   })
 
   it('leaves the Add chooser usable after a failed add', async () => {
