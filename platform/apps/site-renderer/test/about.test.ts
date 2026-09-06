@@ -18,7 +18,7 @@ test('About plain text splits only blank-line boundaries into semantic paragraph
 
 test('About renders escaped React text, optional Theme-native image layout, and semantic paragraphs', async () => {
   const about = await source('../../../packages/site-components/src/About.tsx')
-  assert.match(about, /<SiteSection className="bg-site-bg" id="about">/)
+  assert.match(about, /<SiteSection anchorId=\{anchorId\} className="bg-site-bg" sectionType="about">/)
   assert.match(about, /<SiteContainer>/)
   assert.match(about, /lg:grid-cols-2/)
   assert.match(about, /site-radius-panel/)
@@ -30,7 +30,7 @@ test('About renders escaped React text, optional Theme-native image layout, and 
 test('SectionRenderer and shell navigation use the canonical About section and anchor', async () => {
   const renderer = await source('../components/SectionRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
-  assert.match(renderer, /case 'about':[\s\S]*<About content=\{section\.content\}/)
+  assert.match(renderer, /case 'about':[\s\S]*<About anchorId=\{section\.id\} content=\{section\.content\}/)
   assert.match(shell, /about: 'About'/)
-  assert.match(shell, /`\$\{prefix\}#\$\{section\.id\}`/)
+  assert.match(shell, /`\$\{prefix\}#section-\$\{section\.id\}`/)
 })

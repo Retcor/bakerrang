@@ -6,16 +6,9 @@ export const websiteEditors = [
   { id: 'branding', label: 'Branding', group: 'Site setup', description: 'Manage the site name, logo, and favicon.' },
   { id: 'theme', label: 'Theme', group: 'Site setup', description: 'Set the visual style, typography, spacing, and colors.' },
   { id: 'businessProfile', label: 'Business Profile', group: 'Site setup', description: 'Maintain the business details used across the website.' },
-  { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set weekly hours and their homepage presentation.' },
+  { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set the weekly schedule used across the website.' },
   { id: 'socialProfiles', label: 'Social Profiles', group: 'Site setup', description: 'Connect the business social profiles.' },
-  { id: 'hero', label: 'Hero', group: 'Homepage', description: 'Shape the first message visitors see on the homepage.' },
-  { id: 'about', label: 'About', group: 'Homepage', description: 'Tell visitors about the business.' },
-  { id: 'services', label: 'Services', group: 'Homepage', description: 'Present the services the business offers.' },
-  { id: 'gallery', label: 'Gallery', group: 'Homepage', description: 'Choose and arrange homepage gallery images.' },
-  { id: 'testimonials', label: 'Testimonials', group: 'Homepage', description: 'Show customer quotes on the homepage.' },
-  { id: 'faq', label: 'FAQ', group: 'Homepage', description: 'Answer common questions on the homepage.' },
-  { id: 'contact', label: 'Contact', group: 'Homepage', description: 'Configure the homepage contact call to action.' },
-  { id: 'sections', label: 'Manage Sections', group: 'Homepage', description: 'Choose and order the sections shown on the homepage.' },
+  { id: 'homepage', label: 'Homepage', group: 'Homepage', description: 'Choose, order, edit, and show or hide homepage sections.' },
   { id: 'customCss', label: 'Custom CSS', group: 'Advanced', description: 'Add scoped styling overrides for the website.' }
 ] as const satisfies ReadonlyArray<{
   id: string

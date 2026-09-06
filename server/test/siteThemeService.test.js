@@ -78,21 +78,17 @@ test('Theme validation rejects unsafe colors and every unsupported enum', () => 
   }
 })
 
-test('read normalization fills defaults, seeds legacy colors, and tolerates partial malformed Theme', () => {
+test('read normalization fills defaults without reading retired Branding colors', () => {
   assert.deepEqual(normalizeSiteTheme(), DEFAULT_SITE_THEME)
-  assert.deepEqual(normalizeSiteTheme(undefined, {
-    primaryColor: '#ABCDEF', accentColor: '#123456'
-  }).colors, {
-    primary: '#abcdef', accent: '#123456', background: '#f8fafc', text: '#172033'
-  })
+  assert.deepEqual(normalizeSiteTheme(undefined, { primaryColor: '#ABCDEF', accentColor: '#123456' }), DEFAULT_SITE_THEME)
   assert.deepEqual(normalizeSiteTheme({
     colors: { background: '#000000', primary: 'bad' },
     headingFont: 'playfair',
     bodyFont: 'bad',
     cornerStyle: 'square'
-  }, { primaryColor: '#010203' }), {
+  }), {
     colors: {
-      primary: '#010203', accent: '#0f766e', background: '#000000', text: '#172033'
+      primary: '#334155', accent: '#0f766e', background: '#000000', text: '#172033'
     },
     headingFont: 'playfair',
     bodyFont: 'inter',
@@ -102,7 +98,7 @@ test('read normalization fills defaults, seeds legacy colors, and tolerates part
   })
 })
 
-test('identity-only Branding saves preserve legacy colors without writing Theme', async () => {
+test('identity-only Branding saves remove retired colors without writing Theme', async () => {
   await initializeSite('tenant-1', 'admin')
   const config = fakeDb.data('tenants/tenant-1/site/config')
   delete config.theme
@@ -113,10 +109,10 @@ test('identity-only Branding saves preserve legacy colors without writing Theme'
   const site = await updateSiteBranding('tenant-1', { siteName: 'Renamed' })
   const stored = fakeDb.data('tenants/tenant-1/site/config')
   assert.deepEqual(stored.branding, {
-    siteName: 'Renamed', primaryColor: '#112233', accentColor: '#445566'
+    siteName: 'Renamed'
   })
   assert.equal(Object.hasOwn(stored, 'theme'), false)
-  assert.equal(site.theme.colors.primary, '#112233')
+  assert.equal(site.theme.colors.primary, DEFAULT_SITE_THEME.colors.primary)
 })
 
 test('Theme updates only WORKING state through preview and publish lifecycle', async () => {
@@ -146,17 +142,17 @@ test('Theme updates only WORKING state through preview and publish lifecycle', a
   assert.deepEqual((await getPublishedSiteDefinition('tenant-1')).theme, themeB)
 })
 
-test('old published snapshots without Theme normalize from their legacy Branding', async () => {
+test('old published snapshots without canonical Home fail closed', async () => {
   fakeDb.seed('tenants/tenant-1/site/config', { status: 'PUBLISHED' })
   fakeDb.seed('tenants/tenant-1/site/config/published/current', {
     siteDefinition: {
       status: 'PUBLISHED',
-      branding: { siteName: 'Old', primaryColor: '#ABCDEF', accentColor: '#123456' },
+      branding: { siteName: 'Old' },
       pages: []
     }
   })
-  const published = await getPublishedSiteDefinition('tenant-1')
-  assert.equal(published.theme.colors.primary, '#abcdef')
-  assert.equal(published.theme.colors.accent, '#123456')
-  assert.equal(published.theme.headingFont, 'inter')
+  await assert.rejects(getPublishedSiteDefinition('tenant-1'), {
+    status: 500,
+    message: 'Home sections invalid'
+  })
 })

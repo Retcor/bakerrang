@@ -8,12 +8,7 @@ import {
   isValidPhone
 } from '../validation/contactMethods.js'
 import { hydrateSiteMedia, requireTenantMediaInTransaction } from './mediaService.js'
-import {
-  DEFAULT_SITE_ACCENT_COLOR,
-  DEFAULT_SITE_PRIMARY_COLOR,
-  siteBrandingResponse,
-  validateSiteBranding
-} from '../domain/siteBranding.js'
+import { siteBrandingResponse, validateSiteBranding } from '../domain/siteBranding.js'
 import { DEFAULT_SITE_THEME, normalizeSiteTheme, validateSiteTheme } from '../domain/siteTheme.js'
 import {
   businessProfileResponse,
@@ -23,18 +18,14 @@ import {
 import { validateBusinessHoursUpdate } from '../domain/businessHours.js'
 import { validateSocialLinksUpdate } from '../domain/socialLinks.js'
 import { normalizeStoredCustomCss, validateCustomCss } from '../domain/customCss.js'
+import {
+  SECTION_TYPES,
+  SINGLETON_SECTION_TYPES,
+  createDefaultSection
+} from '../domain/sectionDefaults.js'
 
 const TENANTS = 'tenants'
-const CANONICAL_SECTION_IDS = new Set([
-  'hero',
-  'about',
-  'services',
-  'gallery',
-  'testimonials',
-  'faq',
-  'businessHours',
-  'contact'
-])
+const SECTION_TYPE_SET = new Set(SECTION_TYPES)
 
 let firestore = db
 
@@ -57,26 +48,28 @@ const refsFor = (tenantId) => {
 }
 
 const siteSectionResponse = (section) => {
-  if (section?.id === 'businessHours' && section?.type === 'businessHours') {
+  if (section?.type === 'businessHours') {
     const content = section.content && typeof section.content === 'object' && !Array.isArray(section.content)
       ? section.content
       : {}
     const heading = typeof content.heading === 'string' ? content.heading.trim().slice(0, 120) : ''
     const intro = typeof content.intro === 'string' ? content.intro.trim().slice(0, 300) : ''
     return {
-      id: 'businessHours',
+      id: section.id,
       type: 'businessHours',
+      hidden: section.hidden,
       content: {
         ...(heading ? { heading } : {}),
         ...(intro ? { intro } : {})
       }
     }
   }
-  if (section?.id === 'faq' && section?.type === 'faq') {
+  if (section?.type === 'faq') {
     const content = section.content && typeof section.content === 'object' ? section.content : {}
     return {
-      id: 'faq',
+      id: section.id,
       type: 'faq',
+      hidden: section.hidden,
       content: {
         heading: content.heading,
         ...(typeof content.intro === 'string' && content.intro ? { intro: content.intro } : {}),
@@ -88,11 +81,12 @@ const siteSectionResponse = (section) => {
       }
     }
   }
-  if (section?.id !== 'testimonials' || section?.type !== 'testimonials') return section
+  if (section?.type !== 'testimonials') return section
   const content = section.content && typeof section.content === 'object' ? section.content : {}
   return {
-    id: 'testimonials',
+    id: section.id,
     type: 'testimonials',
+    hidden: section.hidden,
     content: {
       title: content.title,
       items: (Array.isArray(content.items) ? content.items : []).map((item) => ({
@@ -122,6 +116,7 @@ const publicationState = (config, home) => {
 }
 
 const toSiteDefinition = (config, home) => {
+  validateSectionComposition(home?.sections)
   const definition = {
     status: config.status,
     ...publicationState(config, home),
@@ -136,13 +131,15 @@ const toSiteDefinition = (config, home) => {
   return {
     ...definition,
     branding: siteBrandingResponse(config.branding, definition),
-    theme: normalizeSiteTheme(config.theme, config.branding),
+    theme: normalizeSiteTheme(config.theme),
     ...(typeof config.customCss === 'string' ? { customCss: config.customCss } : {}),
     ...(businessProfile ? { businessProfile } : {})
   }
 }
 
 const normalizePublishedSiteDefinition = (definition) => {
+  const home = Array.isArray(definition?.pages) ? definition.pages.find((page) => page?.slug === '/') : null
+  validateSectionComposition(home?.sections)
   const businessProfile = businessProfileResponse(definition?.businessProfile)
   const canonical = definition && typeof definition === 'object' ? { ...definition } : {}
   delete canonical.customCss
@@ -150,7 +147,7 @@ const normalizePublishedSiteDefinition = (definition) => {
   const normalized = {
     ...canonical,
     branding: siteBrandingResponse(definition?.branding, definition),
-    theme: normalizeSiteTheme(definition?.theme, definition?.branding),
+    theme: normalizeSiteTheme(definition?.theme),
     ...(typeof definition?.customCss === 'string' ? { customCss: definition.customCss } : {})
   }
   if (businessProfile) normalized.businessProfile = businessProfile
@@ -513,63 +510,82 @@ const validateFaqInput = (input) => {
   return { heading, ...(intro ? { intro } : {}), items }
 }
 
-const validateCompositionInput = (input) => {
-  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
-  if (!Array.isArray(body.sectionIds)) {
-    throw httpError(400, 'Composition sectionIds must be an array')
-  }
-  if (body.sectionIds.length > CANONICAL_SECTION_IDS.size) {
-    throw httpError(400, `Composition cannot exceed ${CANONICAL_SECTION_IDS.size} sections`)
-  }
-
-  const seen = new Set()
-  for (const id of body.sectionIds) {
-    if (typeof id !== 'string' || !id.trim()) {
-      throw httpError(400, 'Section id must be a non-empty string')
+const contentValidators = {
+  hero: validateHeroInput,
+  about: validateAboutInput,
+  services: validateServicesInput,
+  gallery: validateGalleryInput,
+  testimonials: validateTestimonialsInput,
+  faq: validateFaqInput,
+  contact: validateContactInput,
+  businessHours: (content) => {
+    if (!content || typeof content !== 'object' || Array.isArray(content)) throw httpError(400, 'Business Hours content is invalid')
+    for (const [field, max] of [['heading', 120], ['intro', 300]]) {
+      if (Object.prototype.hasOwnProperty.call(content, field) && typeof content[field] !== 'string') {
+        throw httpError(400, `Business Hours ${field} must be a string`)
+      }
+      if (typeof content[field] === 'string' && content[field].trim().length > max) {
+        throw httpError(400, `Business Hours ${field} is too long`)
+      }
     }
-    if (!CANONICAL_SECTION_IDS.has(id)) throw httpError(400, 'Unknown section id')
-    if (seen.has(id)) throw httpError(400, 'Duplicate section id')
-    seen.add(id)
+    return content
   }
-  if (!seen.has('hero')) throw httpError(400, 'Hero section is required')
-  if (body.sectionIds[0] !== 'hero') throw httpError(400, 'Hero section must be first')
-  return body.sectionIds
 }
 
-const mapCanonicalSections = (sections) => {
-  if (!Array.isArray(sections)) throw httpError(500, 'Home sections invalid')
-  const byId = new Map()
+const validateSectionContent = (type, content, { allowEmptyGallery = false } = {}) => {
+  if (type === 'hero') {
+    const { title, subtitle } = validateHeroInput(content)
+    return { title, ...(subtitle ? { subtitle } : {}), ...(typeof content?.ctaLabel === 'string' && content.ctaLabel.trim() ? { ctaLabel: content.ctaLabel.trim() } : {}) }
+  }
+  if (type === 'gallery' && allowEmptyGallery && content && Array.isArray(content.items) && content.items.length === 0) {
+    if (typeof content.title !== 'string' || !content.title.trim() || content.title.trim().length > 100) {
+      throw httpError(400, 'Gallery title is required')
+    }
+    return { title: content.title.trim(), items: [] }
+  }
+  return contentValidators[type](content)
+}
+
+export const validateSectionComposition = (sections, status = 500) => {
+  const invalid = (message = 'Home sections invalid') => { throw httpError(status, message) }
+  if (!Array.isArray(sections) || sections.length === 0) invalid()
+  const ids = new Set()
+  const counts = new Map()
   for (const section of sections) {
-    if (
-      !section ||
-      typeof section !== 'object' ||
-      typeof section.id !== 'string' ||
-      typeof section.type !== 'string' ||
-      !CANONICAL_SECTION_IDS.has(section.id) ||
-      !CANONICAL_SECTION_IDS.has(section.type) ||
-      section.id !== section.type ||
-      byId.has(section.id)
-    ) {
-      throw httpError(500, 'Home sections invalid')
+    if (!section || typeof section !== 'object' || Array.isArray(section)) invalid()
+    if (typeof section.id !== 'string' || !section.id.trim() || ids.has(section.id)) invalid()
+    if (typeof section.type !== 'string' || !SECTION_TYPE_SET.has(section.type)) invalid()
+    if (typeof section.hidden !== 'boolean') invalid()
+    ids.add(section.id)
+    counts.set(section.type, (counts.get(section.type) || 0) + 1)
+    if (['services', 'gallery', 'testimonials', 'faq'].includes(section.type) && Array.isArray(section.content?.items)) {
+      const itemIds = new Set()
+      for (const item of section.content.items) {
+        if (!item || typeof item.id !== 'string' || !item.id.trim() || itemIds.has(item.id)) invalid()
+        itemIds.add(item.id)
+      }
     }
-    byId.set(section.id, section)
+    try {
+      validateSectionContent(section.type, section.content, { allowEmptyGallery: true })
+    } catch {
+      invalid()
+    }
   }
-  if (
-    !byId.has('hero') ||
-    sections[0]?.id !== 'hero' ||
-    sections[0]?.type !== 'hero'
-  ) {
-    throw httpError(500, 'Home sections invalid')
+  for (const type of SINGLETON_SECTION_TYPES) {
+    if ((counts.get(type) || 0) > 1) invalid()
   }
-  return byId
+  if ((counts.get('hero') || 0) !== 1 || sections[0]?.type !== 'hero' || sections[0]?.hidden !== false) invalid()
+  return new Map(sections.map((section) => [section.id, section]))
 }
 
-const requireHeroIndex = (sections) => {
-  const heroIndex = sections.findIndex((section) =>
-    section.id === 'hero' && section.type === 'hero'
-  )
-  if (heroIndex === -1) throw httpError(500, 'Home hero section missing')
-  return heroIndex
+const requirePageId = (pageId) => {
+  if (pageId !== 'home') throw httpError(400, 'Only the home page is supported')
+}
+
+const requireSection = (sections, sectionId) => {
+  const index = sections.findIndex((section) => section.id === sectionId)
+  if (index === -1) throw httpError(400, 'Unknown section id')
+  return { section: sections[index], index }
 }
 
 const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) => {
@@ -578,9 +594,6 @@ const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) 
   let definition
 
   await firestore.runTransaction(async (transaction) => {
-    if (mediaRequirement) {
-      await requireTenantMediaInTransaction(transaction, tenantId, mediaRequirement.mediaIds, mediaRequirement.message)
-    }
     const [configSnapshot, homeSnapshot] = await Promise.all([
       transaction.get(configRef),
       transaction.get(homeRef)
@@ -591,17 +604,28 @@ const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) 
 
     const config = configSnapshot.data()
     const home = homeSnapshot.data()
-    const sections = Array.isArray(home.sections) ? home.sections : []
-    const nextSections = transformSections(sections)
+    const sections = home.sections
+    validateSectionComposition(sections)
+    const nextSections = transformSections(sections, config)
+    validateSectionComposition(nextSections)
+    if (mediaRequirement) {
+      const mediaIds = typeof mediaRequirement.mediaIds === 'function'
+        ? mediaRequirement.mediaIds(nextSections)
+        : mediaRequirement.mediaIds
+      const message = typeof mediaRequirement.message === 'function' ? mediaRequirement.message() : mediaRequirement.message
+      await requireTenantMediaInTransaction(transaction, tenantId, [...new Set(mediaIds || [])], message)
+    }
     const nextHome = {
       ...home,
       sections: nextSections,
       updatedAt: now
     }
-    const nextConfig = { ...config, updatedAt: now }
+    const nextConfig = mediaRequirement?.configTransform
+      ? { ...mediaRequirement.configTransform(config), updatedAt: now }
+      : { ...config, updatedAt: now }
 
     transaction.set(homeRef, nextHome)
-    transaction.set(configRef, { updatedAt: now }, { merge: true })
+    transaction.set(configRef, nextConfig)
     definition = toSiteDefinition(nextConfig, nextHome)
   })
 
@@ -626,9 +650,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
     const config = {
       status: 'DRAFT',
       branding: {
-        siteName: String(tenantSnapshot.data().name || '').trim().slice(0, 80) || 'Website',
-        primaryColor: DEFAULT_SITE_PRIMARY_COLOR,
-        accentColor: DEFAULT_SITE_ACCENT_COLOR
+        siteName: String(tenantSnapshot.data().name || '').trim().slice(0, 80) || 'Website'
       },
       theme: DEFAULT_SITE_THEME,
       createdAt: now,
@@ -639,13 +661,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
       id: 'home',
       slug: '/',
       title: 'Home',
-      sections: [{
-        id: 'hero',
-        type: 'hero',
-        content: {
-          title: tenantSnapshot.data().name
-        }
-      }],
+      sections: [createDefaultSection('hero', { siteName: tenantSnapshot.data().name })],
       createdAt: now,
       updatedAt: now
     }
@@ -705,13 +721,8 @@ export const updateSiteBranding = async (tenantId, input) => {
     ])
     if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
     if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-    const storedBranding = configSnapshot.data().branding || {}
     const branding = {
       siteName: identity.siteName,
-      ...(typeof storedBranding.primaryColor === 'string' ? { primaryColor: storedBranding.primaryColor } : {}),
-      ...(typeof storedBranding.accentColor === 'string' ? { accentColor: storedBranding.accentColor } : {}),
-      ...(identity.primaryColor ? { primaryColor: identity.primaryColor } : {}),
-      ...(identity.accentColor ? { accentColor: identity.accentColor } : {}),
       ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {}),
       ...(identity.faviconMediaId ? { faviconMediaId: identity.faviconMediaId } : {})
     }
@@ -771,43 +782,22 @@ export const updateBusinessProfile = async (tenantId, input) => {
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateBusinessHours = async (tenantId, input) => {
+export const updateBusinessHours = async (tenantId, input, sectionId) => {
   const update = validateBusinessHoursUpdate(input)
-  const refs = refsFor(tenantId)
-  const now = Date.now()
-  let definition
-
-  await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-    const config = configSnapshot.data()
-    const home = homeSnapshot.data()
-    const sections = Array.isArray(home.sections) ? home.sections : []
-    mapCanonicalSections(sections)
-    const hoursIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'businessHours' || section.type === 'businessHours')
-    if (hoursIndexes.length > 1 || (hoursIndexes.length === 1 && (
-      hoursIndexes[0].section.id !== 'businessHours' || hoursIndexes[0].section.type !== 'businessHours'
-    ))) throw httpError(500, 'Home Business Hours section invalid')
-
-    const nextProfile = { ...(config.businessProfile || {}) }
-    if (update.businessHours) nextProfile.businessHours = update.businessHours
-    else delete nextProfile.businessHours
-
+  return mutateWorkingHome(tenantId, (sections) => {
     const nextSections = [...sections]
-    const existing = hoursIndexes[0]
+    const existing = sectionId ? requireSection(sections, sectionId) : null
+    if (existing && existing.section.type !== 'businessHours') throw httpError(400, 'Section is not Business Hours')
+    if (!existing && sections.some((section) => section.type === 'businessHours')) {
+      throw httpError(400, 'Business Hours section id is required')
+    }
     if (!update.businessHours || !update.homepage.enabled) {
       if (existing) nextSections.splice(existing.index, 1)
     } else {
       const section = {
-        id: 'businessHours',
+        id: existing?.section.id || randomUUID(),
         type: 'businessHours',
+        hidden: false,
         content: {
           ...(update.homepage.heading ? { heading: update.homepage.heading } : {}),
           ...(update.homepage.intro ? { intro: update.homepage.intro } : {})
@@ -815,22 +805,23 @@ export const updateBusinessHours = async (tenantId, input) => {
       }
       if (existing) nextSections[existing.index] = section
       else {
-        const contactIndex = nextSections.findIndex((item) => item.id === 'contact' && item.type === 'contact')
+        const contactIndex = nextSections.findIndex((item) => item.type === 'contact')
         if (contactIndex === -1) nextSections.push(section)
         else nextSections.splice(contactIndex, 0, section)
       }
     }
-
-    const nextConfig = { ...config, updatedAt: now }
-    if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
-    else delete nextConfig.businessProfile
-    const nextHome = { ...home, sections: nextSections, updatedAt: now }
-    transaction.set(refs.config, nextConfig)
-    transaction.set(refs.home, nextHome)
-    definition = toSiteDefinition(nextConfig, nextHome)
+    return nextSections
+  }, {
+    configTransform: (config) => {
+      const nextProfile = { ...(config.businessProfile || {}) }
+      if (update.businessHours) nextProfile.businessHours = update.businessHours
+      else delete nextProfile.businessHours
+      const nextConfig = { ...config }
+      if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
+      else delete nextConfig.businessProfile
+      return nextConfig
+    }
   })
-
-  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const updateSocialLinks = async (tenantId, input) => {
@@ -970,336 +961,122 @@ export const unpublishSite = async (tenantId, actorUserId) => {
   return finalizeSiteDefinitionRead(tenantId, draftDefinition)
 }
 
-export const updateHomeHero = async (tenantId, input) => {
-  const { title, subtitle, subtitleSupplied } = validateHeroInput(input)
-  return mutateWorkingHome(tenantId, (sections) => {
-    const heroIndex = requireHeroIndex(sections)
-
-    const hero = sections[heroIndex]
-    const nextContent = { ...hero.content, title }
-    if (subtitleSupplied) {
-      if (subtitle) nextContent.subtitle = subtitle
-      else delete nextContent.subtitle
-    }
-
-    const nextSections = [...sections]
-    nextSections[heroIndex] = {
-      ...hero,
-      content: nextContent
-    }
-    return nextSections
-  })
+const sectionMediaIds = (section) => {
+  if (section.type === 'about') return section.content.imageMediaId ? [section.content.imageMediaId] : []
+  if (section.type === 'gallery') return section.content.items.map((item) => item.mediaId)
+  return []
 }
 
-export const upsertHomeServices = async (tenantId, input) => {
-  const { title, items } = validateServicesInput(input)
-  return mutateWorkingHome(tenantId, (sections) => {
-    const servicesIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'services' || section.type === 'services')
-
-    if (servicesIndexes.length > 1 || (servicesIndexes.length === 1 && (
-      servicesIndexes[0].section.id !== 'services' ||
-      servicesIndexes[0].section.type !== 'services'
-    ))) {
-      throw httpError(500, 'Home services section invalid')
-    }
-
-    const existingServices = servicesIndexes[0]
-    const storedItems = existingServices && Array.isArray(existingServices.section.content?.items)
-      ? existingServices.section.content.items
-      : []
-    const storedById = new Map(storedItems.map((item) => [item.id, item]))
-    const resolvedItems = items.map((item) => {
-      if (!Object.prototype.hasOwnProperty.call(item, 'id')) {
-        return {
-          id: randomUUID(),
-          name: item.name,
-          ...(item.description ? { description: item.description } : {})
-        }
-      }
-
-      const stored = storedById.get(item.id)
-      if (!stored) throw httpError(400, 'Unknown service item id')
-      const next = { ...stored, name: item.name }
-      if (item.description) next.description = item.description
-      else delete next.description
-      return next
+const resolveItemIds = (type, content, storedContent) => {
+  if (!['services', 'gallery', 'testimonials', 'faq'].includes(type)) return content
+  const storedIds = new Set((storedContent?.items || []).map((item) => item.id))
+  return {
+    ...content,
+    items: content.items.map((item) => {
+      if (!Object.prototype.hasOwnProperty.call(item, 'id')) return { ...item, id: randomUUID() }
+      if (!storedIds.has(item.id)) throw httpError(400, `Unknown ${type} item id`)
+      return item
     })
+  }
+}
 
-    const nextSections = [...sections]
-    if (existingServices) {
-      nextSections[existingServices.index] = {
-        ...existingServices.section,
-        content: {
-          ...existingServices.section.content,
-          title,
-          items: resolvedItems
-        }
-      }
-    } else {
-      const heroIndex = requireHeroIndex(sections)
-      const aboutIndex = sections.findIndex((section) => section.id === 'about' && section.type === 'about')
-      nextSections.splice(aboutIndex === -1 ? heroIndex + 1 : aboutIndex + 1, 0, {
-        id: 'services',
-        type: 'services',
-        content: { title, items: resolvedItems }
-      })
+export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}) => {
+  requirePageId(pageId)
+  if (!SECTION_TYPE_SET.has(type)) throw httpError(400, 'Unknown section type')
+  let sectionId
+  const site = await mutateWorkingHome(tenantId, (sections, config) => {
+    if (SINGLETON_SECTION_TYPES.has(type) && sections.some((section) => section.type === type)) {
+      throw httpError(409, `${type} section already exists`)
     }
-    return nextSections
+    if (type === 'businessHours' && !config.businessProfile?.businessHours) {
+      throw httpError(400, 'Configure business hours before adding them to the homepage')
+    }
+    const section = createDefaultSection(type, { siteName: config.branding?.siteName })
+    sectionId = section.id
+    const next = [...sections]
+    if (afterSectionId === undefined) next.push(section)
+    else {
+      const { index } = requireSection(sections, afterSectionId)
+      next.splice(index + 1, 0, section)
+    }
+    return next
+  })
+  return { site, sectionId }
+}
+
+export const removeSection = async (tenantId, pageId, sectionId) => {
+  requirePageId(pageId)
+  return mutateWorkingHome(tenantId, (sections) => {
+    const { section, index } = requireSection(sections, sectionId)
+    if (section.type === 'hero') throw httpError(400, 'Hero section cannot be removed')
+    const next = [...sections]
+    next.splice(index, 1)
+    return next
   })
 }
 
-export const upsertHomeAbout = async (tenantId, input) => {
-  const content = validateAboutInput(input)
+export const moveSection = async (tenantId, pageId, sectionId, direction) => {
+  requirePageId(pageId)
+  if (!['up', 'down'].includes(direction)) throw httpError(400, 'Move direction must be up or down')
   return mutateWorkingHome(tenantId, (sections) => {
-    const aboutIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'about' || section.type === 'about')
-    if (aboutIndexes.length > 1 || (aboutIndexes.length === 1 && (
-      aboutIndexes[0].section.id !== 'about' || aboutIndexes[0].section.type !== 'about'
-    ))) {
-      throw httpError(500, 'Home about section invalid')
-    }
-
-    const existingAbout = aboutIndexes[0]
-    const nextSections = [...sections]
-    if (existingAbout) {
-      nextSections[existingAbout.index] = { id: 'about', type: 'about', content }
-    } else {
-      const heroIndex = requireHeroIndex(sections)
-      nextSections.splice(heroIndex + 1, 0, { id: 'about', type: 'about', content })
-    }
-    return nextSections
-  }, { mediaIds: content.imageMediaId ? [content.imageMediaId] : [], message: 'About image not found' })
-}
-
-export const upsertHomeContact = async (tenantId, input) => {
-  const content = validateContactInput(input)
-  return mutateWorkingHome(tenantId, (sections) => {
-    const contactIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'contact' || section.type === 'contact')
-
-    if (contactIndexes.length > 1 || (contactIndexes.length === 1 && (
-      contactIndexes[0].section.id !== 'contact' ||
-      contactIndexes[0].section.type !== 'contact'
-    ))) {
-      throw httpError(500, 'Home contact section invalid')
-    }
-
-    const existingContact = contactIndexes[0]
-    const nextSections = [...sections]
-    if (existingContact) {
-      const nextContent = {
-        ...existingContact.section.content,
-        title: content.title,
-        buttonLabel: content.buttonLabel,
-        action: content.action
-      }
-      if (content.text) nextContent.text = content.text
-      else delete nextContent.text
-      nextSections[existingContact.index] = {
-        ...existingContact.section,
-        content: nextContent
-      }
-    } else {
-      nextSections.push({ id: 'contact', type: 'contact', content })
-    }
-    return nextSections
+    const { section, index } = requireSection(sections, sectionId)
+    if (section.type === 'hero') throw httpError(400, 'Hero section cannot move')
+    const target = direction === 'up' ? index - 1 : index + 1
+    if (target <= 0 || target >= sections.length) throw httpError(400, 'Section cannot move in that direction')
+    const next = [...sections]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    return next
   })
 }
 
-export const upsertHomeGallery = async (tenantId, input) => {
-  const { title, items } = validateGalleryInput(input)
-
-  return mutateWorkingHome(tenantId, (sections) => {
-    const galleryIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'gallery' || section.type === 'gallery')
-
-    if (galleryIndexes.length > 1 || (galleryIndexes.length === 1 && (
-      galleryIndexes[0].section.id !== 'gallery' ||
-      galleryIndexes[0].section.type !== 'gallery'
-    ))) {
-      throw httpError(500, 'Home gallery section invalid')
+export const duplicateSection = async (tenantId, pageId, sectionId) => {
+  requirePageId(pageId)
+  let duplicateId
+  const site = await mutateWorkingHome(tenantId, (sections) => {
+    const { section, index } = requireSection(sections, sectionId)
+    if (SINGLETON_SECTION_TYPES.has(section.type)) throw httpError(409, `${section.type} section cannot be duplicated`)
+    const duplicate = structuredClone(section)
+    duplicate.id = randomUUID()
+    duplicateId = duplicate.id
+    if (Array.isArray(duplicate.content?.items)) {
+      duplicate.content.items = duplicate.content.items.map((item) => ({ ...item, id: randomUUID() }))
     }
-
-    const existingGallery = galleryIndexes[0]
-    const storedItems = existingGallery && Array.isArray(existingGallery.section.content?.items)
-      ? existingGallery.section.content.items
-      : []
-    const storedIds = new Set()
-    for (const item of storedItems) {
-      if (!item || typeof item.id !== 'string' || !item.id || storedIds.has(item.id)) {
-        throw httpError(500, 'Home gallery section invalid')
-      }
-      storedIds.add(item.id)
-    }
-    const storedById = new Map(storedItems.map((item) => [item.id, item]))
-    const resolvedItems = items.map((item) => {
-      if (!Object.prototype.hasOwnProperty.call(item, 'id')) {
-        return { id: randomUUID(), mediaId: item.mediaId, altText: item.altText }
-      }
-      const stored = storedById.get(item.id)
-      if (!stored) throw httpError(400, 'Unknown gallery item id')
-      const next = { ...stored, mediaId: item.mediaId, altText: item.altText }
-      delete next.src
-      delete next.width
-      delete next.height
-      delete next.objectName
-      delete next.bucket
-      return next
-    })
-
-    const nextSections = [...sections]
-    if (existingGallery) {
-      nextSections[existingGallery.index] = {
-        ...existingGallery.section,
-        content: {
-          ...existingGallery.section.content,
-          title,
-          items: resolvedItems
-        }
-      }
-    } else {
-      const contactIndex = sections.findIndex((section) =>
-        section.id === 'contact' || section.type === 'contact'
-      )
-      const gallery = {
-        id: 'gallery',
-        type: 'gallery',
-        content: { title, items: resolvedItems }
-      }
-      if (contactIndex === -1) nextSections.push(gallery)
-      else nextSections.splice(contactIndex, 0, gallery)
-    }
-    return nextSections
-  }, { mediaIds: items.map((item) => item.mediaId), message: 'Gallery image not found' })
+    const next = [...sections]
+    next.splice(index + 1, 0, duplicate)
+    return next
+  }, {
+    mediaIds: (sections) => sectionMediaIds(requireSection(sections, sectionId).section),
+    message: 'Section media not found'
+  })
+  return { site, sectionId: duplicateId }
 }
 
-export const upsertHomeTestimonials = async (tenantId, input) => {
-  const { title, items } = validateTestimonialsInput(input)
+export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden) => {
+  requirePageId(pageId)
+  if (typeof hidden !== 'boolean') throw httpError(400, 'hidden must be a boolean')
   return mutateWorkingHome(tenantId, (sections) => {
-    const testimonialsIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'testimonials' || section.type === 'testimonials')
-
-    if (testimonialsIndexes.length > 1 || (testimonialsIndexes.length === 1 && (
-      testimonialsIndexes[0].section.id !== 'testimonials' ||
-      testimonialsIndexes[0].section.type !== 'testimonials'
-    ))) {
-      throw httpError(500, 'Home testimonials section invalid')
-    }
-
-    const existingTestimonials = testimonialsIndexes[0]
-    const storedItems = existingTestimonials?.section.content?.items
-    if (existingTestimonials && !Array.isArray(storedItems)) {
-      throw httpError(500, 'Home testimonials section invalid')
-    }
-    const storedIds = new Set()
-    for (const item of storedItems || []) {
-      if (
-        !item ||
-        typeof item !== 'object' ||
-        typeof item.id !== 'string' ||
-        !item.id.trim() ||
-        storedIds.has(item.id)
-      ) {
-        throw httpError(500, 'Home testimonials section invalid')
-      }
-      storedIds.add(item.id)
-    }
-    const storedById = new Map((storedItems || []).map((item) => [item.id, item]))
-    const resolvedItems = items.map((item) => {
-      if (!Object.prototype.hasOwnProperty.call(item, 'id')) {
-        return { id: randomUUID(), customerName: item.customerName, quote: item.quote }
-      }
-      const stored = storedById.get(item.id)
-      if (!stored) throw httpError(400, 'Unknown testimonial item id')
-      return { ...stored, customerName: item.customerName, quote: item.quote }
-    })
-
-    const nextSections = [...sections]
-    if (existingTestimonials) {
-      nextSections[existingTestimonials.index] = {
-        ...existingTestimonials.section,
-        content: {
-          ...existingTestimonials.section.content,
-          title,
-          items: resolvedItems
-        }
-      }
-    } else {
-      const contactIndex = sections.findIndex((section) =>
-        section.id === 'contact' || section.type === 'contact'
-      )
-      const testimonials = {
-        id: 'testimonials',
-        type: 'testimonials',
-        content: { title, items: resolvedItems }
-      }
-      if (contactIndex === -1) nextSections.push(testimonials)
-      else nextSections.splice(contactIndex, 0, testimonials)
-    }
-    return nextSections
+    const { section, index } = requireSection(sections, sectionId)
+    if (section.type === 'hero' && hidden) throw httpError(400, 'Hero section cannot be hidden')
+    const next = [...sections]
+    next[index] = { ...section, hidden }
+    return next
   })
 }
 
-export const upsertHomeFaq = async (tenantId, input) => {
-  const { heading, intro, items } = validateFaqInput(input)
+export const updateSectionContent = async (tenantId, pageId, sectionId, input) => {
+  requirePageId(pageId)
+  let mediaIds = []
+  let mediaMessage = 'Section media not found'
   return mutateWorkingHome(tenantId, (sections) => {
-    const faqIndexes = sections
-      .map((section, index) => ({ section, index }))
-      .filter(({ section }) => section.id === 'faq' || section.type === 'faq')
-    if (faqIndexes.length > 1 || (faqIndexes.length === 1 && (
-      faqIndexes[0].section.id !== 'faq' || faqIndexes[0].section.type !== 'faq'
-    ))) {
-      throw httpError(500, 'Home FAQ section invalid')
-    }
-
-    const existingFaq = faqIndexes[0]
-    const storedItems = existingFaq?.section.content?.items
-    if (existingFaq && !Array.isArray(storedItems)) throw httpError(500, 'Home FAQ section invalid')
-    const storedIds = new Set()
-    for (const item of storedItems || []) {
-      if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id.trim() || storedIds.has(item.id)) {
-        throw httpError(500, 'Home FAQ section invalid')
-      }
-      storedIds.add(item.id)
-    }
-    const storedById = new Map((storedItems || []).map((item) => [item.id, item]))
-    const resolvedItems = items.map((item) => {
-      if (!Object.prototype.hasOwnProperty.call(item, 'id')) {
-        return { id: randomUUID(), question: item.question, answer: item.answer }
-      }
-      const stored = storedById.get(item.id)
-      if (!stored) throw httpError(400, 'Unknown FAQ item id')
-      return { ...stored, question: item.question, answer: item.answer }
-    })
-
-    const content = { heading, ...(intro ? { intro } : {}), items: resolvedItems }
-    const nextSections = [...sections]
-    if (existingFaq) {
-      nextSections[existingFaq.index] = { ...existingFaq.section, content }
-    } else {
-      const contactIndex = sections.findIndex((section) => section.id === 'contact' || section.type === 'contact')
-      const faq = { id: 'faq', type: 'faq', content }
-      if (contactIndex === -1) nextSections.push(faq)
-      else nextSections.splice(contactIndex, 0, faq)
-    }
-    return nextSections
-  })
-}
-
-export const composeHomeSections = async (tenantId, input) => {
-  const sectionIds = validateCompositionInput(input)
-  return mutateWorkingHome(tenantId, (sections) => {
-    const storedById = mapCanonicalSections(sections)
-    return sectionIds.map((id) => {
-      const section = storedById.get(id)
-      if (!section) throw httpError(400, 'Unknown section id')
-      return section
-    })
-  })
+    const { section, index } = requireSection(sections, sectionId)
+    const validated = validateSectionContent(section.type, input)
+    const content = resolveItemIds(section.type, validated, section.content)
+    const nextSection = { ...section, content }
+    mediaIds = sectionMediaIds(nextSection)
+    if (section.type === 'about') mediaMessage = 'About image not found'
+    if (section.type === 'gallery') mediaMessage = 'Gallery image not found'
+    const next = [...sections]
+    next[index] = nextSection
+    return next
+  }, { mediaIds: () => mediaIds, message: () => mediaMessage })
 }

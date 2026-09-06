@@ -23,6 +23,7 @@ type LibraryState = 'loading' | 'ready' | 'error'
 type UploadState = 'idle' | 'uploading' | 'success' | 'validation-error' | 'server-error'
 
 export interface GalleryEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -32,8 +33,10 @@ export interface GalleryEditorProps {
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export function GalleryEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: GalleryEditorProps) {
-  const gallery = findHomePage(site)?.sections.find(isGallerySection)
+export function GalleryEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: GalleryEditorProps) {
+  const home = findHomePage(site)
+  const selectedGallery = home?.sections.find((section) => section.id === sectionId)
+  const gallery = selectedGallery && isGallerySection(selectedGallery) ? selectedGallery : undefined
   const fileInput = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(gallery?.content.title ?? 'Gallery')
   const [rows, setRows] = useState<GalleryRow[]>(() => gallery?.content.items.map((item) => ({
@@ -143,7 +146,7 @@ export function GalleryEditor ({ tenantId, site, onCancel, onDirtyChange = () =>
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeGallery(tenantId, {
+      onSaved(await upsertHomeGallery(tenantId, gallery?.id, {
         title: heading,
         items: rows.map((row) => ({
           ...(row.id ? { id: row.id } : {}),

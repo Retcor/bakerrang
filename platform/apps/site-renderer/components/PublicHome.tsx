@@ -12,15 +12,15 @@ export function PublicHome ({ previewToken, site, siteBaseUrl, sitePath }: {
 }) {
   const home = findHomePage(site)
   if (!home) return null
-  const hasContact = home.sections.some(isContactSection)
+  const contact = home.sections.find((section) => !section.hidden && isContactSection(section))
   return (
     <SiteShell currentPage="home" site={site} sitePath={sitePath}>
       <BusinessJsonLd site={site} siteBaseUrl={siteBaseUrl} />
       <main data-br-role="main">
-        {home.sections.map((section) => (
+        {home.sections.filter((section) => !section.hidden).map((section) => (
           <SectionRenderer
             businessHours={site.businessProfile?.businessHours}
-            heroContactHref={hasContact ? '#contact' : undefined}
+            heroContactHref={contact ? `#section-${contact.id}` : undefined}
             key={section.id}
             previewToken={previewToken}
             section={section}

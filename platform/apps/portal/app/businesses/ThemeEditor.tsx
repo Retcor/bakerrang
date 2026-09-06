@@ -9,7 +9,7 @@ import type {
   SiteFont,
   SiteTheme
 } from '@bakerrang/site-schema'
-import { Button, Field, Input, Select } from '@bakerrang/ui'
+import { Button, ConfirmDialog, Field, Input, Select } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateSiteTheme } from '../../lib/site'
 import {
@@ -18,6 +18,7 @@ import {
   SITE_FONT_OPTIONS,
   themeColorContrast
 } from '../../lib/theme'
+import { cloneTheme, THEME_PRESETS, type ThemePreset } from '../../lib/themePresets'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 const HEX = /^#[0-9a-f]{6}$/i
@@ -36,6 +37,7 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   const [theme, setTheme] = useState<SiteTheme>(site.theme)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingPreset, setPendingPreset] = useState<ThemePreset | 'reset' | null>(null)
 
   const setColor = (key: keyof SiteTheme['colors'], value: string) => {
     setTheme((current) => ({ ...current, colors: { ...current.colors, [key]: value } }))
@@ -43,6 +45,18 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   const contrast = themeColorContrast(theme.colors.text, theme.colors.background)
   const lowContrast = contrast !== null && contrast < 4.5
   const radius = theme.cornerStyle === 'rounded' ? '1rem' : theme.cornerStyle === 'soft' ? '0.75rem' : '0'
+  const dirty = JSON.stringify(theme) !== JSON.stringify(site.theme)
+
+  const applyTheme = (next: SiteTheme) => {
+    setTheme(cloneTheme(next))
+    setError(null)
+    setPendingPreset(null)
+  }
+  const requestTheme = (preset: ThemePreset | 'reset') => {
+    if (saving) return
+    if (dirty) setPendingPreset(preset)
+    else applyTheme(preset === 'reset' ? DEFAULT_SITE_THEME : preset.theme)
+  }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -68,8 +82,25 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   }
 
   return (
-    <WebsiteEditorShell dirtyValue={theme} editor="theme" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} secondaryActions={<Button disabled={saving} onClick={() => { setTheme(DEFAULT_SITE_THEME); setError(null) }} type="button" variant="ghost">Reset to defaults</Button>}>
+    <>
+    <WebsiteEditorShell dirtyValue={theme} editor="theme" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} secondaryActions={<Button disabled={saving} onClick={() => requestTheme('reset')} type="button" variant="ghost">Reset to defaults</Button>}>
       <p className="text-sm leading-6 text-fg-muted">Save, then use Preview to review the actual website before republishing.</p>
+
+      <section aria-labelledby={`theme-presets-${tenantId}`} className="mt-6 rounded-md border border-border bg-surface-muted p-4">
+        <h3 className="text-sm font-semibold text-fg" id={`theme-presets-${tenantId}`}>Start from a preset</h3>
+        <p className="mt-1 text-sm leading-6 text-fg-muted">Presets fill this local form. Customize anything, then save when you are ready.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {THEME_PRESETS.map((preset) => (
+            <article className="rounded-md border border-border bg-surface p-3" key={preset.name}>
+              <div className="flex items-start justify-between gap-3"><div><h4 className="font-semibold text-fg">{preset.name}</h4><p className="mt-1 text-sm leading-5 text-fg-muted">{preset.description}</p></div><div aria-label={`${preset.name} colors`} className="flex shrink-0 overflow-hidden rounded border border-border" title={[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].join(', ')}>
+                {[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].map((color) => <span className="h-5 w-5" key={color} style={{ backgroundColor: color }} />)}
+              </div></div>
+              <p className="mt-3 text-xs text-fg-subtle">{SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.headingFont)?.label} + {SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.bodyFont)?.label}</p>
+              <Button className="mt-3" disabled={saving} onClick={() => requestTheme(preset)} size="sm" type="button" variant="secondary">Apply {preset.name}</Button>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <fieldset className="mt-6">
         <legend className="text-sm font-semibold text-fg">Colors</legend>
@@ -123,9 +154,16 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
           borderRadius: theme.cornerStyle === 'rounded' ? '0.75rem' : theme.cornerStyle === 'soft' ? '0.375rem' : '0',
           color: previewForeground(HEX.test(theme.colors.primary) ? theme.colors.primary : DEFAULT_SITE_THEME.colors.primary)
         }}>Primary action</span>
+        <span className="ml-2 mt-4 inline-flex px-4 py-2 text-sm font-semibold" style={{
+          backgroundColor: HEX.test(theme.colors.accent) ? theme.colors.accent : DEFAULT_SITE_THEME.colors.accent,
+          borderRadius: theme.cornerStyle === 'rounded' ? '0.75rem' : theme.cornerStyle === 'soft' ? '0.375rem' : '0',
+          color: previewForeground(HEX.test(theme.colors.accent) ? theme.colors.accent : DEFAULT_SITE_THEME.colors.accent)
+        }}>Accent</span>
       </section>
 
     </WebsiteEditorShell>
+    <ConfirmDialog cancelLabel="Keep editing" confirmLabel={pendingPreset === 'reset' ? 'Reset form' : 'Apply preset'} description={pendingPreset === 'reset' ? 'This will replace your unsaved Theme choices. You can continue editing before saving.' : `This will replace your unsaved Theme choices with ${pendingPreset?.name ?? 'this'} theme. You can continue editing before saving.`} onCancel={() => setPendingPreset(null)} onConfirm={() => { if (pendingPreset) applyTheme(pendingPreset === 'reset' ? DEFAULT_SITE_THEME : pendingPreset.theme) }} open={pendingPreset !== null} title={pendingPreset === 'reset' ? 'Reset Theme defaults?' : `Apply ${pendingPreset?.name ?? ''} theme?`} />
+    </>
   )
 }
 

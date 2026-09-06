@@ -12,22 +12,23 @@ export interface SectionRendererProps {
 export function SectionRenderer ({ businessHours, heroContactHref, previewToken, section, sitePath }: SectionRendererProps) {
   switch (section.type) {
     case 'hero':
-      return <Hero contactHref={heroContactHref} content={section.content} />
+      return <Hero anchorId={section.id} contactHref={heroContactHref} content={section.content} />
     case 'about':
-      return <About content={section.content} />
+      return <About anchorId={section.id} content={section.content} />
     case 'services':
-      return <Services content={section.content} />
+      return <Services anchorId={section.id} content={section.content} />
     case 'gallery':
-      return <Gallery content={section.content} />
+      return <Gallery anchorId={section.id} content={section.content} />
     case 'testimonials':
-      return <Testimonials content={section.content} />
+      return <Testimonials anchorId={section.id} content={section.content} />
     case 'faq':
-      return <Faq content={section.content} />
+      return <Faq anchorId={section.id} content={section.content} />
     case 'businessHours':
-      return <BusinessHours content={section.content} hours={businessHours} />
+      return <BusinessHours anchorId={section.id} content={section.content} hours={businessHours} />
     case 'contact':
       return (
         <Contact
+          anchorId={section.id}
           content={section.content}
           leadFormHref={`${sitePath}/contact${previewToken ? `?${new URLSearchParams({ token: previewToken }).toString()}` : ''}`}
         />

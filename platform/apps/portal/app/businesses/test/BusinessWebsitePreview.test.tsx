@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const site: SiteDefinition = {
   status: 'DRAFT',
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   theme: {
     colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' },
     headingFont: 'inter', bodyFont: 'inter', cornerStyle: 'soft',
@@ -12,7 +12,7 @@ const site: SiteDefinition = {
   },
   pages: [{
     id: 'home', slug: '/', title: 'Home',
-    sections: [{ id: 'hero', type: 'hero', content: { title: 'Welcome' } }]
+    sections: [{ id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } }]
   }]
 }
 
@@ -155,7 +155,7 @@ describe('working-site preview launch', () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
 
     const desktopNav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
-    for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Manage Sections']) {
+    for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Homepage']) {
       expect(within(desktopNav).getByRole('button', { name })).toBeInTheDocument()
     }
     const advanced = within(desktopNav).getByRole('heading', { name: 'Advanced' }).closest('section')

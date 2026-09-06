@@ -17,7 +17,7 @@ const links = [
 
 const site = (socialLinks: unknown, operational = true) => ({
   status: 'PUBLISHED',
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   businessProfile: {
     ...(operational ? { phone: '+1 303 555 0100' } : {}),
     ...(socialLinks !== undefined ? { socialLinks } : {})

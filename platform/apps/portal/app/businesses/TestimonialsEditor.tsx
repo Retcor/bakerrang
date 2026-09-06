@@ -16,6 +16,7 @@ interface EditorRow {
 }
 
 export interface TestimonialsEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -23,8 +24,10 @@ export interface TestimonialsEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function TestimonialsEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: TestimonialsEditorProps) {
-  const testimonials = findHomePage(site)?.sections.find(isTestimonialsSection)
+export function TestimonialsEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: TestimonialsEditorProps) {
+  const home = findHomePage(site)
+  const selectedTestimonials = home?.sections.find((section) => section.id === sectionId)
+  const testimonials = selectedTestimonials && isTestimonialsSection(selectedTestimonials) ? selectedTestimonials : undefined
   const nextKey = useRef(1)
   const [title, setTitle] = useState(testimonials?.content.title ?? 'Testimonials')
   const [rows, setRows] = useState<EditorRow[]>(() => testimonials
@@ -65,7 +68,7 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onDirtyChange = 
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeTestimonials(tenantId, {
+      onSaved(await upsertHomeTestimonials(tenantId, testimonials?.id, {
         title: title.trim(),
         items: rows.map(({ id, customerName, quote }) => ({
           ...(id ? { id } : {}),

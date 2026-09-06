@@ -23,15 +23,16 @@ const theme = {
 }
 const site = (withAbout = false): SiteDefinition => ({
   status: 'PUBLISHED',
-  branding: { siteName: 'Bakery', primaryColor: '#334155', accentColor: '#0f766e' },
+  branding: { siteName: 'Bakery' },
   theme,
   pages: [{
     id: 'home', slug: '/', title: 'Home', sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
+      { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
       ...(withAbout
         ? [{
-            id: 'about' as const,
+            id: 'about-id',
             type: 'about' as const,
+            hidden: false,
             content: { eyebrow: 'Who we are', heading: 'Our story', body: 'First.\n\nSecond.' }
           }]
         : [])
@@ -53,7 +54,7 @@ describe('About editor', () => {
   })
 
   it('supports the empty create state and validates required text', async () => {
-    render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" sectionId="about-id" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('')
     expect(screen.getByLabelText('Body')).toHaveValue('')
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -64,13 +65,13 @@ describe('About editor', () => {
 
   it('loads existing values, edits multiline body, saves canonical input, and propagates the result', async () => {
     const onSaved = vi.fn()
-    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site(true)} tenantId="tenant-1" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site(true)} tenantId="tenant-1" sectionId="about-id" />)
     expect(screen.getByLabelText('Eyebrow / label Optional')).toHaveValue('Who we are')
     expect(screen.getByLabelText('Heading')).toHaveValue('Our story')
     expect(screen.getByLabelText('Body')).toHaveValue('First.\n\nSecond.')
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Updated one.\n\nUpdated two.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', {
+    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', 'about-id', {
       eyebrow: 'Who we are', heading: 'Our story', body: 'Updated one.\n\nUpdated two.'
     }))
     expect(onSaved).toHaveBeenCalledWith(site(true))
@@ -78,7 +79,7 @@ describe('About editor', () => {
 
   it('reuses polished media upload, requires alt text, and saves the selected Media id', async () => {
     const onSaved = vi.fn()
-    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site()} tenantId="tenant-1" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site()} tenantId="tenant-1" sectionId="about-id" />)
     fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'Our team' } })
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Meet the people behind the work.' } })
     const file = new File(['image'], 'team.jpg', { type: 'image/jpeg' })
@@ -88,7 +89,7 @@ describe('About editor', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Image alt text is required')
     fireEvent.change(screen.getByLabelText('Image alt text'), { target: { value: 'The bakery team' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', {
+    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', undefined, {
       heading: 'Our team',
       body: 'Meet the people behind the work.',
       imageMediaId: 'media-1',

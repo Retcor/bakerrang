@@ -105,12 +105,10 @@ const requirePublishedLeadForm = async (tenantId) => {
     : null
   const sections = home && Array.isArray(home.sections) ? home.sections : []
   const related = sections.filter((section) =>
-    section && (section.id === 'contact' || section.type === 'contact')
+    section && section.type === 'contact'
   )
   if (
     related.length !== 1 ||
-    related[0].id !== 'contact' ||
-    related[0].type !== 'contact' ||
     !related[0].content ||
     !related[0].content.action ||
     related[0].content.action.type !== 'leadForm'

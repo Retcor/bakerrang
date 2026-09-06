@@ -16,6 +16,7 @@ interface EditorRow {
 }
 
 export interface FaqEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -23,8 +24,10 @@ export interface FaqEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function FaqEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: FaqEditorProps) {
-  const faq = findHomePage(site)?.sections.find(isFaqSection)
+export function FaqEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: FaqEditorProps) {
+  const home = findHomePage(site)
+  const selectedFaq = home?.sections.find((section) => section.id === sectionId)
+  const faq = selectedFaq && isFaqSection(selectedFaq) ? selectedFaq : undefined
   const nextKey = useRef(1)
   const [heading, setHeading] = useState(faq?.content.heading ?? 'Frequently Asked Questions')
   const [intro, setIntro] = useState(faq?.content.intro ?? '')
@@ -65,7 +68,7 @@ export function FaqEditor ({ tenantId, site, onCancel, onDirtyChange = () => {},
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeFaq(tenantId, {
+      onSaved(await upsertHomeFaq(tenantId, faq?.id, {
         heading: heading.trim(),
         ...(intro.trim() ? { intro: intro.trim() } : {}),
         items: rows.map(({ id, question, answer }) => ({

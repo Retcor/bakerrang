@@ -7,7 +7,7 @@ const source = async (relative: string) => readFile(fileURLToPath(new URL(relati
 
 test('FAQ uses collapsed native disclosure markup and renders safe ordered plain text', async () => {
   const faq = await source('../../../packages/site-components/src/Faq.tsx')
-  assert.match(faq, /<SiteSection className="bg-site-bg" id="faq">/)
+  assert.match(faq, /<SiteSection anchorId=\{anchorId\} className="bg-site-bg" sectionType="faq">/)
   assert.match(faq, /<SiteContainer>/)
   assert.match(faq, /<SectionHeading>\{heading\}<\/SectionHeading>/)
   assert.match(faq, /\{intro && <p/)
@@ -26,9 +26,9 @@ test('FAQ is Theme-native, dispatched canonically, and participates in derived n
   assert.match(faq, /site-radius-panel/)
   assert.match(faq, /text-site-(?:fg|muted)/)
   assert.match(faq, /border-site-border/)
-  assert.match(renderer, /case 'faq':[\s\S]*<Faq content=\{section\.content\}/)
+  assert.match(renderer, /case 'faq':[\s\S]*<Faq anchorId=\{section\.id\} content=\{section\.content\}/)
   assert.match(shell, /faq: 'FAQ'/)
-  assert.match(shell, /sections\.filter\(\(section\) => section\.type !== 'hero'\)\.map/)
+  assert.match(shell, /sections\.filter\(\(section\) => !section\.hidden && section\.type !== 'hero'\)\.map/)
   assert.match(shell, /label: labels\[section\.type\]/)
-  assert.match(shell, /`\$\{prefix\}#\$\{section\.id\}`/)
+  assert.match(shell, /`\$\{prefix\}#section-\$\{section\.id\}`/)
 })

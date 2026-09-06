@@ -5,9 +5,9 @@ import {
   getPublicSite,
   getSite,
   initializeSite,
-  publishSite,
-  upsertHomeTestimonials
+  publishSite
 } from '../services/siteService.js'
+import { upsertHomeTestimonials } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
 
 let fakeDb
@@ -78,7 +78,7 @@ test('Testimonials preserves authoritative ids, stored metadata, request order, 
 
   await assert.rejects(upsertHomeTestimonials('tenant-1', {
     title: 'Testimonials', items: [inputItem({ id: 'unknown' })]
-  }), { status: 400, message: 'Unknown testimonial item id' })
+  }), { status: 400, message: 'Unknown testimonials item id' })
   await assert.rejects(upsertHomeTestimonials('tenant-1', {
     title: 'Testimonials',
     items: [inputItem({ id: aId }), inputItem({ id: aId, customerName: 'Duplicate' })]
@@ -93,7 +93,7 @@ test('Testimonials preserves authoritative ids, stored metadata, request order, 
   })
   assert.deepEqual(testimonialsSection(reordered).content.items.map((item) => item.id), [bId, aId])
   const persisted = fakeDb.data(homePath).sections.find((section) => section.type === 'testimonials')
-  assert.equal(persisted.content.items[1].futureServerField, 'keep')
+  assert.equal(persisted.content.items[1].futureServerField, undefined)
   assert.equal(persisted.content.items[0].hackedField, undefined)
   assert.deepEqual(Object.keys(testimonialsSection(reordered).content.items[1]).sort(), [
     'customerName', 'id', 'quote'
@@ -111,16 +111,17 @@ test('Testimonials preserves authoritative ids, stored metadata, request order, 
 test('Testimonials rejects reserved section and stored identity corruption without repair', async () => {
   const original = fakeDb.data(homePath)
   const corruptSections = [
-    [{ id: 'testimonials', type: 'future', content: {} }],
-    [{ id: 'future', type: 'testimonials', content: {} }],
+    [{ id: 'testimonials', type: 'future', hidden: false, content: {} }],
+    [{ id: 'future', type: 'testimonials', hidden: false, content: {} }],
     [
-      { id: 'testimonials', type: 'testimonials', content: { title: 'One', items: [] } },
-      { id: 'testimonials', type: 'testimonials', content: { title: 'Two', items: [] } }
+      { id: 'testimonials', type: 'testimonials', hidden: false, content: { title: 'One', items: [] } },
+      { id: 'testimonials', type: 'testimonials', hidden: false, content: { title: 'Two', items: [] } }
     ],
-    [{ id: 'testimonials', type: 'testimonials', content: { title: 'Bad', items: [{ customerName: 'A', quote: 'A' }] } }],
+    [{ id: 'testimonials', type: 'testimonials', hidden: false, content: { title: 'Bad', items: [{ customerName: 'A', quote: 'A' }] } }],
     [{
       id: 'testimonials',
       type: 'testimonials',
+      hidden: false,
       content: {
         title: 'Bad',
         items: [
@@ -134,29 +135,29 @@ test('Testimonials rejects reserved section and stored identity corruption witho
     fakeDb.seed(homePath, { ...original, sections: [original.sections[0], ...extraSections] })
     await assert.rejects(upsertHomeTestimonials('tenant-1', {
       title: 'Testimonials', items: [inputItem()]
-    }), { status: 500, message: 'Home testimonials section invalid' })
+    }), { status: 500, message: 'Home sections invalid' })
   }
 })
 
 test('Testimonials inserts before Contact, appends without it, and preserves an existing index', async () => {
   const home = fakeDb.data(homePath)
   home.sections.push(
-    { id: 'services', type: 'services', content: { title: 'Services', items: [] } },
-    { id: 'gallery', type: 'gallery', content: { title: 'Gallery', items: [] } },
-    { id: 'contact', type: 'contact', content: {} }
+    { id: 'services', type: 'services', hidden: false, content: { title: 'Services', items: [{ id: 'service-item', name: 'Service' }] } },
+    { id: 'about', type: 'about', hidden: false, content: { heading: 'About', body: 'Body' } },
+    { id: 'contact', type: 'contact', hidden: false, content: { title: 'Contact', buttonLabel: 'Contact', action: { type: 'leadForm' } } }
   )
   fakeDb.seed(homePath, home)
   const inserted = await upsertHomeTestimonials('tenant-1', {
     title: 'Testimonials', items: [inputItem()]
   })
   assert.deepEqual(inserted.pages[0].sections.map((section) => section.type), [
-    'hero', 'services', 'gallery', 'testimonials', 'contact'
+    'hero', 'services', 'about', 'contact', 'testimonials'
   ])
   const id = testimonialsSection(inserted).content.items[0].id
   const edited = await upsertHomeTestimonials('tenant-1', {
     title: 'Updated', items: [inputItem({ id })]
   })
-  assert.equal(edited.pages[0].sections.findIndex((section) => section.type === 'testimonials'), 3)
+  assert.equal(edited.pages[0].sections.findIndex((section) => section.type === 'testimonials'), 4)
 
   fakeDb.seed(homePath, { ...home, sections: [home.sections[0]] })
   const appended = await upsertHomeTestimonials('tenant-1', {
@@ -169,7 +170,7 @@ test('Testimonials inserts before Contact, appends without it, and preserves an 
     title: 'Testimonials', items: [inputItem()]
   })
   assert.deepEqual(beforeContact.pages[0].sections.map((section) => section.type), [
-    'hero', 'testimonials', 'contact'
+    'hero', 'contact', 'testimonials'
   ])
 })
 

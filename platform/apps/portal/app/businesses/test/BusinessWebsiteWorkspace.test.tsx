@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const baseSite: SiteDefinition = {
   status: 'DRAFT',
   hasUnpublishedChanges: false,
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   theme: {
     colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' },
     headingFont: 'inter', bodyFont: 'inter', cornerStyle: 'soft', contentWidth: 'standard', sectionSpacing: 'comfortable'
@@ -13,9 +13,9 @@ const baseSite: SiteDefinition = {
   pages: [{
     id: 'home', slug: '/', title: 'Home',
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
-      { id: 'about', type: 'about', content: { heading: 'About', body: 'Our story' } },
-      { id: 'faq', type: 'faq', content: { heading: 'FAQ', items: [{ id: 'q1', question: 'When?', answer: 'Today' }] } }
+      { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
+      { id: 'about-id', type: 'about', hidden: false, content: { heading: 'About', body: 'Our story' } },
+      { id: 'faq-id', type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ id: 'q1', question: 'When?', answer: 'Today' }] } }
     ]
   }]
 }
@@ -65,7 +65,7 @@ describe('Website workspace', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Hero', 'About', 'Services', 'Gallery', 'Testimonials', 'FAQ', 'Contact', 'Manage Sections', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Homepage', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
@@ -76,18 +76,18 @@ describe('Website workspace', () => {
     expect(within(nav).queryByRole('button', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(setup).getByRole('button', { name: 'Social Profiles' })).toBeInTheDocument()
-    expect(within(setup).queryByRole('button', { name: 'Manage Sections' })).not.toBeInTheDocument()
-    expect(within(homepage).getByRole('button', { name: 'Manage Sections' })).toBeInTheDocument()
+    expect(within(setup).queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument()
+    expect(within(homepage).getByRole('button', { name: 'Homepage' })).toBeInTheDocument()
     expect(within(advanced).getByRole('button', { name: 'Custom CSS' })).toBeInTheDocument()
   })
 
   it('selects valid deep links, fails invalid values to Overview, and keeps Preview persistent', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=homepage&sectionId=faq-id'
     const { unmount } = render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     expect(await screen.findByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Preview changes' })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
-    expect(within(nav).getByRole('button', { name: 'FAQ' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('button', { name: 'Homepage' })).toHaveAttribute('aria-current', 'page')
     unmount()
 
     navigation.search = 'editor=not-real'
@@ -95,26 +95,33 @@ describe('Website workspace', () => {
     expect(await screen.findByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
   })
 
+  it('fails closed with a clear message for a stale homepage section id', async () => {
+    navigation.search = 'editor=homepage&sectionId=deleted-section'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    expect(await screen.findByText(/selected homepage section is no longer available/i)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Homepage sections' })).not.toBeInTheDocument()
+  })
+
   it('uses replace, preserves unrelated query parameters, avoids refetches, and Cancel returns to Overview', async () => {
     navigation.search = 'campaign=spring'
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     const nav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
-    fireEvent.click(within(nav).getByRole('button', { name: 'FAQ' }))
-    expect(screen.getByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
-    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring&editor=faq', { scroll: false })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Homepage' }))
+    expect(screen.getByRole('heading', { name: 'Homepage sections' })).toBeInTheDocument()
+    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring&editor=homepage', { scroll: false })
     expect(mocks.getSite).toHaveBeenCalledTimes(1)
     expect(mocks.getSiteDomain).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }))
     expect(screen.getByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
     expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring', { scroll: false })
     expect(mocks.getSite).toHaveBeenCalledTimes(1)
   })
 
   it('offers grouped dialog navigation below lg, shows the active pane, and closes after selection', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=homepage&sectionId=faq-id'
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
-    const change = await screen.findByRole('button', { name: /FAQ.*Change/ })
+    const change = await screen.findByRole('button', { name: /Homepage.*Change/ })
     fireEvent.click(change)
     const dialog = screen.getByRole('dialog', { name: 'Website navigation' })
     const selector = within(dialog).getByRole('navigation', { name: 'Website editor selector' })
@@ -144,7 +151,7 @@ describe('Website workspace', () => {
     expect((await screen.findAllByText('Changes not published')).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Unpublish' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Republish' })).toBeInTheDocument()
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'FAQ' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'Homepage' }))
     expect(screen.queryByRole('button', { name: 'Unpublish' })).not.toBeInTheDocument()
   })
 
@@ -162,7 +169,7 @@ describe('Website workspace', () => {
   })
 
   it('guards dirty editor navigation, blocks stale Preview and Publish, and protects beforeunload', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=homepage&sectionId=faq-id'
     const addListener = vi.spyOn(window, 'addEventListener')
     const removeListener = vi.spyOn(window, 'removeEventListener')
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
@@ -188,8 +195,21 @@ describe('Website workspace', () => {
     expect(removeListener).toHaveBeenCalledWith('beforeunload', expect.any(Function))
   })
 
+  it('guards navigation after a local Theme preset is applied without saving', async () => {
+    navigation.search = 'editor=theme'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    await screen.findByRole('heading', { name: 'Theme' })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Midnight' }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Homepage' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
   it('re-seeds an active multi-item editor from the authoritative save response', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=homepage&sectionId=faq-id'
     const canonical = structuredClone(baseSite)
     const faq = canonical.pages[0]?.sections.find((section) => section.type === 'faq')
     if (!faq || faq.type !== 'faq') throw new Error('FAQ fixture missing')
@@ -207,7 +227,7 @@ describe('Website workspace', () => {
     fireEvent.change(within(reseededGroups[1]).getByLabelText('Answer'), { target: { value: 'Updated answer' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.upsertHomeFaq).toHaveBeenCalledTimes(2))
-    expect(mocks.upsertHomeFaq.mock.calls[1]?.[1].items[1]).toMatchObject({ id: 'server-generated', question: 'New?', answer: 'Updated answer' })
+    expect(mocks.upsertHomeFaq.mock.calls[1]?.[2].items[1]).toMatchObject({ id: 'server-generated', question: 'New?', answer: 'Updated answer' })
   })
 
   it('resets the Custom CSS dirty baseline after an authoritative save', async () => {

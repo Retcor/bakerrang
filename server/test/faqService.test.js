@@ -2,15 +2,12 @@ import test, { afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   _setDb as setSiteDb,
-  composeHomeSections,
   getPublicSite,
   getSite,
   initializeSite,
-  publishSite,
-  upsertHomeContact,
-  upsertHomeFaq,
-  upsertHomeServices
+  publishSite
 } from '../services/siteService.js'
+import { composeHomeSections, upsertHomeContact, upsertHomeFaq, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { _setDb as setMediaDb, _setStorage } from '../services/mediaService.js'
 import { FakeDb } from './helpers/fakeDb.js'
 import { FakeStorage } from './helpers/fakeStorage.js'
@@ -50,8 +47,9 @@ test('FAQ validates, trims, persists canonical fields, and creates server IDs', 
     items: [{ question: '  Question?  ', answer: '  Answer.  ', temporaryKey: 'browser-only' }]
   }))
   const faq = faqSection(result)
-  assert.equal(faq.id, 'faq')
+  assert.match(faq.id, /^[0-9a-f-]{36}$/)
   assert.equal(faq.type, 'faq')
+  assert.equal(faq.hidden, false)
   assert.match(faq.content.items[0].id, /^[0-9a-f-]{36}$/)
   assert.deepEqual(faq.content, {
     heading: 'FAQ',
@@ -100,7 +98,7 @@ test('FAQ retains stable IDs through edits and child reorder and rejects invalid
   assert.deepEqual(reordered.content.items.map(({ id }) => id), [second.id, first.id])
   await assert.rejects(upsertHomeFaq('tenant-1', input({
     items: [{ id: 'unknown', question: 'Question?', answer: 'Answer.' }]
-  })), { status: 400, message: 'Unknown FAQ item id' })
+  })), { status: 400, message: 'Unknown faq item id' })
   await assert.rejects(upsertHomeFaq('tenant-1', input({
     items: [
       { id: first.id, question: 'One?', answer: 'One.' },
@@ -117,7 +115,7 @@ test('FAQ insertion and independent section/item composition preserve their resp
       { question: 'First?', answer: 'First.' }, { question: 'Second?', answer: 'Second.' }
     ]
   }))
-  assert.deepEqual(created.pages[0].sections.map(({ type }) => type), ['hero', 'services', 'faq', 'contact'])
+  assert.deepEqual(created.pages[0].sections.map(({ type }) => type), ['hero', 'services', 'contact', 'faq'])
   const ids = faqSection(created).content.items.map(({ id }) => id)
 
   await composeHomeSections('tenant-1', { sectionIds: ['hero', 'faq', 'services', 'contact'] })
@@ -132,7 +130,7 @@ test('FAQ insertion and independent section/item composition preserve their resp
 
   await composeHomeSections('tenant-1', { sectionIds: ['hero', 'services', 'contact'] })
   const readded = await upsertHomeFaq('tenant-1', input())
-  assert.deepEqual(readded.pages[0].sections.map(({ type }) => type), ['hero', 'services', 'faq', 'contact'])
+  assert.deepEqual(readded.pages[0].sections.map(({ type }) => type), ['hero', 'services', 'contact', 'faq'])
   assert.notEqual(faqSection(readded).content.items[0].id, ids[0])
 })
 
@@ -141,13 +139,12 @@ test('FAQ rejects malformed canonical state and appends when Contact is absent',
   assert.deepEqual(appended.pages[0].sections.map(({ type }) => type), ['hero', 'faq'])
   const original = fakeDb.data(homePath)
   for (const corrupt of [
-    [{ id: 'faq', type: 'future', content: {} }],
-    [{ id: 'future', type: 'faq', content: {} }],
+    [{ id: 'faq', type: 'future', hidden: false, content: {} }],
     [faqSection(appended), faqSection(appended)],
-    [{ id: 'faq', type: 'faq', content: { heading: 'FAQ', items: [{ id: 'same' }, { id: 'same' }] } }]
+    [{ id: 'faq', type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ id: 'same' }, { id: 'same' }] } }]
   ]) {
     fakeDb.seed(homePath, { ...original, sections: [original.sections[0], ...corrupt] })
-    await assert.rejects(upsertHomeFaq('tenant-1', input()), { status: 500, message: 'Home FAQ section invalid' })
+    await assert.rejects(upsertHomeFaq('tenant-1', input()), { status: 500, message: 'Home sections invalid' })
   }
 })
 

@@ -5,11 +5,12 @@ import { contactHref } from './contactHref'
 export { contactHref } from './contactHref'
 
 export interface ContactProps {
+  anchorId: string
   content: ContactContent
   leadFormHref?: string
 }
 
-export function Contact ({ content, leadFormHref }: ContactProps) {
+export function Contact ({ anchorId, content, leadFormHref }: ContactProps) {
   const title = typeof content?.title === 'string' ? content.title : null
   const text = typeof content?.text === 'string' ? content.text : null
   const buttonLabel = typeof content?.buttonLabel === 'string' ? content.buttonLabel : null
@@ -17,7 +18,7 @@ export function Contact ({ content, leadFormHref }: ContactProps) {
   const external = href !== null && typeof content?.action === 'object' && content.action?.type === 'url'
 
   return (
-    <SiteSection className="bg-site-bg" id="contact">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="contact">
       <SiteContainer>
         <div className="site-radius-panel max-w-4xl border border-site-border border-l-4 border-l-site-accent bg-site-surface p-8 shadow-sm sm:p-12">
           {title && <h2 className="text-balance text-3xl font-semibold tracking-tight text-site-fg sm:text-5xl" data-br-role="section-heading">{title}</h2>}

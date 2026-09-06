@@ -124,7 +124,7 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.put('/:tenantId/site/business-hours', platformAdmin, handle(
-    (req) => sites.updateBusinessHours(req.params.tenantId, req.body)
+    (req) => sites.updateBusinessHours(req.params.tenantId, req.body, req.body?.sectionId)
   ))
 
   router.put('/:tenantId/site/social-links', platformAdmin, handle(
@@ -135,36 +135,29 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateCustomCss(req.params.tenantId, req.body)
   ))
 
-  router.patch('/:tenantId/site/pages/home/sections/hero', platformAdmin, handle(
-    (req) => sites.updateHomeHero(req.params.tenantId, req.body)
+  router.post('/:tenantId/site/pages/home/sections', platformAdmin, handle(
+    (req) => sites.addSection(req.params.tenantId, 'home', req.body?.type, { afterSectionId: req.body?.afterSectionId }),
+    201
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/about', platformAdmin, handle(
-    (req) => sites.upsertHomeAbout(req.params.tenantId, req.body)
+  router.post('/:tenantId/site/pages/home/sections/:sectionId/duplicate', platformAdmin, handle(
+    (req) => sites.duplicateSection(req.params.tenantId, 'home', req.params.sectionId)
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/services', platformAdmin, handle(
-    (req) => sites.upsertHomeServices(req.params.tenantId, req.body)
+  router.delete('/:tenantId/site/pages/home/sections/:sectionId', platformAdmin, handle(
+    (req) => sites.removeSection(req.params.tenantId, 'home', req.params.sectionId)
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/contact', platformAdmin, handle(
-    (req) => sites.upsertHomeContact(req.params.tenantId, req.body)
+  router.post('/:tenantId/site/pages/home/sections/:sectionId/move', platformAdmin, handle(
+    (req) => sites.moveSection(req.params.tenantId, 'home', req.params.sectionId, req.body?.direction)
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/gallery', platformAdmin, handle(
-    (req) => sites.upsertHomeGallery(req.params.tenantId, req.body)
+  router.patch('/:tenantId/site/pages/home/sections/:sectionId/visibility', platformAdmin, handle(
+    (req) => sites.setSectionVisibility(req.params.tenantId, 'home', req.params.sectionId, req.body?.hidden)
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/testimonials', platformAdmin, handle(
-    (req) => sites.upsertHomeTestimonials(req.params.tenantId, req.body)
-  ))
-
-  router.put('/:tenantId/site/pages/home/sections/faq', platformAdmin, handle(
-    (req) => sites.upsertHomeFaq(req.params.tenantId, req.body)
-  ))
-
-  router.put('/:tenantId/site/pages/home/composition', platformAdmin, handle(
-    (req) => sites.composeHomeSections(req.params.tenantId, req.body)
+  router.put('/:tenantId/site/pages/home/sections/:sectionId', platformAdmin, handle(
+    (req) => sites.updateSectionContent(req.params.tenantId, 'home', req.params.sectionId, req.body)
   ))
 
   router.get('/:tenantId/media', platformAdmin, noStore, handle(

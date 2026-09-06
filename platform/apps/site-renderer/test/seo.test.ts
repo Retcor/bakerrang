@@ -10,8 +10,6 @@ const site = (businessProfile: SiteDefinition['businessProfile'] = undefined, st
   theme: DEFAULT_SITE_THEME,
   branding: {
     siteName: 'Acme & Sons',
-    primaryColor: '#112233',
-    accentColor: '#445566',
     logoMediaId: 'logo',
     logoSrc: 'https://media.example.com/logo.png',
     logoWidth: 400,
@@ -23,8 +21,8 @@ const site = (businessProfile: SiteDefinition['businessProfile'] = undefined, st
     slug: '/',
     title: 'Home',
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Hero', subtitle: 'Never infer this' } },
-      { id: 'contact', type: 'contact', content: { title: 'Contact', buttonLabel: 'Call', action: { type: 'phone', value: '+1 303 555 0123' } } }
+      { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Hero', subtitle: 'Never infer this' } },
+      { id: 'contact-id', type: 'contact', hidden: false, content: { title: 'Contact', buttonLabel: 'Call', action: { type: 'phone', value: '+1 303 555 0123' } } }
     ]
   }]
 })

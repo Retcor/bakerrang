@@ -25,7 +25,7 @@ test('the public shell exposes the documented stable root and landmark hooks', a
   assert.match(contact, /<main[^>]+data-br-role="main"/)
 })
 
-test('every Home section exposes a section type and canonical section id hook', async () => {
+test('every Home section exposes stable type and opaque instance hooks', async () => {
   const [primitives, hero, ...sections] = await Promise.all([
     source('../../../packages/site-components/src/SitePrimitives.tsx'),
     source('../../../packages/site-components/src/Hero.tsx'),
@@ -33,10 +33,10 @@ test('every Home section exposes a section type and canonical section id hook', 
       .map((name) => source(`../../../packages/site-components/src/${name}.tsx`))
   ])
 
-  assert.match(primitives, /data-br-section=\{id\} data-br-section-id=\{id\}/)
-  assert.match(hero, /data-br-section="hero" data-br-section-id="hero"/)
+  assert.match(primitives, /data-br-section=\{sectionType\} data-br-section-id=\{anchorId\} id=\{`section-\$\{anchorId\}`\}/)
+  assert.match(hero, /data-br-section="hero" data-br-section-id=\{anchorId\} id=\{`section-\$\{anchorId\}`\}/)
   for (const [index, id] of ['about', 'services', 'gallery', 'testimonials', 'faq', 'businessHours', 'contact'].entries()) {
-    assert.match(sections[index], new RegExp(`<SiteSection[^>]+id="${id}"`))
+    assert.match(sections[index], new RegExp(`<SiteSection anchorId=\\{anchorId\\}[^>]+sectionType="${id}"`))
   }
 })
 
@@ -59,4 +59,17 @@ test('public headings, cards, CTAs, and lead fields expose semantic hooks', asyn
   assert.match(leadForm, /data-br-role="form"/)
   assert.equal((leadForm.match(/data-br-role="input"/g) ?? []).length, 4)
   assert.match(leadForm, /data-br-role="button"/)
+})
+
+test('public lead fields inherit the Theme-derived surface, border, and foreground tokens', async () => {
+  const [themeCss, leadForm] = await Promise.all([
+    source('../../../packages/site-components/src/site-theme.css'),
+    source('../components/LeadForm.tsx')
+  ])
+
+  assert.match(themeCss, /--color-surface: var\(--site-surface\);/)
+  assert.match(themeCss, /--color-border: var\(--site-border\);/)
+  assert.match(themeCss, /--color-fg: var\(--site-fg\);/)
+  assert.match(leadForm, /border border-border bg-surface/)
+  assert.match(leadForm, /text-fg/)
 })

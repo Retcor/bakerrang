@@ -2,6 +2,7 @@ import type { GalleryContent, GalleryItem } from '@bakerrang/site-schema'
 import { SectionHeading, SiteContainer, SiteSection } from './SitePrimitives'
 
 export interface GalleryProps {
+  anchorId: string
   content: GalleryContent
 }
 
@@ -13,12 +14,12 @@ const isResolved = (item: GalleryItem): item is GalleryItem & {
   Number.isSafeInteger(item.width) && Number(item.width) > 0 &&
   Number.isSafeInteger(item.height) && Number(item.height) > 0
 
-export function Gallery ({ content }: GalleryProps) {
+export function Gallery ({ anchorId, content }: GalleryProps) {
   const items = Array.isArray(content?.items) ? content.items.filter(isResolved) : []
   if (items.length === 0) return null
 
   return (
-    <SiteSection className="bg-site-bg" id="gallery">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="gallery">
       <SiteContainer>
         <SectionHeading>{content.title}</SectionHeading>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

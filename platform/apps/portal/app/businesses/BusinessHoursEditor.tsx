@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { findHomePage, isBusinessHoursSection, type BusinessHours, type DayHours, type SiteDefinition, type WeekdayKey } from '@bakerrang/site-schema'
-import { Button, ConfirmDialog, Field, Input, Textarea } from '@bakerrang/ui'
+import { Button, ConfirmDialog, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateBusinessHours } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
@@ -46,9 +46,6 @@ export function BusinessHoursEditor ({ onCancel, onDirtyChange = () => {}, onSav
   const section = findHomePage(site)?.sections.find(isBusinessHoursSection)
   const configured = Boolean(site.businessProfile?.businessHours)
   const [week, setWeek] = useState(() => editableWeek(site.businessProfile?.businessHours))
-  const [homepageEnabled, setHomepageEnabled] = useState(Boolean(section))
-  const [heading, setHeading] = useState(section?.content.heading ?? '')
-  const [intro, setIntro] = useState(section?.content.intro ?? '')
   const [saving, setSaving] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,8 +63,8 @@ export function BusinessHoursEditor ({ onCancel, onDirtyChange = () => {}, onSav
         businessHours,
         homepage: businessHours === null
           ? { enabled: false }
-          : { enabled: homepageEnabled, ...(heading.trim() ? { heading: heading.trim() } : {}), ...(intro.trim() ? { intro: intro.trim() } : {}) }
-      }))
+          : { enabled: Boolean(section), ...(section?.content.heading ? { heading: section.content.heading } : {}), ...(section?.content.intro ? { intro: section.content.intro } : {}) }
+      }, section?.id))
     } catch (caught) {
       setError(caught instanceof ApiError && caught.status === 400 ? caught.message : 'Unable to save Business Hours. Please try again.')
     } finally {
@@ -89,15 +86,13 @@ export function BusinessHoursEditor ({ onCancel, onDirtyChange = () => {}, onSav
         return
       }
     }
-    if (heading.trim().length > 120) return setError('Section heading must be 120 characters or fewer.')
-    if (intro.trim().length > 300) return setError('Intro must be 300 characters or fewer.')
     void save(canonicalWeek(week))
   }
 
   return (
     <>
-      <WebsiteEditorShell dirtyValue={{ businessHours: canonicalWeek(week), homepage: { enabled: homepageEnabled, heading: heading.trim(), intro: intro.trim() } }} editor="businessHours" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={submit} saving={saving} width="wide" secondaryActions={configured && <Button disabled={saving} onClick={() => setConfirmRemove(true)} type="button" variant="danger">Remove business hours</Button>}>
-        <p className="text-sm leading-6 text-fg-muted">Set the weekly schedule used across your site and in search results. You can also choose whether a separate Hours section appears on the homepage.</p>
+      <WebsiteEditorShell dirtyValue={{ businessHours: canonicalWeek(week) }} editor="businessHours" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={submit} saving={saving} width="wide" secondaryActions={configured && <Button disabled={saving} onClick={() => setConfirmRemove(true)} type="button" variant="danger">Remove business hours</Button>}>
+        <p className="text-sm leading-6 text-fg-muted">Set the weekly schedule used across your site and in search results. Homepage presence and presentation are managed from Homepage.</p>
         {!configured && <p className="mt-3 text-sm text-fg-muted">Weekday defaults are ready to edit and won&apos;t be saved until you choose Save.</p>}
 
         <div className="mt-5 space-y-3">
@@ -127,22 +122,8 @@ export function BusinessHoursEditor ({ onCancel, onDirtyChange = () => {}, onSav
           thursday: { ...current.monday }, friday: { ...current.monday }
         }))} size="sm" type="button" variant="secondary">Copy Monday to weekdays</Button>
 
-        <fieldset className="mt-6 rounded-md border border-border p-4" disabled={saving}>
-          <legend className="px-1 text-sm font-semibold text-fg">Homepage presentation</legend>
-          <label className="flex min-h-11 items-center gap-3 font-semibold text-fg">
-            <input checked={homepageEnabled} className="size-5 accent-[var(--color-accent)]" onChange={(event) => setHomepageEnabled(event.target.checked)} type="checkbox" />
-            Show business hours on homepage
-          </label>
-          {homepageEnabled && (
-            <div className="mt-4 space-y-4">
-              <Field id={`hours-heading-${tenantId}`} label="Section heading" optional><Input className="mt-2" maxLength={120} onChange={(event) => setHeading(event.target.value)} placeholder="Business Hours" value={heading} /></Field>
-              <Field id={`hours-intro-${tenantId}`} label="Intro" optional><Textarea className="mt-2" maxLength={300} onChange={(event) => setIntro(event.target.value)} value={intro} /></Field>
-            </div>
-          )}
-        </fieldset>
-
       </WebsiteEditorShell>
-      <ConfirmDialog busy={saving} confirmLabel="Remove hours" description="This removes the weekly schedule and the optional homepage Hours section from the working site. Your published site will not change until you republish." onCancel={() => setConfirmRemove(false)} onConfirm={() => void save(null)} open={confirmRemove} title="Remove business hours?" />
+      <ConfirmDialog busy={saving} confirmLabel="Remove hours" description="This removes the weekly schedule. The homepage Business Hours section is also removed because it cannot display without a schedule. Your published site will not change until you republish." onCancel={() => setConfirmRemove(false)} onConfirm={() => void save(null)} open={confirmRemove} title="Remove business hours?" />
     </>
   )
 }

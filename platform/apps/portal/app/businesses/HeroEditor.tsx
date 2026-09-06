@@ -8,6 +8,7 @@ import { updateHomeHero } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 export interface HeroEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -15,9 +16,10 @@ export interface HeroEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function HeroEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: HeroEditorProps) {
+export function HeroEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: HeroEditorProps) {
   const home = findHomePage(site)
-  const hero = home?.sections.find(isHeroSection)
+  const selectedHero = home?.sections.find((section) => section.id === sectionId)
+  const hero = selectedHero && isHeroSection(selectedHero) ? selectedHero : undefined
   const [title, setTitle] = useState(hero?.content.title ?? '')
   const [subtitle, setSubtitle] = useState(hero?.content.subtitle ?? '')
   const [saving, setSaving] = useState(false)
@@ -48,7 +50,7 @@ export function HeroEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}
     setSaving(true)
     setError(null)
     try {
-      onSaved(await updateHomeHero(tenantId, { title: trimmedTitle, subtitle }))
+      onSaved(await updateHomeHero(tenantId, hero.id, { title: trimmedTitle, subtitle }))
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
       else setError('Unable to save the Hero. Please try again.')

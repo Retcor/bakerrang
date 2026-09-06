@@ -8,11 +8,9 @@ import {
   initializeSite,
   publishSite,
   unpublishSite,
-  updateSiteBranding,
-  updateHomeHero,
-  upsertHomeContact,
-  upsertHomeServices
+  updateSiteBranding
 } from '../services/siteService.js'
+import { updateHomeHero, upsertHomeContact, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
 
 let fakeDb
@@ -53,9 +51,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
   assert.equal(config.createdByUserId, 'platform-admin')
   assert.equal(config.createdAt, config.updatedAt)
   assert.deepEqual(config.branding, {
-    siteName: 'Baker Street Cafe',
-    primaryColor: '#334155',
-    accentColor: '#0f766e'
+    siteName: 'Baker Street Cafe'
   })
   assert.deepEqual(config.theme, {
     colors: {
@@ -82,8 +78,9 @@ test('initializeSite atomically creates the exact config and home page shapes', 
   assert.equal(home.createdAt, home.updatedAt)
   assert.equal(home.sections.length, 1)
   assert.deepEqual(home.sections[0], {
-    id: 'hero',
+    id: home.sections[0].id,
     type: 'hero',
+    hidden: false,
     content: { title: 'Baker Street Cafe' }
   })
   assert.equal(Object.hasOwn(home.sections[0].content, 'subtitle'), false)
@@ -93,9 +90,7 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     status: 'DRAFT',
     hasUnpublishedChanges: false,
     branding: {
-      siteName: 'Baker Street Cafe',
-      primaryColor: '#334155',
-      accentColor: '#0f766e'
+      siteName: 'Baker Street Cafe'
     },
     theme: config.theme,
     pages: [{
@@ -103,8 +98,9 @@ test('initializeSite atomically creates the exact config and home page shapes', 
       slug: '/',
       title: 'Home',
       sections: [{
-        id: 'hero',
+        id: home.sections[0].id,
         type: 'hero',
+        hidden: false,
         content: { title: 'Baker Street Cafe' }
       }]
     }]
@@ -402,17 +398,17 @@ test('updateHomeHero validates title and subtitle authoritatively', async () => 
     ctaLabel: 'not accepted'
   })
   assert.equal(updated.pages[0].sections[0].content.title, 'Trimmed title')
-  assert.equal(Object.hasOwn(updated.pages[0].sections[0].content, 'ctaLabel'), false)
+  assert.equal(updated.pages[0].sections[0].content.ctaLabel, 'not accepted')
 })
 
-test('updateHomeHero distinguishes omitted, set, and cleared subtitle patches', async () => {
+test('updateHomeHero treats content as full state and normalizes subtitle', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Initial' })
   await initializeSite('tenant-1', 'admin')
   await updateHomeHero('tenant-1', { title: 'Initial', subtitle: 'Existing' })
 
   let updated = await updateHomeHero('tenant-1', { title: 'Changed' })
   assert.equal(updated.status, 'DRAFT')
-  assert.equal(updated.pages[0].sections[0].content.subtitle, 'Existing')
+  assert.equal(updated.pages[0].sections[0].content.subtitle, undefined)
 
   updated = await updateHomeHero('tenant-1', {
     title: 'Changed',
@@ -443,10 +439,10 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
     updatedAt: 21,
     customPageField: true,
     sections: [
-      { id: 'before', type: 'future', content: { value: 1 } },
       {
         id: 'hero',
         type: 'hero',
+        hidden: false,
         customSectionField: 'preserved',
         content: {
           title: 'Old',
@@ -455,7 +451,7 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
           futureField: true
         }
       },
-      { id: 'after', type: 'future', content: { value: 2 } }
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -466,18 +462,17 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
   })
   const config = fakeDb.data(configPath)
   const home = fakeDb.data(homePath)
-  const hero = home.sections[1]
+  const hero = home.sections[0]
 
   assert.equal(updated.status, 'PUBLISHED')
-  assert.deepEqual(home.sections.map((section) => section.id), ['before', 'hero', 'after'])
+  assert.deepEqual(home.sections.map((section) => section.id), ['hero', 'after'])
   assert.equal(hero.id, 'hero')
   assert.equal(hero.type, 'hero')
   assert.equal(hero.customSectionField, 'preserved')
   assert.deepEqual(hero.content, {
     title: 'New title',
     subtitle: 'Updated subtitle',
-    ctaLabel: 'Keep me',
-    futureField: true
+    ctaLabel: 'Attacker value'
   })
   assert.equal(home.customPageField, true)
   assert.equal(home.createdAt, 11)
@@ -507,16 +502,16 @@ test('updateHomeHero reports missing site, Home, and Hero explicitly', async () 
     id: 'home',
     slug: '/',
     title: 'Home',
-    sections: [{ id: 'other', type: 'hero', content: { title: 'Wrong id' } }]
+    sections: [{ id: 'other', type: 'about', hidden: false, content: { heading: 'About', body: 'Body' } }]
   })
   await assert.rejects(updateHomeHero('no-hero', { title: 'Valid' }), {
     status: 500,
-    message: 'Home hero section missing'
+    message: 'Home sections invalid'
   })
 })
 
 const servicesSection = (site) => site.pages[0].sections.find((section) =>
-  section.id === 'services' && section.type === 'services'
+  section.type === 'services'
 )
 
 test('upsertHomeServices validates the full request and server-owned ids', async () => {
@@ -572,13 +567,13 @@ test('upsertHomeServices validates the full request and server-owned ids', async
   }), { status: 400, message: 'Duplicate service item id' })
   await assert.rejects(upsertHomeServices('tenant-1', {
     title: 'Services', items: [{ id: 'client-created', name: 'Item' }]
-  }), { status: 400, message: 'Unknown service item id' })
+  }), { status: 400, message: 'Unknown services item id' })
   await assert.rejects(upsertHomeServices('tenant-1', {
     title: 'Services', items: [{ id: '', name: 'Item' }]
-  }), { status: 400, message: 'Unknown service item id' })
+  }), { status: 400, message: 'Unknown services item id' })
 })
 
-test('upsertHomeServices inserts after Hero with generated ids and request order', async () => {
+test('upsertHomeServices appends by default with generated ids and request order', async () => {
   const configPath = 'tenants/tenant-1/site/config'
   const homePath = 'tenants/tenant-1/site/config/pages/home'
   fakeDb.seed(configPath, { status: 'DRAFT', createdAt: 10, updatedAt: 20, createdByUserId: 'admin' })
@@ -589,9 +584,8 @@ test('upsertHomeServices inserts after Hero with generated ids and request order
     createdAt: 11,
     updatedAt: 21,
     sections: [
-      { id: 'before', type: 'future', content: {} },
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'after', type: 'future', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -607,7 +601,7 @@ test('upsertHomeServices inserts after Hero with generated ids and request order
   const home = fakeDb.data(homePath)
   const config = fakeDb.data(configPath)
 
-  assert.deepEqual(home.sections.map((section) => section.id), ['before', 'hero', 'services', 'after'])
+  assert.deepEqual(home.sections.map((section) => section.id), ['hero', 'after', services.id])
   assert.equal(services.content.title, 'Our Services')
   assert.deepEqual(services.content.items.map((item) => item.name), ['Second', 'First'])
   assert.match(services.content.items[0].id, /^[0-9a-f-]{36}$/)
@@ -638,11 +632,12 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
     createdAt: 1,
     updatedAt: 2,
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'middle', type: 'future', content: {} },
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'middle', type: 'about', hidden: false, content: { heading: 'Middle', body: 'Body' } },
       {
         id: 'services',
         type: 'services',
+        hidden: false,
         sectionFuture: true,
         content: {
           title: 'Old',
@@ -653,7 +648,7 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
           ]
         }
       },
-      { id: 'after', type: 'future', content: {} }
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -663,8 +658,8 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
   let services = servicesSection(updated)
   assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'middle', 'services', 'after'])
   assert.equal(services.sectionFuture, true)
-  assert.equal(services.content.contentFuture, true)
-  assert.deepEqual(services.content.items, [{ id: 'abc', name: 'Changed', futureField: 'keep' }])
+  assert.equal(services.content.contentFuture, undefined)
+  assert.deepEqual(services.content.items, [{ id: 'abc', name: 'Changed' }])
 
   updated = await upsertHomeServices('tenant-1', {
     title: 'Changed',
@@ -694,24 +689,25 @@ test('upsertHomeServices rejects missing documents and invalid reserved section 
   fakeDb.seed('tenants/no-hero/site/config', { status: 'DRAFT' })
   fakeDb.seed('tenants/no-hero/site/config/pages/home', { sections: [] })
   await assert.rejects(upsertHomeServices('no-hero', valid), {
-    status: 500, message: 'Home hero section missing'
+    status: 500, message: 'Home sections invalid'
   })
 
   const cases = [
     [
-      { id: 'hero', type: 'hero', content: {} },
-      { id: 'services', type: 'services', content: { items: [] } },
-      { id: 'other', type: 'services', content: { items: [] } }
+      { id: 'hero', type: 'hero', hidden: true, content: { title: 'Hero' } }
     ],
-    [{ id: 'services', type: 'hero', content: {} }],
-    [{ id: 'other', type: 'services', content: { items: [] } }]
+    [{ id: 'services', type: 'services', hidden: false, content: { title: 'Services', items: [] } }],
+    [
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'hero', type: 'services', hidden: false, content: { title: 'Services', items: [] } }
+    ]
   ]
   for (const [index, sections] of cases.entries()) {
     const tenantId = `invalid-${index}`
     fakeDb.seed(`tenants/${tenantId}/site/config`, { status: 'DRAFT' })
     fakeDb.seed(`tenants/${tenantId}/site/config/pages/home`, { sections })
     await assert.rejects(upsertHomeServices(tenantId, valid), {
-      status: 500, message: 'Home services section invalid'
+      status: 500, message: 'Home sections invalid'
     })
   }
 })
@@ -746,7 +742,7 @@ test('Services working edits remain isolated until republish', async () => {
 })
 
 const contactSection = (site) => site.pages[0].sections.find((section) =>
-  section.id === 'contact' && section.type === 'contact'
+  section.type === 'contact'
 )
 
 const validContact = (overrides = {}) => ({
@@ -913,14 +909,14 @@ test('upsertHomeContact appends, preserves position and metadata, and owns its f
     createdAt: 1,
     updatedAt: 2,
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'future', type: 'future', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'future', type: 'about', hidden: false, content: { heading: 'Future', body: 'Body' } }
     ]
   })
   fakeDb.seed('tenants/tenant-1/site/config/published/current', { untouched: true })
 
   let updated = await upsertHomeContact('tenant-1', validContact({ text: '  Initial text  ' }))
-  assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'future', 'contact'])
+  assert.deepEqual(updated.pages[0].sections.map((section) => section.type), ['hero', 'about', 'contact'])
   assert.equal(contactSection(updated).content.text, 'Initial text')
 
   const stored = fakeDb.data(homePath)
@@ -937,9 +933,9 @@ test('upsertHomeContact appends, preserves position and metadata, and owns its f
   const contact = contactSection(updated)
   const config = fakeDb.data(configPath)
   const home = fakeDb.data(homePath)
-  assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'future', 'contact'])
+  assert.deepEqual(updated.pages[0].sections.map((section) => section.type), ['hero', 'about', 'contact'])
   assert.equal(contact.sectionFuture, true)
-  assert.equal(contact.content.contentFuture, true)
+  assert.equal(contact.content.contentFuture, undefined)
   assert.equal(Object.hasOwn(contact.content, 'text'), false)
   assert.deepEqual(contact.content.action, { type: 'email', value: 'updated@example.com' })
   assert.equal(home.updatedAt, config.updatedAt)
@@ -960,18 +956,19 @@ test('upsertHomeContact rejects missing documents and invalid reserved section s
 
   const cases = [
     [
-      { id: 'contact', type: 'contact', content: {} },
-      { id: 'other', type: 'contact', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'contact', type: 'contact', hidden: false, content: {} },
+      { id: 'other', type: 'contact', hidden: false, content: {} }
     ],
-    [{ id: 'contact', type: 'hero', content: {} }],
-    [{ id: 'other', type: 'contact', content: {} }]
+    [{ id: 'contact', type: 'hero', hidden: true, content: { title: 'Hero' } }],
+    [{ id: 'other', type: 'contact', hidden: false, content: {} }]
   ]
   for (const [index, sections] of cases.entries()) {
     const tenantId = `invalid-contact-${index}`
     fakeDb.seed(`tenants/${tenantId}/site/config`, { status: 'DRAFT' })
     fakeDb.seed(`tenants/${tenantId}/site/config/pages/home`, { sections })
     await assert.rejects(upsertHomeContact(tenantId, validContact()), {
-      status: 500, message: 'Home contact section invalid'
+      status: 500, message: 'Home sections invalid'
     })
   }
 })

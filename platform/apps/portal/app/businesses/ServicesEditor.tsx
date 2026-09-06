@@ -16,6 +16,7 @@ interface EditorRow {
 }
 
 export interface ServicesEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -23,9 +24,10 @@ export interface ServicesEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
+export function ServicesEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
   const home = findHomePage(site)
-  const services = home?.sections.find(isServicesSection)
+  const selectedServices = home?.sections.find((section) => section.id === sectionId)
+  const services = selectedServices && isServicesSection(selectedServices) ? selectedServices : undefined
   const nextKey = useRef(1)
   const [title, setTitle] = useState(services?.content.title ?? 'Services')
   const [rows, setRows] = useState<EditorRow[]>(() => services
@@ -59,7 +61,7 @@ export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () =
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeServices(tenantId, {
+      onSaved(await upsertHomeServices(tenantId, services?.id, {
         title: trimmedTitle,
         items: rows.map(({ id, name, description }) => ({
           ...(id ? { id } : {}),

@@ -10,6 +10,7 @@ import { WebsiteEditorShell } from './WebsiteEditorShell'
 type ActionType = ContactAction['type']
 
 export interface ContactEditorProps {
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -24,9 +25,10 @@ const actionDetails: Record<ActionType, { label: string, placeholder?: string, h
   leadForm: { label: 'Lead Form', help: 'Opens a form where visitors can send their contact details and a message.' }
 }
 
-export function ContactEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ContactEditorProps) {
+export function ContactEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ContactEditorProps) {
   const home = findHomePage(site)
-  const contact = home?.sections.find(isContactSection)
+  const selectedContact = home?.sections.find((section) => section.id === sectionId)
+  const contact = selectedContact && isContactSection(selectedContact) ? selectedContact : undefined
   const [title, setTitle] = useState(contact?.content.title ?? 'Contact Us')
   const [text, setText] = useState(contact?.content.text ?? '')
   const [buttonLabel, setButtonLabel] = useState(contact?.content.buttonLabel ?? 'Contact Us')
@@ -51,7 +53,7 @@ export function ContactEditor ({ tenantId, site, onCancel, onDirtyChange = () =>
       const action: ContactActionInput = actionType === 'leadForm'
         ? { type: 'leadForm' }
         : { type: actionType, value: actionValue }
-      onSaved(await upsertHomeContact(tenantId, {
+      onSaved(await upsertHomeContact(tenantId, contact?.id, {
         title,
         text,
         buttonLabel,

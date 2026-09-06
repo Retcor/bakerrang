@@ -8,14 +8,17 @@ import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
 import { upsertHomeAbout } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
-export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
+export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, sectionId, site, tenantId }: {
+  sectionId: string
   onCancel: () => void
   onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
 }) {
-  const about = findHomePage(site)?.sections.find(isAboutSection)
+  const home = findHomePage(site)
+  const selectedAbout = home?.sections.find((section) => section.id === sectionId)
+  const about = selectedAbout && isAboutSection(selectedAbout) ? selectedAbout : undefined
   const [eyebrow, setEyebrow] = useState(about?.content.eyebrow ?? '')
   const [heading, setHeading] = useState(about?.content.heading ?? '')
   const [body, setBody] = useState(about?.content.body ?? '')
@@ -77,7 +80,7 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeAbout(tenantId, {
+      onSaved(await upsertHomeAbout(tenantId, about?.id, {
         ...(eyebrow.trim() ? { eyebrow: eyebrow.trim() } : {}),
         heading: heading.trim(),
         body: body.trim(),

@@ -15,11 +15,11 @@ export function SiteShell ({ children, currentPage, site, sitePath }: {
 }) {
   const sections = site.pages.find((page) => page.slug === '/')?.sections ?? []
   const { contactPageHref, homeHref, sectionPrefix: prefix } = siteNavigationPaths(sitePath, currentPage)
-  const sectionItems = sections.filter((section) => section.type !== 'hero').map((section) => ({
+  const sectionItems = sections.filter((section) => !section.hidden && section.type !== 'hero').map((section) => ({
     label: labels[section.type],
     href: section.type === 'contact' && section.content.action.type === 'leadForm'
       ? contactPageHref
-      : `${prefix}#${section.id}`
+      : `${prefix}#section-${section.id}`
   })).filter((item): item is SiteNavItem => Boolean(item.label))
   const contact = sectionItems.find((item) => item.label === 'Contact')
   const primaryNav: SiteNavItem[] = sectionItems.filter((item) => item.label !== 'Contact')

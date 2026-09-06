@@ -7,6 +7,7 @@ export interface HeroContent {
 export interface HeroSection {
   id: string
   type: 'hero'
+  hidden: boolean
   content: HeroContent
 }
 
@@ -23,8 +24,9 @@ export interface AboutContent {
 }
 
 export interface AboutSection {
-  id: 'about'
+  id: string
   type: 'about'
+  hidden: boolean
   content: AboutContent
 }
 
@@ -42,6 +44,7 @@ export interface ServicesContent {
 export interface ServicesSection {
   id: string
   type: 'services'
+  hidden: boolean
   content: ServicesContent
 }
 
@@ -61,6 +64,7 @@ export interface ContactContent {
 export interface ContactSection {
   id: string
   type: 'contact'
+  hidden: boolean
   content: ContactContent
 }
 
@@ -82,6 +86,7 @@ export interface GalleryContent {
 export interface GallerySection {
   id: string
   type: 'gallery'
+  hidden: boolean
   content: GalleryContent
 }
 
@@ -99,6 +104,7 @@ export interface TestimonialsContent {
 export interface TestimonialsSection {
   id: string
   type: 'testimonials'
+  hidden: boolean
   content: TestimonialsContent
 }
 
@@ -115,8 +121,9 @@ export interface FaqContent {
 }
 
 export interface FaqSection {
-  id: 'faq'
+  id: string
   type: 'faq'
+  hidden: boolean
   content: FaqContent
 }
 
@@ -149,12 +156,14 @@ export interface BusinessHoursContent {
 }
 
 export interface BusinessHoursSection {
-  id: 'businessHours'
+  id: string
   type: 'businessHours'
+  hidden: boolean
   content: BusinessHoursContent
 }
 
 export type SiteSection = HeroSection | AboutSection | ServicesSection | GallerySection | TestimonialsSection | FaqSection | BusinessHoursSection | ContactSection
+export type SectionType = SiteSection['type']
 
 export interface SitePage {
   id: string
@@ -197,8 +206,6 @@ export interface SiteTheme {
 
 export interface SiteBranding {
   siteName: string
-  primaryColor: string
-  accentColor: string
   logoMediaId?: string
   /** Read-time hydration only. Never persisted in working or published site documents. */
   logoSrc?: string
@@ -263,28 +270,28 @@ export interface SiteDefinition {
 }
 
 export const isHeroSection = (section: SiteSection): section is HeroSection =>
-  section.id === 'hero' && section.type === 'hero'
+  section.type === 'hero'
 
 export const isAboutSection = (section: SiteSection): section is AboutSection =>
-  section.id === 'about' && section.type === 'about'
+  section.type === 'about'
 
 export const isServicesSection = (section: SiteSection): section is ServicesSection =>
-  section.id === 'services' && section.type === 'services'
+  section.type === 'services'
 
 export const isContactSection = (section: SiteSection): section is ContactSection =>
-  section.id === 'contact' && section.type === 'contact'
+  section.type === 'contact'
 
 export const isGallerySection = (section: SiteSection): section is GallerySection =>
-  section.id === 'gallery' && section.type === 'gallery'
+  section.type === 'gallery'
 
 export const isTestimonialsSection = (section: SiteSection): section is TestimonialsSection =>
-  section.id === 'testimonials' && section.type === 'testimonials'
+  section.type === 'testimonials'
 
 export const isFaqSection = (section: SiteSection): section is FaqSection =>
-  section.id === 'faq' && section.type === 'faq'
+  section.type === 'faq'
 
 export const isBusinessHoursSection = (section: SiteSection): section is BusinessHoursSection =>
-  section.id === 'businessHours' && section.type === 'businessHours'
+  section.type === 'businessHours'
 
 export const findHomePage = (site: SiteDefinition): SitePage | undefined =>
   site.pages.find((page) => page.slug === '/')

@@ -23,12 +23,21 @@ beforeEach(async () => {
 })
 afterEach(() => { sites._setDb(); media._setDb(); media._setStorage() })
 const remove = () => media.deleteUnusedMedia(tenant, 'image')
+const sectionByType = (type) => db.data(homePath).sections.find((section) => section.type === type)
+const updateType = async (type, content) => {
+  let section = sectionByType(type)
+  if (!section) {
+    await sites.addSection(tenant, 'home', type)
+    section = sectionByType(type)
+  }
+  return sites.updateSectionContent(tenant, 'home', section.id, content)
+}
 const writers = [
   ['Logo', (id = 'image') => sites.updateSiteBranding(tenant, { siteName: 'Business', logoMediaId: id })],
   ['Favicon', (id = 'image') => sites.updateSiteBranding(tenant, { siteName: 'Business', faviconMediaId: id })],
   ['Social', (id = 'image') => sites.updateBusinessProfile(tenant, { socialImageMediaId: id })],
-  ['About', (id = 'image') => sites.upsertHomeAbout(tenant, { heading: 'About', body: 'Body', imageMediaId: id, imageAlt: 'Image' })],
-  ['Gallery', (id = 'image') => sites.upsertHomeGallery(tenant, { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })]
+  ['About', (id = 'image') => updateType('about', { heading: 'About', body: 'Body', imageMediaId: id, imageAlt: 'Image' })],
+  ['Gallery', (id = 'image') => updateType('gallery', { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })]
 ]
 const refs = () => [...media.collectSiteMediaIds({ ...db.data(configPath), pages: [db.data(homePath)] }), ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)]
 const assertIntact = () => {
@@ -49,7 +58,7 @@ for (const [name, write] of writers) {
     onceBeforeCommit(write)
     await assert.rejects(remove(), { status: 400 })
     assertIntact()
-    assert.equal(db.transactionAttempts - attempts, 3)
+    assert.equal(db.transactionAttempts - attempts, ['About', 'Gallery'].includes(name) ? 4 : 3)
   })
   test(`${name}: deletion commits in writer gap; writer rejects`, async () => {
     onceBeforeCommit(remove)
@@ -65,6 +74,14 @@ for (const [name, write] of writers) {
     assert.equal(db.data(mediaPath).deletion.state, 'PENDING')
   })
 }
+test('duplicate commits in deletion gap and copied media keeps deletion blocked', async () => {
+  await writers[4][1]()
+  const gallery = sectionByType('gallery')
+  onceBeforeCommit(() => sites.duplicateSection(tenant, 'home', gallery.id))
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the working gallery' })
+  assertIntact()
+})
+
 test('old unguarded writer pattern demonstrably leaves a dangling reference', async () => {
   await media.requireTenantMedia(tenant, ['image'])
   await remove()
@@ -79,8 +96,8 @@ test('old unguarded writer pattern demonstrably leaves a dangling reference', as
 })
 for (const [name, edit] of [
   ['publish', () => sites.publishSite(tenant, 'admin')],
-  ['composition', () => sites.composeHomeSections(tenant, { sectionIds: ['hero'] })],
-  ['hero', () => sites.updateHomeHero(tenant, { title: 'New title' })]
+  ['composition', () => sites.setSectionVisibility(tenant, 'home', sectionByType('hero').id, false)],
+  ['hero', () => sites.updateSectionContent(tenant, 'home', sectionByType('hero').id, { title: 'New title' })]
 ]) {
   test(`${name} commits first; deletion cannot leave references`, async () => { onceBeforeCommit(edit); await remove(); assertRemoved() })
   test(`${name} commits last; cannot resurrect deleted references`, async () => { onceBeforeCommit(remove); await edit(); assertRemoved() })
@@ -160,8 +177,8 @@ test('pending hydration removes URLs and gallery items from working and publishe
     assert.equal(definition.branding.logoSrc, undefined)
     assert.equal(definition.branding.faviconSrc, undefined)
     assert.equal(definition.businessProfile.socialImageSrc, undefined)
-    assert.equal(definition.pages[0].sections.find((s) => s.id === 'about').content.imageSrc, undefined)
-    assert.deepEqual(definition.pages[0].sections.find((s) => s.id === 'gallery').content.items, [])
+    assert.equal(definition.pages[0].sections.find((s) => s.type === 'about').content.imageSrc, undefined)
+    assert.deepEqual(definition.pages[0].sections.find((s) => s.type === 'gallery').content.items, [])
   }
 })
 test('pending query finds old items beyond newest50 and is bounded and tenant scoped', async () => {
@@ -181,7 +198,7 @@ test('pending query finds old items beyond newest50 and is bounded and tenant sc
 test('section removal overlapping deletion permits deletion only after reference removal commits', async () => {
   await writers[3][1]()
   onceBeforeCommit(async () => { await assert.rejects(remove(), { status: 400 }); assertIntact() })
-  await sites.composeHomeSections(tenant, { sectionIds: ['hero'] })
+  await sites.removeSection(tenant, 'home', sectionByType('about').id)
   await remove()
   assertRemoved()
 })

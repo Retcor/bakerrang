@@ -16,12 +16,12 @@ const theme = {
 
 const site = (customCss?: string, scopedCustomCss?: string): SiteDefinition => ({
   status: 'DRAFT',
-  branding: { siteName: 'Bakery', primaryColor: '#334155', accentColor: '#0f766e' },
+  branding: { siteName: 'Bakery' },
   theme,
   ...(customCss === undefined ? {} : { customCss }),
   ...(scopedCustomCss === undefined ? {} : { scopedCustomCss }),
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
-    { id: 'hero', type: 'hero', content: { title: 'Welcome' } }
+    { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } }
   ] }]
 })
 

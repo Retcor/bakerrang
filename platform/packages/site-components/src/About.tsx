@@ -3,6 +3,7 @@ import { aboutParagraphs } from './aboutText'
 import { SectionHeading, SiteContainer, SiteSection } from './SitePrimitives'
 
 export interface AboutProps {
+  anchorId: string
   content: AboutContent
 }
 
@@ -16,11 +17,11 @@ const hasResolvedImage = (content: AboutContent): content is AboutContent & {
   Number.isSafeInteger(content.imageWidth) && Number(content.imageWidth) > 0 &&
   Number.isSafeInteger(content.imageHeight) && Number(content.imageHeight) > 0
 
-export function About ({ content }: AboutProps) {
+export function About ({ anchorId, content }: AboutProps) {
   const paragraphs = aboutParagraphs(content.body)
   const withImage = hasResolvedImage(content)
   return (
-    <SiteSection className="bg-site-bg" id="about">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="about">
       <SiteContainer>
         <div className={withImage ? 'grid items-center gap-10 lg:grid-cols-2 lg:gap-14' : 'max-w-3xl'}>
           {withImage && (

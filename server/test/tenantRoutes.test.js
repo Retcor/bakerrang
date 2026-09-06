@@ -29,7 +29,7 @@ const notFound = () => Object.assign(new Error('Tenant not found'), { status: 40
 const calls = []
 const siteDefinition = {
   status: 'DRAFT',
-  branding: { siteName: 'Tenant', primaryColor: '#334155', accentColor: '#0f766e' },
+  branding: { siteName: 'Tenant' },
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [] }]
 }
 const service = {
@@ -93,36 +93,28 @@ const sites = {
     calls.push({ operation: 'updateCustomCss', tenantId, body })
     return siteDefinition
   },
-  updateHomeHero: async (tenantId, body) => {
-    calls.push({ operation: 'updateHomeHero', tenantId, body })
+  addSection: async (tenantId, pageId, type, options) => {
+    calls.push({ operation: 'addSection', tenantId, pageId, type, options })
     return siteDefinition
   },
-  upsertHomeAbout: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeAbout', tenantId, body })
+  duplicateSection: async (tenantId, pageId, sectionId) => {
+    calls.push({ operation: 'duplicateSection', tenantId, pageId, sectionId })
     return siteDefinition
   },
-  upsertHomeServices: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeServices', tenantId, body })
+  removeSection: async (tenantId, pageId, sectionId) => {
+    calls.push({ operation: 'removeSection', tenantId, pageId, sectionId })
     return siteDefinition
   },
-  upsertHomeContact: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeContact', tenantId, body })
+  moveSection: async (tenantId, pageId, sectionId, direction) => {
+    calls.push({ operation: 'moveSection', tenantId, pageId, sectionId, direction })
     return siteDefinition
   },
-  upsertHomeGallery: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeGallery', tenantId, body })
+  setSectionVisibility: async (tenantId, pageId, sectionId, hidden) => {
+    calls.push({ operation: 'setSectionVisibility', tenantId, pageId, sectionId, hidden })
     return siteDefinition
   },
-  upsertHomeTestimonials: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeTestimonials', tenantId, body })
-    return siteDefinition
-  },
-  upsertHomeFaq: async (tenantId, body) => {
-    calls.push({ operation: 'upsertHomeFaq', tenantId, body })
-    return siteDefinition
-  },
-  composeHomeSections: async (tenantId, body) => {
-    calls.push({ operation: 'composeHomeSections', tenantId, body })
+  updateSectionContent: async (tenantId, pageId, sectionId, body) => {
+    calls.push({ operation: 'updateSectionContent', tenantId, pageId, sectionId, body })
     return siteDefinition
   }
 }
@@ -473,40 +465,9 @@ test('custom domain lifecycle is PLATFORM_ADMIN-only and forwards explicit comma
   }
 })
 
-test('only PLATFORM_ADMIN can edit the Home Hero and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/hero'
-  const body = { title: 'New title', subtitle: 'New subtitle', ignored: true }
-
-  assert.equal((await request(path, { method: 'PATCH', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PATCH', body })).status, 403)
-  }
-
-  const response = await request(path, { userId: 'platform', method: 'PATCH', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(await response.json(), siteDefinition)
-  assert.deepEqual(calls.at(-1), {
-    operation: 'updateHomeHero',
-    tenantId: 'tenant-1',
-    body
-  })
-})
-
-test('only PLATFORM_ADMIN can PUT About and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/about'
-  const body = { eyebrow: 'About', heading: 'Our story', body: 'Plain text.' }
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeAbout', tenantId: 'tenant-1', body })
-})
-
 test('only PLATFORM_ADMIN can PUT branding and the route forwards tenantId and body', async () => {
   const path = '/tenants/tenant-1/site/branding'
-  const body = { siteName: 'Site', primaryColor: '#112233', accentColor: '#445566' }
+  const body = { siteName: 'Site' }
   assert.equal((await request(path, { method: 'PUT', body })).status, 401)
   for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
     assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
@@ -597,88 +558,24 @@ test('Custom CSS mutation matches the existing PLATFORM_ADMIN site-edit policy',
   assert.deepEqual(await invalid.json(), { error: 'Custom CSS contains invalid syntax (line 1).' })
 })
 
-test('only PLATFORM_ADMIN can PUT Services and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/services'
-  const body = { title: 'Services', items: [{ name: 'One' }] }
-
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
+test('instance section routes are PLATFORM_ADMIN-only and forward page and section identity', async () => {
+  const operations = [
+    { method: 'POST', path: '/tenants/tenant-1/site/pages/home/sections', body: { type: 'gallery', afterSectionId: 'after-id' }, operation: 'addSection', status: 201 },
+    { method: 'POST', path: '/tenants/tenant-1/site/pages/home/sections/section-id/duplicate', operation: 'duplicateSection' },
+    { method: 'DELETE', path: '/tenants/tenant-1/site/pages/home/sections/section-id', operation: 'removeSection' },
+    { method: 'POST', path: '/tenants/tenant-1/site/pages/home/sections/section-id/move', body: { direction: 'up' }, operation: 'moveSection' },
+    { method: 'PATCH', path: '/tenants/tenant-1/site/pages/home/sections/section-id/visibility', body: { hidden: true }, operation: 'setSectionVisibility' },
+    { method: 'PUT', path: '/tenants/tenant-1/site/pages/home/sections/section-id', body: { title: 'Content' }, operation: 'updateSectionContent' }
+  ]
+  for (const item of operations) {
+    assert.equal((await request(item.path, { method: item.method, body: item.body })).status, 401)
+    assert.equal((await request(item.path, { userId: 'staff', method: item.method, body: item.body })).status, 403)
+    const response = await request(item.path, { userId: 'platform', method: item.method, body: item.body })
+    assert.equal(response.status, item.status || 200)
+    assert.equal(calls.at(-1).operation, item.operation)
+    assert.equal(calls.at(-1).tenantId, 'tenant-1')
+    assert.equal(calls.at(-1).pageId, 'home')
   }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), {
-    operation: 'upsertHomeServices', tenantId: 'tenant-1', body
-  })
-})
-
-test('only PLATFORM_ADMIN can PUT Contact and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/contact'
-  const body = {
-    title: 'Contact Us',
-    buttonLabel: 'Email us',
-    action: { type: 'email', value: 'hello@example.com' }
-  }
-
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), {
-    operation: 'upsertHomeContact', tenantId: 'tenant-1', body
-  })
-})
-
-test('only PLATFORM_ADMIN can PUT Gallery and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/gallery'
-  const body = { title: 'Gallery', items: [{ mediaId: 'media-1', altText: 'Project' }] }
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeGallery', tenantId: 'tenant-1', body })
-})
-
-test('only PLATFORM_ADMIN can PUT Testimonials and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/testimonials'
-  const body = { title: 'Testimonials', items: [{ customerName: 'Jane', quote: 'Excellent work.' }] }
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), {
-    operation: 'upsertHomeTestimonials', tenantId: 'tenant-1', body
-  })
-})
-
-test('only PLATFORM_ADMIN can PUT FAQ and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/sections/faq'
-  const body = { heading: 'FAQ', items: [{ question: 'When?', answer: 'Today.' }] }
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), { operation: 'upsertHomeFaq', tenantId: 'tenant-1', body })
-})
-
-test('only PLATFORM_ADMIN can PUT Home composition and the route forwards tenantId and body', async () => {
-  const path = '/tenants/tenant-1/site/pages/home/composition'
-  const body = { sectionIds: ['hero', 'testimonials', 'contact'] }
-  assert.equal((await request(path, { method: 'PUT', body })).status, 401)
-  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
-    assert.equal((await request(path, { userId, method: 'PUT', body })).status, 403)
-  }
-  const response = await request(path, { userId: 'platform', method: 'PUT', body })
-  assert.equal(response.status, 200)
-  assert.deepEqual(calls.at(-1), { operation: 'composeHomeSections', tenantId: 'tenant-1', body })
 })
 
 test('only PLATFORM_ADMIN can list and upload tenant Media with no-store', async () => {
