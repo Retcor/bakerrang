@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { findHomePage, isContactSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isContactSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { upsertHomeContact, type ContactActionInput } from '../../lib/site'
+import { updateSectionContent, type ContactActionInput } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 import { SectionActionFields, type SectionActionType } from './SectionActionFields'
 
 export interface ContactEditorProps {
+  pageId: string
   sectionId: string
   tenantId: string
   site: SiteDefinition
@@ -17,9 +18,9 @@ export interface ContactEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function ContactEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ContactEditorProps) {
-  const home = findHomePage(site)
-  const selectedContact = home?.sections.find((section) => section.id === sectionId)
+export function ContactEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ContactEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedContact = page?.sections.find((section) => section.id === sectionId)
   const contact = selectedContact && isContactSection(selectedContact) ? selectedContact : undefined
   const [title, setTitle] = useState(contact?.content.title ?? 'Contact Us')
   const [text, setText] = useState(contact?.content.text ?? '')
@@ -44,7 +45,8 @@ export function ContactEditor ({ sectionId, tenantId, site, onCancel, onDirtyCha
       const action: ContactActionInput = actionType === 'leadForm'
         ? { type: 'leadForm' }
         : { type: actionType, value: actionValue }
-      onSaved(await upsertHomeContact(tenantId, contact?.id, {
+      if (!contact) throw new Error('Contact section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, contact.id, {
         title,
         text,
         buttonLabel,

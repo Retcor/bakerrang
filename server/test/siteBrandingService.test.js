@@ -197,7 +197,7 @@ test('logo, social image, and Gallery hydrate through one batch while storage re
     return originalGetAll(...refs)
   }
   const site = await getSite('tenant-1')
-  assert.deepEqual(batches, [['logo', 'favicon', 'social', 'gallery']])
+  assert.deepEqual(batches, [['home'], ['logo', 'favicon', 'social', 'gallery']])
   assert.equal(site.branding.logoSrc, 'https://media.test/tenants/tenant-1/media/logo')
   assert.equal(site.pages[0].sections.find((section) => section.type === 'gallery').content.items[0].src,
     'https://media.test/tenants/tenant-1/media/gallery')

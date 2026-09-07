@@ -5,38 +5,39 @@ import { Button, Dialog, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { addSection } from '../../lib/site'
 import type { SectionType, SiteDefinition } from '@bakerrang/site-schema'
-import { sectionDefinitions, sectionTypes, homeSections } from './sectionDefinitions'
+import { sectionDefinitions, sectionTypes } from './sectionDefinitions'
 
 const groups = ['Core', 'Content', 'Media', 'Trust', 'Conversion', 'Business'] as const
 
-export function AddSectionDialog ({ onAdded, onClose, onRefresh, open, site, tenantId }: {
+export function AddSectionDialog ({ onAdded, onClose, onRefresh, open, pageId, site, tenantId }: {
   onAdded: (site: SiteDefinition, sectionId: string) => void
   onClose: () => void
   onRefresh: () => Promise<SiteDefinition>
   open: boolean
+  pageId: string
   site: SiteDefinition
   tenantId: string
 }) {
   const [pending, setPending] = useState<SectionType | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const sections = homeSections(site)
+  const sections = site.pages.find((page) => page.id === pageId)?.sections ?? []
   const add = async (type: SectionType) => {
     if (pending) return
     setPending(type); setError(null)
     try {
-      const result = await addSection(tenantId, type)
+      const result = await addSection(tenantId, pageId, type)
       onAdded(result.site, result.sectionId)
       onClose()
     } catch (caught) {
       if (caught instanceof ApiError && (caught.status === 400 || caught.status === 409)) {
         try { await onRefresh() } catch {}
-        setError(caught.message || 'The homepage changed. Review the current sections and try again.')
+        setError(caught.message || 'The page changed. Review the current sections and try again.')
       } else setError('Unable to add this section. Please try again.')
     } finally { setPending(null) }
   }
-  return <Dialog description="Add a section to the homepage. The new section opens in its exact editor after it is created." onClose={onClose} open={open} title="Add homepage section">
+  return <Dialog description="Add a section to this page. The new section opens in its exact editor after it is created." onClose={onClose} open={open} title="Add section">
     <div className="space-y-5">
-      {groups.map((group) => <section key={group}><h3 className="text-sm font-semibold text-fg">{group}</h3><div className="mt-2 space-y-3">{sectionTypes.filter((type) => sectionDefinitions[type].group === group).map((type) => {
+      {groups.map((group) => <section key={group}><h3 className="text-sm font-semibold text-fg">{group}</h3><div className="mt-2 space-y-3">{sectionTypes.filter((type) => sectionDefinitions[type].group === group && !(sectionDefinitions[type].homeOnly && pageId !== 'home')).map((type) => {
         const definition = sectionDefinitions[type]
         const exists = sections.some((section) => section.type === type)
         const blocked = definition.singleton && exists

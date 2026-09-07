@@ -106,6 +106,7 @@ export interface BusinessHoursUpdateInput {
     heading?: string
     intro?: string
   }
+  preserveSections?: boolean
 }
 
 export interface SocialLinksUpdateInput {
@@ -120,6 +121,10 @@ export interface SitePreviewToken {
   token: string
   expiresAt: number
 }
+
+export interface PageInput { title: string, slug: string }
+export interface UpdatePageInput { title?: string, slug?: string }
+export interface CreatePageResponse { site: SiteDefinition, pageId: string }
 
 export type SiteDomainStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'ACTIVE' | 'DISABLED'
 
@@ -175,11 +180,8 @@ export const updateSiteTheme = (tenantId: string, input: SiteTheme) =>
 export const updateBusinessProfile = (tenantId: string, input: BusinessProfileInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/profile`, input)
 
-export const updateBusinessHours = (tenantId: string, input: BusinessHoursUpdateInput, sectionId?: string) =>
-  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/business-hours`, {
-    ...input,
-    ...(sectionId ? { sectionId } : {})
-  })
+export const updateBusinessHours = (tenantId: string, input: BusinessHoursUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/business-hours`, input)
 
 export const updateSocialLinks = (tenantId: string, input: SocialLinksUpdateInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/social-links`, input)
@@ -193,54 +195,29 @@ export const publishSite = (tenantId: string) =>
 export const unpublishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/unpublish`)
 
-const sectionPath = (tenantId: string, sectionId: string) =>
-  `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/${encodeURIComponent(sectionId)}`
+const pagePath = (tenantId: string, pageId: string) =>
+  `/tenants/${encodeURIComponent(tenantId)}/site/pages/${encodeURIComponent(pageId)}`
+const sectionPath = (tenantId: string, pageId: string, sectionId: string) =>
+  `${pagePath(tenantId, pageId)}/sections/${encodeURIComponent(sectionId)}`
 
-const saveSectionContent = async <T>(tenantId: string, sectionId: string | undefined, type: SectionType, input: T) => {
-  if (!sectionId) throw new Error(`Missing ${type} section id`)
-  return apiSend<SiteDefinition>('PUT', sectionPath(tenantId, sectionId), input)
-}
+export const createPage = (tenantId: string, input: PageInput) =>
+  apiSend<CreatePageResponse>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/pages`, input)
+export const updatePage = (tenantId: string, pageId: string, input: UpdatePageInput) =>
+  apiSend<SiteDefinition>('PATCH', pagePath(tenantId, pageId), input)
+export const movePage = (tenantId: string, pageId: string, direction: 'up' | 'down') =>
+  apiSend<SiteDefinition>('POST', `${pagePath(tenantId, pageId)}/move`, { direction })
+export const deletePage = (tenantId: string, pageId: string) =>
+  apiSend<SiteDefinition>('DELETE', pagePath(tenantId, pageId))
 
-export const updateHomeHero = (tenantId: string, sectionId: string, input: HeroInput) =>
-  saveSectionContent(tenantId, sectionId, 'hero', input)
-
-export const upsertHomeServices = (tenantId: string, sectionId: string | undefined, input: ServicesInput) =>
-  saveSectionContent(tenantId, sectionId, 'services', input)
-
-export const upsertHomeAbout = (tenantId: string, sectionId: string | undefined, input: AboutInput) =>
-  saveSectionContent(tenantId, sectionId, 'about', input)
-
-export const upsertHomeContact = (tenantId: string, sectionId: string | undefined, input: ContactInput) =>
-  saveSectionContent(tenantId, sectionId, 'contact', input)
-
-export const upsertHomeGallery = (tenantId: string, sectionId: string | undefined, input: GalleryInput) =>
-  saveSectionContent(tenantId, sectionId, 'gallery', input)
-
-export const upsertHomeTestimonials = (tenantId: string, sectionId: string | undefined, input: TestimonialsInput) =>
-  saveSectionContent(tenantId, sectionId, 'testimonials', input)
-
-export const upsertHomeFaq = (tenantId: string, sectionId: string | undefined, input: FaqInput) =>
-  saveSectionContent(tenantId, sectionId, 'faq', input)
-
-export const upsertHomeProcess = (tenantId: string, sectionId: string, input: ProcessInput) => saveSectionContent(tenantId, sectionId, 'process', input)
-export const upsertHomeStats = (tenantId: string, sectionId: string, input: StatsInput) => saveSectionContent(tenantId, sectionId, 'stats', input)
-export const upsertHomeCta = (tenantId: string, sectionId: string, input: CtaInput) => saveSectionContent(tenantId, sectionId, 'cta', input)
-export const upsertHomeLogos = (tenantId: string, sectionId: string, input: LogosInput) => saveSectionContent(tenantId, sectionId, 'logos', input)
-
-export const removeSection = (tenantId: string, sectionId: string) =>
-  apiSend<SiteDefinition>('DELETE', sectionPath(tenantId, sectionId))
-
-export const moveSection = (tenantId: string, sectionId: string, direction: 'up' | 'down') =>
-  apiSend<SiteDefinition>('POST', `${sectionPath(tenantId, sectionId)}/move`, { direction })
-
-export const addSection = (tenantId: string, type: SectionType, afterSectionId?: string) =>
-  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections`, { type, ...(afterSectionId ? { afterSectionId } : {}) })
-
-export const duplicateSection = (tenantId: string, sectionId: string) =>
-  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `${sectionPath(tenantId, sectionId)}/duplicate`)
-
-export const setSectionVisibility = (tenantId: string, sectionId: string, hidden: boolean) =>
-  apiSend<SiteDefinition>('PATCH', `${sectionPath(tenantId, sectionId)}/visibility`, { hidden })
-
-export const updateSectionContent = <T>(tenantId: string, sectionId: string, input: T) =>
-  apiSend<SiteDefinition>('PUT', sectionPath(tenantId, sectionId), input)
+export const removeSection = (tenantId: string, pageId: string, sectionId: string) =>
+  apiSend<SiteDefinition>('DELETE', sectionPath(tenantId, pageId, sectionId))
+export const moveSection = (tenantId: string, pageId: string, sectionId: string, direction: 'up' | 'down') =>
+  apiSend<SiteDefinition>('POST', `${sectionPath(tenantId, pageId, sectionId)}/move`, { direction })
+export const addSection = (tenantId: string, pageId: string, type: SectionType, afterSectionId?: string) =>
+  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `${pagePath(tenantId, pageId)}/sections`, { type, ...(afterSectionId ? { afterSectionId } : {}) })
+export const duplicateSection = (tenantId: string, pageId: string, sectionId: string) =>
+  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `${sectionPath(tenantId, pageId, sectionId)}/duplicate`)
+export const setSectionVisibility = (tenantId: string, pageId: string, sectionId: string, hidden: boolean) =>
+  apiSend<SiteDefinition>('PATCH', `${sectionPath(tenantId, pageId, sectionId)}/visibility`, { hidden })
+export const updateSectionContent = <T>(tenantId: string, pageId: string, sectionId: string, input: T) =>
+  apiSend<SiteDefinition>('PUT', sectionPath(tenantId, pageId, sectionId), input)

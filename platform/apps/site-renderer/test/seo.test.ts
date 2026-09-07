@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { SiteDefinition } from '@bakerrang/site-schema'
 import { DEFAULT_SITE_THEME } from '../../../packages/site-components/src/theme.ts'
-import { contactMetadata, homeMetadata, localBusinessData, serializeJsonLd } from '../lib/seo.ts'
+import { homeMetadata, localBusinessData, pageMetadata, serializeJsonLd } from '../lib/seo.ts'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSharedPublicOrigin, resolveSiteBaseUrl } from '../lib/siteUrl.ts'
 
 const site = (businessProfile: SiteDefinition['businessProfile'] = undefined, status: SiteDefinition['status'] = 'PUBLISHED'): SiteDefinition => ({
@@ -106,19 +106,19 @@ test('preview and invalid-origin metadata are noindex with no inferred presentat
   assert.equal(invalid.openGraph?.url, undefined)
 })
 
-test('Contact metadata remains noindex/follow and uses the resolved tenant base', () => {
-  const metadata = contactMetadata(site(), 'abc', indexedEnv)
-  assert.equal(metadata.title, 'Contact | Acme & Sons')
-  assert.deepEqual(metadata.robots, { index: false, follow: true })
+test('generic page metadata uses the page title and canonical page slug', () => {
+  const definition = site()
+  const page = { id: 'page-1', slug: 'services', title: 'Services', sections: [] }
+  definition.pages.push(page)
+  const metadata = pageMetadata(definition, page, 'abc', indexedEnv)
+  assert.equal(metadata.title, 'Services | Acme & Sons')
+  assert.deepEqual(metadata.robots, { index: true, follow: true })
   assert.deepEqual(metadata.alternates, {
-    canonical: 'https://sites.example.com/site/abc/contact'
+    canonical: 'https://sites.example.com/site/abc/services'
   })
-  assert.deepEqual(contactMetadata(site(undefined, 'DRAFT'), 'abc', indexedEnv).robots, {
+  assert.deepEqual(pageMetadata(site(undefined, 'DRAFT'), page, 'abc', indexedEnv).robots, {
     index: false, follow: false
   })
-  assert.deepEqual(contactMetadata(site(), 'abc', {
-    SITE_PUBLIC_ORIGIN: 'invalid', SITE_PUBLIC_INDEXING_ENABLED: 'true'
-  }).robots, { index: false, follow: false })
 })
 
 test('LocalBusiness requires an explicit operational fact and omits empty fields', () => {
@@ -151,18 +151,18 @@ test('LocalBusiness requires an explicit operational fact and omits empty fields
   assert.equal(data?.image, 'https://media.example.com/social.png')
 })
 
-test('home and contact metadata include icons only when faviconSrc is present', () => {
+test('home and generic page metadata include icons only when faviconSrc is present', () => {
   const withIcon = site({ phone: '+1 303 555 0123' })
   withIcon.branding.faviconSrc = 'https://media.example.com/favicon.png'
   assert.deepEqual(homeMetadata(withIcon, 'abc', indexedEnv).icons, {
     icon: 'https://media.example.com/favicon.png'
   })
-  assert.deepEqual(contactMetadata(withIcon, 'abc', indexedEnv).icons, {
+  assert.deepEqual(pageMetadata(withIcon, { id: 'page-1', slug: 'services', title: 'Services', sections: [] }, 'abc', indexedEnv).icons, {
     icon: 'https://media.example.com/favicon.png'
   })
   const without = site()
   assert.equal(Object.hasOwn(homeMetadata(without, 'abc', indexedEnv), 'icons'), false)
-  assert.equal(Object.hasOwn(contactMetadata(without, 'abc', indexedEnv), 'icons'), false)
+  assert.equal(Object.hasOwn(pageMetadata(without, { id: 'page-1', slug: 'services', title: 'Services', sections: [] }, 'abc', indexedEnv), 'icons'), false)
 })
 
 test('JSON-LD serialization escapes script-breaking characters without losing quotes', () => {

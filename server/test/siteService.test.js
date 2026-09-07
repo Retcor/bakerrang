@@ -43,11 +43,13 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     'branding',
     'createdAt',
     'createdByUserId',
+    'pageOrder',
     'status',
     'theme',
     'updatedAt'
   ])
   assert.equal(config.status, 'DRAFT')
+  assert.deepEqual(config.pageOrder, ['home'])
   assert.equal(config.createdByUserId, 'platform-admin')
   assert.equal(config.createdAt, config.updatedAt)
   assert.deepEqual(config.branding, {

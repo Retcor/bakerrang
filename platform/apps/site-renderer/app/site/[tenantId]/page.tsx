@@ -37,6 +37,7 @@ export default async function TenantSitePage ({ params }: TenantSitePageProps) {
   return (
     <PublicHome
       site={site}
+      tenantId={tenantId}
       siteBaseUrl={resolveSiteBaseUrl(tenantId)}
       sitePath={`/site/${encodeURIComponent(tenantId)}`}
     />

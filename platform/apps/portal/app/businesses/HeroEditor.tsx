@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { findHomePage, isHeroSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isHeroSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { updateHomeHero } from '../../lib/site'
+import { updateSectionContent } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
 export interface HeroEditorProps {
+  pageId: string
   sectionId: string
   tenantId: string
   site: SiteDefinition
@@ -16,9 +17,9 @@ export interface HeroEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function HeroEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: HeroEditorProps) {
-  const home = findHomePage(site)
-  const selectedHero = home?.sections.find((section) => section.id === sectionId)
+export function HeroEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: HeroEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedHero = page?.sections.find((section) => section.id === sectionId)
   const hero = selectedHero && isHeroSection(selectedHero) ? selectedHero : undefined
   const [title, setTitle] = useState(hero?.content.title ?? '')
   const [subtitle, setSubtitle] = useState(hero?.content.subtitle ?? '')
@@ -50,7 +51,7 @@ export function HeroEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange
     setSaving(true)
     setError(null)
     try {
-      onSaved(await updateHomeHero(tenantId, hero.id, { title: trimmedTitle, subtitle }))
+      onSaved(await updateSectionContent(tenantId, pageId, hero.id, { title: trimmedTitle, subtitle }))
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
       else setError('Unable to save the Hero. Please try again.')

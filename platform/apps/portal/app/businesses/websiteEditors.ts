@@ -1,4 +1,4 @@
-export const websiteEditorGroups = ['Site setup', 'Homepage', 'Advanced'] as const
+export const websiteEditorGroups = ['Site setup', 'Pages', 'Advanced'] as const
 
 export type WebsiteEditorGroup = typeof websiteEditorGroups[number]
 
@@ -8,7 +8,7 @@ export const websiteEditors = [
   { id: 'businessProfile', label: 'Business Profile', group: 'Site setup', description: 'Maintain the business details used across the website.' },
   { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set the weekly schedule used across the website.' },
   { id: 'socialProfiles', label: 'Social Profiles', group: 'Site setup', description: 'Connect the business social profiles.' },
-  { id: 'homepage', label: 'Homepage', group: 'Homepage', description: 'Choose, order, edit, and show or hide homepage sections.' },
+  { id: 'pages', label: 'Pages', group: 'Pages', description: 'Create, organize, and edit the site’s pages.' },
   { id: 'customCss', label: 'Custom CSS', group: 'Advanced', description: 'Add scoped styling overrides for the website.' }
 ] as const satisfies ReadonlyArray<{
   id: string
@@ -17,13 +17,13 @@ export const websiteEditors = [
   description: string
 }>
 
-export type WebsiteEditorId = typeof websiteEditors[number]['id']
+export type WebsiteEditorId = typeof websiteEditors[number]['id'] | 'page'
 export type WebsitePaneId = WebsiteEditorId | 'overview'
 
 export const overviewEditor = {
   id: 'overview',
   label: 'Overview',
-  description: 'Review publication status and homepage structure.'
+  description: 'Review publication status and the working site structure.'
 } as const
 
 export const websiteEditorById = new Map<WebsiteEditorId, typeof websiteEditors[number]>(
@@ -31,7 +31,7 @@ export const websiteEditorById = new Map<WebsiteEditorId, typeof websiteEditors[
 )
 
 export function parseWebsiteEditor (value: string | null): WebsiteEditorId | null {
-  return value && websiteEditorById.has(value as WebsiteEditorId) ? value as WebsiteEditorId : null
+  return value === 'page' || (value && websiteEditorById.has(value as WebsiteEditorId)) ? value as WebsiteEditorId : null
 }
 
 export function websitePaneMetadata (id: WebsitePaneId) {

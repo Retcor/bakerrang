@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getMedia: vi.fn(),
   uploadMedia: vi.fn(),
-  upsertHomeAbout: vi.fn()
+  updateSectionContent: vi.fn()
 }))
 
 vi.mock('../../../lib/media', () => ({ getMedia: mocks.getMedia, uploadMedia: mocks.uploadMedia }))
-vi.mock('../../../lib/site', () => ({ upsertHomeAbout: mocks.upsertHomeAbout }))
+vi.mock('../../../lib/site', () => ({ updateSectionContent: mocks.updateSectionContent }))
 
 import { AboutEditor } from '../AboutEditor'
 
@@ -50,36 +50,55 @@ describe('About editor', () => {
     vi.clearAllMocks()
     mocks.getMedia.mockResolvedValue({ media: [], hasMore: false })
     mocks.uploadMedia.mockResolvedValue(media)
-    mocks.upsertHomeAbout.mockResolvedValue(site(true))
+    mocks.updateSectionContent.mockResolvedValue(site(true))
   })
 
   it('supports the empty create state and validates required text', async () => {
-    render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" sectionId="about-id" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site()} tenantId="tenant-1" sectionId="about-id" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('')
     expect(screen.getByLabelText('Body')).toHaveValue('')
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Heading must be between 1 and 120 characters.')
-    expect(mocks.upsertHomeAbout).not.toHaveBeenCalled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
     await waitFor(() => expect(mocks.getMedia).toHaveBeenCalledWith('tenant-1'))
   })
 
   it('loads existing values, edits multiline body, saves canonical input, and propagates the result', async () => {
     const onSaved = vi.fn()
-    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site(true)} tenantId="tenant-1" sectionId="about-id" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site(true)} tenantId="tenant-1" sectionId="about-id" />)
     expect(screen.getByLabelText('Eyebrow / label Optional')).toHaveValue('Who we are')
     expect(screen.getByLabelText('Heading')).toHaveValue('Our story')
     expect(screen.getByLabelText('Body')).toHaveValue('First.\n\nSecond.')
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Updated one.\n\nUpdated two.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', 'about-id', {
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-id', {
       eyebrow: 'Who we are', heading: 'Our story', body: 'Updated one.\n\nUpdated two.'
     }))
     expect(onSaved).toHaveBeenCalledWith(site(true))
   })
 
+  it('resolves the exact repeated About instance inside the selected page without a type fallback', async () => {
+    const multiPage = site(true)
+    multiPage.pages.push(
+      { id: 'page-a', slug: 'services', title: 'Services', sections: [
+        { id: 'about-a', type: 'about', hidden: false, content: { heading: 'About A', body: 'A' } },
+        { id: 'about-b', type: 'about', hidden: false, content: { heading: 'About B', body: 'B' } }
+      ] },
+      { id: 'page-b', slug: 'contact', title: 'Contact', sections: [
+        { id: 'about-c', type: 'about', hidden: false, content: { heading: 'About C', body: 'C' } },
+        { id: 'about-d', type: 'about', hidden: false, content: { heading: 'About D', body: 'D' } }
+      ] }
+    )
+    render(<AboutEditor onCancel={() => undefined} onSaved={() => undefined} pageId="page-b" site={multiPage} tenantId="tenant-1" sectionId="about-d" />)
+    expect(screen.getByLabelText('Heading')).toHaveValue('About D')
+    fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'About D saved' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'page-b', 'about-d', expect.objectContaining({ heading: 'About D saved' })))
+  })
+
   it('reuses polished media upload, requires alt text, and saves the selected Media id', async () => {
     const onSaved = vi.fn()
-    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} site={site()} tenantId="tenant-1" sectionId="about-id" />)
+    render(<AboutEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site(true)} tenantId="tenant-1" sectionId="about-id" />)
     fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'Our team' } })
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Meet the people behind the work.' } })
     const file = new File(['image'], 'team.jpg', { type: 'image/jpeg' })
@@ -89,8 +108,8 @@ describe('About editor', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Image alt text is required')
     fireEvent.change(screen.getByLabelText('Image alt text'), { target: { value: 'The bakery team' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', undefined, {
-      heading: 'Our team',
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-id', {
+      eyebrow: 'Who we are', heading: 'Our team',
       body: 'Meet the people behind the work.',
       imageMediaId: 'media-1',
       imageAlt: 'The bakery team'

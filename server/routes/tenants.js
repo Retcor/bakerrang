@@ -135,29 +135,46 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateCustomCss(req.params.tenantId, req.body)
   ))
 
-  router.post('/:tenantId/site/pages/home/sections', platformAdmin, handle(
-    (req) => sites.addSection(req.params.tenantId, 'home', req.body?.type, { afterSectionId: req.body?.afterSectionId }),
+  router.post('/:tenantId/site/pages', platformAdmin, handle(
+    (req) => sites.createPage(req.params.tenantId, req.body),
     201
   ))
 
-  router.post('/:tenantId/site/pages/home/sections/:sectionId/duplicate', platformAdmin, handle(
-    (req) => sites.duplicateSection(req.params.tenantId, 'home', req.params.sectionId)
+  router.patch('/:tenantId/site/pages/:pageId', platformAdmin, handle(
+    (req) => sites.updatePage(req.params.tenantId, req.params.pageId, req.body)
   ))
 
-  router.delete('/:tenantId/site/pages/home/sections/:sectionId', platformAdmin, handle(
-    (req) => sites.removeSection(req.params.tenantId, 'home', req.params.sectionId)
+  router.post('/:tenantId/site/pages/:pageId/move', platformAdmin, handle(
+    (req) => sites.movePage(req.params.tenantId, req.params.pageId, req.body?.direction)
   ))
 
-  router.post('/:tenantId/site/pages/home/sections/:sectionId/move', platformAdmin, handle(
-    (req) => sites.moveSection(req.params.tenantId, 'home', req.params.sectionId, req.body?.direction)
+  router.delete('/:tenantId/site/pages/:pageId', platformAdmin, handle(
+    (req) => sites.deletePage(req.params.tenantId, req.params.pageId)
   ))
 
-  router.patch('/:tenantId/site/pages/home/sections/:sectionId/visibility', platformAdmin, handle(
-    (req) => sites.setSectionVisibility(req.params.tenantId, 'home', req.params.sectionId, req.body?.hidden)
+  router.post('/:tenantId/site/pages/:pageId/sections', platformAdmin, handle(
+    (req) => sites.addSection(req.params.tenantId, req.params.pageId, req.body?.type, { afterSectionId: req.body?.afterSectionId }),
+    201
   ))
 
-  router.put('/:tenantId/site/pages/home/sections/:sectionId', platformAdmin, handle(
-    (req) => sites.updateSectionContent(req.params.tenantId, 'home', req.params.sectionId, req.body)
+  router.post('/:tenantId/site/pages/:pageId/sections/:sectionId/duplicate', platformAdmin, handle(
+    (req) => sites.duplicateSection(req.params.tenantId, req.params.pageId, req.params.sectionId)
+  ))
+
+  router.delete('/:tenantId/site/pages/:pageId/sections/:sectionId', platformAdmin, handle(
+    (req) => sites.removeSection(req.params.tenantId, req.params.pageId, req.params.sectionId)
+  ))
+
+  router.post('/:tenantId/site/pages/:pageId/sections/:sectionId/move', platformAdmin, handle(
+    (req) => sites.moveSection(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.direction)
+  ))
+
+  router.patch('/:tenantId/site/pages/:pageId/sections/:sectionId/visibility', platformAdmin, handle(
+    (req) => sites.setSectionVisibility(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.hidden)
+  ))
+
+  router.put('/:tenantId/site/pages/:pageId/sections/:sectionId', platformAdmin, handle(
+    (req) => sites.updateSectionContent(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body)
   ))
 
   router.get('/:tenantId/media', platformAdmin, noStore, handle(

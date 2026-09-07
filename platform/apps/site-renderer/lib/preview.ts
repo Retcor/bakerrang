@@ -11,8 +11,8 @@ export function previewHostAllowed (
   return requestMatchesSharedOrigin(requestHost, resolveSharedPublicOrigin(env))
 }
 
-export function previewPath (tenantId: string, token: string, contact = false): string {
-  const base = `/preview/${encodeURIComponent(tenantId)}${contact ? '/contact' : ''}`
+export function previewPath (tenantId: string, token: string, pageId = 'home'): string {
+  const base = pageId === 'home' ? `/preview/${encodeURIComponent(tenantId)}` : `/preview/${encodeURIComponent(tenantId)}/page/${encodeURIComponent(pageId)}`
   return `${base}?${new URLSearchParams({ token }).toString()}`
 }
 

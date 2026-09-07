@@ -30,6 +30,7 @@ export default async function PreviewPage ({ params, searchParams }: PreviewPage
       <PublicHome
         previewToken={token}
         site={site}
+        tenantId={tenantId}
         siteBaseUrl={null}
         sitePath={`/preview/${encodeURIComponent(tenantId)}`}
       />

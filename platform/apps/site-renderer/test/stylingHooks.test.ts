@@ -2,27 +2,26 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { contactHref } from '../../../packages/site-components/src/contactHref.ts'
 
 const source = async (relative: string) => readFile(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
 
 test('the public shell exposes the documented stable root and landmark hooks', async () => {
-  const [shell, header, footer, home, contact] = await Promise.all([
+  const [shell, header, footer, page] = await Promise.all([
     source('../../../packages/site-components/src/SiteShell.tsx'),
     source('../../../packages/site-components/src/SiteHeader.tsx'),
     source('../../../packages/site-components/src/SiteFooter.tsx'),
-    source('../components/PublicHome.tsx'),
-    source('../components/PublicContact.tsx')
+    source('../components/PublicPage.tsx')
   ])
 
   assert.match(shell, /data-br-\* attributes are stable public Custom CSS hooks\. Do not rename\/remove casually\./)
-  assert.match(shell, /data-br-site=""/)
+  assert.match(shell, /data-br-page=\{activePage\.id\} data-br-site=""/)
   assert.match(header, /data-br-role="header"/)
   assert.match(header, /data-br-role="nav"/)
   assert.match(footer, /data-br-role="footer"/)
   assert.match(footer, /data-br-role="nav"/)
   assert.match(footer, /data-br-role="social"/)
-  assert.match(home, /<main data-br-role="main">/)
-  assert.match(contact, /<main[^>]+data-br-role="main"/)
+  assert.match(page, /<main data-br-role="main">/)
 })
 
 test('every Home section exposes stable type and opaque instance hooks', async () => {
@@ -72,4 +71,14 @@ test('public lead fields inherit the Theme-derived surface, border, and foregrou
   assert.match(themeCss, /--color-fg: var\(--site-fg\);/)
   assert.match(leadForm, /border border-border bg-surface/)
   assert.match(leadForm, /text-fg/)
+})
+
+test('Contact retains safe email, phone, and URL actions while leadForm renders inline', async () => {
+  assert.equal(contactHref({ type: 'email', value: 'hello@example.com' }), 'mailto:hello@example.com')
+  assert.equal(contactHref({ type: 'phone', value: '+1 (303) 555-0123' }), 'tel:+13035550123')
+  assert.equal(contactHref({ type: 'url', value: 'https://example.com/contact' }), 'https://example.com/contact')
+  assert.equal(contactHref({ type: 'leadForm' }), null)
+  const contact = await source('../../../packages/site-components/src/Contact.tsx')
+  assert.match(contact, /content\?\.action\?\.type === 'leadForm' && leadForm/)
+  assert.match(contact, /content\?\.action\?\.type === 'leadForm' \? null : contactHref/)
 })

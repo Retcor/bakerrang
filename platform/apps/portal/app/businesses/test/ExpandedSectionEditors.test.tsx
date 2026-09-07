@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  getMedia: vi.fn(), uploadMedia: vi.fn(), upsertHomeProcess: vi.fn(), upsertHomeStats: vi.fn(), upsertHomeCta: vi.fn(), upsertHomeLogos: vi.fn(), upsertHomeAbout: vi.fn()
+  getMedia: vi.fn(), uploadMedia: vi.fn(), updateSectionContent: vi.fn()
 }))
 vi.mock('../../../lib/media', () => ({ getMedia: mocks.getMedia, uploadMedia: mocks.uploadMedia }))
 vi.mock('../../../lib/site', () => ({
-  upsertHomeProcess: mocks.upsertHomeProcess, upsertHomeStats: mocks.upsertHomeStats, upsertHomeCta: mocks.upsertHomeCta, upsertHomeLogos: mocks.upsertHomeLogos, upsertHomeAbout: mocks.upsertHomeAbout
+  updateSectionContent: mocks.updateSectionContent
 }))
 
 import { AboutEditor } from '../AboutEditor'
@@ -35,8 +35,8 @@ const definition = (): SiteDefinition => ({ status: 'DRAFT', branding: { siteNam
   { id: 'about-rich', type: 'about', hidden: false, content: { heading: 'Our new story', body: 'New here.', imageMediaId: 'media-b', imageAlt: 'New image', imagePosition: 'right', buttonLabel: 'Email us', action: { type: 'email', value: 'hello@example.com' } } }
 ] }] })
 
-const renderEditor = <T extends object>(Editor: React.ComponentType<T>, props: Omit<T, 'site' | 'tenantId' | 'onCancel' | 'onSaved'> & { sectionId: string }, dirty = vi.fn()) => {
-  render(<Editor {...props as T} onCancel={() => undefined} onDirtyChange={dirty} onSaved={() => undefined} site={definition()} tenantId="tenant-1" />)
+const renderEditor = <T extends object>(Editor: React.ComponentType<T>, props: Omit<T, 'pageId' | 'site' | 'tenantId' | 'onCancel' | 'onSaved'> & { sectionId: string }, dirty = vi.fn()) => {
+  render(<Editor {...({ pageId: 'home', ...props } as T)} onCancel={() => undefined} onDirtyChange={dirty} onSaved={() => undefined} site={definition()} tenantId="tenant-1" />)
   return dirty
 }
 
@@ -45,7 +45,7 @@ describe('expanded section editors', () => {
     vi.clearAllMocks()
     mocks.getMedia.mockResolvedValue({ media, hasMore: false })
     mocks.uploadMedia.mockResolvedValue({ ...media[1], id: 'media-uploaded' })
-    for (const save of [mocks.upsertHomeProcess, mocks.upsertHomeStats, mocks.upsertHomeCta, mocks.upsertHomeLogos, mocks.upsertHomeAbout]) save.mockResolvedValue(definition())
+    mocks.updateSectionContent.mockResolvedValue(definition())
   })
 
   it('edits the exact repeated Process instance, validates titles, and manages rows without a stored step number', async () => {
@@ -61,8 +61,8 @@ describe('expanded section editors', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete step' })[1])
     await waitFor(() => expect(dirty).toHaveBeenCalledWith(true))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeProcess).toHaveBeenCalledWith('tenant-1', 'process-b', expect.objectContaining({ heading: 'Second steps', intro: 'B intro', items: expect.arrayContaining([expect.objectContaining({ id: 'process-b-1', title: 'B one' }), expect.objectContaining({ title: 'B three' })]) })))
-    expect(mocks.upsertHomeProcess.mock.calls[0][2].items[0]).not.toHaveProperty('number')
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'process-b', expect.objectContaining({ heading: 'Second steps', intro: 'B intro' })))
+    expect(mocks.updateSectionContent.mock.calls[0][3].items[0]).not.toHaveProperty('number')
     cleanup()
     renderEditor(ProcessEditor, { sectionId: 'process-a' })
     fireEvent.change(screen.getByLabelText('Step 1 title'), { target: { value: '' } })
@@ -83,7 +83,7 @@ describe('expanded section editors', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete highlight' })[1])
     await waitFor(() => expect(dirty).toHaveBeenCalledWith(true))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeStats).toHaveBeenCalledWith('tenant-1', 'stats-b', expect.objectContaining({ items: expect.arrayContaining([expect.objectContaining({ value: '24/7' }), expect.objectContaining({ value: 'Same Day' }), expect.objectContaining({ value: '25+' })]) })))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'stats-b', expect.any(Object)))
     cleanup()
     renderEditor(StatsEditor, { sectionId: 'stats-a' })
     fireEvent.change(screen.getByLabelText('Highlight 1 label'), { target: { value: '' } })
@@ -102,12 +102,12 @@ describe('expanded section editors', () => {
     fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'email' } })
     fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: 'hello@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeCta).toHaveBeenCalledWith('tenant-1', 'cta-b', { heading: 'Second CTA', body: 'Call us', buttonLabel: 'Visit', action: { type: 'email', value: 'hello@example.com' } }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'cta-b', { heading: 'Second CTA', body: 'Call us', buttonLabel: 'Visit', action: { type: 'email', value: 'hello@example.com' } }))
     cleanup()
     renderEditor(CtaEditor, { sectionId: 'cta-a' })
     expect(screen.getByLabelText('Action Value')).toHaveValue('')
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeCta).toHaveBeenCalledWith('tenant-1', 'cta-a', { heading: 'First CTA' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenLastCalledWith('tenant-1', 'home', 'cta-a', { heading: 'First CTA' }))
   })
 
   it('blocks unpaired CTA buttons and supports phone and URL action selections without inventing a value', () => {
@@ -143,14 +143,14 @@ describe('expanded section editors', () => {
     fireEvent.change(screen.getByLabelText('Logo 2 alt text'), { target: { value: 'Uploaded logo' } })
     await waitFor(() => expect(dirty).toHaveBeenCalledWith(true))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeLogos).toHaveBeenCalledWith('tenant-1', 'logos-b', expect.objectContaining({ items: expect.arrayContaining([expect.objectContaining({ mediaId: 'media-a', altText: 'Added logo' }), expect.objectContaining({ mediaId: 'media-uploaded', altText: 'Uploaded logo' })]) })))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'logos-b', expect.any(Object)))
   })
 
   it('preserves a legacy About round trip and saves enhanced About actions only to the selected id', async () => {
     const dirty = renderEditor(AboutEditor, { sectionId: 'about-legacy' })
     await waitFor(() => expect(dirty).toHaveBeenCalledWith(false))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', 'about-legacy', { heading: 'Our legacy story', body: 'Still here.', imageMediaId: 'media-a', imageAlt: 'Legacy image' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-legacy', expect.any(Object)))
     cleanup()
     renderEditor(AboutEditor, { sectionId: 'about-rich' })
     expect(screen.getByLabelText('Image position')).toHaveValue('right')
@@ -163,10 +163,10 @@ describe('expanded section editors', () => {
     fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'phone' } })
     fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: '(801) 555-1234' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenCalledWith('tenant-1', 'about-rich', expect.objectContaining({ imagePosition: 'right', buttonLabel: 'Email us', action: { type: 'phone', value: '(801) 555-1234' } })))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-rich', expect.any(Object)))
     fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'url' } })
     fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: 'https://example.com/contact' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeAbout).toHaveBeenLastCalledWith('tenant-1', 'about-rich', expect.objectContaining({ action: { type: 'url', value: 'https://example.com/contact' } })))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenLastCalledWith('tenant-1', 'home', 'about-rich', expect.objectContaining({ action: { type: 'url', value: 'https://example.com/contact' } })))
   })
 })

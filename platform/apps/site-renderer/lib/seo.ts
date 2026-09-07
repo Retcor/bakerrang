@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import type { BusinessProfile, SiteDefinition } from '@bakerrang/site-schema'
+import type { BusinessProfile, SiteDefinition, SitePage } from '@bakerrang/site-schema'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSiteBaseUrl, type PublicSiteEnvironment } from './siteUrl.ts'
 
 const schemaDays = {
@@ -72,17 +72,32 @@ export function homeMetadata (
   }
 }
 
-export function contactMetadata (
-  site: SiteDefinition,
-  tenantId: string,
-  env: PublicSiteEnvironment = process.env,
-  canonicalHost?: string | null
-): Metadata {
+export function pageMetadata (site: SiteDefinition, page: SitePage, tenantId: string, env: PublicSiteEnvironment = process.env, canonicalHost?: string | null): Metadata {
   const baseUrl = resolveSiteBaseUrl(tenantId, env, canonicalHost)
+  const canonical = baseUrl ? (page.id === 'home' ? baseUrl : appendSitePath(baseUrl, page.slug)) : undefined
+  const indexable = site.status !== 'DRAFT' && baseUrl !== null && (canonicalHost ? indexingEnvironmentEnabled(env) : publicIndexingEnabled(env))
+  const title = page.id === 'home' ? site.branding.siteName : `${page.title} | ${site.branding.siteName}`
+  const description = site.businessProfile?.description
+  const image = socialImage(site.businessProfile)
   return {
-    title: `Contact | ${site.branding.siteName}`,
-    robots: { index: false, follow: site.status !== 'DRAFT' && baseUrl !== null },
-    ...(baseUrl ? { alternates: { canonical: appendSitePath(baseUrl, 'contact') } } : {}),
+    title,
+    ...(description ? { description } : {}),
+    robots: { index: indexable, follow: indexable },
+    ...(canonical ? { alternates: { canonical } } : {}),
+    openGraph: {
+      title,
+      ...(description ? { description } : {}),
+      ...(canonical ? { url: canonical } : {}),
+      siteName: site.branding.siteName,
+      type: 'website',
+      ...(image ? { images: [image] } : {})
+    },
+    twitter: {
+      title,
+      ...(description ? { description } : {}),
+      card: image ? 'summary_large_image' : 'summary',
+      ...(image ? { images: [image.url] } : {})
+    },
     ...brandingIcons(site)
   }
 }

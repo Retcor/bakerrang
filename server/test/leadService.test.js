@@ -193,6 +193,27 @@ test('createPublicLead fails closed for every ineligible published state', async
   assert.equal(leadPaths().length, 1)
 })
 
+test('a published lead-form Contact on any normal page authorizes the existing website lead endpoint', async () => {
+  seedPublished({ type: 'email', value: 'hello@example.com' })
+  const published = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  published.siteDefinition.pages.push({
+    id: 'page-contact',
+    slug: 'contact',
+    title: 'Contact',
+    sections: [{
+      id: 'contact-page-section',
+      type: 'contact',
+      hidden: false,
+      content: { title: 'Contact us', buttonLabel: 'Send', action: { type: 'leadForm' } }
+    }]
+  })
+  fakeDb.seed('tenants/tenant-1/site/config/published/current', published)
+  await createPublicLead('tenant-1', {
+    name: 'Visitor', email: 'visitor@example.com', message: 'From the normal contact page'
+  })
+  assert.equal(leadPaths().length, 1)
+})
+
 test('lead write authority follows only the published snapshot through lifecycle changes', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Business' })
   await initializeSite('tenant-1', 'admin')

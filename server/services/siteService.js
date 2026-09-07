@@ -26,6 +26,10 @@ import {
 
 const TENANTS = 'tenants'
 const SECTION_TYPE_SET = new Set(SECTION_TYPES)
+export const MAX_PAGES = 25
+// A deliberately conservative buffer below Firestore's 1 MiB document limit.
+export const MAX_PUBLISHED_SNAPSHOT_BYTES = 900 * 1024
+export const RESERVED_PAGE_SLUGS = new Set(['preview', 'site'])
 
 let firestore = db
 
@@ -44,7 +48,8 @@ const refsFor = (tenantId) => {
   const config = tenant.collection('site').doc('config')
   const home = config.collection('pages').doc('home')
   const published = config.collection('published').doc('current')
-  return { tenant, config, home, published }
+  const page = (pageId) => config.collection('pages').doc(pageId)
+  return { tenant, config, home, page, published }
 }
 
 const siteSectionResponse = (section) => {
@@ -100,7 +105,23 @@ const siteSectionResponse = (section) => {
 
 const validTimestamp = (value) => Number.isSafeInteger(value) && value >= 0
 
-const publicationState = (config, home) => {
+const pageOrderFrom = (config, status = 500) => {
+  if (!Object.prototype.hasOwnProperty.call(config || {}, 'pageOrder')) return ['home']
+  const order = config.pageOrder
+  if (!Array.isArray(order) || order.length === 0 || order.length > MAX_PAGES || order[0] !== 'home' || new Set(order).size !== order.length || order.some((id) => typeof id !== 'string' || !id)) {
+    throw httpError(status, 'Site page order is invalid')
+  }
+  return order
+}
+
+const pageResponse = (page) => ({
+  id: page.id,
+  slug: page.slug,
+  title: page.title,
+  sections: Array.isArray(page.sections) ? page.sections.map(siteSectionResponse) : page.sections
+})
+
+const publicationState = (config, pages) => {
   const lastPublishedAt = validTimestamp(config.lastPublishedAt) ? config.lastPublishedAt : undefined
   if (config.status !== 'PUBLISHED' || lastPublishedAt === undefined) {
     return {
@@ -108,24 +129,29 @@ const publicationState = (config, home) => {
       ...(lastPublishedAt !== undefined ? { lastPublishedAt } : {})
     }
   }
-  const workingTimestamps = [config.updatedAt, home.updatedAt].filter(validTimestamp)
+  const workingTimestamps = [config.updatedAt, ...pages.map((page) => page.updatedAt)].filter(validTimestamp)
   return {
     hasUnpublishedChanges: workingTimestamps.some((updatedAt) => updatedAt > lastPublishedAt),
     lastPublishedAt
   }
 }
 
-const toSiteDefinition = (config, home) => {
-  validateSectionComposition(home?.sections)
+const toSiteDefinition = (config, pages) => {
+  const pageOrder = pageOrderFrom(config)
+  if (!Array.isArray(pages) || pages.length !== pageOrder.length) throw httpError(500, 'Site pages are invalid')
+  const byId = new Map(pages.map((page) => [page?.id, page]))
+  const orderedPages = pageOrder.map((id) => {
+    const page = byId.get(id)
+    if (!page || page.id !== id) throw httpError(500, pageOrder.length === 1 && pageOrder[0] === 'home' ? 'Site home page missing' : 'Site page is missing')
+    if (id === 'home' && (page.slug !== '/' || page.title !== 'Home')) throw httpError(500, 'Site home page is invalid')
+    if (id !== 'home') validatePageRecord(page, 500)
+    validateSectionComposition(page.sections, id)
+    return page
+  })
   const definition = {
     status: config.status,
-    ...publicationState(config, home),
-    pages: [{
-      id: home.id,
-      slug: home.slug,
-      title: home.title,
-      sections: Array.isArray(home.sections) ? home.sections.map(siteSectionResponse) : home.sections
-    }]
+    ...publicationState(config, orderedPages),
+    pages: orderedPages.map(pageResponse)
   }
   const businessProfile = businessProfileResponse(config.businessProfile)
   return {
@@ -138,8 +164,13 @@ const toSiteDefinition = (config, home) => {
 }
 
 const normalizePublishedSiteDefinition = (definition) => {
-  const home = Array.isArray(definition?.pages) ? definition.pages.find((page) => page?.slug === '/') : null
-  validateSectionComposition(home?.sections)
+  const pages = Array.isArray(definition?.pages) ? definition.pages : []
+  const home = pages.find((page) => page?.id === 'home')
+  if (!home || home.slug !== '/' || home.title !== 'Home') throw httpError(500, 'Home sections invalid')
+  for (const page of pages) {
+    if (page?.id !== 'home') validatePageRecord(page, 500)
+    validateSectionComposition(page?.sections, page?.id)
+  }
   const businessProfile = businessProfileResponse(definition?.businessProfile)
   const canonical = definition && typeof definition === 'object' ? { ...definition } : {}
   delete canonical.customCss
@@ -652,9 +683,12 @@ const validateSectionContent = (type, content, { allowEmptyGallery = false } = {
   return contentValidators[type](content)
 }
 
-export const validateSectionComposition = (sections, status = 500) => {
-  const invalid = (message = 'Home sections invalid') => { throw httpError(status, message) }
-  if (!Array.isArray(sections) || sections.length === 0) invalid()
+export const validateSectionComposition = (sections, pageId = 'home', status = 500) => {
+  // Preserve the old two-argument internal/testing convention.
+  if (typeof pageId === 'number') { status = pageId; pageId = 'home' }
+  const home = pageId === 'home'
+  const invalid = (message = `${home ? 'Home' : 'Page'} sections invalid`) => { throw httpError(status, message) }
+  if (!Array.isArray(sections) || (home && sections.length === 0)) invalid()
   const ids = new Set()
   const counts = new Map()
   for (const section of sections) {
@@ -680,12 +714,28 @@ export const validateSectionComposition = (sections, status = 500) => {
   for (const type of SINGLETON_SECTION_TYPES) {
     if ((counts.get(type) || 0) > 1) invalid()
   }
-  if ((counts.get('hero') || 0) !== 1 || sections[0]?.type !== 'hero' || sections[0]?.hidden !== false) invalid()
+  if (home) {
+    if ((counts.get('hero') || 0) !== 1 || sections[0]?.type !== 'hero' || sections[0]?.hidden !== false) invalid()
+  } else if ((counts.get('hero') || 0) !== 0) invalid()
   return new Map(sections.map((section) => [section.id, section]))
 }
 
-const requirePageId = (pageId) => {
-  if (pageId !== 'home') throw httpError(400, 'Only the home page is supported')
+export const validatePageSlug = (value) => {
+  if (typeof value !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) || value.length > 60) {
+    throw httpError(400, 'Page slug must be 1 to 60 lowercase letters, numbers, or single hyphens')
+  }
+  if (RESERVED_PAGE_SLUGS.has(value)) throw httpError(400, 'Page slug is reserved')
+  return value
+}
+
+export const slugifyPageTitle = (value) => String(value || '').toLowerCase().trim()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/-+/g, '-').slice(0, 60)
+
+const validatePageRecord = (page, status = 400) => {
+  if (!page || typeof page !== 'object' || Array.isArray(page) || typeof page.id !== 'string' || !page.id || page.id === 'home') throw httpError(status, 'Page is invalid')
+  if (typeof page.title !== 'string' || !page.title.trim() || page.title.trim().length > 120) throw httpError(status, 'Page title is invalid')
+  try { validatePageSlug(page.slug) } catch { throw httpError(status, 'Page slug is invalid') }
+  return { ...page, title: page.title.trim() }
 }
 
 const requireSection = (sections, sectionId) => {
@@ -694,26 +744,44 @@ const requireSection = (sections, sectionId) => {
   return { section: sections[index], index }
 }
 
-const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) => {
-  const { config: configRef, home: homeRef } = refsFor(tenantId)
+const readPageSnapshots = async (transaction, refs, config) => {
+  const order = pageOrderFrom(config)
+  const snapshots = await (transaction ? transaction.getAll(...order.map(refs.page)) : firestore.getAll(...order.map(refs.page)))
+  if (snapshots.some((snapshot) => !snapshot.exists)) throw httpError(500, order.length === 1 && order[0] === 'home' ? 'Site home page missing' : 'Site page is missing')
+  return { order, snapshots }
+}
+
+const pagesFromSnapshots = (order, snapshots) => order.map((id, index) => {
+  const page = snapshots[index].data()
+  if (!page || page.id !== id) {
+    throw httpError(500, order.length === 1 && id === 'home' ? 'Home sections invalid' : 'Site page is invalid')
+  }
+  return page
+})
+
+const readWorkingSite = async (tenantId, transaction) => {
+  const refs = refsFor(tenantId)
+  const configSnapshot = await (transaction ? transaction.get(refs.config) : refs.config.get())
+  if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+  const config = configSnapshot.data()
+  const { order, snapshots } = await readPageSnapshots(transaction, refs, config)
+  return { refs, config, order, snapshots, pages: pagesFromSnapshots(order, snapshots) }
+}
+
+const mutateWorkingPage = async (tenantId, pageId, transformSections, mediaRequirement) => {
+  const { config: configRef } = refsFor(tenantId)
   const now = Date.now()
   let definition
 
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(configRef),
-      transaction.get(homeRef)
-    ])
-
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-    const config = configSnapshot.data()
-    const home = homeSnapshot.data()
-    const sections = home.sections
-    validateSectionComposition(sections)
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    if (!order.includes(pageId)) throw httpError(404, 'Page not found')
+    const pageIndex = order.indexOf(pageId)
+    const page = pages[pageIndex]
+    const sections = page.sections
+    validateSectionComposition(sections, pageId)
     const nextSections = transformSections(sections, config)
-    validateSectionComposition(nextSections)
+    validateSectionComposition(nextSections, pageId)
     if (mediaRequirement) {
       const mediaIds = typeof mediaRequirement.mediaIds === 'function'
         ? mediaRequirement.mediaIds(nextSections)
@@ -721,8 +789,8 @@ const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) 
       const message = typeof mediaRequirement.message === 'function' ? mediaRequirement.message() : mediaRequirement.message
       await requireTenantMediaInTransaction(transaction, tenantId, [...new Set(mediaIds || [])], message)
     }
-    const nextHome = {
-      ...home,
+    const nextPage = {
+      ...page,
       sections: nextSections,
       updatedAt: now
     }
@@ -730,9 +798,11 @@ const mutateWorkingHome = async (tenantId, transformSections, mediaRequirement) 
       ? { ...mediaRequirement.configTransform(config), updatedAt: now }
       : { ...config, updatedAt: now }
 
-    transaction.set(homeRef, nextHome)
+    transaction.set(refs.page(pageId), nextPage)
     transaction.set(configRef, nextConfig)
-    definition = toSiteDefinition(nextConfig, nextHome)
+    const nextPages = [...pages]
+    nextPages[pageIndex] = nextPage
+    definition = toSiteDefinition(nextConfig, nextPages)
   })
 
   return finalizeSiteDefinitionRead(tenantId, definition)
@@ -759,6 +829,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
         siteName: String(tenantSnapshot.data().name || '').trim().slice(0, 80) || 'Website'
       },
       theme: DEFAULT_SITE_THEME,
+      pageOrder: ['home'],
       createdAt: now,
       updatedAt: now,
       createdByUserId: actorUserId
@@ -774,23 +845,15 @@ export const initializeSite = async (tenantId, actorUserId) => {
 
     transaction.set(refs.config, config)
     transaction.set(refs.home, home)
-    definition = toSiteDefinition(config, home)
+    definition = toSiteDefinition(config, [home])
   })
 
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const getSite = async (tenantId) => {
-  const refs = refsFor(tenantId)
-  const [configSnapshot, homeSnapshot] = await Promise.all([
-    refs.config.get(),
-    refs.home.get()
-  ])
-
-  if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-  if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-  return finalizeSiteDefinitionRead(tenantId, toSiteDefinition(configSnapshot.data(), homeSnapshot.data()))
+  const { config, pages } = await readWorkingSite(tenantId)
+  return finalizeSiteDefinitionRead(tenantId, toSiteDefinition(config, pages))
 }
 
 export const getPublishedSiteDefinition = async (tenantId) => {
@@ -821,20 +884,15 @@ export const updateSiteBranding = async (tenantId, input) => {
     if (identity.faviconMediaId) {
       await requireTenantMediaInTransaction(transaction, tenantId, [identity.faviconMediaId], 'Favicon image not found')
     }
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
     const branding = {
       siteName: identity.siteName,
       ...(identity.logoMediaId ? { logoMediaId: identity.logoMediaId } : {}),
       ...(identity.faviconMediaId ? { faviconMediaId: identity.faviconMediaId } : {})
     }
-    const nextConfig = { ...configSnapshot.data(), branding, updatedAt: now }
+    const nextConfig = { ...config, branding, updatedAt: now }
     transaction.set(refs.config, nextConfig)
-    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
@@ -845,15 +903,10 @@ export const updateSiteTheme = async (tenantId, input) => {
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-    const nextConfig = { ...configSnapshot.data(), theme, updatedAt: now }
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const nextConfig = { ...config, theme, updatedAt: now }
     transaction.set(refs.config, { theme, updatedAt: now }, { merge: true })
-    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
@@ -867,37 +920,34 @@ export const updateBusinessProfile = async (tenantId, input) => {
     if (businessProfile.socialImageMediaId) {
       await requireTenantMediaInTransaction(transaction, tenantId, [businessProfile.socialImageMediaId], 'Social image not found')
     }
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-    const storedProfile = businessProfileResponse(configSnapshot.data().businessProfile)
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const storedProfile = businessProfileResponse(config.businessProfile)
     const compatibleProfile = {
       ...businessProfile,
       ...(storedProfile?.businessHours ? { businessHours: storedProfile.businessHours } : {}),
       ...(storedProfile?.socialLinks ? { socialLinks: storedProfile.socialLinks } : {})
     }
-    const nextConfig = { ...configSnapshot.data(), updatedAt: now }
+    const nextConfig = { ...config, updatedAt: now }
     if (hasBusinessProfile(compatibleProfile)) nextConfig.businessProfile = compatibleProfile
     else delete nextConfig.businessProfile
     transaction.set(refs.config, nextConfig)
-    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const updateBusinessHours = async (tenantId, input, sectionId) => {
   const update = validateBusinessHoursUpdate(input)
-  return mutateWorkingHome(tenantId, (sections) => {
+  return mutateWorkingPage(tenantId, 'home', (sections) => {
     const nextSections = [...sections]
     const existing = sectionId ? requireSection(sections, sectionId) : null
     if (existing && existing.section.type !== 'businessHours') throw httpError(400, 'Section is not Business Hours')
     if (!existing && sections.some((section) => section.type === 'businessHours')) {
       throw httpError(400, 'Business Hours section id is required')
     }
-    if (!update.businessHours || !update.homepage.enabled) {
+    if (update.preserveSections) {
+      // The global Site Setup schedule is independent of per-page presentation sections.
+    } else if (!update.businessHours || !update.homepage.enabled) {
       if (existing) nextSections.splice(existing.index, 1)
     } else {
       const section = {
@@ -937,14 +987,7 @@ export const updateSocialLinks = async (tenantId, input) => {
   let definition
 
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-    const config = configSnapshot.data()
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
     const nextProfile = { ...(config.businessProfile || {}) }
     if (socialLinks) nextProfile.socialLinks = socialLinks
     else delete nextProfile.socialLinks
@@ -952,7 +995,7 @@ export const updateSocialLinks = async (tenantId, input) => {
     if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
     else delete nextConfig.businessProfile
     transaction.set(refs.config, nextConfig)
-    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    definition = toSiteDefinition(nextConfig, pages)
   })
 
   return finalizeSiteDefinitionRead(tenantId, definition)
@@ -966,18 +1009,12 @@ export const updateCustomCss = async (tenantId, input) => {
   let definition
 
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-    const nextConfig = { ...configSnapshot.data(), updatedAt: now }
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const nextConfig = { ...config, updatedAt: now }
     if (customCss) nextConfig.customCss = customCss
     else delete nextConfig.customCss
     transaction.set(refs.config, nextConfig)
-    definition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    definition = toSiteDefinition(nextConfig, pages)
   })
 
   return finalizeSiteDefinitionRead(tenantId, definition)
@@ -1003,21 +1040,20 @@ export const publishSite = async (tenantId, actorUserId) => {
   let publishedDefinition
 
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
-    const config = configSnapshot.data()
-    const home = homeSnapshot.data()
-    const workingDefinition = toSiteDefinition(config, home)
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const workingDefinition = toSiteDefinition(config, pages)
     const canonicalWorkingDefinition = { ...workingDefinition }
     delete canonicalWorkingDefinition.hasUnpublishedChanges
     delete canonicalWorkingDefinition.lastPublishedAt
     const storedPublishedDefinition = { ...canonicalWorkingDefinition, status: 'PUBLISHED' }
+    const publishedRecord = {
+      siteDefinition: storedPublishedDefinition,
+      publishedAt: now,
+      publishedByUserId: actorUserId
+    }
+    if (Buffer.byteLength(JSON.stringify(publishedRecord), 'utf8') > MAX_PUBLISHED_SNAPSHOT_BYTES) {
+      throw httpError(400, 'Published site is too large to store safely')
+    }
     const nextConfig = {
       ...config,
       status: 'PUBLISHED',
@@ -1025,13 +1061,9 @@ export const publishSite = async (tenantId, actorUserId) => {
       lastPublishedAt: now,
       lastPublishedByUserId: actorUserId
     }
-    publishedDefinition = toSiteDefinition(nextConfig, home)
+    publishedDefinition = toSiteDefinition(nextConfig, pages)
 
-    transaction.set(refs.published, {
-      siteDefinition: storedPublishedDefinition,
-      publishedAt: now,
-      publishedByUserId: actorUserId
-    })
+    transaction.set(refs.published, publishedRecord)
     transaction.set(refs.config, nextConfig)
   })
 
@@ -1044,27 +1076,114 @@ export const unpublishSite = async (tenantId, actorUserId) => {
   let draftDefinition
 
   await firestore.runTransaction(async (transaction) => {
-    const [configSnapshot, homeSnapshot] = await Promise.all([
-      transaction.get(refs.config),
-      transaction.get(refs.home)
-    ])
-
-    if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
-    if (!homeSnapshot.exists) throw httpError(500, 'Site home page missing')
-
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
     const nextConfig = {
-      ...configSnapshot.data(),
+      ...config,
       status: 'DRAFT',
       updatedAt: now,
       lastUnpublishedAt: now,
       lastUnpublishedByUserId: actorUserId
     }
-    draftDefinition = toSiteDefinition(nextConfig, homeSnapshot.data())
+    draftDefinition = toSiteDefinition(nextConfig, pages)
 
     transaction.set(refs.config, nextConfig)
   })
 
   return finalizeSiteDefinitionRead(tenantId, draftDefinition)
+}
+
+const validatePageTitle = (value) => {
+  if (typeof value !== 'string' || !value.trim() || value.trim().length > 120) throw httpError(400, 'Page title must be between 1 and 120 characters')
+  return value.trim()
+}
+
+const requireUniquePageSlug = (pages, slug, pageId) => {
+  if (pages.some((page) => page.id !== pageId && page.slug === slug)) throw httpError(409, 'Page slug is already in use')
+}
+
+export const createPage = async (tenantId, input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  const title = validatePageTitle(body.title)
+  const slug = validatePageSlug(body.slug)
+  const pageId = randomUUID()
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    if (order.length >= MAX_PAGES) throw httpError(400, `Sites can have at most ${MAX_PAGES} pages`)
+    requireUniquePageSlug(pages, slug, pageId)
+    const page = { id: pageId, slug, title, sections: [], createdAt: now, updatedAt: now }
+    const nextConfig = { ...config, pageOrder: [...order, pageId], updatedAt: now }
+    transaction.set(refs.page(pageId), page)
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, [...pages, page])
+  })
+  return { site: await finalizeSiteDefinitionRead(tenantId, definition), pageId }
+}
+
+export const updatePage = async (tenantId, pageId, input) => {
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  const hasTitle = Object.prototype.hasOwnProperty.call(body, 'title')
+  const hasSlug = Object.prototype.hasOwnProperty.call(body, 'slug')
+  if (!hasTitle && !hasSlug) throw httpError(400, 'Page title or slug is required')
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    if (!order.includes(pageId)) throw httpError(404, 'Page not found')
+    if (pageId === 'home') throw httpError(400, 'Home page settings cannot be changed')
+    const index = order.indexOf(pageId)
+    const current = pages[index]
+    const title = hasTitle ? validatePageTitle(body.title) : current.title
+    const slug = hasSlug ? validatePageSlug(body.slug) : current.slug
+    requireUniquePageSlug(pages, slug, pageId)
+    const page = { ...current, title, slug, updatedAt: now }
+    const nextPages = [...pages]; nextPages[index] = page
+    const nextConfig = { ...config, updatedAt: now }
+    transaction.set(refs.page(pageId), page)
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, nextPages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const movePage = async (tenantId, pageId, direction) => {
+  if (!['up', 'down'].includes(direction)) throw httpError(400, 'Move direction must be up or down')
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    const index = order.indexOf(pageId)
+    if (index === -1) throw httpError(404, 'Page not found')
+    if (pageId === 'home') throw httpError(400, 'Home page cannot move')
+    const target = direction === 'up' ? index - 1 : index + 1
+    if (target < 1 || target >= order.length) throw httpError(400, 'Page cannot move in that direction')
+    const nextOrder = [...order]; [nextOrder[index], nextOrder[target]] = [nextOrder[target], nextOrder[index]]
+    const byId = new Map(pages.map((page) => [page.id, page]))
+    const nextPages = nextOrder.map((id) => byId.get(id))
+    const nextConfig = { ...config, pageOrder: nextOrder, updatedAt: now }
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, nextPages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const deletePage = async (tenantId, pageId) => {
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    const index = order.indexOf(pageId)
+    if (index === -1) throw httpError(404, 'Page not found')
+    if (pageId === 'home') throw httpError(400, 'Home page cannot be deleted')
+    const nextOrder = order.filter((id) => id !== pageId)
+    const nextPages = pages.filter((page) => page.id !== pageId)
+    const nextConfig = { ...config, pageOrder: nextOrder, updatedAt: now }
+    transaction.delete(refs.page(pageId))
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, nextPages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 const sectionMediaIds = (section) => {
@@ -1088,15 +1207,15 @@ const resolveItemIds = (type, content, storedContent) => {
 }
 
 export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}) => {
-  requirePageId(pageId)
   if (!SECTION_TYPE_SET.has(type)) throw httpError(400, 'Unknown section type')
   let sectionId
-  const site = await mutateWorkingHome(tenantId, (sections, config) => {
+  const site = await mutateWorkingPage(tenantId, pageId, (sections, config) => {
+    if (type === 'hero' && pageId !== 'home') throw httpError(400, 'Hero section is only allowed on Home')
     if (SINGLETON_SECTION_TYPES.has(type) && sections.some((section) => section.type === type)) {
       throw httpError(409, `${type} section already exists`)
     }
     if (type === 'businessHours' && !config.businessProfile?.businessHours) {
-      throw httpError(400, 'Configure business hours before adding them to the homepage')
+      throw httpError(400, 'Configure business hours before adding them to a page')
     }
     const section = createDefaultSection(type, { siteName: config.branding?.siteName })
     sectionId = section.id
@@ -1112,8 +1231,7 @@ export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}
 }
 
 export const removeSection = async (tenantId, pageId, sectionId) => {
-  requirePageId(pageId)
-  return mutateWorkingHome(tenantId, (sections) => {
+  return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     if (section.type === 'hero') throw httpError(400, 'Hero section cannot be removed')
     const next = [...sections]
@@ -1123,13 +1241,12 @@ export const removeSection = async (tenantId, pageId, sectionId) => {
 }
 
 export const moveSection = async (tenantId, pageId, sectionId, direction) => {
-  requirePageId(pageId)
   if (!['up', 'down'].includes(direction)) throw httpError(400, 'Move direction must be up or down')
-  return mutateWorkingHome(tenantId, (sections) => {
+  return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     if (section.type === 'hero') throw httpError(400, 'Hero section cannot move')
     const target = direction === 'up' ? index - 1 : index + 1
-    if (target <= 0 || target >= sections.length) throw httpError(400, 'Section cannot move in that direction')
+    if (target < (pageId === 'home' ? 1 : 0) || target >= sections.length) throw httpError(400, 'Section cannot move in that direction')
     const next = [...sections]
     ;[next[index], next[target]] = [next[target], next[index]]
     return next
@@ -1137,9 +1254,8 @@ export const moveSection = async (tenantId, pageId, sectionId, direction) => {
 }
 
 export const duplicateSection = async (tenantId, pageId, sectionId) => {
-  requirePageId(pageId)
   let duplicateId
-  const site = await mutateWorkingHome(tenantId, (sections) => {
+  const site = await mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     if (SINGLETON_SECTION_TYPES.has(section.type)) throw httpError(409, `${section.type} section cannot be duplicated`)
     const duplicate = structuredClone(section)
@@ -1159,9 +1275,8 @@ export const duplicateSection = async (tenantId, pageId, sectionId) => {
 }
 
 export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden) => {
-  requirePageId(pageId)
   if (typeof hidden !== 'boolean') throw httpError(400, 'hidden must be a boolean')
-  return mutateWorkingHome(tenantId, (sections) => {
+  return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     if (section.type === 'hero' && hidden) throw httpError(400, 'Hero section cannot be hidden')
     const next = [...sections]
@@ -1171,10 +1286,9 @@ export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden) 
 }
 
 export const updateSectionContent = async (tenantId, pageId, sectionId, input) => {
-  requirePageId(pageId)
   let mediaIds = []
   let mediaMessage = 'Section media not found'
-  return mutateWorkingHome(tenantId, (sections) => {
+  return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     const validated = validateSectionContent(section.type, input)
     const content = resolveItemIds(section.type, validated, section.content)

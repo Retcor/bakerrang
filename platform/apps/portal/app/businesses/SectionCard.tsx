@@ -5,7 +5,7 @@ import { Badge, Button, Dialog } from '@bakerrang/ui'
 import { sectionDefinitions, sectionLabel, sectionSummary } from './sectionDefinitions'
 import type { SiteDefinition, SiteSection } from '@bakerrang/site-schema'
 
-export function SectionCard ({ disabled, index, onDelete, onDuplicate, onEdit, onMove, onToggleVisibility, section, site }: {
+export function SectionCard ({ disabled, index, onDelete, onDuplicate, onEdit, onMove, onToggleVisibility, pageSections, section, site }: {
   disabled?: boolean
   index: number
   onDelete: () => void
@@ -13,13 +13,15 @@ export function SectionCard ({ disabled, index, onDelete, onDuplicate, onEdit, o
   onEdit: () => void
   onMove: (direction: 'up' | 'down') => void
   onToggleVisibility: () => void
+  pageSections: SiteSection[]
   section: SiteSection
   site: SiteDefinition
 }) {
   const definition = sectionDefinitions[section.type]
   const hero = section.type === 'hero'
-  const ordinal = site.pages.find((page) => page.id === 'home')?.sections.filter((item) => item.type === section.type).findIndex((item) => item.id === section.id) ?? 0
-  const repeated = site.pages.find((page) => page.id === 'home')?.sections.filter((item) => item.type === section.type).length ?? 0
+  const matchingSections = pageSections.filter((item) => item.type === section.type)
+  const ordinal = matchingSections.findIndex((item) => item.id === section.id)
+  const repeated = matchingSections.length
   const instanceLabel = repeated > 1 ? `${sectionLabel(section)} ${ordinal + 1}` : sectionLabel(section)
   const editLabel = `Edit ${instanceLabel}`
   const moveUpLabel = `Move ${instanceLabel} up`
@@ -39,8 +41,8 @@ export function SectionCard ({ disabled, index, onDelete, onDuplicate, onEdit, o
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Button aria-label={editLabel} disabled={disabled} onClick={onEdit} size="sm" type="button">Edit</Button>
           {!hero && <>
-            <Button aria-label={moveUpLabel} disabled={disabled || index <= 1} onClick={() => onMove('up')} size="sm" type="button" variant="secondary">↑</Button>
-            <Button aria-label={moveDownLabel} disabled={disabled || index >= (site.pages.find((page) => page.id === 'home')?.sections.length ?? 1) - 1} onClick={() => onMove('down')} size="sm" type="button" variant="secondary">↓</Button>
+            <Button aria-label={moveUpLabel} disabled={disabled || index <= (pageSections[0]?.type === 'hero' ? 1 : 0)} onClick={() => onMove('up')} size="sm" type="button" variant="secondary">↑</Button>
+            <Button aria-label={moveDownLabel} disabled={disabled || index >= pageSections.length - 1} onClick={() => onMove('down')} size="sm" type="button" variant="secondary">↓</Button>
             <div className="relative">
               <Button aria-expanded={moreOpen} aria-haspopup="dialog" aria-label={`More actions for ${instanceLabel}`} disabled={disabled} onClick={() => setMoreOpen(true)} size="sm" type="button" variant="secondary">⋯</Button>
               <Dialog description={`Choose an action for this ${sectionLabel(section)} section.`} onClose={() => setMoreOpen(false)} open={moreOpen} title={`${instanceLabel} actions`}>

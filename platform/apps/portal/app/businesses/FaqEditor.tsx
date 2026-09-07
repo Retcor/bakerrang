@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isFaqSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isFaqSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button, Field, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { upsertHomeFaq } from '../../lib/site'
+import { updateSectionContent } from '../../lib/site'
 import { RowActions } from './RowActions'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
@@ -16,6 +16,7 @@ interface EditorRow {
 }
 
 export interface FaqEditorProps {
+  pageId: string
   sectionId: string
   tenantId: string
   site: SiteDefinition
@@ -24,9 +25,9 @@ export interface FaqEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function FaqEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: FaqEditorProps) {
-  const home = findHomePage(site)
-  const selectedFaq = home?.sections.find((section) => section.id === sectionId)
+export function FaqEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: FaqEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedFaq = page?.sections.find((section) => section.id === sectionId)
   const faq = selectedFaq && isFaqSection(selectedFaq) ? selectedFaq : undefined
   const nextKey = useRef(1)
   const [heading, setHeading] = useState(faq?.content.heading ?? 'Frequently Asked Questions')
@@ -68,7 +69,8 @@ export function FaqEditor ({ sectionId, tenantId, site, onCancel, onDirtyChange 
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeFaq(tenantId, faq?.id, {
+      if (!faq) throw new Error('FAQ section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, faq.id, {
         heading: heading.trim(),
         ...(intro.trim() ? { intro: intro.trim() } : {}),
         items: rows.map(({ id, question, answer }) => ({

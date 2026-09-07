@@ -83,8 +83,8 @@ describe('Business Hours editor', () => {
         wednesday: { open: '09:00', close: '17:00' }, thursday: { open: '09:00', close: '17:00' },
         friday: { open: '09:00', close: '17:00' }, saturday: { closed: true }, sunday: { closed: true }
       },
-      homepage: { enabled: false }
-    }, undefined))
+      homepage: { enabled: false }, preserveSections: true
+    }))
     expect(onSaved).toHaveBeenCalledWith(site(true, true))
   })
 
@@ -94,8 +94,8 @@ describe('Business Hours editor', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Remove hours' }))
     await waitFor(() => expect(mocks.updateBusinessHours).toHaveBeenCalledWith('tenant-1', {
-      businessHours: null, homepage: { enabled: false }
-    }, 'hours-id'))
+      businessHours: null, homepage: { enabled: false }, preserveSections: true
+    }))
   })
 
 })

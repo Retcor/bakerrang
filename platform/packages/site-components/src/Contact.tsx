@@ -1,4 +1,5 @@
 import type { ContactContent } from '@bakerrang/site-schema'
+import type { ReactNode } from 'react'
 import { SiteContainer, SiteSection } from './SitePrimitives'
 import { contactHref } from './contactHref'
 
@@ -7,14 +8,14 @@ export { contactHref } from './contactHref'
 export interface ContactProps {
   anchorId: string
   content: ContactContent
-  leadFormHref?: string
+  leadForm?: ReactNode
 }
 
-export function Contact ({ anchorId, content, leadFormHref }: ContactProps) {
+export function Contact ({ anchorId, content, leadForm }: ContactProps) {
   const title = typeof content?.title === 'string' ? content.title : null
   const text = typeof content?.text === 'string' ? content.text : null
   const buttonLabel = typeof content?.buttonLabel === 'string' ? content.buttonLabel : null
-  const href = content?.action?.type === 'leadForm' ? leadFormHref ?? null : contactHref(content?.action)
+  const href = content?.action?.type === 'leadForm' ? null : contactHref(content?.action)
   const external = href !== null && typeof content?.action === 'object' && content.action?.type === 'url'
 
   return (
@@ -35,6 +36,7 @@ export function Contact ({ anchorId, content, leadFormHref }: ContactProps) {
               </a>
             </div>
           )}
+          {content?.action?.type === 'leadForm' && leadForm && <div className="mt-8">{leadForm}</div>}
         </div>
       </SiteContainer>
     </SiteSection>

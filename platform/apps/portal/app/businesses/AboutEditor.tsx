@@ -1,15 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isAboutSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isAboutSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button, FileInput, Input, Select, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
-import { upsertHomeAbout, type LinkActionInput } from '../../lib/site'
+import { updateSectionContent, type LinkActionInput } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 import { SectionActionFields, type SectionActionType } from './SectionActionFields'
 
-export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, sectionId, site, tenantId }: {
+export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, pageId, sectionId, site, tenantId }: {
+  pageId: string
   sectionId: string
   onCancel: () => void
   onDirtyChange?: (dirty: boolean) => void
@@ -17,8 +18,8 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, sect
   site: SiteDefinition
   tenantId: string
 }) {
-  const home = findHomePage(site)
-  const selectedAbout = home?.sections.find((section) => section.id === sectionId)
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedAbout = page?.sections.find((section) => section.id === sectionId)
   const about = selectedAbout && isAboutSection(selectedAbout) ? selectedAbout : undefined
   const [eyebrow, setEyebrow] = useState(about?.content.eyebrow ?? '')
   const [heading, setHeading] = useState(about?.content.heading ?? '')
@@ -86,7 +87,8 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, sect
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeAbout(tenantId, about?.id, {
+      if (!about) throw new Error('About section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, about.id, {
         ...(eyebrow.trim() ? { eyebrow: eyebrow.trim() } : {}),
         heading: heading.trim(),
         body: body.trim(),

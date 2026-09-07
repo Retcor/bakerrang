@@ -40,7 +40,15 @@ const writers = [
   ['Gallery', (id = 'image') => updateType('gallery', { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })],
   ['Logos', (id = 'image') => updateType('logos', { heading: 'Trusted by', items: [{ mediaId: id, altText: 'Logo' }] })]
 ]
-const refs = () => [...media.collectSiteMediaIds({ ...db.data(configPath), pages: [db.data(homePath)] }), ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)]
+const refs = () => {
+  const config = db.data(configPath)
+  const pageOrder = config.pageOrder || ['home']
+  const pages = pageOrder.map((pageId) => db.data(`${configPath}/pages/${pageId}`))
+  return [
+    ...media.collectSiteMediaIds({ ...config, pages }),
+    ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)
+  ]
+}
 const assertIntact = () => {
   assert.ok(refs().includes('image'))
   assert.equal(db.data(mediaPath).deletion, undefined)
@@ -81,6 +89,19 @@ test('duplicate commits in deletion gap and copied media keeps deletion blocked'
   onceBeforeCommit(() => sites.duplicateSection(tenant, 'home', gallery.id))
   await assert.rejects(remove(), { status: 400, message: 'Image is still used as the working gallery' })
   assertIntact()
+})
+
+test('a concurrent Page-B media reference forces deletion to retry and then blocks it', async () => {
+  onceBeforeCommit(async () => {
+    const { pageId } = await sites.createPage(tenant, { title: 'Page B', slug: 'page-b' })
+    const { sectionId } = await sites.addSection(tenant, pageId, 'gallery')
+    await sites.updateSectionContent(tenant, pageId, sectionId, {
+      title: 'Gallery', items: [{ mediaId: 'image', altText: 'Image' }]
+    })
+  })
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the working gallery' })
+  assertIntact()
+  assert.ok(db.transactionAttempts >= 4)
 })
 
 test('old unguarded writer pattern demonstrably leaves a dangling reference', async () => {

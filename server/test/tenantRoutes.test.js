@@ -93,6 +93,22 @@ const sites = {
     calls.push({ operation: 'updateCustomCss', tenantId, body })
     return siteDefinition
   },
+  createPage: async (tenantId, body) => {
+    calls.push({ operation: 'createPage', tenantId, body })
+    return { site: siteDefinition, pageId: 'page-id' }
+  },
+  updatePage: async (tenantId, pageId, body) => {
+    calls.push({ operation: 'updatePage', tenantId, pageId, body })
+    return siteDefinition
+  },
+  movePage: async (tenantId, pageId, direction) => {
+    calls.push({ operation: 'movePage', tenantId, pageId, direction })
+    return siteDefinition
+  },
+  deletePage: async (tenantId, pageId) => {
+    calls.push({ operation: 'deletePage', tenantId, pageId })
+    return siteDefinition
+  },
   addSection: async (tenantId, pageId, type, options) => {
     calls.push({ operation: 'addSection', tenantId, pageId, type, options })
     return siteDefinition
@@ -575,6 +591,24 @@ test('instance section routes are PLATFORM_ADMIN-only and forward page and secti
     assert.equal(calls.at(-1).operation, item.operation)
     assert.equal(calls.at(-1).tenantId, 'tenant-1')
     assert.equal(calls.at(-1).pageId, 'home')
+  }
+})
+
+test('Page CRUD routes are PLATFORM_ADMIN-only and return the server-created Page id', async () => {
+  const operations = [
+    { method: 'POST', path: '/tenants/tenant-1/site/pages', body: { title: 'Contact', slug: 'contact' }, operation: 'createPage', status: 201 },
+    { method: 'PATCH', path: '/tenants/tenant-1/site/pages/page-id', body: { title: 'Updated' }, operation: 'updatePage' },
+    { method: 'POST', path: '/tenants/tenant-1/site/pages/page-id/move', body: { direction: 'up' }, operation: 'movePage' },
+    { method: 'DELETE', path: '/tenants/tenant-1/site/pages/page-id', operation: 'deletePage' }
+  ]
+  for (const item of operations) {
+    assert.equal((await request(item.path, { method: item.method, body: item.body })).status, 401)
+    assert.equal((await request(item.path, { userId: 'staff', method: item.method, body: item.body })).status, 403)
+    const response = await request(item.path, { userId: 'platform', method: item.method, body: item.body })
+    assert.equal(response.status, item.status || 200)
+    assert.equal(calls.at(-1).operation, item.operation)
+    assert.equal(calls.at(-1).tenantId, 'tenant-1')
+    if (item.operation === 'createPage') assert.equal((await response.json()).pageId, 'page-id')
   }
 })
 

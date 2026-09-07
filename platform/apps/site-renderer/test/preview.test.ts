@@ -72,9 +72,9 @@ test('previewMetadata includes working icons when faviconSrc is set', () => {
   assert.deepEqual(metadata.icons, { icon: 'https://media.example.com/working-favicon.png' })
 })
 
-test('preview navigation paths preserve the token on home and contact', () => {
+test('preview navigation paths preserve the token on home and generic pages', () => {
   assert.equal(previewPath('tenant/one', 'a b'), '/preview/tenant%2Fone?token=a+b')
-  assert.equal(previewPath('tenant/one', 'a b', true), '/preview/tenant%2Fone/contact?token=a+b')
+  assert.equal(previewPath('tenant/one', 'a b', 'page-123'), '/preview/tenant%2Fone/page/page-123?token=a+b')
 })
 
 test('preview contact is explicitly inert while published lead submission code remains present', async () => {
@@ -93,7 +93,7 @@ test('preview contact is explicitly inert while published lead submission code r
 test('preview routes are dynamic, use the preview API, and contain no domain redirect path', async () => {
   for (const relative of [
     '../app/preview/[tenantId]/page.tsx',
-    '../app/preview/[tenantId]/contact/page.tsx'
+    '../app/preview/[tenantId]/page/[pageId]/page.tsx'
   ]) {
     const source = await readFile(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
     assert.match(source, /dynamic = 'force-dynamic'/)
@@ -119,8 +119,8 @@ mock.module('../components/PreviewFrame.tsx', {
 mock.module('../components/PublicHome.tsx', {
   namedExports: { PublicHome: () => null }
 })
-mock.module('../components/PublicContact.tsx', {
-  namedExports: { PublicContact: () => null }
+mock.module('../components/PublicPage.tsx', {
+  namedExports: { PublicPage: () => null }
 })
 
 test('resolvePreviewMetadata includes working favicon icons and swallows missing or failed preview loads', async () => {
@@ -142,24 +142,29 @@ test('resolvePreviewMetadata includes working favicon icons and swallows missing
 
 test('preview page generateMetadata functions use working faviconSrc and do not throw', async () => {
   const { generateMetadata: homeGenerateMetadata } = await import('../app/preview/[tenantId]/page.tsx')
-  const { generateMetadata: contactGenerateMetadata } = await import('../app/preview/[tenantId]/contact/page.tsx')
+  const { generateMetadata: pageGenerateMetadata } = await import('../app/preview/[tenantId]/page/[pageId]/page.tsx')
 
   previewSiteState.impl = async () => workingFaviconSite
   const home = await homeGenerateMetadata(previewProps('secret'))
   assert.deepEqual(home.icons, { icon: 'https://media.example.com/working-favicon.png' })
-  const contact = await contactGenerateMetadata(previewProps('secret'))
-  assert.deepEqual(contact.icons, { icon: 'https://media.example.com/working-favicon.png' })
-  assert.equal(contact.title, 'Contact Preview')
+  const page = await pageGenerateMetadata({
+    params: Promise.resolve({ tenantId: 'tenant-1', pageId: 'page-123' }),
+    searchParams: Promise.resolve({ token: 'secret' })
+  })
+  assert.deepEqual(page.icons, { icon: 'https://media.example.com/working-favicon.png' })
 
   const homeMissingToken = await homeGenerateMetadata(previewProps())
   assert.equal(Object.hasOwn(homeMissingToken, 'icons'), false)
-  const contactMissingToken = await contactGenerateMetadata(previewProps())
-  assert.equal(Object.hasOwn(contactMissingToken, 'icons'), false)
-  assert.equal(contactMissingToken.title, 'Contact Preview')
+  const pageMissingToken = await pageGenerateMetadata({
+    params: Promise.resolve({ tenantId: 'tenant-1', pageId: 'page-123' }), searchParams: Promise.resolve({})
+  })
+  assert.equal(Object.hasOwn(pageMissingToken, 'icons'), false)
 
   previewSiteState.impl = async () => null
   const homeNull = await homeGenerateMetadata(previewProps('secret'))
   assert.equal(Object.hasOwn(homeNull, 'icons'), false)
-  const contactNull = await contactGenerateMetadata(previewProps('secret'))
-  assert.equal(Object.hasOwn(contactNull, 'icons'), false)
+  const pageNull = await pageGenerateMetadata({
+    params: Promise.resolve({ tenantId: 'tenant-1', pageId: 'page-123' }), searchParams: Promise.resolve({ token: 'secret' })
+  })
+  assert.equal(Object.hasOwn(pageNull, 'icons'), false)
 })

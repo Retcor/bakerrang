@@ -89,12 +89,12 @@ describe('working-site preview launch', () => {
     render(<BusinessWebsite autoLoad tenantId="tenant/one" />)
     const button = await screen.findByRole('button', { name: 'Preview changes' })
     expect(screen.getByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
-    expect(screen.getByText('1 homepage section configured')).toBeInTheDocument()
+    expect(screen.getByText('1 page · 1 section')).toBeInTheDocument()
     fireEvent.click(button)
 
     expect(sequence).toEqual(['open', 'mint'])
     await waitFor(() => expect(popup.location.href).toBe(
-      'https://sites-dev.bakerrang.com/preview/tenant%2Fone?token=token+value'
+      'https://sites-dev.bakerrang.com/preview/tenant%2Fone/page/home?token=token+value'
     ))
     expect(window.open).toHaveBeenCalledWith('about:blank', '_blank')
     expect(popup.opener).toBeNull()
@@ -116,7 +116,7 @@ describe('working-site preview launch', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Preview changes' }))
     const fallback = await screen.findByRole('link', { name: 'Open preview' })
     expect(fallback).toHaveAttribute(
-      'href', 'https://sites-dev.bakerrang.com/preview/tenant-1?token=token+value'
+      'href', 'https://sites-dev.bakerrang.com/preview/tenant-1/page/home?token=token+value'
     )
     expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant-1')
   })
@@ -155,7 +155,7 @@ describe('working-site preview launch', () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
 
     const desktopNav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
-    for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Homepage']) {
+    for (const name of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages']) {
       expect(within(desktopNav).getByRole('button', { name })).toBeInTheDocument()
     }
     const advanced = within(desktopNav).getByRole('heading', { name: 'Advanced' }).closest('section')

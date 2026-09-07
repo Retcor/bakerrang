@@ -28,6 +28,7 @@ export default async function CustomDomainHomePage () {
   return (
     <PublicHome
       site={resolved.site}
+      tenantId={resolved.domain.tenantId}
       siteBaseUrl={resolveSiteBaseUrl(
         resolved.domain.tenantId,
         process.env,

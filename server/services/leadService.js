@@ -100,19 +100,12 @@ const requirePublishedLeadForm = async (tenantId) => {
     throw error
   }
 
-  const home = Array.isArray(site.pages)
-    ? site.pages.find((page) => page && page.slug === '/')
-    : null
-  const sections = home && Array.isArray(home.sections) ? home.sections : []
-  const related = sections.filter((section) =>
-    section && section.type === 'contact'
+  const hasLeadForm = Array.isArray(site.pages) && site.pages.some((page) =>
+    Array.isArray(page?.sections) && page.sections.some((section) =>
+      section?.type === 'contact' && section.content?.action?.type === 'leadForm'
+    )
   )
-  if (
-    related.length !== 1 ||
-    !related[0].content ||
-    !related[0].content.action ||
-    related[0].content.action.type !== 'leadForm'
-  ) {
+  if (!hasLeadForm) {
     throw httpError(404, 'Site not found')
   }
 }

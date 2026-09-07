@@ -25,6 +25,10 @@ These are the supported advanced hooks for the current BakerRang site system.
 Prefer them to generated utility class names, DOM structure selectors, or other
 implementation details, which are not stability promises.
 
+Each rendered page also has an immutable instance hook on its SiteShell root:
+`[data-br-page="<page-id>"]`. Page IDs, rather than mutable slugs, are the
+stable Custom CSS identity for a page.
+
 The expanded section library also exposes meaningful role hooks where needed:
 `[data-br-role="step"]`, `[data-br-role="cta-button"]`, and
 `[data-br-role="logo"]`.

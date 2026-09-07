@@ -17,7 +17,7 @@ vi.mock('../../../lib/site', () => mocks)
 
 import { BusinessHoursSectionEditor } from '../BusinessHoursSectionEditor'
 import { GalleryEditor } from '../GalleryEditor'
-import { HomepageSectionManager } from '../HomepageSectionManager'
+import { PageSectionManager } from '../PageSectionManager'
 import { AddSectionDialog } from '../AddSectionDialog'
 
 const theme = {
@@ -51,15 +51,15 @@ const site = (options: { hours?: boolean, contact?: boolean, businessHoursSectio
 })
 
 const updated = site({ hours: true, contact: true, businessHoursSection: true })
-const renderManager = (current = site(), extra: Partial<React.ComponentProps<typeof HomepageSectionManager>> = {}) => {
+const renderManager = (current = site(), extra: Partial<React.ComponentProps<typeof PageSectionManager>> = {}) => {
   const props = {
-    onBack: vi.fn(), onEditSection: vi.fn(), onRefresh: vi.fn().mockResolvedValue(current), onSaved: vi.fn(),
-    site: current, tenantId: 'tenant-1', ...extra
+    onBack: vi.fn(), onEditSection: vi.fn(), onPreview: vi.fn(), onRefresh: vi.fn().mockResolvedValue(current), onSaved: vi.fn(),
+    pageId: 'home', site: current, tenantId: 'tenant-1', ...extra
   }
-  return { ...render(<HomepageSectionManager {...props} />), props }
+  return { ...render(<PageSectionManager {...props} />), props }
 }
 
-describe('Homepage section manager', () => {
+describe('Page section manager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.addSection.mockResolvedValue({ site: updated, sectionId: 'new-gallery' })
@@ -68,7 +68,6 @@ describe('Homepage section manager', () => {
     mocks.removeSection.mockResolvedValue(updated)
     mocks.setSectionVisibility.mockResolvedValue(updated)
     mocks.updateSectionContent.mockResolvedValue(updated)
-    mocks.upsertHomeGallery.mockResolvedValue(updated)
   })
 
   it('renders exact ordered instances, repeated ordinals, summaries, and visibility', () => {
@@ -93,6 +92,65 @@ describe('Homepage section manager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit Gallery 2' }))
     expect(props.onEditSection).toHaveBeenCalledWith('gallery-b')
     expect(screen.getByRole('button', { name: 'Edit Gallery 1' })).toBeInTheDocument()
+  })
+
+  it('uses the selected non-Home page and sends every section command to that page', async () => {
+    const current = site()
+    current.pages.push({ id: 'contact-page', slug: 'contact', title: 'Contact', sections: [
+      { id: 'contact-gallery', type: 'gallery', hidden: false, content: { title: 'Visit us', items: [] } },
+      { id: 'contact-gallery-two', type: 'gallery', hidden: false, content: { title: 'More visits', items: [] } }
+    ] })
+    const { props } = renderManager(current, { pageId: 'contact-page' })
+    expect(screen.getByRole('heading', { name: 'Contact sections' })).toBeInTheDocument()
+    expect(screen.getByText('/contact')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move Gallery 2 up' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Move Gallery 2 up' }))
+    await waitFor(() => expect(mocks.moveSection).toHaveBeenCalledWith('tenant-1', 'contact-page', 'contact-gallery-two', 'up'))
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 1' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 1 actions' })).getByRole('button', { name: 'Hide' }))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'contact-page', 'contact-gallery', true))
+    expect(props.onEditSection).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Gallery 1' }))
+    expect(props.onEditSection).toHaveBeenCalledWith('contact-gallery')
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 1' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 1 actions' })).getByRole('button', { name: 'Duplicate' }))
+    await waitFor(() => expect(mocks.duplicateSection).toHaveBeenCalledWith('tenant-1', 'contact-page', 'contact-gallery'))
+    expect(props.onEditSection).toHaveBeenCalledWith('gallery-copy')
+  })
+
+  it('keeps empty non-Home pages isolated and applies singleton availability to that page only', async () => {
+    const current = site({ hours: true, contact: true, businessHoursSection: true })
+    current.pages.push(
+      { id: 'page-a', slug: 'services', title: 'Services', sections: [{ id: 'page-a-contact', type: 'contact', hidden: false, content: { title: 'Talk', buttonLabel: 'Email', action: { type: 'email', value: 'a@example.com' } } }] },
+      { id: 'page-b', slug: 'contact', title: 'Contact', sections: [] }
+    )
+    const { props } = renderManager(current, { pageId: 'page-b' })
+    expect(screen.getByRole('heading', { name: 'Contact sections' })).toBeInTheDocument()
+    expect(screen.getByText('No sections yet')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    const dialog = screen.getByRole('dialog', { name: 'Add section' })
+    expect(within(dialog).queryByText('Hero')).not.toBeInTheDocument()
+    const contactCard = within(dialog).getByText('Contact').closest('div.rounded-md') as HTMLElement
+    const hoursCard = within(dialog).getByText('Business Hours').closest('div.rounded-md') as HTMLElement
+    expect(within(contactCard).getByRole('button', { name: 'Add' })).toBeEnabled()
+    expect(within(hoursCard).getByRole('button', { name: 'Add' })).toBeEnabled()
+    fireEvent.click(within(contactCard).getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(mocks.addSection).toHaveBeenCalledWith('tenant-1', 'page-b', 'contact'))
+    expect(props.onEditSection).toHaveBeenCalledWith('new-gallery')
+
+    current.pages.find((page) => page.id === 'page-b')?.sections.push(
+      { id: 'page-b-contact', type: 'contact', hidden: false, content: { title: 'Talk', buttonLabel: 'Email', action: { type: 'email', value: 'b@example.com' } } },
+      { id: 'page-b-hours', type: 'businessHours', hidden: false, content: { heading: 'Hours' } }
+    )
+    const { rerender } = render(<AddSectionDialog onAdded={() => undefined} onClose={() => undefined} onRefresh={vi.fn()} open pageId="page-b" site={current} tenantId="tenant-1" />)
+    const pageBDialog = screen.getByRole('dialog', { name: 'Add section' })
+    expect(within(within(pageBDialog).getByText('Contact').closest('div.rounded-md') as HTMLElement).getByRole('button', { name: 'Add' })).toBeDisabled()
+    expect(within(within(pageBDialog).getByText('Business Hours').closest('div.rounded-md') as HTMLElement).getByRole('button', { name: 'Add' })).toBeDisabled()
+    const pageC = structuredClone(current)
+    pageC.pages.push({ id: 'page-c', slug: 'faq', title: 'FAQ', sections: [] })
+    rerender(<AddSectionDialog onAdded={() => undefined} onClose={() => undefined} onRefresh={vi.fn()} open pageId="page-c" site={pageC} tenantId="tenant-1" />)
+    const pageCDialog = screen.getByRole('dialog', { name: 'Add section' })
+    expect(within(within(pageCDialog).getByText('Contact').closest('div.rounded-md') as HTMLElement).getByRole('button', { name: 'Add' })).toBeEnabled()
   })
 
   it('summarizes and independently addresses every new repeatable section type', () => {
@@ -130,10 +188,10 @@ describe('Homepage section manager', () => {
     expect(screen.getByRole('button', { name: 'Move Gallery 1 up' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Move FAQ down' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Move Gallery 2 up' }))
-    await waitFor(() => expect(mocks.moveSection).toHaveBeenCalledWith('tenant-1', 'gallery-b', 'up'))
+    await waitFor(() => expect(mocks.moveSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-b', 'up'))
     await waitFor(() => expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section order updated.'))
     fireEvent.click(screen.getByRole('button', { name: 'Move Gallery 1 down' }))
-    await waitFor(() => expect(mocks.moveSection).toHaveBeenCalledWith('tenant-1', 'gallery-a', 'down'))
+    await waitFor(() => expect(mocks.moveSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-a', 'down'))
   })
 
   it('hides and shows an exact section while retaining the card', async () => {
@@ -142,18 +200,18 @@ describe('Homepage section manager', () => {
     const dialog = screen.getByRole('dialog', { name: 'Gallery 1 actions' })
     expect(dialog).not.toHaveAttribute('role', 'menu')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Hide' }))
-    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'gallery-a', true))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-a', true))
     expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section hidden.')
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 2' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 2 actions' })).getByRole('button', { name: 'Show' }))
-    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'gallery-b', false))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-b', false))
   })
 
   it('duplicates through the server-returned id and opens that exact editor', async () => {
     const { props } = renderManager()
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 1' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 1 actions' })).getByRole('button', { name: 'Duplicate' }))
-    await waitFor(() => expect(mocks.duplicateSection).toHaveBeenCalledWith('tenant-1', 'gallery-a'))
+    await waitFor(() => expect(mocks.duplicateSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-a'))
     expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section duplicated.')
     expect(props.onEditSection).toHaveBeenCalledWith('gallery-copy')
   })
@@ -174,10 +232,10 @@ describe('Homepage section manager', () => {
     const { props } = renderManager(site({ hours: true, contact: true, businessHoursSection: true }))
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 1' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 1 actions' })).getByRole('button', { name: 'Delete' }))
-    expect(screen.getByRole('dialog', { name: 'Delete homepage section?' })).toHaveTextContent('uploaded media')
+    expect(screen.getByRole('dialog', { name: 'Delete section?' })).toHaveTextContent('uploaded media')
     fireEvent.click(screen.getByRole('button', { name: 'Delete section' }))
-    await waitFor(() => expect(mocks.removeSection).toHaveBeenCalledWith('tenant-1', 'gallery-a'))
-    expect(props.onSaved).toHaveBeenCalledWith(updated, 'Homepage section removed.')
+    await waitFor(() => expect(mocks.removeSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-a'))
+    expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section removed.')
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Contact' }))
     expect(within(screen.getByRole('dialog', { name: 'Contact actions' })).queryByRole('button', { name: 'Duplicate' })).not.toBeInTheDocument()
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'Contact actions' }), { key: 'Escape' })
@@ -185,7 +243,7 @@ describe('Homepage section manager', () => {
     const hoursActions = screen.getByRole('dialog', { name: 'Business Hours actions' })
     expect(within(hoursActions).queryByRole('button', { name: 'Duplicate' })).not.toBeInTheDocument()
     fireEvent.click(within(hoursActions).getByRole('button', { name: 'Delete' }))
-    expect(screen.getByRole('dialog', { name: 'Delete homepage section?' })).toHaveTextContent('keeps the weekly schedule')
+    expect(screen.getByRole('dialog', { name: 'Delete section?' })).toHaveTextContent('keeps the global weekly schedule')
   })
 
   it('prevents a second delete submit while the first deletion is pending', async () => {
@@ -194,19 +252,19 @@ describe('Homepage section manager', () => {
     renderManager()
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Gallery 1' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Gallery 1 actions' })).getByRole('button', { name: 'Delete' }))
-    const confirm = screen.getByRole('dialog', { name: 'Delete homepage section?' })
+    const confirm = screen.getByRole('dialog', { name: 'Delete section?' })
     const deleteButton = within(confirm).getByRole('button', { name: 'Delete section' })
     fireEvent.click(deleteButton)
     fireEvent.click(deleteButton)
     expect(mocks.removeSection).toHaveBeenCalledTimes(1)
     resolve(updated)
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete homepage section?' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete section?' })).not.toBeInTheDocument())
   })
 
   it('opens and constrains the Add dialog based on section policy and schedule setup', () => {
     renderManager(site({ hours: true, contact: true, businessHoursSection: true }))
     fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
-    const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
+    const dialog = screen.getByRole('dialog', { name: 'Add section' })
     expect(within(dialog).getAllByRole('button', { name: 'Add' })).toHaveLength(12)
     for (const group of ['Core', 'Content', 'Media', 'Trust', 'Conversion', 'Business']) expect(within(dialog).getByText(group)).toBeInTheDocument()
     expect(within(dialog).getAllByText('Already added').length).toBeGreaterThan(1)
@@ -214,22 +272,22 @@ describe('Homepage section manager', () => {
     expect(within(dialog).getAllByRole('button', { name: 'Add' })[1]).toBeEnabled()
     expect(within(dialog).getByText(/Business Hours/).closest('div')!).toBeInTheDocument()
     fireEvent.keyDown(dialog, { key: 'Escape' })
-    expect(screen.queryByRole('dialog', { name: 'Add homepage section' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Add section' })).not.toBeInTheDocument()
   })
 
   it('keeps singleton and schedule rules correct while allowing every repeatable type', () => {
     const onAdded = vi.fn(); const onClose = vi.fn(); const onRefresh = vi.fn().mockResolvedValue(site())
-    const { rerender } = render(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open site={site({ oneAbout: true })} tenantId="tenant-1" />)
-    const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
+    const { rerender } = render(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ oneAbout: true })} tenantId="tenant-1" />)
+    const dialog = screen.getByRole('dialog', { name: 'Add section' })
     let buttons = within(dialog).getAllByRole('button', { name: 'Add' })
     expect(buttons[0]).toBeDisabled()
     expect(buttons.slice(1, 11).every((button) => !button.hasAttribute('disabled'))).toBe(true)
     expect(buttons[11]).toBeDisabled()
-    rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open site={site({ hours: true })} tenantId="tenant-1" />)
-    buttons = within(screen.getByRole('dialog', { name: 'Add homepage section' })).getAllByRole('button', { name: 'Add' })
+    rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ hours: true })} tenantId="tenant-1" />)
+    buttons = within(screen.getByRole('dialog', { name: 'Add section' })).getAllByRole('button', { name: 'Add' })
     expect(buttons[11]).toBeEnabled()
-    rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open site={site({ hours: true, contact: true, businessHoursSection: true })} tenantId="tenant-1" />)
-    buttons = within(screen.getByRole('dialog', { name: 'Add homepage section' })).getAllByRole('button', { name: 'Add' })
+    rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ hours: true, contact: true, businessHoursSection: true })} tenantId="tenant-1" />)
+    buttons = within(screen.getByRole('dialog', { name: 'Add section' })).getAllByRole('button', { name: 'Add' })
     expect(buttons[9]).toBeDisabled()
     expect(buttons[11]).toBeDisabled()
   })
@@ -242,7 +300,7 @@ describe('Homepage section manager', () => {
       { id: 'cta-id', type: 'cta', hidden: false, content: { heading: 'Ready?' } },
       { id: 'logos-id', type: 'logos', hidden: false, content: { items: [] } }
     )
-    render(<AddSectionDialog onAdded={() => undefined} onClose={() => undefined} onRefresh={vi.fn()} open site={current} tenantId="tenant-1" />)
+    render(<AddSectionDialog onAdded={() => undefined} onClose={() => undefined} onRefresh={vi.fn()} open pageId="home" site={current} tenantId="tenant-1" />)
     for (const label of ['Steps', 'Highlights', 'Call to Action', 'Logos']) {
       const card = screen.getByText(label).closest('div.rounded-md')
       expect(card).not.toBeNull()
@@ -254,7 +312,7 @@ describe('Homepage section manager', () => {
     mocks.addSection.mockRejectedValueOnce(new Error('temporary failure'))
     renderManager()
     fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
-    const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
+    const dialog = screen.getByRole('dialog', { name: 'Add section' })
     fireEvent.click(within(dialog).getAllByRole('button', { name: 'Add' })[3])
     await waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent('Unable to add this section'))
     expect(within(dialog).getAllByRole('button', { name: 'Add' })[3]).toBeEnabled()
@@ -265,7 +323,7 @@ describe('Homepage section manager', () => {
     mocks.addSection.mockReturnValue(new Promise((done) => { resolve = done }))
     const { props } = renderManager()
     fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
-    const dialog = screen.getByRole('dialog', { name: 'Add homepage section' })
+    const dialog = screen.getByRole('dialog', { name: 'Add section' })
     fireEvent.click(within(dialog).getAllByRole('button', { name: 'Add' })[1])
     expect(within(dialog).getAllByRole('button', { name: 'Adding…' })).toHaveLength(1)
     fireEvent.click(within(dialog).getAllByRole('button', { name: 'Adding…' })[0])
@@ -283,26 +341,26 @@ describe('section editor identity and Business Hours presentation', () => {
   })
 
   it('edits the selected repeated gallery and writes its exact id', async () => {
-    render(<GalleryEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" sectionId="gallery-b" />)
+    render(<GalleryEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site()} tenantId="tenant-1" sectionId="gallery-b" />)
     fireEvent.change(screen.getByLabelText('Section Heading'), { target: { value: 'Second gallery updated' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeGallery).toHaveBeenCalledWith('tenant-1', 'gallery-b', expect.objectContaining({ title: 'Second gallery updated' })))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-b', expect.objectContaining({ title: 'Second gallery updated' })))
   })
 
   it('updates only Business Hours presentation content and leaves Site setup ownership intact', async () => {
     const onSaved = vi.fn()
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={onSaved} site={site({ hours: true, businessHoursSection: true })} tenantId="tenant-1" sectionId="hours-id" />)
+    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site({ hours: true, businessHoursSection: true })} tenantId="tenant-1" sectionId="hours-id" />)
     fireEvent.change(screen.getByLabelText('Section heading Optional'), { target: { value: 'Opening times' } })
     fireEvent.change(screen.getByLabelText('Intro Optional'), { target: { value: 'Drop in.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'hours-id', { heading: 'Opening times', intro: 'Drop in.' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'hours-id', { heading: 'Opening times', intro: 'Drop in.' }))
     expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
     expect(onSaved).toHaveBeenCalledWith(updated)
     expect(screen.getByText(/Weekly hours are managed in Site setup/i)).toBeInTheDocument()
   })
 
   it('fails closed for a stale or wrong-type section id', () => {
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={() => undefined} site={site({ hours: true })} tenantId="tenant-1" sectionId="gallery-a" />)
+    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site({ hours: true })} tenantId="tenant-1" sectionId="gallery-a" />)
     expect(screen.getByRole('alert')).toHaveTextContent('selected Business Hours section is unavailable')
   })
 })

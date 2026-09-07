@@ -1,15 +1,15 @@
 import type { BusinessHours as BusinessHoursValue, SiteSection } from '@bakerrang/site-schema'
+import type { ReactNode } from 'react'
 import { About, BusinessHours, Contact, Cta, Faq, Gallery, Hero, Logos, Process, Services, Stats, Testimonials } from '@bakerrang/site-components'
 
 export interface SectionRendererProps {
   section: SiteSection
-  sitePath: string
   heroContactHref?: string
-  previewToken?: string
+  leadForm?: ReactNode
   businessHours?: BusinessHoursValue
 }
 
-export function SectionRenderer ({ businessHours, heroContactHref, previewToken, section, sitePath }: SectionRendererProps) {
+export function SectionRenderer ({ businessHours, heroContactHref, leadForm, section }: SectionRendererProps) {
   switch (section.type) {
     case 'hero':
       return <Hero anchorId={section.id} contactHref={heroContactHref} content={section.content} />
@@ -34,7 +34,7 @@ export function SectionRenderer ({ businessHours, heroContactHref, previewToken,
         <Contact
           anchorId={section.id}
           content={section.content}
-          leadFormHref={`${sitePath}/contact${previewToken ? `?${new URLSearchParams({ token: previewToken }).toString()}` : ''}`}
+          leadForm={leadForm}
         />
       )
     default:

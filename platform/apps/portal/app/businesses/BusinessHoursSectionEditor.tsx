@@ -1,21 +1,22 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { findHomePage, isBusinessHoursSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isBusinessHoursSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateSectionContent } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
-export function BusinessHoursSectionEditor ({ onCancel, onDirtyChange = () => {}, onSaved, sectionId, site, tenantId }: {
+export function BusinessHoursSectionEditor ({ onCancel, onDirtyChange = () => {}, onSaved, pageId, sectionId, site, tenantId }: {
   onCancel: () => void
   onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
+  pageId: string
   sectionId: string
   site: SiteDefinition
   tenantId: string
 }) {
-  const selectedSection = findHomePage(site)?.sections.find((candidate) => candidate.id === sectionId)
+  const selectedSection = site.pages.find((page) => page.id === pageId)?.sections.find((candidate) => candidate.id === sectionId)
   const section = selectedSection && isBusinessHoursSection(selectedSection) ? selectedSection : undefined
   const [heading, setHeading] = useState(section?.content.heading ?? '')
   const [intro, setIntro] = useState(section?.content.intro ?? '')
@@ -30,7 +31,7 @@ export function BusinessHoursSectionEditor ({ onCancel, onDirtyChange = () => {}
     if (intro.trim().length > 300) return setError('Intro must be 300 characters or fewer.')
     setSaving(true); setError(null)
     try {
-      onSaved(await updateSectionContent(tenantId, sectionId, {
+      onSaved(await updateSectionContent(tenantId, pageId, sectionId, {
         ...(heading.trim() ? { heading: heading.trim() } : {}),
         ...(intro.trim() ? { intro: intro.trim() } : {})
       }))
@@ -41,7 +42,7 @@ export function BusinessHoursSectionEditor ({ onCancel, onDirtyChange = () => {}
 
   return (
     <WebsiteEditorShell dirtyValue={{ heading: heading.trim(), intro: intro.trim() }} editor="businessHoursSection" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving}>
-      <p className="text-sm leading-6 text-fg-muted">Edit how the schedule appears on the homepage. Weekly hours are managed in Site setup.</p>
+      <p className="text-sm leading-6 text-fg-muted">Edit how the schedule appears on this page. Weekly hours are managed in Site setup.</p>
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`hours-heading-${tenantId}`}>Section heading <span className="font-normal text-fg-muted">Optional</span></label>
       <Input className="mt-2" disabled={saving} id={`hours-heading-${tenantId}`} maxLength={120} onChange={(event) => setHeading(event.target.value)} placeholder="Business Hours" value={heading} />
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`hours-intro-${tenantId}`}>Intro <span className="font-normal text-fg-muted">Optional</span></label>

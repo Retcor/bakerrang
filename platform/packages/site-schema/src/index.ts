@@ -328,4 +328,10 @@ export const isBusinessHoursSection = (section: SiteSection): section is Busines
   section.type === 'businessHours'
 
 export const findHomePage = (site: SiteDefinition): SitePage | undefined =>
-  site.pages.find((page) => page.slug === '/')
+  site.pages.find((page) => page.id === 'home')
+
+export const findPageById = (site: SiteDefinition, pageId: string): SitePage | undefined =>
+  site.pages.find((page) => page.id === pageId)
+
+export const findPageBySlug = (site: SiteDefinition, slug: string): SitePage | undefined =>
+  site.pages.find((page) => page.id !== 'home' && page.slug === slug)

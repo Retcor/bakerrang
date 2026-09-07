@@ -40,7 +40,7 @@ describe('business workspace polish', () => {
         { id: 'gallery-id', type: 'gallery', hidden: false, content: { title: 'Gallery', items: [{ id: 'image-1', mediaId: 'media-1', altText: 'Cake' }, { id: 'image-2', mediaId: 'media-2', altText: 'Bread' }] } }
       ] }]
     }
-    const common = { onCancel: () => undefined, onSaved: () => undefined, site, tenantId: 'bakery-1' }
+    const common = { onCancel: () => undefined, onSaved: () => undefined, pageId: 'home', site, tenantId: 'bakery-1' }
 
     const services = render(<ServicesEditor {...common} sectionId="services-id" />)
     expect(screen.getByRole('button', { name: 'Remove service' })).toHaveClass('min-h-11', 'min-w-11')

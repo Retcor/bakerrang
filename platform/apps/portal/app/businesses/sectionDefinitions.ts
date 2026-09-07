@@ -1,4 +1,4 @@
-import { findHomePage, type SectionType, type SiteDefinition, type SiteSection } from '@bakerrang/site-schema'
+import { type SectionType, type SiteDefinition, type SiteSection } from '@bakerrang/site-schema'
 
 export type SectionEditorKey = Exclude<SectionType, 'businessHours'> | 'businessHoursSection'
 
@@ -7,6 +7,7 @@ export interface SectionDefinition {
   description: string
   group: 'Core' | 'Content' | 'Media' | 'Trust' | 'Conversion' | 'Business'
   editor: SectionEditorKey
+  homeOnly?: boolean
   singleton: boolean
   duplicable: boolean
   summary: (section: SiteSection, site: SiteDefinition) => string
@@ -17,7 +18,7 @@ const countText = (count: number, singular: string, plural = `${singular}s`) => 
 
 export const sectionDefinitions: Record<SectionType, SectionDefinition> = {
   hero: {
-    label: 'Hero', description: 'Shape the first message visitors see on the homepage.', group: 'Core', editor: 'hero', singleton: true, duplicable: false,
+    label: 'Hero', description: 'Shape the first message visitors see on the homepage.', group: 'Core', editor: 'hero', homeOnly: true, singleton: true, duplicable: false,
     summary: (section) => fallback(section.type === 'hero' ? section.content.title : undefined, 'Headline & call to action')
   },
   about: {
@@ -29,19 +30,19 @@ export const sectionDefinitions: Record<SectionType, SectionDefinition> = {
     summary: (section) => section.type === 'services' ? (section.content.items.length ? countText(section.content.items.length, 'service') : 'No services yet') : 'No services yet'
   },
   gallery: {
-    label: 'Gallery', description: 'Choose and arrange homepage gallery images.', group: 'Media', editor: 'gallery', singleton: false, duplicable: true,
+    label: 'Gallery', description: 'Choose and arrange gallery images for this page.', group: 'Media', editor: 'gallery', singleton: false, duplicable: true,
     summary: (section) => section.type === 'gallery' ? (section.content.items.length ? countText(section.content.items.length, 'image') : 'No images yet') : 'No images yet'
   },
   testimonials: {
-    label: 'Testimonials', description: 'Show customer quotes on the homepage.', group: 'Trust', editor: 'testimonials', singleton: false, duplicable: true,
+    label: 'Testimonials', description: 'Show customer quotes on this page.', group: 'Trust', editor: 'testimonials', singleton: false, duplicable: true,
     summary: (section) => section.type === 'testimonials' ? (section.content.items.length ? countText(section.content.items.length, 'testimonial') : 'No testimonials yet') : 'No testimonials yet'
   },
   faq: {
-    label: 'FAQ', description: 'Answer common questions on the homepage.', group: 'Trust', editor: 'faq', singleton: false, duplicable: true,
+    label: 'FAQ', description: 'Answer common questions on this page.', group: 'Trust', editor: 'faq', singleton: false, duplicable: true,
     summary: (section) => section.type === 'faq' ? (section.content.items.length ? countText(section.content.items.length, 'question') : 'No questions yet') : 'No questions yet'
   },
   businessHours: {
-    label: 'Business Hours', description: 'Present the business schedule on the homepage.', group: 'Business', editor: 'businessHoursSection', singleton: true, duplicable: false,
+    label: 'Business Hours', description: 'Present the global business schedule on this page.', group: 'Business', editor: 'businessHoursSection', singleton: true, duplicable: false,
     summary: (_section, site) => {
       const hours = site.businessProfile?.businessHours
       if (!hours) return 'Weekly business hours'
@@ -50,7 +51,7 @@ export const sectionDefinitions: Record<SectionType, SectionDefinition> = {
     }
   },
   contact: {
-    label: 'Contact', description: 'Configure the homepage contact call to action.', group: 'Conversion', editor: 'contact', singleton: true, duplicable: false,
+    label: 'Contact', description: 'Configure this page’s contact call to action.', group: 'Conversion', editor: 'contact', singleton: true, duplicable: false,
     summary: (section) => {
       if (section.type !== 'contact') return 'Configure a contact action'
       const action = section.content.action
@@ -64,10 +65,6 @@ export const sectionDefinitions: Record<SectionType, SectionDefinition> = {
 }
 
 export const sectionTypes = Object.keys(sectionDefinitions) as SectionType[]
-
-export function homeSections (site: SiteDefinition) {
-  return findHomePage(site)?.sections ?? []
-}
 
 export function sectionLabel (section: SiteSection) {
   return sectionDefinitions[section.type].label

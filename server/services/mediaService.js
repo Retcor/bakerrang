@@ -294,21 +294,26 @@ export const formatMediaInUseMessage = (locations) => {
 
 const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
   const refs = siteRefsFor(tenantId)
-  const [configSnapshot, homeSnapshot, publishedSnapshot] = await Promise.all([
-    transaction ? transaction.get(refs.config) : refs.config.get(),
-    transaction ? transaction.get(refs.home) : refs.home.get(),
+  const configSnapshot = await (transaction ? transaction.get(refs.config) : refs.config.get())
+  const config = configSnapshot.exists ? configSnapshot.data() : null
+  const pageOrder = config && Object.prototype.hasOwnProperty.call(config, 'pageOrder') ? config.pageOrder : ['home']
+  if (!Array.isArray(pageOrder) || pageOrder[0] !== 'home' || new Set(pageOrder).size !== pageOrder.length) throw httpError(500, 'Site page order is invalid')
+  const pageRefs = pageOrder.map((pageId) => refs.config.collection('pages').doc(pageId))
+  const [pageSnapshots, publishedSnapshot] = await Promise.all([
+    transaction ? transaction.getAll(...pageRefs) : firestore.getAll(...pageRefs),
     transaction ? transaction.get(refs.published) : refs.published.get()
   ])
-
-  const working = configSnapshot.exists
+  if (config && pageSnapshots.some((snapshot) => !snapshot.exists)) throw httpError(500, 'Site page is missing')
+  const working = config
     ? {
-        branding: configSnapshot.data().branding,
-        businessProfile: configSnapshot.data().businessProfile,
-        pages: [{
-          sections: homeSnapshot.exists && Array.isArray(homeSnapshot.data().sections)
-            ? homeSnapshot.data().sections
-            : []
-        }]
+        branding: config.branding,
+        businessProfile: config.businessProfile,
+        pages: pageSnapshots.map((snapshot) => ({
+          id: snapshot.data().id,
+          slug: snapshot.data().slug,
+          title: snapshot.data().title,
+          sections: Array.isArray(snapshot.data().sections) ? snapshot.data().sections : []
+        }))
       }
     : null
 
