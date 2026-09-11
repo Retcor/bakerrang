@@ -1,4 +1,4 @@
-import type { BusinessHours, SectionType, SiteDefinition, SiteFooter, SiteHeader, SiteTheme, SocialLink } from '@bakerrang/site-schema'
+import type { BusinessHours, SectionType, SiteDefinition, SiteFooter, SiteHeader, SiteSeo, SiteTheme, SocialLink } from '@bakerrang/site-schema'
 import type { PostalAddress } from '@bakerrang/site-schema'
 import { apiGet, apiSend } from './api'
 
@@ -117,6 +117,19 @@ export interface CustomCssUpdateInput {
   customCss: string | null
 }
 
+export interface SiteSeoUpdateInput extends SiteSeo {
+  /** Omit to retain the current BusinessProfile-owned social image; null clears it. */
+  socialImageMediaId?: string | null
+}
+
+/** Persisted SEO fields only; hydrated image values are intentionally excluded. */
+export interface PageSeoUpdateInput {
+  title?: string
+  description?: string
+  socialImageMediaId?: string | null
+  noIndex?: boolean
+}
+
 export interface SitePreviewToken {
   token: string
   expiresAt: number
@@ -195,6 +208,9 @@ export const updateSocialLinks = (tenantId: string, input: SocialLinksUpdateInpu
 export const updateCustomCss = (tenantId: string, input: CustomCssUpdateInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/custom-css`, input)
 
+export const updateSiteSeo = (tenantId: string, input: SiteSeoUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/seo`, input)
+
 export const publishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/publish`)
 
@@ -210,6 +226,8 @@ export const createPage = (tenantId: string, input: PageInput) =>
   apiSend<CreatePageResponse>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/pages`, input)
 export const updatePage = (tenantId: string, pageId: string, input: UpdatePageInput) =>
   apiSend<SiteDefinition>('PATCH', pagePath(tenantId, pageId), input)
+export const updatePageSeo = (tenantId: string, pageId: string, input: PageSeoUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `${pagePath(tenantId, pageId)}/seo`, input)
 export const movePage = (tenantId: string, pageId: string, direction: 'up' | 'down') =>
   apiSend<SiteDefinition>('POST', `${pagePath(tenantId, pageId)}/move`, { direction })
 export const deletePage = (tenantId: string, pageId: string) =>

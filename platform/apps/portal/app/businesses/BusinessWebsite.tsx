@@ -29,6 +29,7 @@ import { PageSectionManager } from './PageSectionManager'
 import { PagesManager } from './PagesManager'
 import { ServicesEditor } from './ServicesEditor'
 import { SocialProfilesEditor } from './SocialProfilesEditor'
+import { SeoEditor } from './SeoEditor'
 import { TestimonialsEditor } from './TestimonialsEditor'
 import { ThemeEditor } from './ThemeEditor'
 import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
@@ -50,7 +51,7 @@ function publishedDate (timestamp: number | undefined) {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(timestamp)
 }
 
-function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, onEditSection, onPreviewPage, onRefresh, onSaved, pageId, sectionId, site, tenantId }: {
+function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, onEditSection, onPreviewPage, onRefresh, onSaved, onSelectSeoContext, pageId, sectionId, site, tenantId }: {
   editor: WebsiteEditorId
   onBackToPages: (pageId?: string) => void
   onCancel: () => void
@@ -59,6 +60,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
   onPreviewPage: (pageId: string) => void
   onRefresh: () => Promise<SiteDefinition>
   onSaved: (site: SiteDefinition) => void
+  onSelectSeoContext: (pageId?: string) => void
   pageId?: string
   sectionId?: string
   site: SiteDefinition
@@ -96,6 +98,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
     case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'header': return <HeaderEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'footer': return <FooterEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'seo': return <SeoEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreviewPage={onPreviewPage} onSaved={onSaved} onSelectContext={onSelectSeoContext} pageId={pageId} site={site} tenantId={tenantId} />
     case 'customCss': return <CustomCssEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
   }
 }
@@ -197,7 +200,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     const params = new URLSearchParams(searchParams.toString())
     if (nextEditor) params.set('editor', nextEditor)
     else params.delete('editor')
-    if (nextEditor === 'page' && pageId) params.set('pageId', pageId)
+    if ((nextEditor === 'page' || nextEditor === 'seo') && pageId) params.set('pageId', pageId)
     else params.delete('pageId')
     if (nextEditor === 'page' && sectionId) params.set('sectionId', sectionId)
     else params.delete('sectionId')
@@ -214,6 +217,10 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const selectPage = (pageId: string, sectionId?: string) => {
     if (editorDirty) { setPendingPane({ editor: 'page', pageId, sectionId }); return }
     navigateToEditor('page', pageId, sectionId)
+  }
+  const selectSeoContext = (pageId?: string) => {
+    if (editorDirty) { setPendingPane({ editor: 'seo', pageId }); return }
+    navigateToEditor('seo', pageId)
   }
   const run = async (operation: Operation, action: () => Promise<SiteDefinition>, message: string) => {
     if (pending) return
@@ -286,7 +293,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
       <div className="grid min-w-0 gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
         <WebsiteEditorNavigation active={activePane} onSelect={selectEditor} />
         <main className="min-w-0">
-          {editor ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${queryPageId ?? 'none'}:${querySectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => { if (queryPageId) selectPage(queryPageId, sectionId) }} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} pageId={editor === 'page' ? queryPageId : undefined} sectionId={editor === 'page' ? querySectionId : undefined} site={site} tenantId={tenantId} /> : <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />}
+          {editor ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${queryPageId ?? 'none'}:${querySectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => { if (queryPageId) selectPage(queryPageId, sectionId) }} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? queryPageId : undefined} sectionId={editor === 'page' ? querySectionId : undefined} site={site} tenantId={tenantId} /> : <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />}
         </main>
       </div>
       <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description={`Your changes in ${editor ? websiteEditorById.get(editor)?.label ?? 'this editor' : 'this editor'} haven't been saved.`} onCancel={() => setPendingPane(null)} onConfirm={() => { const destination = pendingPane; setPendingPane(null); setEditorDirty(false); if (destination) navigateToEditor(destination.editor, destination.pageId, destination.sectionId) }} open={pendingPane !== null} title="Discard unsaved changes?" />

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { SiteDefinition } from '@bakerrang/site-schema'
 import { DEFAULT_SITE_THEME } from '../../../packages/site-components/src/theme.ts'
-import { homeMetadata, localBusinessData, pageMetadata, serializeJsonLd } from '../lib/seo.ts'
+import { homeMetadata, localBusinessData, pageMetadata, resolvePageMetadata, serializeJsonLd } from '../lib/seo.ts'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSharedPublicOrigin, resolveSiteBaseUrl } from '../lib/siteUrl.ts'
 
 const site = (businessProfile: SiteDefinition['businessProfile'] = undefined, status: SiteDefinition['status'] = 'PUBLISHED'): SiteDefinition => ({
@@ -119,6 +119,41 @@ test('generic page metadata uses the page title and canonical page slug', () => 
   assert.deepEqual(pageMetadata(site(undefined, 'DRAFT'), page, 'abc', indexedEnv).robots, {
     index: false, follow: false
   })
+})
+
+test('unified metadata resolves SEO precedence, page imagery, operator robots, and preview safety', () => {
+  const definition = site({ description: 'Profile description', socialImageMediaId: 'site-image', socialImageSrc: 'https://media.example.com/site.png' })
+  definition.seo = { defaultDescription: 'Site description', indexable: true }
+  const page: SiteDefinition['pages'][number] = { id: 'page-1', slug: 'services', title: 'Services', sections: [], seo: { title: 'Search title', description: 'Page description', socialImageMediaId: 'page-image', socialImageSrc: 'https://media.example.com/page.png', socialImageWidth: 1200, socialImageHeight: 630 } }
+  definition.pages.push(page)
+  const metadata = resolvePageMetadata(definition, page, { tenantId: 'abc', env: indexedEnv })
+  assert.equal(metadata.title, 'Search title')
+  assert.equal(metadata.description, 'Page description')
+  assert.deepEqual(metadata.openGraph?.images, [{ url: 'https://media.example.com/page.png', width: 1200, height: 630 }])
+  assert.equal((metadata.twitter as { card?: string })?.card, 'summary_large_image')
+  assert.deepEqual(metadata.robots, { index: true, follow: true })
+
+  page.seo = { noIndex: true }
+  assert.deepEqual(resolvePageMetadata(definition, page, { tenantId: 'abc', env: indexedEnv }).robots, { index: false, follow: true })
+  definition.seo = { indexable: false }
+  assert.deepEqual(resolvePageMetadata(definition, page, { tenantId: 'abc', env: indexedEnv }).robots, { index: false, follow: true })
+  const preview = resolvePageMetadata(definition, page, { tenantId: 'abc', preview: true })
+  assert.deepEqual(preview.robots, { index: false, follow: false })
+  assert.equal(preview.alternates, undefined)
+  assert.equal(preview.openGraph?.url, undefined)
+})
+
+test('unified metadata independently falls back to site defaults, profile copy, and the site social image', () => {
+  const definition = site({ description: 'Business Profile description', socialImageMediaId: 'site-image', socialImageSrc: 'https://media.example.com/site.png' })
+  const page: SiteDefinition['pages'][number] = { id: 'page-1', slug: 'services', title: 'Services', sections: [] }
+  definition.pages.push(page)
+  definition.seo = { defaultDescription: 'Site default description' }
+  const fromSite = resolvePageMetadata(definition, page, { tenantId: 'abc', env: indexedEnv })
+  assert.equal(fromSite.description, 'Site default description')
+  assert.deepEqual(fromSite.openGraph?.images, [{ url: 'https://media.example.com/site.png' }])
+
+  definition.seo = undefined
+  assert.equal(resolvePageMetadata(definition, page, { tenantId: 'abc', env: indexedEnv }).description, 'Business Profile description')
 })
 
 test('LocalBusiness requires an explicit operational fact and omits empty fields', () => {

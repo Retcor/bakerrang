@@ -10,7 +10,7 @@ vi.mock('../api', () => ({
   apiSend: mocks.apiSend
 }))
 
-import { updateCustomCss } from '../site'
+import { updateCustomCss, updatePageSeo, updateSiteSeo } from '../site'
 
 describe('site API helpers', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -24,5 +24,18 @@ describe('site API helpers', () => {
 
     expect(mocks.apiSend).toHaveBeenNthCalledWith(1, 'PUT', '/tenants/tenant%2Fone/site/custom-css', { customCss: raw })
     expect(mocks.apiSend).toHaveBeenNthCalledWith(2, 'PUT', '/tenants/tenant%2Fone/site/custom-css', { customCss: null })
+  })
+
+  it('sends SEO mutations to their single atomic site or page endpoint with canonical payloads', async () => {
+    mocks.apiSend.mockResolvedValue({ status: 'DRAFT' })
+    await updateSiteSeo('tenant/one', { defaultDescription: 'Site copy', indexable: false, socialImageMediaId: null })
+    await updatePageSeo('tenant/one', 'page/id', { title: 'Page copy', description: '', socialImageMediaId: 'media-1', noIndex: true })
+
+    expect(mocks.apiSend).toHaveBeenNthCalledWith(1, 'PUT', '/tenants/tenant%2Fone/site/seo', {
+      defaultDescription: 'Site copy', indexable: false, socialImageMediaId: null
+    })
+    expect(mocks.apiSend).toHaveBeenNthCalledWith(2, 'PUT', '/tenants/tenant%2Fone/site/pages/page%2Fid/seo', {
+      title: 'Page copy', description: '', socialImageMediaId: 'media-1', noIndex: true
+    })
   })
 })

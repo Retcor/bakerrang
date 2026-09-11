@@ -8,7 +8,7 @@ import { getPreviewSite } from '../../../../../lib/api'
 import { previewHostAllowed, resolvePreviewMetadata } from '../../../../../lib/preview'
 
 export const dynamic = 'force-dynamic'
-export async function generateMetadata (props: { params: Promise<{ tenantId: string, pageId: string }>, searchParams: Promise<{ token?: string | string[] }> }): Promise<Metadata> { return resolvePreviewMetadata(props) }
+export async function generateMetadata (props: { params: Promise<{ tenantId: string, pageId: string }>, searchParams: Promise<{ token?: string | string[] }> }): Promise<Metadata> { return resolvePreviewMetadata(props, undefined, (await props.params).pageId) }
 export default async function PreviewGenericPage ({ params, searchParams }: { params: Promise<{ tenantId: string, pageId: string }>, searchParams: Promise<{ token?: string | string[] }> }) {
   if (!previewHostAllowed((await headers()).get('host'))) notFound()
   const [{ tenantId, pageId }, query] = await Promise.all([params, searchParams]); const token = typeof query.token === 'string' && query.token ? query.token : null

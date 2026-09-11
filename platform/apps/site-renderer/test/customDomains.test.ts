@@ -132,18 +132,19 @@ test('host-aware robots and sitemap fail closed and trust the API canonical host
   process.env.SITE_PUBLIC_ORIGIN = 'https://sites.example.com'
   process.env.SITE_PUBLIC_INDEXING_ENABLED = 'true'
   try {
+    let published: { status: string, pages: Array<Record<string, unknown>>, seo?: { indexable: boolean } } = {
+      status: 'PUBLISHED', pages: [
+        { id: 'home', slug: '/', title: 'Home', sections: [] },
+        { id: 'page-1', slug: 'services', title: 'Services', sections: [] }
+      ]
+    }
     globalThis.fetch = (async (input: string | URL | Request) => {
       const url = String(input)
       if (url.endsWith('/public/domains/active.example')) {
         return Response.json({ tenantId: 'tenant-1', canonicalHost: 'active.example' })
       }
       if (url.endsWith('/public/sites/tenant-1/published')) {
-        return Response.json({
-          status: 'PUBLISHED', pages: [
-            { id: 'home', slug: '/', title: 'Home', sections: [] },
-            { id: 'page-1', slug: 'services', title: 'Services', sections: [] }
-          ]
-        })
+        return Response.json(published)
       }
       return new Response(null, { status: 404 })
     }) as typeof fetch
@@ -162,6 +163,24 @@ test('host-aware robots and sitemap fail closed and trust the API canonical host
     assert.match(await (await sitemap(new Request('https://ignored/sitemap.xml', {
       headers: { host: 'active.example' }
     }))).text(), /<loc>https:\/\/active\.example\/services<\/loc>/)
+
+    published = {
+      status: 'PUBLISHED', pages: [
+        { id: 'home', slug: '/', title: 'Home', sections: [], seo: { noIndex: true } },
+        { id: 'page-1', slug: 'services', title: 'Services', sections: [] }
+      ]
+    }
+    const pageFiltered = await (await sitemap(new Request('https://ignored/sitemap.xml', {
+      headers: { host: 'active.example' }
+    }))).text()
+    assert.doesNotMatch(pageFiltered, /<loc>https:\/\/active\.example\/<\/loc>/)
+    assert.match(pageFiltered, /<loc>https:\/\/active\.example\/services<\/loc>/)
+
+    published = { ...published, seo: { indexable: false } }
+    const empty = await (await sitemap(new Request('https://ignored/sitemap.xml', {
+      headers: { host: 'active.example' }
+    }))).text()
+    assert.doesNotMatch(empty, /<loc>/)
 
     const sharedRobots = await robots(new Request('https://ignored/robots.txt', {
       headers: { host: 'sites.example.com' }

@@ -82,6 +82,10 @@ const sites = {
     calls.push({ operation: 'updateSiteTheme', tenantId, body })
     return siteDefinition
   },
+  updateSiteSeo: async (tenantId, body) => {
+    calls.push({ operation: 'updateSiteSeo', tenantId, body })
+    return siteDefinition
+  },
   updateBusinessProfile: async (tenantId, body) => {
     calls.push({ operation: 'updateBusinessProfile', tenantId, body })
     return siteDefinition
@@ -107,6 +111,10 @@ const sites = {
   },
   updatePage: async (tenantId, pageId, body) => {
     calls.push({ operation: 'updatePage', tenantId, pageId, body })
+    return siteDefinition
+  },
+  updatePageSeo: async (tenantId, pageId, body) => {
+    calls.push({ operation: 'updatePageSeo', tenantId, pageId, body })
     return siteDefinition
   },
   movePage: async (tenantId, pageId, direction) => {
@@ -541,6 +549,19 @@ test('Theme mutation matches the existing PLATFORM_ADMIN site-edit policy', asyn
   })
   assert.equal(invalid.status, 400)
   assert.deepEqual(await invalid.json(), { error: 'Heading font is not supported' })
+})
+
+test('SEO mutations are PLATFORM_ADMIN-only and forward the exact logical payload and page identity', async () => {
+  const operations = [
+    { path: '/tenants/tenant-1/site/seo', body: { defaultDescription: 'Description', indexable: false, socialImageMediaId: null }, operation: 'updateSiteSeo' },
+    { path: '/tenants/tenant-1/site/pages/page-id/seo', body: { title: 'Search title', noIndex: true }, operation: 'updatePageSeo', pageId: 'page-id' }
+  ]
+  for (const item of operations) {
+    assert.equal((await request(item.path, { method: 'PUT', body: item.body })).status, 401)
+    for (const userId of ['staff', 'admin', 'owner', 'ordinary']) assert.equal((await request(item.path, { userId, method: 'PUT', body: item.body })).status, 403)
+    assert.equal((await request(item.path, { userId: 'platform', method: 'PUT', body: item.body })).status, 200)
+    assert.deepEqual(calls.at(-1), { operation: item.operation, tenantId: 'tenant-1', ...(item.pageId ? { pageId: item.pageId } : {}), body: item.body })
+  }
 })
 
 test('only PLATFORM_ADMIN can PUT Business Profile and the route forwards tenantId and body', async () => {

@@ -135,6 +135,74 @@ const rejectUnknownFields = (value, allowed, label) => {
   if (Object.keys(value).some((key) => !allowed.includes(key))) throw httpError(400, `${label} has unknown fields`)
 }
 
+const optionalSeoText = (value, key, label, maximum) => {
+  if (!own(value, key)) return undefined
+  if (typeof value[key] !== 'string') throw httpError(400, `${label} must be a string`)
+  const text = value[key].trim()
+  if (text.length > maximum) throw httpError(400, `${label} must be ${maximum} characters or fewer`)
+  return text || undefined
+}
+
+const normalizeSeoText = (value, maximum) => typeof value === 'string' && value.trim() && value.trim().length <= maximum
+  ? value.trim()
+  : undefined
+
+const normalizeSiteSeo = (input) => {
+  if (!isObject(input)) return undefined
+  const value = input
+  const defaultDescription = normalizeSeoText(value.defaultDescription, 500)
+  return { ...(defaultDescription ? { defaultDescription } : {}), indexable: value.indexable !== false }
+}
+
+const validateSiteSeo = (input) => {
+  rejectUnknownFields(input, ['defaultDescription', 'indexable', 'socialImageMediaId'], 'SEO settings')
+  const defaultDescription = optionalSeoText(input, 'defaultDescription', 'SEO default description', 500)
+  if (own(input, 'indexable') && typeof input.indexable !== 'boolean') throw httpError(400, 'SEO indexable must be boolean')
+  let socialImageMediaId
+  if (own(input, 'socialImageMediaId')) {
+    if (input.socialImageMediaId !== null && typeof input.socialImageMediaId !== 'string') throw httpError(400, 'SEO social image is invalid')
+    socialImageMediaId = typeof input.socialImageMediaId === 'string' ? input.socialImageMediaId.trim() : ''
+  }
+  return {
+    seo: { ...(defaultDescription ? { defaultDescription } : {}), indexable: input.indexable !== false },
+    hasSocialImageMediaId: own(input, 'socialImageMediaId'),
+    socialImageMediaId
+  }
+}
+
+const normalizePageSeo = (input) => {
+  const value = isObject(input) ? input : {}
+  const title = normalizeSeoText(value.title, 120)
+  const description = normalizeSeoText(value.description, 500)
+  const socialImageMediaId = normalizeSeoText(value.socialImageMediaId, 200)
+  const seo = {
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
+    ...(socialImageMediaId ? { socialImageMediaId } : {}),
+    ...(value.noIndex === true ? { noIndex: true } : {})
+  }
+  return Object.keys(seo).length ? seo : undefined
+}
+
+const validatePageSeo = (input) => {
+  rejectUnknownFields(input, ['title', 'description', 'socialImageMediaId', 'noIndex'], 'Page SEO')
+  const title = optionalSeoText(input, 'title', 'Page SEO title', 120)
+  const description = optionalSeoText(input, 'description', 'Page SEO description', 500)
+  if (own(input, 'noIndex') && typeof input.noIndex !== 'boolean') throw httpError(400, 'Page SEO noIndex must be boolean')
+  let socialImageMediaId
+  if (own(input, 'socialImageMediaId')) {
+    if (input.socialImageMediaId !== null && typeof input.socialImageMediaId !== 'string') throw httpError(400, 'Page SEO social image is invalid')
+    socialImageMediaId = typeof input.socialImageMediaId === 'string' ? input.socialImageMediaId.trim() : ''
+  }
+  const seo = {
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
+    ...(socialImageMediaId ? { socialImageMediaId } : {}),
+    ...(input.noIndex === true ? { noIndex: true } : {})
+  }
+  return Object.keys(seo).length ? seo : undefined
+}
+
 const normalizeNavigationItems = (items, pageOrder) => {
   if (!Array.isArray(items)) return []
   const knownPageIds = new Set(pageOrder)
@@ -236,7 +304,8 @@ const pageResponse = (page) => ({
   id: page.id,
   slug: page.slug,
   title: page.title,
-  sections: Array.isArray(page.sections) ? page.sections.map(siteSectionResponse) : page.sections
+  sections: Array.isArray(page.sections) ? page.sections.map(siteSectionResponse) : page.sections,
+  ...(normalizePageSeo(page.seo) ? { seo: normalizePageSeo(page.seo) } : {})
 })
 
 const publicationState = (config, pages) => {
@@ -276,6 +345,7 @@ const toSiteDefinition = (config, pages) => {
     ...definition,
     branding: siteBrandingResponse(config.branding, definition),
     theme: normalizeSiteTheme(config.theme),
+    ...(normalizeSiteSeo(config.seo) ? { seo: normalizeSiteSeo(config.seo) } : {}),
     header: normalizeSiteHeader(config.header, pageOrder),
     footer: normalizeSiteFooter(config.footer, pageOrder),
     ...(typeof config.customCss === 'string' ? { customCss: config.customCss } : {}),
@@ -295,10 +365,13 @@ const normalizePublishedSiteDefinition = (definition) => {
   const canonical = definition && typeof definition === 'object' ? { ...definition } : {}
   delete canonical.customCss
   delete canonical.scopedCustomCss
+  delete canonical.seo
   const normalized = {
     ...canonical,
+    pages: pages.map(pageResponse),
     branding: siteBrandingResponse(definition?.branding, definition),
     theme: normalizeSiteTheme(definition?.theme),
+    ...(normalizeSiteSeo(definition?.seo) ? { seo: normalizeSiteSeo(definition?.seo) } : {}),
     header: normalizeSiteHeader(definition?.header, pages.map((page) => page.id)),
     footer: normalizeSiteFooter(definition?.footer, pages.map((page) => page.id)),
     ...(typeof definition?.customCss === 'string' ? { customCss: definition.customCss } : {})
@@ -1061,6 +1134,28 @@ export const updateSiteTheme = async (tenantId, input) => {
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
+export const updateSiteSeo = async (tenantId, input) => {
+  const update = validateSiteSeo(input)
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    if (update.socialImageMediaId) await requireTenantMediaInTransaction(transaction, tenantId, [update.socialImageMediaId], 'SEO social image not found')
+    const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const nextConfig = { ...config, seo: update.seo, updatedAt: now }
+    if (update.hasSocialImageMediaId) {
+      const profile = { ...(config.businessProfile || {}) }
+      if (update.socialImageMediaId) profile.socialImageMediaId = update.socialImageMediaId
+      else delete profile.socialImageMediaId
+      if (Object.keys(profile).length) nextConfig.businessProfile = profile
+      else delete nextConfig.businessProfile
+    }
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, pages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
 export const updateBusinessProfile = async (tenantId, input) => {
   const businessProfile = validateBusinessProfile(input)
   const refs = refsFor(tenantId)
@@ -1288,6 +1383,27 @@ export const updatePage = async (tenantId, pageId, input) => {
     const slug = hasSlug ? validatePageSlug(body.slug) : current.slug
     requireUniquePageSlug(pages, slug, pageId)
     const page = { ...current, title, slug, updatedAt: now }
+    const nextPages = [...pages]; nextPages[index] = page
+    const nextConfig = { ...config, updatedAt: now }
+    transaction.set(refs.page(pageId), page)
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, nextPages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const updatePageSeo = async (tenantId, pageId, input) => {
+  const seo = validatePageSeo(input)
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    if (seo?.socialImageMediaId) await requireTenantMediaInTransaction(transaction, tenantId, [seo.socialImageMediaId], 'Page SEO social image not found')
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    const index = order.indexOf(pageId)
+    if (index === -1) throw httpError(404, 'Page not found')
+    const page = { ...pages[index], updatedAt: now }
+    if (seo) page.seo = seo
+    else delete page.seo
     const nextPages = [...pages]; nextPages[index] = page
     const nextConfig = { ...config, updatedAt: now }
     transaction.set(refs.page(pageId), page)

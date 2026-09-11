@@ -240,6 +240,7 @@ export const collectSiteMediaIds = (definition) => {
     ...(logoMediaId ? [logoMediaId] : []),
     ...(faviconMediaId ? [faviconMediaId] : []),
     ...(socialImageMediaId ? [socialImageMediaId] : []),
+    ...(Array.isArray(definition?.pages) ? definition.pages.map((page) => page?.seo?.socialImageMediaId).filter(nonEmptyString) : []),
     ...aboutSections.map((section) => section.content?.imageMediaId).filter(nonEmptyString),
     ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString),
     ...logoItems.map((item) => item?.mediaId).filter(nonEmptyString)
@@ -250,12 +251,14 @@ const MEDIA_USAGE_ORDER = [
   ['working', 'logo'],
   ['working', 'favicon'],
   ['working', 'social image'],
+  ['working', 'page SEO social image'],
   ['working', 'about image'],
   ['working', 'gallery'],
   ['working', 'logos'],
   ['published', 'logo'],
   ['published', 'favicon'],
   ['published', 'social image'],
+  ['published', 'page SEO social image'],
   ['published', 'about image'],
   ['published', 'gallery'],
   ['published', 'logos']
@@ -267,6 +270,7 @@ const collectMediaLocations = (definition, mediaId, surface) => {
   if (definition?.branding?.faviconMediaId === mediaId) found.add('favicon')
   if (definition?.businessProfile?.socialImageMediaId === mediaId) found.add('social image')
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
+    if (page?.seo?.socialImageMediaId === mediaId) found.add('page SEO social image')
     for (const section of Array.isArray(page?.sections) ? page.sections : []) {
       if (section?.type === 'about' && section.content?.imageMediaId === mediaId) {
         found.add('about image')
@@ -312,6 +316,7 @@ const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
           id: snapshot.data().id,
           slug: snapshot.data().slug,
           title: snapshot.data().title,
+          seo: snapshot.data().seo,
           sections: Array.isArray(snapshot.data().sections) ? snapshot.data().sections : []
         }))
       }
@@ -413,43 +418,60 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
           }
         }
       : {}),
-    pages: (Array.isArray(definition?.pages) ? definition.pages : []).map((page) => ({
-      ...page,
-      sections: (Array.isArray(page?.sections) ? page.sections : []).map((section) => {
-        if (section?.type === 'about') {
-          const content = { ...(section.content || {}) }
-          delete content.imageSrc
-          delete content.imageWidth
-          delete content.imageHeight
-          const mediaId = nonEmptyString(content.imageMediaId) ? content.imageMediaId : null
-          const media = mediaId && resolved.get(mediaId)
-          if (media && nonEmptyString(content.imageAlt)) {
-            content.imageSrc = objectStorage.publicUrl(media.objectName)
-            content.imageWidth = media.width
-            content.imageHeight = media.height
-          }
-          return { ...section, content }
-        }
-        if (section?.type !== 'gallery' && section?.type !== 'logos') return section
-        const items = (Array.isArray(section.content?.items) ? section.content.items : [])
-          .map((item) => {
-            const media = item && resolved.get(item.mediaId)
-            if (!media || !nonEmptyString(item.id) || !nonEmptyString(item.altText)) return null
-            return {
-              id: item.id,
-              mediaId: item.mediaId,
-              altText: item.altText,
-              src: objectStorage.publicUrl(media.objectName),
-              width: media.width,
-              height: media.height
+    pages: (Array.isArray(definition?.pages) ? definition.pages : []).map((page) => {
+      const { socialImageSrc, socialImageWidth, socialImageHeight, ...seo } = page?.seo || {}
+      return {
+        ...page,
+        ...(page?.seo
+          ? {
+              seo: {
+                ...seo,
+                ...(nonEmptyString(seo.socialImageMediaId) && resolved.has(seo.socialImageMediaId)
+                  ? {
+                      socialImageSrc: objectStorage.publicUrl(resolved.get(seo.socialImageMediaId).objectName),
+                      socialImageWidth: resolved.get(seo.socialImageMediaId).width,
+                      socialImageHeight: resolved.get(seo.socialImageMediaId).height
+                    }
+                  : {})
+              }
             }
-          })
-          .filter(Boolean)
-        return {
-          ...section,
-          content: { ...section.content, items }
-        }
-      })
-    }))
+          : {}),
+        sections: (Array.isArray(page?.sections) ? page.sections : []).map((section) => {
+          if (section?.type === 'about') {
+            const content = { ...(section.content || {}) }
+            delete content.imageSrc
+            delete content.imageWidth
+            delete content.imageHeight
+            const mediaId = nonEmptyString(content.imageMediaId) ? content.imageMediaId : null
+            const media = mediaId && resolved.get(mediaId)
+            if (media && nonEmptyString(content.imageAlt)) {
+              content.imageSrc = objectStorage.publicUrl(media.objectName)
+              content.imageWidth = media.width
+              content.imageHeight = media.height
+            }
+            return { ...section, content }
+          }
+          if (section?.type !== 'gallery' && section?.type !== 'logos') return section
+          const items = (Array.isArray(section.content?.items) ? section.content.items : [])
+            .map((item) => {
+              const media = item && resolved.get(item.mediaId)
+              if (!media || !nonEmptyString(item.id) || !nonEmptyString(item.altText)) return null
+              return {
+                id: item.id,
+                mediaId: item.mediaId,
+                altText: item.altText,
+                src: objectStorage.publicUrl(media.objectName),
+                width: media.width,
+                height: media.height
+              }
+            })
+            .filter(Boolean)
+          return {
+            ...section,
+            content: { ...section.content, items }
+          }
+        })
+      }
+    })
   }
 }

@@ -18,7 +18,9 @@ export async function GET (request: Request): Promise<Response> {
 
   const site = await getPublishedSite(domain.tenantId)
   if (!site) return new Response('Not found', { status: 404 })
-  const urls = site.pages.map((page) => `https://${domain.canonicalHost}/${page.id === 'home' ? '' : page.slug}`)
+  const urls = site.seo?.indexable === false
+    ? []
+    : site.pages.filter((page) => page.seo?.noIndex !== true).map((page) => `https://${domain.canonicalHost}/${page.id === 'home' ? '' : page.slug}`)
   const body = '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     urls.map((url) => `  <url><loc>${url}</loc></url>\n`).join('') +

@@ -27,7 +27,8 @@ const mocks = vi.hoisted(() => ({
   upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(),
   updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(),
-  updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn()
+  updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(),
+  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn()
 }))
 
 const navigation = vi.hoisted(() => ({
@@ -65,12 +66,13 @@ describe('Website workspace', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages', 'Header & Navigation', 'Footer', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
     const structure = within(nav).getByRole('heading', { name: 'Site structure' }).closest('section') as HTMLElement
     const advanced = within(nav).getByRole('heading', { name: 'Advanced' }).closest('section') as HTMLElement
+    const search = within(nav).getByRole('heading', { name: 'Search & sharing' }).closest('section') as HTMLElement
     expect(within(nav).getByRole('heading', { name: 'Site setup' })).toHaveClass('text-[0.6875rem]', 'font-semibold', 'tracking-[0.12em]')
     expect(structure).toHaveClass('border-t', 'border-border', 'pt-5')
     expect(within(nav).queryByRole('button', { name: 'Site setup' })).not.toBeInTheDocument()
@@ -80,6 +82,7 @@ describe('Website workspace', () => {
     expect(within(structure).getByRole('button', { name: 'Pages' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Header & Navigation' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Footer' })).toBeInTheDocument()
+    expect(within(search).getByRole('button', { name: 'SEO & Social' })).toBeInTheDocument()
     expect(within(advanced).getByRole('button', { name: 'Custom CSS' })).toBeInTheDocument()
   })
 
@@ -219,6 +222,28 @@ describe('Website workspace', () => {
     expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation confirmation when switching SEO & Social contexts', async () => {
+    navigation.search = 'editor=seo'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.change(await screen.findByLabelText('Default search description'), { target: { value: 'Unsaved site SEO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Home · /' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('Default search description')).toHaveValue('Unsaved site SEO')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home · /' }))
+    navigation.search = 'editor=seo&pageId=home'
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByLabelText('SEO title')).toBeInTheDocument()
+    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?editor=seo&pageId=home', { scroll: false })
+
+    fireEvent.change(screen.getByLabelText('SEO title'), { target: { value: 'Unsaved Home SEO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Site Defaults' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('SEO title')).toHaveValue('Unsaved Home SEO')
   })
 
   it('uses the shared dirty-navigation confirmation for Page Settings and keeps its draft on Cancel', async () => {

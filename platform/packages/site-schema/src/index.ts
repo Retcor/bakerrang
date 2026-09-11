@@ -199,6 +199,7 @@ export interface SitePage {
   slug: string
   title: string
   sections: SiteSection[]
+  seo?: PageSeo
 }
 
 export type SiteStatus = 'DRAFT' | 'PUBLISHED'
@@ -282,6 +283,24 @@ export interface BusinessProfile {
   socialLinks?: SocialLink[]
 }
 
+/** Operator-authored site defaults. Missing indexable is logically true. */
+export interface SiteSeo {
+  defaultDescription?: string
+  indexable?: boolean
+}
+
+/** Page-id-owned SEO overrides. Hydrated media values are read-only. */
+export interface PageSeo {
+  title?: string
+  description?: string
+  socialImageMediaId?: string
+  /** Read-time hydration only. Never persisted in working or published site documents. */
+  socialImageSrc?: string
+  socialImageWidth?: number
+  socialImageHeight?: number
+  noIndex?: boolean
+}
+
 /** A Page-only navigation reference. Its pageId is its identity within a menu. */
 export interface NavigationItem {
   pageId: string
@@ -322,6 +341,8 @@ export interface SiteDefinition {
   /** Read-time only. Server-validated and scoped for renderer injection; never persisted. */
   scopedCustomCss?: string
   businessProfile?: BusinessProfile
+  /** Missing legacy SEO normalizes to indexable=true. */
+  seo?: SiteSeo
   /** Always present in normalized server responses; optional for legacy callers. */
   header?: SiteHeader
   /** Always present in normalized server responses; optional for legacy callers. */

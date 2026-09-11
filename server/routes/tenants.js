@@ -127,6 +127,10 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateSiteTheme(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/seo', platformAdmin, handle(
+    (req) => sites.updateSiteSeo(req.params.tenantId, req.body)
+  ))
+
   router.put('/:tenantId/site/profile', platformAdmin, handle(
     (req) => sites.updateBusinessProfile(req.params.tenantId, req.body)
   ))
@@ -150,6 +154,10 @@ export const createTenantRouter = (deps = {}) => {
 
   router.patch('/:tenantId/site/pages/:pageId', platformAdmin, handle(
     (req) => sites.updatePage(req.params.tenantId, req.params.pageId, req.body)
+  ))
+
+  router.put('/:tenantId/site/pages/:pageId/seo', platformAdmin, handle(
+    (req) => sites.updatePageSeo(req.params.tenantId, req.params.pageId, req.body)
   ))
 
   router.post('/:tenantId/site/pages/:pageId/move', platformAdmin, handle(
