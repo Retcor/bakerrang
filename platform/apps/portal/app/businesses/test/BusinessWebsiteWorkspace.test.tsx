@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
   upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(),
   updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(),
-  updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn()
+  updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn()
 }))
 
 const navigation = vi.hoisted(() => ({
@@ -65,19 +65,21 @@ describe('Website workspace', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages', 'Header & Navigation', 'Footer', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
-    const homepage = within(nav).getByRole('heading', { name: 'Pages' }).closest('section') as HTMLElement
+    const structure = within(nav).getByRole('heading', { name: 'Site structure' }).closest('section') as HTMLElement
     const advanced = within(nav).getByRole('heading', { name: 'Advanced' }).closest('section') as HTMLElement
     expect(within(nav).getByRole('heading', { name: 'Site setup' })).toHaveClass('text-[0.6875rem]', 'font-semibold', 'tracking-[0.12em]')
-    expect(homepage).toHaveClass('border-t', 'border-border', 'pt-5')
+    expect(structure).toHaveClass('border-t', 'border-border', 'pt-5')
     expect(within(nav).queryByRole('button', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(setup).getByRole('button', { name: 'Social Profiles' })).toBeInTheDocument()
     expect(within(setup).queryByRole('button', { name: 'Pages' })).not.toBeInTheDocument()
-    expect(within(homepage).getByRole('button', { name: 'Pages' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Pages' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Header & Navigation' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Footer' })).toBeInTheDocument()
     expect(within(advanced).getByRole('button', { name: 'Custom CSS' })).toBeInTheDocument()
   })
 
@@ -106,7 +108,7 @@ describe('Website workspace', () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     const nav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
     fireEvent.click(within(nav).getByRole('button', { name: 'Pages' }))
-    expect(screen.getAllByRole('heading', { name: 'Pages' }).length).toBeGreaterThan(1)
+    expect(screen.getAllByRole('heading', { name: 'Pages' }).length).toBeGreaterThan(0)
     expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring&editor=pages', { scroll: false })
     expect(mocks.getSite).toHaveBeenCalledTimes(1)
     expect(mocks.getSiteDomain).toHaveBeenCalledTimes(1)
@@ -126,7 +128,7 @@ describe('Website workspace', () => {
     const selector = within(dialog).getByRole('navigation', { name: 'Website editor selector' })
     expect(within(selector).getByRole('button', { name: 'Overview' })).toBeInTheDocument()
     expect(within(selector).getByRole('heading', { name: 'Site setup' })).toBeInTheDocument()
-    expect(within(selector).getByRole('heading', { name: 'Pages' })).toBeInTheDocument()
+    expect(within(selector).getByRole('heading', { name: 'Site structure' })).toBeInTheDocument()
     expect(within(selector).getByRole('heading', { name: 'Advanced' })).toBeInTheDocument()
     fireEvent.click(within(selector).getByRole('button', { name: 'Theme' }))
     expect(screen.queryByRole('dialog', { name: 'Website navigation' })).not.toBeInTheDocument()
@@ -205,6 +207,18 @@ describe('Website workspace', () => {
     expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation confirmation for Header & Navigation', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Footer' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
   })
 
   it('uses the shared dirty-navigation confirmation for Page Settings and keeps its draft on Cancel', async () => {

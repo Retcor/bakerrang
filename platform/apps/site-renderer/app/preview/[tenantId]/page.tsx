@@ -29,10 +29,10 @@ export default async function PreviewPage ({ params, searchParams }: PreviewPage
     <PreviewFrame tenantId={tenantId} token={token}>
       <PublicHome
         previewToken={token}
+        navigationContext={{ kind: 'preview', tenantId, token }}
         site={site}
         tenantId={tenantId}
         siteBaseUrl={null}
-        sitePath={`/preview/${encodeURIComponent(tenantId)}`}
       />
     </PreviewFrame>
   )

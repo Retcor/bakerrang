@@ -20,8 +20,8 @@ test('the generic public page owns the single SiteShell injection path', async (
     source('../components/PublicHome.tsx'),
     source('../components/PublicPage.tsx')
   ])
-  assert.match(home, /<PublicPage page=\{home\}/)
-  assert.match(page, /<SiteShell activePage=\{page\} site=\{site\}/)
+  assert.match(home, /<PublicPage navigationContext=\{navigationContext\} page=\{home\}/)
+  assert.match(page, /<SiteShell activePage=\{page\} footerNav=\{navigation\.footerItems\}/)
   assert.doesNotMatch(`${home}\n${page}`, /br-custom-css|site\.customCss/)
   assert.doesNotMatch(`${home}\n${page}`, /data-preview-(?:frame|banner|site-layer)/)
 })

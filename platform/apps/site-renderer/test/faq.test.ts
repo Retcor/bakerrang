@@ -19,7 +19,7 @@ test('FAQ uses collapsed native disclosure markup and renders safe ordered plain
   assert.match(faq, /whitespace-pre-line/)
 })
 
-test('FAQ is Theme-native, dispatched canonically, and participates in derived navigation', async () => {
+test('FAQ is Theme-native and dispatched canonically without implicit navigation', async () => {
   const faq = await source('../../../packages/site-components/src/Faq.tsx')
   const renderer = await source('../components/SectionRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
@@ -27,8 +27,5 @@ test('FAQ is Theme-native, dispatched canonically, and participates in derived n
   assert.match(faq, /text-site-(?:fg|muted)/)
   assert.match(faq, /border-site-border/)
   assert.match(renderer, /case 'faq':[\s\S]*<Faq anchorId=\{section\.id\} content=\{section\.content\}/)
-  assert.match(shell, /faq: 'FAQ'/)
-  assert.match(shell, /sections\.filter\(\(section\) => !section\.hidden && section\.type !== 'hero'\)\.map/)
-  assert.match(shell, /label: labels\[section\.type\]/)
-  assert.match(shell, /`\$\{prefix\}#section-\$\{section\.id\}`/)
+  assert.doesNotMatch(shell, /faq: 'FAQ'|activePage\.sections|label: labels\[section\.type\]|#section-\$\{section\.id\}/)
 })

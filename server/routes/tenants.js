@@ -115,6 +115,14 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.updateSiteBranding(req.params.tenantId, req.body)
   ))
 
+  router.put('/:tenantId/site/header', platformAdmin, handle(
+    (req) => sites.updateSiteHeader(req.params.tenantId, req.body)
+  ))
+
+  router.put('/:tenantId/site/footer', platformAdmin, handle(
+    (req) => sites.updateSiteFooter(req.params.tenantId, req.body)
+  ))
+
   router.put('/:tenantId/site/theme', platformAdmin, handle(
     (req) => sites.updateSiteTheme(req.params.tenantId, req.body)
   ))

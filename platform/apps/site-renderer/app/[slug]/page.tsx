@@ -21,5 +21,5 @@ export default async function CustomDomainPage ({ params }: { params: Promise<{ 
   const site = await getPublishedSite(domain.tenantId)
   const page = site ? findPageBySlug(site, slug) : undefined
   if (!site || !page) notFound()
-  return <PublicPage page={page} site={site} siteBaseUrl={resolveSiteBaseUrl(domain.tenantId, process.env, domain.canonicalHost)} sitePath="" tenantId={domain.tenantId} />
+  return <PublicPage navigationContext={{ kind: 'customDomain' }} page={page} site={site} siteBaseUrl={resolveSiteBaseUrl(domain.tenantId, process.env, domain.canonicalHost)} tenantId={domain.tenantId} />
 }

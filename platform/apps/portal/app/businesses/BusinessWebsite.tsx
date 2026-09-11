@@ -21,6 +21,8 @@ import { LogosEditor } from './LogosEditor'
 import { ProcessEditor } from './ProcessEditor'
 import { StatsEditor } from './StatsEditor'
 import { HeroEditor } from './HeroEditor'
+import { HeaderEditor } from './HeaderEditor'
+import { FooterEditor } from './FooterEditor'
 import { BusinessHoursSectionEditor } from './BusinessHoursSectionEditor'
 import { sectionDefinitions } from './sectionDefinitions'
 import { PageSectionManager } from './PageSectionManager'
@@ -92,6 +94,8 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
     case 'businessProfile': return <BusinessProfileEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'businessHours': return <BusinessHoursEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'header': return <HeaderEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'footer': return <FooterEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'customCss': return <CustomCssEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
   }
 }

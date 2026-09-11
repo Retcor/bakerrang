@@ -67,6 +67,14 @@ const sites = {
     calls.push({ operation: 'updateSiteBranding', tenantId, body })
     return siteDefinition
   },
+  updateSiteHeader: async (tenantId, body) => {
+    calls.push({ operation: 'updateSiteHeader', tenantId, body })
+    return siteDefinition
+  },
+  updateSiteFooter: async (tenantId, body) => {
+    calls.push({ operation: 'updateSiteFooter', tenantId, body })
+    return siteDefinition
+  },
   updateSiteTheme: async (tenantId, body) => {
     if (body.headingFont === 'invalid') {
       throw Object.assign(new Error('Heading font is not supported'), { status: 400 })
@@ -491,6 +499,21 @@ test('only PLATFORM_ADMIN can PUT branding and the route forwards tenantId and b
   const response = await request(path, { userId: 'platform', method: 'PUT', body })
   assert.equal(response.status, 200)
   assert.deepEqual(calls.at(-1), { operation: 'updateSiteBranding', tenantId: 'tenant-1', body })
+})
+
+test('Header and Footer mutations match the PLATFORM_ADMIN site-edit policy', async () => {
+  const operations = [
+    { path: '/tenants/tenant-1/site/header', body: { brandDisplay: 'logo', navigation: { items: [] } }, operation: 'updateSiteHeader' },
+    { path: '/tenants/tenant-1/site/footer', body: { showBranding: true, navigationMode: 'header', showBusinessContact: false, showSocialLinks: true, showCopyright: true }, operation: 'updateSiteFooter' }
+  ]
+  for (const item of operations) {
+    assert.equal((await request(item.path, { method: 'PUT', body: item.body })).status, 401)
+    for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+      assert.equal((await request(item.path, { userId, method: 'PUT', body: item.body })).status, 403)
+    }
+    assert.equal((await request(item.path, { userId: 'platform', method: 'PUT', body: item.body })).status, 200)
+    assert.deepEqual(calls.at(-1), { operation: item.operation, tenantId: 'tenant-1', body: item.body })
+  }
 })
 
 test('Theme mutation matches the existing PLATFORM_ADMIN site-edit policy', async () => {

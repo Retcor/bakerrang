@@ -15,5 +15,5 @@ export default async function PreviewGenericPage ({ params, searchParams }: { pa
   if (!token) notFound()
   const site = await getPreviewSite(tenantId, token); const page = site ? findPageById(site, pageId) : undefined
   if (!site || !page) notFound()
-  return <PreviewFrame tenantId={tenantId} token={token}><PublicPage page={page} preview site={site} siteBaseUrl={null} sitePath={`/preview/${encodeURIComponent(tenantId)}/page/${encodeURIComponent(pageId)}`} tenantId={tenantId} /></PreviewFrame>
+  return <PreviewFrame tenantId={tenantId} token={token}><PublicPage navigationContext={{ kind: 'preview', tenantId, token }} page={page} preview site={site} siteBaseUrl={null} tenantId={tenantId} /></PreviewFrame>
 }

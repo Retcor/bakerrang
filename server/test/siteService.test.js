@@ -43,6 +43,8 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     'branding',
     'createdAt',
     'createdByUserId',
+    'footer',
+    'header',
     'pageOrder',
     'status',
     'theme',
@@ -64,6 +66,14 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     cornerStyle: 'soft',
     contentWidth: 'standard',
     sectionSpacing: 'comfortable'
+  })
+  assert.deepEqual(config.header, { brandDisplay: 'logo', navigation: { items: [] } })
+  assert.deepEqual(config.footer, {
+    showBranding: true,
+    navigationMode: 'header',
+    showBusinessContact: false,
+    showSocialLinks: true,
+    showCopyright: true
   })
 
   assert.deepEqual(Object.keys(home).sort(), [
@@ -95,6 +105,8 @@ test('initializeSite atomically creates the exact config and home page shapes', 
       siteName: 'Baker Street Cafe'
     },
     theme: config.theme,
+    header: config.header,
+    footer: config.footer,
     pages: [{
       id: 'home',
       slug: '/',
@@ -174,10 +186,12 @@ test('publish creates a sanitized snapshot and persists publication audit metada
     status: published.status,
     pages: published.pages,
     branding: published.branding,
-    theme: published.theme
+    theme: published.theme,
+    header: published.header,
+    footer: published.footer
   })
   assert.deepEqual(Object.keys(published), [
-    'status', 'hasUnpublishedChanges', 'lastPublishedAt', 'pages', 'branding', 'theme'
+    'status', 'hasUnpublishedChanges', 'lastPublishedAt', 'pages', 'branding', 'theme', 'header', 'footer'
   ])
   assert.deepEqual(Object.keys(published.pages[0]).sort(), ['id', 'sections', 'slug', 'title'])
   assert.equal(published.status, 'PUBLISHED')

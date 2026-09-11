@@ -282,6 +282,33 @@ export interface BusinessProfile {
   socialLinks?: SocialLink[]
 }
 
+/** A Page-only navigation reference. Its pageId is its identity within a menu. */
+export interface NavigationItem {
+  pageId: string
+  label?: string
+}
+
+export interface SiteHeader {
+  brandDisplay: 'logo' | 'logoAndName' | 'name'
+  navigation: {
+    items: NavigationItem[]
+  }
+  cta?: {
+    buttonLabel: string
+    action: LinkAction
+  }
+}
+
+export interface SiteFooter {
+  showBranding: boolean
+  navigationMode: 'header' | 'custom' | 'none'
+  navigationItems?: NavigationItem[]
+  showBusinessContact: boolean
+  showSocialLinks: boolean
+  text?: string
+  showCopyright: boolean
+}
+
 export interface SiteDefinition {
   status: SiteStatus
   /** Read-time publication signal derived from authoritative working timestamps. */
@@ -295,6 +322,10 @@ export interface SiteDefinition {
   /** Read-time only. Server-validated and scoped for renderer injection; never persisted. */
   scopedCustomCss?: string
   businessProfile?: BusinessProfile
+  /** Always present in normalized server responses; optional for legacy callers. */
+  header?: SiteHeader
+  /** Always present in normalized server responses; optional for legacy callers. */
+  footer?: SiteFooter
   pages: SitePage[]
 }
 

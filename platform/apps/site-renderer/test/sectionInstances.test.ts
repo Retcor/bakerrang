@@ -32,7 +32,7 @@ test('renderer honors instance order, repeated types, hidden state, and prefixed
   assert.match(html, /id="section-gallery-two"/)
   assert.ok(html.indexOf('First gallery') < html.indexOf('First services'))
   assert.ok(html.indexOf('First services') < html.indexOf('Second gallery'))
-  assert.match(html, /href="#section-gallery-one"/)
+  assert.doesNotMatch(html, /href="#section-/)
 })
 
 test('expanded sections render semantic themed markup and retain About legacy image order', () => {

@@ -27,10 +27,9 @@ test('About renders escaped React text, optional Theme-native image layout, and 
   assert.doesNotMatch(about, /dangerouslySetInnerHTML|Markdown|whitespace-pre-line/)
 })
 
-test('SectionRenderer and shell navigation use the canonical About section and anchor', async () => {
+test('SectionRenderer uses the canonical About section while navigation is no longer section-derived', async () => {
   const renderer = await source('../components/SectionRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
   assert.match(renderer, /case 'about':[\s\S]*<About anchorId=\{section\.id\} content=\{section\.content\}/)
-  assert.match(shell, /about: 'About'/)
-  assert.match(shell, /`\$\{prefix\}#section-\$\{section\.id\}`/)
+  assert.doesNotMatch(shell, /about: 'About'|activePage\.sections|#section-\$\{section\.id\}/)
 })

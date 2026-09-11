@@ -1,4 +1,4 @@
-import type { BusinessHours, SectionType, SiteDefinition, SiteTheme, SocialLink } from '@bakerrang/site-schema'
+import type { BusinessHours, SectionType, SiteDefinition, SiteFooter, SiteHeader, SiteTheme, SocialLink } from '@bakerrang/site-schema'
 import type { PostalAddress } from '@bakerrang/site-schema'
 import { apiGet, apiSend } from './api'
 
@@ -176,6 +176,12 @@ export const updateSiteBranding = (tenantId: string, input: BrandingInput) =>
 
 export const updateSiteTheme = (tenantId: string, input: SiteTheme) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/theme`, input)
+
+export const updateSiteHeader = (tenantId: string, input: SiteHeader) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/header`, input)
+
+export const updateSiteFooter = (tenantId: string, input: SiteFooter) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/footer`, input)
 
 export const updateBusinessProfile = (tenantId: string, input: BusinessProfileInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/profile`, input)

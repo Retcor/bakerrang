@@ -31,6 +31,19 @@ export const MAX_PAGES = 25
 export const MAX_PUBLISHED_SNAPSHOT_BYTES = 900 * 1024
 export const RESERVED_PAGE_SLUGS = new Set(['preview', 'site'])
 
+const DEFAULT_SITE_HEADER = Object.freeze({
+  brandDisplay: 'logo',
+  navigation: { items: [] }
+})
+
+const DEFAULT_SITE_FOOTER = Object.freeze({
+  showBranding: true,
+  navigationMode: 'header',
+  showBusinessContact: false,
+  showSocialLinks: true,
+  showCopyright: true
+})
+
 let firestore = db
 
 export const _setDb = (nextDb) => {
@@ -114,6 +127,111 @@ const pageOrderFrom = (config, status = 500) => {
   return order
 }
 
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key)
+const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+const rejectUnknownFields = (value, allowed, label) => {
+  if (!isObject(value)) throw httpError(400, `${label} must be an object`)
+  if (Object.keys(value).some((key) => !allowed.includes(key))) throw httpError(400, `${label} has unknown fields`)
+}
+
+const normalizeNavigationItems = (items, pageOrder) => {
+  if (!Array.isArray(items)) return []
+  const knownPageIds = new Set(pageOrder)
+  const seen = new Set()
+  const normalized = []
+  for (const item of items) {
+    if (!isObject(item) || typeof item.pageId !== 'string' || !item.pageId || !knownPageIds.has(item.pageId) || seen.has(item.pageId)) continue
+    const label = typeof item.label === 'string' ? item.label.trim() : ''
+    if (typeof item.label === 'string' && label.length > 60) continue
+    seen.add(item.pageId)
+    normalized.push({ pageId: item.pageId, ...(label ? { label } : {}) })
+  }
+  return normalized
+}
+
+const validateNavigationItems = (items, pageOrder, label) => {
+  if (!Array.isArray(items)) throw httpError(400, `${label} items must be an array`)
+  const knownPageIds = new Set(pageOrder)
+  const seen = new Set()
+  return items.map((item) => {
+    rejectUnknownFields(item, ['pageId', 'label'], `${label} item`)
+    if (typeof item.pageId !== 'string' || !item.pageId) throw httpError(400, `${label} page id is required`)
+    if (!knownPageIds.has(item.pageId)) throw httpError(400, `${label} page reference is invalid`)
+    if (seen.has(item.pageId)) throw httpError(400, `${label} contains duplicate page references`)
+    seen.add(item.pageId)
+    if (own(item, 'label') && typeof item.label !== 'string') throw httpError(400, `${label} label must be a string`)
+    const itemLabel = typeof item.label === 'string' ? item.label.trim() : ''
+    if (itemLabel.length > 60) throw httpError(400, `${label} label must be 60 characters or fewer`)
+    return { pageId: item.pageId, ...(itemLabel ? { label: itemLabel } : {}) }
+  })
+}
+
+const normalizeSiteHeader = (input, pageOrder) => {
+  const value = isObject(input) ? input : {}
+  const brandDisplay = ['logo', 'logoAndName', 'name'].includes(value.brandDisplay) ? value.brandDisplay : DEFAULT_SITE_HEADER.brandDisplay
+  const items = normalizeNavigationItems(value.navigation?.items, pageOrder)
+  let cta
+  try {
+    if (isObject(value.cta) && typeof value.cta.buttonLabel === 'string') {
+      const buttonLabel = value.cta.buttonLabel.trim()
+      if (buttonLabel && buttonLabel.length <= 60) cta = { buttonLabel, action: validateLinkAction(value.cta.action, 'Header CTA') }
+    }
+  } catch {}
+  return { brandDisplay, navigation: { items }, ...(cta ? { cta } : {}) }
+}
+
+const normalizeSiteFooter = (input, pageOrder) => {
+  const value = isObject(input) ? input : {}
+  const navigationMode = ['header', 'custom', 'none'].includes(value.navigationMode) ? value.navigationMode : DEFAULT_SITE_FOOTER.navigationMode
+  const text = typeof value.text === 'string' ? value.text.trim().slice(0, 200) : ''
+  const footer = {
+    showBranding: typeof value.showBranding === 'boolean' ? value.showBranding : DEFAULT_SITE_FOOTER.showBranding,
+    navigationMode,
+    showBusinessContact: typeof value.showBusinessContact === 'boolean' ? value.showBusinessContact : DEFAULT_SITE_FOOTER.showBusinessContact,
+    showSocialLinks: typeof value.showSocialLinks === 'boolean' ? value.showSocialLinks : DEFAULT_SITE_FOOTER.showSocialLinks,
+    showCopyright: typeof value.showCopyright === 'boolean' ? value.showCopyright : DEFAULT_SITE_FOOTER.showCopyright,
+    ...(text ? { text } : {})
+  }
+  if (navigationMode === 'custom') footer.navigationItems = normalizeNavigationItems(value.navigationItems, pageOrder)
+  return footer
+}
+
+const validateSiteHeader = (input, pageOrder) => {
+  rejectUnknownFields(input, ['brandDisplay', 'navigation', 'cta'], 'Header')
+  if (!['logo', 'logoAndName', 'name'].includes(input.brandDisplay)) throw httpError(400, 'Header brand display is invalid')
+  rejectUnknownFields(input.navigation, ['items'], 'Header navigation')
+  const header = { brandDisplay: input.brandDisplay, navigation: { items: validateNavigationItems(input.navigation.items, pageOrder, 'Header navigation') } }
+  if (!own(input, 'cta')) return header
+  rejectUnknownFields(input.cta, ['buttonLabel', 'action'], 'Header CTA')
+  if (typeof input.cta.buttonLabel !== 'string' || !input.cta.buttonLabel.trim()) throw httpError(400, 'Header CTA button label is required')
+  const buttonLabel = input.cta.buttonLabel.trim()
+  if (buttonLabel.length > 60) throw httpError(400, 'Header CTA button label must be 60 characters or fewer')
+  rejectUnknownFields(input.cta.action, ['type', 'value'], 'Header CTA action')
+  return { ...header, cta: { buttonLabel, action: validateLinkAction(input.cta.action, 'Header CTA') } }
+}
+
+const validateSiteFooter = (input, pageOrder) => {
+  rejectUnknownFields(input, ['showBranding', 'navigationMode', 'navigationItems', 'showBusinessContact', 'showSocialLinks', 'text', 'showCopyright'], 'Footer')
+  for (const key of ['showBranding', 'showBusinessContact', 'showSocialLinks', 'showCopyright']) {
+    if (typeof input[key] !== 'boolean') throw httpError(400, `Footer ${key} must be boolean`)
+  }
+  if (!['header', 'custom', 'none'].includes(input.navigationMode)) throw httpError(400, 'Footer navigation mode is invalid')
+  if (own(input, 'text') && typeof input.text !== 'string') throw httpError(400, 'Footer text must be a string')
+  const text = typeof input.text === 'string' ? input.text.trim() : ''
+  if (text.length > 200) throw httpError(400, 'Footer text must be 200 characters or fewer')
+  const footer = {
+    showBranding: input.showBranding,
+    navigationMode: input.navigationMode,
+    showBusinessContact: input.showBusinessContact,
+    showSocialLinks: input.showSocialLinks,
+    showCopyright: input.showCopyright,
+    ...(text ? { text } : {})
+  }
+  if (input.navigationMode === 'custom') footer.navigationItems = validateNavigationItems(input.navigationItems, pageOrder, 'Footer navigation')
+  return footer
+}
+
 const pageResponse = (page) => ({
   id: page.id,
   slug: page.slug,
@@ -158,6 +276,8 @@ const toSiteDefinition = (config, pages) => {
     ...definition,
     branding: siteBrandingResponse(config.branding, definition),
     theme: normalizeSiteTheme(config.theme),
+    header: normalizeSiteHeader(config.header, pageOrder),
+    footer: normalizeSiteFooter(config.footer, pageOrder),
     ...(typeof config.customCss === 'string' ? { customCss: config.customCss } : {}),
     ...(businessProfile ? { businessProfile } : {})
   }
@@ -179,6 +299,8 @@ const normalizePublishedSiteDefinition = (definition) => {
     ...canonical,
     branding: siteBrandingResponse(definition?.branding, definition),
     theme: normalizeSiteTheme(definition?.theme),
+    header: normalizeSiteHeader(definition?.header, pages.map((page) => page.id)),
+    footer: normalizeSiteFooter(definition?.footer, pages.map((page) => page.id)),
     ...(typeof definition?.customCss === 'string' ? { customCss: definition.customCss } : {})
   }
   if (businessProfile) normalized.businessProfile = businessProfile
@@ -829,6 +951,8 @@ export const initializeSite = async (tenantId, actorUserId) => {
         siteName: String(tenantSnapshot.data().name || '').trim().slice(0, 80) || 'Website'
       },
       theme: DEFAULT_SITE_THEME,
+      header: DEFAULT_SITE_HEADER,
+      footer: DEFAULT_SITE_FOOTER,
       pageOrder: ['home'],
       createdAt: now,
       updatedAt: now,
@@ -891,6 +1015,32 @@ export const updateSiteBranding = async (tenantId, input) => {
       ...(identity.faviconMediaId ? { faviconMediaId: identity.faviconMediaId } : {})
     }
     const nextConfig = { ...config, branding, updatedAt: now }
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, pages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const updateSiteHeader = async (tenantId, input) => {
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    const header = validateSiteHeader(input, order)
+    const nextConfig = { ...config, header, updatedAt: now }
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, pages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
+}
+
+export const updateSiteFooter = async (tenantId, input) => {
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order, pages } = await readWorkingSite(tenantId, transaction)
+    const footer = validateSiteFooter(input, order)
+    const nextConfig = { ...config, footer, updatedAt: now }
     transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, pages)
   })
@@ -1161,7 +1311,9 @@ export const movePage = async (tenantId, pageId, direction) => {
     const nextOrder = [...order]; [nextOrder[index], nextOrder[target]] = [nextOrder[target], nextOrder[index]]
     const byId = new Map(pages.map((page) => [page.id, page]))
     const nextPages = nextOrder.map((id) => byId.get(id))
-    const nextConfig = { ...config, pageOrder: nextOrder, updatedAt: now }
+    const header = normalizeSiteHeader(config.header, nextOrder)
+    const footer = normalizeSiteFooter(config.footer, nextOrder)
+    const nextConfig = { ...config, pageOrder: nextOrder, header, footer, updatedAt: now }
     transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, nextPages)
   })
@@ -1178,7 +1330,11 @@ export const deletePage = async (tenantId, pageId) => {
     if (pageId === 'home') throw httpError(400, 'Home page cannot be deleted')
     const nextOrder = order.filter((id) => id !== pageId)
     const nextPages = pages.filter((page) => page.id !== pageId)
-    const nextConfig = { ...config, pageOrder: nextOrder, updatedAt: now }
+    // Persist the normalized navigation, not just the response projection. Otherwise a
+    // later read or publish would re-introduce a deleted page from the stored config.
+    const header = normalizeSiteHeader(config.header, nextOrder)
+    const footer = normalizeSiteFooter(config.footer, nextOrder)
+    const nextConfig = { ...config, pageOrder: nextOrder, header, footer, updatedAt: now }
     transaction.delete(refs.page(pageId))
     transaction.set(refs.config, nextConfig)
     definition = toSiteDefinition(nextConfig, nextPages)

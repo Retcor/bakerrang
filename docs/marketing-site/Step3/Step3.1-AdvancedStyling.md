@@ -12,6 +12,9 @@ The current BakerRang site system exposes these supported advanced styling hooks
 [data-br-site] { }
 [data-br-section="services"] { }
 [data-br-section-id="section-id"] { }
+[data-br-navigation] { }
+[data-br-navigation-item="page-id"] { }
+[data-br-footer-navigation] { }
 ```
 
 Use `data-br-section` for preferred type-level styling. For example, it can
@@ -35,6 +38,11 @@ The expanded section library also exposes meaningful role hooks where needed:
 `[data-br-role="button"]` remains the intentionally shared hook for ordinary
 buttons, including About; `cta-button` is reserved for the CTA section's
 specific primary action.
+
+Header navigation exposes `[data-br-navigation]`; footer navigation exposes
+`[data-br-footer-navigation]`. Each rendered Page item uses the stable,
+immutable Page identity `[data-br-navigation-item="<page-id>"]`. These hooks
+do not depend on a Page title or mutable slug.
 
 ## Theme variables
 

@@ -23,5 +23,5 @@ export default async function TenantSlugPage ({ params }: { params: Promise<{ te
   if (!site || !page) notFound()
   const redirect = sharedSiteRedirectTarget(site.status, domain.canonicalHost, `/${slug}`)
   if (redirect) permanentRedirect(redirect)
-  return <PublicPage page={page} site={site} siteBaseUrl={resolveSiteBaseUrl(tenantId)} sitePath={`/site/${encodeURIComponent(tenantId)}`} tenantId={tenantId} />
+  return <PublicPage navigationContext={{ kind: 'sharedHost', tenantId }} page={page} site={site} siteBaseUrl={resolveSiteBaseUrl(tenantId)} tenantId={tenantId} />
 }
