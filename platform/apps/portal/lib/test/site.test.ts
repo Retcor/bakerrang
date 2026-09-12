@@ -10,7 +10,7 @@ vi.mock('../api', () => ({
   apiSend: mocks.apiSend
 }))
 
-import { updateCustomCss, updatePageSeo, updateSiteSeo } from '../site'
+import { applySiteTemplate, getSiteTemplates, updateCustomCss, updatePageSeo, updateSiteSeo } from '../site'
 
 describe('site API helpers', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -37,5 +37,16 @@ describe('site API helpers', () => {
     expect(mocks.apiSend).toHaveBeenNthCalledWith(2, 'PUT', '/tenants/tenant%2Fone/site/pages/page%2Fid/seo', {
       title: 'Page copy', description: '', socialImageMediaId: 'media-1', noIndex: true
     })
+  })
+
+  it('loads metadata and applies a server-owned template without a request body', async () => {
+    mocks.apiGet.mockResolvedValue([])
+    mocks.apiSend.mockResolvedValue({ status: 'DRAFT' })
+
+    await getSiteTemplates('tenant/one')
+    await applySiteTemplate('tenant/one', 'modern/local')
+
+    expect(mocks.apiGet).toHaveBeenCalledWith('/tenants/tenant%2Fone/site/templates')
+    expect(mocks.apiSend).toHaveBeenCalledWith('POST', '/tenants/tenant%2Fone/site/templates/modern%2Flocal/apply')
   })
 })

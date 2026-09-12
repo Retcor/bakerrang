@@ -32,6 +32,7 @@ import { SocialProfilesEditor } from './SocialProfilesEditor'
 import { SeoEditor } from './SeoEditor'
 import { TestimonialsEditor } from './TestimonialsEditor'
 import { ThemeEditor } from './ThemeEditor'
+import { TemplatesEditor } from './TemplatesEditor'
 import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
 import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
 import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsitePaneId } from './websiteEditors'
@@ -59,7 +60,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
   onEditSection: (sectionId: string) => void
   onPreviewPage: (pageId: string) => void
   onRefresh: () => Promise<SiteDefinition>
-  onSaved: (site: SiteDefinition) => void
+  onSaved: (site: SiteDefinition, successMessage?: string, offerHomePreview?: boolean) => void
   onSelectSeoContext: (pageId?: string) => void
   pageId?: string
   sectionId?: string
@@ -96,6 +97,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
     case 'businessProfile': return <BusinessProfileEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'businessHours': return <BusinessHoursEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'templates': return <TemplatesEditor onSaved={onSaved} tenantId={tenantId} />
     case 'header': return <HeaderEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'footer': return <FooterEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'seo': return <SeoEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreviewPage={onPreviewPage} onSaved={onSaved} onSelectContext={onSelectSeoContext} pageId={pageId} site={site} tenantId={tenantId} />
@@ -159,6 +161,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const [error, setError] = useState<string | null>(null)
   const [editorSelection, setEditorSelection] = useState<{ fromQueryKey: string, toQueryKey: string, editor: WebsiteEditorId | null }>({ fromQueryKey: queryKey, toQueryKey: queryKey, editor: queryEditor })
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [offerHomePreview, setOfferHomePreview] = useState(false)
   const [previewFallback, setPreviewFallback] = useState<string | null>(null)
   const [editorDirty, setEditorDirty] = useState(false)
   const [editorSessionRevision, setEditorSessionRevision] = useState(0)
@@ -196,7 +199,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
 
   const navigateToEditor = (next: WebsitePaneId, pageId?: string, sectionId?: string) => {
     const nextEditor = next === 'overview' ? null : next
-    setError(null); setFeedback(null)
+    setError(null); setFeedback(null); setOfferHomePreview(false)
     const params = new URLSearchParams(searchParams.toString())
     if (nextEditor) params.set('editor', nextEditor)
     else params.delete('editor')
@@ -224,7 +227,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   }
   const run = async (operation: Operation, action: () => Promise<SiteDefinition>, message: string) => {
     if (pending) return
-    setPending(operation); setError(null); setFeedback(null)
+    setPending(operation); setError(null); setFeedback(null); setOfferHomePreview(false)
     try { setSite(await action()); setView('site') } catch { setError(message) } finally { setPending(null) }
   }
   const handleManage = async () => {
@@ -249,7 +252,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     if (pending || editorDirty) return
     const previewWindow = window.open('about:blank', '_blank')
     if (previewWindow) previewWindow.opener = null
-    setPending('preview'); setError(null); setFeedback(null); setPreviewFallback(null)
+    setPending('preview'); setError(null); setFeedback(null); setOfferHomePreview(false); setPreviewFallback(null)
     void createSitePreviewToken(tenantId).then(({ token }) => {
       const url = sitePreviewUrl(tenantId, token, pageId)
       if (previewWindow) previewWindow.location.href = url
@@ -269,9 +272,10 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const published = site.status === 'PUBLISHED'
   const status = editorDirty ? { label: 'Unsaved changes', tone: 'warning' as const } : publicationStatus(site)
   const activePane: WebsitePaneId = editor === 'page' ? 'pages' : editor ?? 'overview'
-  const handleEditorSaved = (definition: SiteDefinition) => {
+  const handleEditorSaved = (definition: SiteDefinition, successMessage?: string, nextOfferHomePreview = false) => {
     setSite(definition); setError(null); setEditorDirty(false); setEditorSessionRevision((revision) => revision + 1)
-    setFeedback(definition.status === 'PUBLISHED' ? 'Saved. Republish to update the public site.' : 'Changes saved.')
+    setOfferHomePreview(nextOfferHomePreview)
+    setFeedback(successMessage ?? (definition.status === 'PUBLISHED' ? 'Saved. Republish to update the public site.' : 'Changes saved.'))
   }
   const publish = () => { if (!editorDirty) void run('publish', () => publishSite(tenantId), 'Unable to publish the website. Please try again.') }
   const unpublish = () => void run('unpublish', () => unpublishSite(tenantId), 'Unable to unpublish the website. Please try again.')
@@ -289,7 +293,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
           <div className="flex flex-col items-end gap-2"><div className="flex flex-wrap gap-2"><Button aria-describedby={editorDirty ? 'dirty-preview-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={() => handlePreview()} title={editorDirty ? 'Save or discard your changes before previewing.' : undefined} variant="secondary">{pending === 'preview' ? 'Opening preview…' : 'Preview changes'}</Button><Button aria-describedby={editorDirty ? 'dirty-publish-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={publish} title={editorDirty ? 'Save or discard your changes before publishing.' : undefined}>{pending === 'publish' ? 'Publishing…' : published ? 'Republish' : 'Publish Site'}</Button></div>{editorDirty && <div className="text-right text-xs text-fg-muted"><span id="dirty-preview-help">Save or discard your changes before previewing.</span> <span id="dirty-publish-help">Save or discard your changes before publishing.</span></div>}</div>
         </div>
       </header>
-      {(error || previewFallback || feedback) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{feedback && <StatusMessage tone="success">{feedback}</StatusMessage>}</div>}
+      {(error || previewFallback || feedback) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{feedback && <StatusMessage tone="success">{feedback}</StatusMessage>}{offerHomePreview && <Button onClick={() => handlePreview('home')} variant="secondary">Preview Home</Button>}</div>}
       <div className="grid min-w-0 gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
         <WebsiteEditorNavigation active={activePane} onSelect={selectEditor} />
         <main className="min-w-0">

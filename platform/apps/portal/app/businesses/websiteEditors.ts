@@ -1,4 +1,4 @@
-export const websiteEditorGroups = ['Site setup', 'Site structure', 'Search & sharing', 'Advanced'] as const
+export const websiteEditorGroups = ['Site setup', 'Design', 'Site structure', 'Search & sharing', 'Advanced'] as const
 
 export type WebsiteEditorGroup = typeof websiteEditorGroups[number]
 
@@ -8,6 +8,7 @@ export const websiteEditors = [
   { id: 'businessProfile', label: 'Business Profile', group: 'Site setup', description: 'Maintain the business details used across the website.' },
   { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set the weekly schedule used across the website.' },
   { id: 'socialProfiles', label: 'Social Profiles', group: 'Site setup', description: 'Connect the business social profiles.' },
+  { id: 'templates', label: 'Templates', group: 'Design', description: 'Apply a curated starting point to the working site.' },
   { id: 'pages', label: 'Pages', group: 'Site structure', description: 'Create, organize, and edit the site’s pages.' },
   { id: 'header', label: 'Header & Navigation', group: 'Site structure', description: 'Configure the shared header, navigation, and optional call to action.' },
   { id: 'footer', label: 'Footer', group: 'Site structure', description: 'Configure the shared footer and its global information.' },

@@ -157,11 +157,26 @@ export interface SiteDomain {
   disabledByUserId?: string
 }
 
+/** Curated server-owned template metadata. Template definitions remain private to the API. */
+export interface SiteTemplateSummary {
+  id: string
+  version: number
+  name: string
+  description: string
+  tags: string[]
+}
+
 export const initializeSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site`)
 
 export const getSite = (tenantId: string) =>
   apiGet<SiteDefinition>(`/tenants/${encodeURIComponent(tenantId)}/site`)
+
+export const getSiteTemplates = (tenantId: string) =>
+  apiGet<SiteTemplateSummary[]>(`/tenants/${encodeURIComponent(tenantId)}/site/templates`)
+
+export const applySiteTemplate = (tenantId: string, templateId: string) =>
+  apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/templates/${encodeURIComponent(templateId)}/apply`)
 
 export const createSitePreviewToken = (tenantId: string) =>
   apiSend<SitePreviewToken>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/preview-token`)

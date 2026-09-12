@@ -55,7 +55,9 @@ vi.mock('../../../lib/site', () => ({
   updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(),
   updateSiteTheme: vi.fn(),
-  updateCustomCss: mocks.updateCustomCss
+  updateCustomCss: mocks.updateCustomCss,
+  getSiteTemplates: vi.fn(),
+  applySiteTemplate: vi.fn()
 }))
 
 import { BusinessWebsite } from '../BusinessWebsite'

@@ -28,7 +28,7 @@ const mocks = vi.hoisted(() => ({
   updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(),
   updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(),
-  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn()
+  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn()
 }))
 
 const navigation = vi.hoisted(() => ({
@@ -55,6 +55,11 @@ describe('Website workspace', () => {
     mocks.createSitePreviewToken.mockResolvedValue({ token: 'preview', expiresAt: 1 })
     mocks.publishSite.mockResolvedValue({ ...baseSite, status: 'PUBLISHED', hasUnpublishedChanges: false, lastPublishedAt: 100 })
     mocks.unpublishSite.mockResolvedValue(baseSite)
+    mocks.getSiteTemplates.mockResolvedValue([
+      { id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A practical local-service website.', tags: ['Local', 'Service'] },
+      { id: 'classic-professional', version: 1, name: 'Classic Professional', description: 'A trustworthy professional website.', tags: ['Professional'] },
+      { id: 'bold-contractor', version: 1, name: 'Bold Contractor', description: 'A strong contractor website.', tags: ['Contractor'] }
+    ])
   })
 
   it('opens to Overview and exposes the authoritative grouped desktop hierarchy', async () => {
@@ -66,10 +71,11 @@ describe('Website workspace', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Templates', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
+    const design = within(nav).getByRole('heading', { name: 'Design' }).closest('section') as HTMLElement
     const structure = within(nav).getByRole('heading', { name: 'Site structure' }).closest('section') as HTMLElement
     const advanced = within(nav).getByRole('heading', { name: 'Advanced' }).closest('section') as HTMLElement
     const search = within(nav).getByRole('heading', { name: 'Search & sharing' }).closest('section') as HTMLElement
@@ -79,6 +85,7 @@ describe('Website workspace', () => {
     expect(within(nav).queryByRole('link', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(setup).getByRole('button', { name: 'Social Profiles' })).toBeInTheDocument()
     expect(within(setup).queryByRole('button', { name: 'Pages' })).not.toBeInTheDocument()
+    expect(within(design).getByRole('button', { name: 'Templates' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Pages' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Header & Navigation' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Footer' })).toBeInTheDocument()
@@ -197,6 +204,51 @@ describe('Website workspace', () => {
     expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
     expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?editor=theme', { scroll: false })
     expect(removeListener).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+  })
+
+  it('uses the shared dirty-navigation guard before opening Templates and leaves Templates clean while browsing', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Templates' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Templates' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByRole('heading', { name: 'Templates' })).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('accepts the authoritative template response, remains on Templates, and previews Home', async () => {
+    const canonical: SiteDefinition = {
+      ...baseSite,
+      status: 'PUBLISHED',
+      hasUnpublishedChanges: true,
+      theme: { ...baseSite.theme, colors: { ...baseSite.theme.colors, primary: '#ff0000' } },
+      pages: [{ id: 'home', slug: '/', title: 'Home', sections: [] }, { id: 'server-page-id', slug: 'services', title: 'Services', sections: [] }]
+    }
+    mocks.applySiteTemplate.mockResolvedValue(canonical)
+    const preview = vi.spyOn(window, 'open').mockReturnValue({ close: vi.fn(), location: { href: 'about:blank' }, opener: window } as unknown as Window)
+    navigation.search = 'editor=templates'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    await screen.findByText('Modern Local Service')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Apply' })[0] as HTMLButtonElement)
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Template' }))
+    await waitFor(() => expect(mocks.applySiteTemplate).toHaveBeenCalledWith('tenant-1', 'modern-local-service'))
+    expect(await screen.findByText('Modern Local Service applied to the working site. Preview your changes, then Publish Site when ready.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Templates' })).toBeInTheDocument()
+    expect(screen.getByText('Changes not published')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Home' }))
+    expect(preview).toHaveBeenCalledWith('about:blank', '_blank')
+    await waitFor(() => expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant-1'))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'Pages' }))
+    expect(await screen.findByRole('heading', { name: 'Services' })).toBeInTheDocument()
   })
 
   it('guards navigation after a local Theme preset is applied without saving', async () => {
