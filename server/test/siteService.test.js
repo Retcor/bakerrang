@@ -1,5 +1,6 @@
 import test, { afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import {
   _setDb,
   applySiteTemplate,
@@ -8,28 +9,39 @@ import {
   getPublishedSiteDefinition,
   getSite,
   initializeSite,
+  listSiteRevisions,
   listSiteTemplates,
   materializeSiteTemplate,
   publishSite,
+  restoreSiteRevision,
   unpublishSite,
   updateSiteBranding,
   updateBusinessProfile,
+  updateCustomCss,
   updatePage,
+  updatePageSeo,
+  updateSiteFooter,
+  updateSiteHeader,
+  updateSiteSeo,
+  updateSiteTheme,
   validateSiteTemplate
 } from '../services/siteService.js'
 import { updateHomeHero, upsertHomeContact, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
 import { SITE_TEMPLATES } from '../domain/siteTemplates.js'
+import { _setDb as setMediaDb } from '../services/mediaService.js'
 
 let fakeDb
 
 beforeEach(() => {
   fakeDb = new FakeDb()
   _setDb(fakeDb)
+  setMediaDb(fakeDb)
 })
 
 afterEach(() => {
   _setDb()
+  setMediaDb()
 })
 
 test('initializeSite rejects a missing tenant without writing site data', async () => {
@@ -184,12 +196,17 @@ test('publish creates a sanitized snapshot and persists publication audit metada
   const published = await publishSite('tenant-1', 'publisher')
   const snapshot = fakeDb.data('tenants/tenant-1/site/config/published/current')
   const config = fakeDb.data('tenants/tenant-1/site/config')
+  const revision = fakeDb.data(`tenants/tenant-1/site/config/revisions/${snapshot.revisionId}`)
+  const revisionIndex = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+  const revisionMedia = fakeDb.data(`tenants/tenant-1/site/config/revisionMedia/${snapshot.revisionId}`)
 
   assert.deepEqual(Object.keys(snapshot).sort(), [
     'publishedAt',
     'publishedByUserId',
+    'revisionId',
     'siteDefinition'
   ])
+  assert.match(snapshot.revisionId, /^[0-9a-f-]{36}$/i)
   assert.deepEqual(snapshot.siteDefinition, {
     status: published.status,
     pages: published.pages,
@@ -208,11 +225,235 @@ test('publish creates a sanitized snapshot and persists publication audit metada
   assert.equal(Object.hasOwn(snapshot.siteDefinition, 'hasUnpublishedChanges'), false)
   assert.equal(Object.hasOwn(snapshot.siteDefinition, 'lastPublishedAt'), false)
   assert.equal(snapshot.publishedByUserId, 'publisher')
+  assert.deepEqual(revision, snapshot)
+  assert.deepEqual(revisionIndex.entries, [{
+    revisionId: snapshot.revisionId,
+    publishedAt: snapshot.publishedAt,
+    publishedByUserId: snapshot.publishedByUserId,
+    pageCount: 1
+  }])
+  assert.deepEqual(revisionMedia, { mediaIds: [] })
   assert.equal(config.status, 'PUBLISHED')
   assert.equal(config.updatedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedByUserId, 'publisher')
   assert.notEqual(config.updatedAt, 1)
+})
+
+test('published revisions are immutable, retained newest-first, and restore only Working', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision A' })
+  await initializeSite('tenant-1', 'admin')
+  const first = await publishSite('tenant-1', 'publisher-a')
+  const firstCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const firstRevision = fakeDb.data(`tenants/tenant-1/site/config/revisions/${firstCurrent.revisionId}`)
+
+  await updateSiteBranding('tenant-1', { siteName: 'Revision B' })
+  const second = await publishSite('tenant-1', 'publisher-b')
+  const secondCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const listed = await listSiteRevisions('tenant-1')
+
+  assert.equal(listed.revisions.length, 2)
+  assert.equal(listed.revisions[0].revisionId, secondCurrent.revisionId)
+  assert.equal(listed.revisions[0].isCurrent, true)
+  assert.equal(listed.revisions[1].revisionId, firstCurrent.revisionId)
+  assert.equal(listed.revisions[1].isCurrent, false)
+  assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/revisions/${firstCurrent.revisionId}`), firstRevision)
+
+  const restored = await restoreSiteRevision('tenant-1', firstCurrent.revisionId)
+  assert.equal(restored.branding.siteName, first.branding.siteName)
+  assert.equal((await getSite('tenant-1')).branding.siteName, first.branding.siteName)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), secondCurrent)
+  assert.equal((await getPublishedSiteDefinition('tenant-1')).branding.siteName, second.branding.siteName)
+})
+
+test('published revision retention keeps current and prunes the oldest revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Retention' })
+  await initializeSite('tenant-1', 'admin')
+  const ids = []
+  for (let index = 0; index < 11; index += 1) {
+    await updateSiteBranding('tenant-1', { siteName: `Retention ${index}` })
+    await publishSite('tenant-1', 'publisher')
+    ids.push(fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId)
+  }
+  const index = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+  assert.equal(index.entries.length, 10)
+  assert.equal(index.entries[0].revisionId, ids.at(-1))
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/revisions/${ids[0]}`), undefined)
+  await assert.rejects(restoreSiteRevision('tenant-1', ids[0]), { status: 404 })
+})
+
+test('restore replaces the full working site with historical globals, pages, SEO, and stable ids', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Restore' })
+  await initializeSite('tenant-1', 'admin')
+  const { pageId: historicalPageId } = await createPage('tenant-1', { title: 'History page', slug: 'history' })
+  await updateHomeHero('tenant-1', { title: 'Historical hero' })
+  await updateSiteBranding('tenant-1', { siteName: 'Historical brand' })
+  await updateBusinessProfile('tenant-1', { description: 'Historical profile', phone: '+15555550100' })
+  await updateSiteSeo('tenant-1', { defaultDescription: 'Historical SEO', indexable: false })
+  await updatePageSeo('tenant-1', historicalPageId, { title: 'Historical page SEO', noIndex: true })
+  await updateSiteHeader('tenant-1', { brandDisplay: 'name', navigation: { items: [{ pageId: historicalPageId }] } })
+  await updateSiteFooter('tenant-1', { showBranding: false, navigationMode: 'custom', navigationItems: [{ pageId: historicalPageId }], showBusinessContact: true, showSocialLinks: false, showCopyright: true, text: 'Historical footer' })
+  await updateSiteTheme('tenant-1', { colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' }, headingFont: 'lora', bodyFont: 'inter', cornerStyle: 'square', contentWidth: 'wide', sectionSpacing: 'spacious' })
+  await updateCustomCss('tenant-1', { customCss: '[data-br-site] { color: red; }' })
+  await publishSite('tenant-1', 'publisher-a')
+  const historicalCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const historicalPage = fakeDb.data(`tenants/tenant-1/site/config/pages/${historicalPageId}`)
+
+  await updateHomeHero('tenant-1', { title: 'Working B' })
+  await updateSiteBranding('tenant-1', { siteName: 'Working B' })
+  const { pageId: displacedPageId } = await createPage('tenant-1', { title: 'Displaced', slug: 'displaced' })
+  await publishSite('tenant-1', 'publisher-b')
+  const currentBeforeRestore = fakeDb.data('tenants/tenant-1/site/config/published/current')
+
+  const restored = await restoreSiteRevision('tenant-1', historicalCurrent.revisionId)
+  assert.equal(restored.branding.siteName, 'Historical brand')
+  assert.equal(restored.businessProfile.description, 'Historical profile')
+  assert.equal(restored.seo.defaultDescription, 'Historical SEO')
+  assert.equal(restored.customCss, '[data-br-site] { color: red; }')
+  assert.equal(restored.theme.headingFont, 'lora')
+  assert.deepEqual(restored.pages.map((page) => page.id), ['home', historicalPageId])
+  assert.equal(restored.pages[0].sections[0].content.title, 'Historical hero')
+  assert.deepEqual(restored.pages[1].seo, { title: 'Historical page SEO', noIndex: true })
+  assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/pages/${historicalPageId}`).sections, historicalPage.sections)
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${displacedPageId}`), undefined)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), currentBeforeRestore)
+})
+
+test('first post-history publish captures a legacy current snapshot with its original metadata', async () => {
+  const originalNow = Date.now
+  let now = 100
+  Date.now = () => now
+  try {
+    fakeDb.seed('tenants/tenant-1', { name: 'Legacy A' })
+    await initializeSite('tenant-1', 'admin')
+    await publishSite('tenant-1', 'publisher-a')
+    const legacyCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const oldRevisionId = legacyCurrent.revisionId
+    delete legacyCurrent.revisionId
+    fakeDb.seed('tenants/tenant-1/site/config/published/current', legacyCurrent)
+    fakeDb.remove(`tenants/tenant-1/site/config/revisions/${oldRevisionId}`)
+    fakeDb.remove(`tenants/tenant-1/site/config/revisionMedia/${oldRevisionId}`)
+    fakeDb.remove('tenants/tenant-1/site/config/revisionIndex/current')
+
+    now = 200
+    await updateSiteBranding('tenant-1', { siteName: 'Legacy B' })
+    now = 300
+    await publishSite('tenant-1', 'publisher-b')
+
+    const index = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current').entries
+    const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const baseline = fakeDb.data(`tenants/tenant-1/site/config/revisions/${index[1].revisionId}`)
+    assert.equal(index.length, 2)
+    assert.equal(index[0].revisionId, current.revisionId)
+    assert.equal(baseline.publishedAt, 100)
+    assert.equal(baseline.publishedByUserId, 'publisher-a')
+    assert.equal(baseline.siteDefinition.branding.siteName, 'Legacy A')
+    assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/revisionMedia/${baseline.revisionId}`).mediaIds, [])
+  } finally {
+    Date.now = originalNow
+  }
+})
+
+test('restore rejects a malformed retained revision without repairing or changing Working', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Corrupt revision' })
+  await initializeSite('tenant-1', 'admin')
+  await publishSite('tenant-1', 'publisher')
+  const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const revisionPath = `tenants/tenant-1/site/config/revisions/${current.revisionId}`
+  const corrupt = fakeDb.data(revisionPath)
+  fakeDb.seed(revisionPath, { ...corrupt, siteDefinition: { status: 'PUBLISHED', pages: [] } })
+  const workingBefore = fakeDb.data('tenants/tenant-1/site/config')
+
+  await assert.rejects(restoreSiteRevision('tenant-1', current.revisionId), {
+    status: 500,
+    message: 'Published revision is invalid'
+  })
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config'), workingBefore)
+})
+
+test('restore retries against concurrent working edits and publishes without altering the live current revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision A' })
+  await initializeSite('tenant-1', 'admin')
+  await publishSite('tenant-1', 'publisher-a')
+  const revisionA = fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId
+  await updateSiteBranding('tenant-1', { siteName: 'Working B' })
+
+  const attemptsBeforeEdit = fakeDb.transactionAttempts
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await updateSiteBranding('tenant-1', { siteName: 'Concurrent edit' })
+  }
+  await restoreSiteRevision('tenant-1', revisionA)
+  assert.equal((await getSite('tenant-1')).branding.siteName, 'Revision A')
+  assert.ok(fakeDb.transactionAttempts - attemptsBeforeEdit >= 3)
+
+  await updateSiteBranding('tenant-1', { siteName: 'Working C' })
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await publishSite('tenant-1', 'publisher-b')
+  }
+  await restoreSiteRevision('tenant-1', revisionA)
+  const live = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  assert.equal((await getSite('tenant-1')).branding.siteName, 'Revision A')
+  assert.equal((await getPublishedSiteDefinition('tenant-1')).branding.siteName, 'Working C')
+  assert.notEqual(live.revisionId, revisionA)
+})
+
+test('restore retries then rejects when a concurrent publish prunes its selected revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision 0' })
+  await initializeSite('tenant-1', 'admin')
+  const revisionIds = []
+  for (let index = 0; index < 10; index += 1) {
+    await updateSiteBranding('tenant-1', { siteName: `Revision ${index}` })
+    await publishSite('tenant-1', 'publisher')
+    revisionIds.push(fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId)
+  }
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await publishSite('tenant-1', 'publisher')
+  }
+  await assert.rejects(restoreSiteRevision('tenant-1', revisionIds[0]), {
+    status: 404,
+    message: 'Published revision not found'
+  })
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/revisions/${revisionIds[0]}`), undefined)
+})
+
+test('publish writes one bounded media manifest for hundreds of referenced media ids', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Many media' })
+  await initializeSite('tenant-1', 'admin')
+  const mediaRecord = (id) => ({
+    originalFilename: `${id}.png`,
+    objectName: `tenants/tenant-1/media/${id}`,
+    contentType: 'image/png',
+    sizeBytes: 1,
+    width: 1,
+    height: 1,
+    createdAt: 1,
+    createdByUserId: 'admin'
+  })
+  for (let pageIndex = 0; pageIndex < 24; pageIndex += 1) {
+    const { pageId } = await createPage('tenant-1', { title: `Page ${pageIndex}`, slug: `page-${pageIndex}` })
+    const items = Array.from({ length: 20 }, (_, itemIndex) => {
+      const id = `image-${pageIndex}-${itemIndex}`
+      fakeDb.seed(`tenants/tenant-1/media/${id}`, mediaRecord(id))
+      return { id: randomUUID(), mediaId: id, altText: id }
+    })
+    const page = fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`)
+    fakeDb.seed(`tenants/tenant-1/site/config/pages/${pageId}`, {
+      ...page,
+      sections: [{ id: randomUUID(), type: 'gallery', hidden: false, content: { title: 'Gallery', items } }]
+    })
+  }
+  let writes
+  fakeDb.beforeCommit = ({ writes: transactionWrites }) => {
+    fakeDb.beforeCommit = null
+    writes = transactionWrites
+  }
+  await publishSite('tenant-1', 'publisher')
+  assert.equal(writes.filter((write) => write.ref.path.includes('/revisionMedia/')).length, 1)
+  assert.equal(writes.filter((write) => write.ref.path.includes('/media/')).length, 0)
+  assert.equal(fakeDb.data('tenants/tenant-1/site/config/revisionMedia/' + fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId).mediaIds.length, 480)
 })
 
 test('publication status follows config and home working timestamps across publish cycles', async () => {

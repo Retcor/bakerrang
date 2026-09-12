@@ -102,7 +102,9 @@ const siteRefsFor = (tenantId) => {
   const config = tenant.collection('site').doc('config')
   const home = config.collection('pages').doc('home')
   const published = config.collection('published').doc('current')
-  return { tenant, config, home, published }
+  const revisionIndex = config.collection('revisionIndex').doc('current')
+  const revisionMedia = (revisionId) => config.collection('revisionMedia').doc(revisionId)
+  return { tenant, config, home, published, revisionIndex, revisionMedia }
 }
 
 const requireTenant = async (tenantId) => {
@@ -287,6 +289,9 @@ const collectMediaLocations = (definition, mediaId, surface) => {
 }
 
 export const formatMediaInUseMessage = (locations) => {
+  if ((locations || []).some(([surface]) => surface === 'published revision history')) {
+    return 'Image is still used in published revision history'
+  }
   const selected = new Set((locations || []).map(([surface, field]) => `${surface}|${field}`))
   const labels = MEDIA_USAGE_ORDER
     .filter(([surface, field]) => selected.has(`${surface}|${field}`))
@@ -331,8 +336,17 @@ const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
 }
 
 export const findMediaUsage = async (tenantId, mediaId, transaction) => {
+  const refs = siteRefsFor(tenantId)
+  const indexSnapshot = await (transaction ? transaction.get(refs.revisionIndex) : refs.revisionIndex.get())
+  const entries = Array.isArray(indexSnapshot.exists ? indexSnapshot.data()?.entries : null)
+    ? indexSnapshot.data().entries.filter((entry) => typeof entry?.revisionId === 'string' && entry.revisionId).slice(0, 10)
+    : []
+  const manifests = entries.length
+    ? await (transaction ? transaction.getAll(...entries.map((entry) => refs.revisionMedia(entry.revisionId))) : firestore.getAll(...entries.map((entry) => refs.revisionMedia(entry.revisionId))))
+    : []
   const { working, published } = await readWorkingAndPublishedDefinitions(tenantId, transaction)
   return [
+    ...(manifests.some((snapshot) => Array.isArray(snapshot.exists ? snapshot.data()?.mediaIds : null) && snapshot.data().mediaIds.includes(mediaId)) ? [['published revision history', '']] : []),
     ...(working ? collectMediaLocations(working, mediaId, 'working') : []),
     ...(published ? collectMediaLocations(published, mediaId, 'published') : [])
   ]

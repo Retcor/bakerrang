@@ -129,8 +129,60 @@ test('published reference retained after unpublish blocks deletion', async () =>
   await sites.publishSite(tenant, 'admin')
   await sites.updateSiteBranding(tenant, { siteName: 'Business' })
   await sites.unpublishSite(tenant)
-  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the published favicon' })
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
   assertIntact()
+})
+
+test('a retained revision manifest protects media without scanning historical snapshots and releases it after pruning', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher')
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+  await sites.publishSite(tenant, 'publisher')
+
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
+  assert.ok(db.data(mediaPath))
+  assert.ok(storage.objects.has(mediaPath))
+
+  for (let index = 0; index < 9; index += 1) await sites.publishSite(tenant, 'publisher')
+  await remove()
+  assertRemoved()
+})
+
+test('prune and media deletion serialize on the revision index before the last retained manifest disappears', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher')
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+  for (let index = 0; index < 9; index += 1) await sites.publishSite(tenant, 'publisher')
+
+  onceBeforeCommit(async () => {
+    await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
+  })
+  await sites.publishSite(tenant, 'publisher')
+  await remove()
+  assertRemoved()
+})
+
+test('legacy baseline capture cannot race a media delete past its retained manifest', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher-a')
+  const legacy = db.data(publishedPath)
+  const oldRevisionId = legacy.revisionId
+  delete legacy.revisionId
+  db.seed(publishedPath, legacy)
+  db.remove(`${configPath}/revisions/${oldRevisionId}`)
+  db.remove(`${configPath}/revisionMedia/${oldRevisionId}`)
+  db.remove(`${configPath}/revisionIndex/current`)
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+
+  onceBeforeCommit(async () => {
+    await assert.rejects(remove(), { status: 400, message: 'Image is still used as the published favicon' })
+  })
+  await sites.publishSite(tenant, 'publisher-b')
+  const baseline = db.data(`${configPath}/revisionIndex/current`).entries[1]
+  assert.deepEqual(db.data(`${configPath}/revisionMedia/${baseline.revisionId}`), { mediaIds: ['image'] })
+  assert.ok(db.data(mediaPath))
+  assert.ok(storage.objects.has(mediaPath))
+  assert.equal(storage.deletes.length, 0)
 })
 test('duplicate deletes that observed marker converge; fresh request404', async () => {
   const original = storage.deleteObject.bind(storage)

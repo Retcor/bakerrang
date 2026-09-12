@@ -7,7 +7,7 @@ import {
   isValidEmail,
   isValidPhone
 } from '../validation/contactMethods.js'
-import { hydrateSiteMedia, requireTenantMediaInTransaction } from './mediaService.js'
+import { collectSiteMediaIds, hydrateSiteMedia, requireTenantMediaInTransaction } from './mediaService.js'
 import { siteBrandingResponse, validateSiteBranding } from '../domain/siteBranding.js'
 import { DEFAULT_SITE_THEME, normalizeSiteTheme, validateSiteTheme } from '../domain/siteTheme.js'
 import {
@@ -15,8 +15,8 @@ import {
   hasBusinessProfile,
   validateBusinessProfile
 } from '../domain/businessProfile.js'
-import { validateBusinessHoursUpdate } from '../domain/businessHours.js'
-import { validateSocialLinksUpdate } from '../domain/socialLinks.js'
+import { validateBusinessHours, validateBusinessHoursUpdate } from '../domain/businessHours.js'
+import { validateSocialLinks, validateSocialLinksUpdate } from '../domain/socialLinks.js'
 import { normalizeStoredCustomCss, validateCustomCss } from '../domain/customCss.js'
 import {
   SECTION_TYPES,
@@ -28,6 +28,7 @@ import { SITE_TEMPLATES, getSiteTemplate, siteTemplateMetadata } from '../domain
 const TENANTS = 'tenants'
 const SECTION_TYPE_SET = new Set(SECTION_TYPES)
 export const MAX_PAGES = 25
+export const MAX_PUBLISHED_REVISIONS = 10
 // A deliberately conservative buffer below Firestore's 1 MiB document limit.
 export const MAX_PUBLISHED_SNAPSHOT_BYTES = 900 * 1024
 export const RESERVED_PAGE_SLUGS = new Set(['preview', 'site'])
@@ -62,8 +63,11 @@ const refsFor = (tenantId) => {
   const config = tenant.collection('site').doc('config')
   const home = config.collection('pages').doc('home')
   const published = config.collection('published').doc('current')
+  const revision = (revisionId) => config.collection('revisions').doc(revisionId)
+  const revisionIndex = config.collection('revisionIndex').doc('current')
+  const revisionMedia = (revisionId) => config.collection('revisionMedia').doc(revisionId)
   const page = (pageId) => config.collection('pages').doc(pageId)
-  return { tenant, config, home, page, published }
+  return { tenant, config, home, page, published, revision, revisionIndex, revisionMedia }
 }
 
 const siteSectionResponse = (section) => {
@@ -381,6 +385,57 @@ const normalizePublishedSiteDefinition = (definition) => {
   else delete normalized.businessProfile
   return normalized
 }
+
+const revisionError = () => httpError(500, 'Published revision is invalid')
+
+const validateRevisionDefinition = (definition) => {
+  try {
+    if (!isObject(definition) || definition.status !== 'PUBLISHED' || !Array.isArray(definition.pages) || definition.pages.length === 0 || definition.pages.length > MAX_PAGES) throw revisionError()
+    const pages = structuredClone(definition.pages)
+    const pageOrder = pages.map((page) => page?.id)
+    if (pageOrder[0] !== 'home' || new Set(pageOrder).size !== pageOrder.length) throw revisionError()
+    for (const page of pages) {
+      if (!isObject(page) || typeof page.id !== 'string' || !page.id) throw revisionError()
+      if (page.id === 'home') {
+        if (page.slug !== '/' || page.title !== 'Home') throw revisionError()
+      } else validatePageRecord(page, 500)
+      validateSectionComposition(page.sections, page.id, 500)
+      if (page.seo !== undefined) page.seo = validatePageSeo(page.seo)
+    }
+    for (const page of pages) requireUniquePageSlug(pages, page.slug, page.id)
+    const branding = validateSiteBranding(definition.branding)
+    const theme = validateSiteTheme(definition.theme)
+    const header = validateSiteHeader(definition.header, pageOrder)
+    const footer = validateSiteFooter(definition.footer, pageOrder)
+    const validatedSiteSeo = definition.seo === undefined ? undefined : validateSiteSeo(definition.seo).seo
+    let businessProfile
+    if (definition.businessProfile !== undefined) {
+      if (!isObject(definition.businessProfile)) throw revisionError()
+      businessProfile = validateBusinessProfile(definition.businessProfile)
+      if (Object.hasOwn(definition.businessProfile, 'businessHours')) businessProfile.businessHours = validateBusinessHours(definition.businessProfile.businessHours)
+      if (Object.hasOwn(definition.businessProfile, 'socialLinks')) businessProfile.socialLinks = validateSocialLinks(definition.businessProfile.socialLinks)
+    }
+    const customCss = definition.customCss === undefined ? undefined : validateCustomCss(definition.customCss)
+    return {
+      pages,
+      pageOrder,
+      branding,
+      theme,
+      header,
+      footer,
+      ...(validatedSiteSeo ? { seo: validatedSiteSeo } : {}),
+      ...(businessProfile && hasBusinessProfile(businessProfile) ? { businessProfile } : {}),
+      ...(customCss ? { customCss } : {})
+    }
+  } catch (error) {
+    if (error?.status === 500) throw error
+    throw revisionError()
+  }
+}
+
+const revisionEntries = (value) => Array.isArray(value?.entries)
+  ? value.entries.filter((entry) => isObject(entry) && typeof entry.revisionId === 'string' && entry.revisionId && validTimestamp(entry.publishedAt) && typeof entry.publishedByUserId === 'string' && Number.isSafeInteger(entry.pageCount) && entry.pageCount >= 0)
+  : []
 
 export const finalizeSiteDefinitionRead = async (tenantId, definition) => {
   const canonical = { ...definition }
@@ -1399,12 +1454,19 @@ export const publishSite = async (tenantId, actorUserId) => {
 
   await firestore.runTransaction(async (transaction) => {
     const { config, pages } = await readWorkingSite(tenantId, transaction)
+    const [currentSnapshot, indexSnapshot] = await Promise.all([
+      transaction.get(refs.published),
+      transaction.get(refs.revisionIndex)
+    ])
     const workingDefinition = toSiteDefinition(config, pages)
     const canonicalWorkingDefinition = { ...workingDefinition }
     delete canonicalWorkingDefinition.hasUnpublishedChanges
     delete canonicalWorkingDefinition.lastPublishedAt
     const storedPublishedDefinition = { ...canonicalWorkingDefinition, status: 'PUBLISHED' }
+    await requireTenantMediaInTransaction(transaction, tenantId, collectSiteMediaIds(storedPublishedDefinition), 'Published site media not found')
+    const revisionId = randomUUID()
     const publishedRecord = {
+      revisionId,
       siteDefinition: storedPublishedDefinition,
       publishedAt: now,
       publishedByUserId: actorUserId
@@ -1420,12 +1482,93 @@ export const publishSite = async (tenantId, actorUserId) => {
       lastPublishedByUserId: actorUserId
     }
     publishedDefinition = toSiteDefinition(nextConfig, pages)
-
+    let entries = revisionEntries(indexSnapshot.exists ? indexSnapshot.data() : null)
+    const current = currentSnapshot.exists ? currentSnapshot.data() : null
+    if (current?.siteDefinition && !current.revisionId) {
+      if (!validTimestamp(current.publishedAt) || typeof current.publishedByUserId !== 'string') throw httpError(500, 'Legacy published site is invalid')
+      const baselineId = randomUUID()
+      const baseline = {
+        revisionId: baselineId,
+        publishedAt: current.publishedAt,
+        publishedByUserId: current.publishedByUserId,
+        siteDefinition: structuredClone(current.siteDefinition)
+      }
+      // Validate before retaining an old live snapshot as an immutable revision.
+      validateRevisionDefinition(baseline.siteDefinition)
+      transaction.set(refs.revision(baselineId), baseline)
+      transaction.set(refs.revisionMedia(baselineId), { mediaIds: collectSiteMediaIds(baseline.siteDefinition) })
+      entries = [{ revisionId: baselineId, publishedAt: baseline.publishedAt, publishedByUserId: baseline.publishedByUserId, pageCount: baseline.siteDefinition.pages.length }, ...entries]
+    }
+    transaction.set(refs.revision(revisionId), publishedRecord)
+    transaction.set(refs.revisionMedia(revisionId), { mediaIds: collectSiteMediaIds(storedPublishedDefinition) })
+    entries = [{ revisionId, publishedAt: now, publishedByUserId: actorUserId, pageCount: storedPublishedDefinition.pages.length }, ...entries.filter((entry) => entry.revisionId !== revisionId)]
+    const retained = entries.slice(0, MAX_PUBLISHED_REVISIONS)
+    for (const entry of entries.slice(MAX_PUBLISHED_REVISIONS)) {
+      transaction.delete(refs.revision(entry.revisionId))
+      transaction.delete(refs.revisionMedia(entry.revisionId))
+    }
     transaction.set(refs.published, publishedRecord)
+    transaction.set(refs.revisionIndex, { entries: retained })
     transaction.set(refs.config, nextConfig)
   })
 
   return finalizeSiteDefinitionRead(tenantId, publishedDefinition)
+}
+
+export const listSiteRevisions = async (tenantId) => {
+  const refs = refsFor(tenantId)
+  const [currentSnapshot, indexSnapshot] = await Promise.all([refs.published.get(), refs.revisionIndex.get()])
+  const current = currentSnapshot.exists ? currentSnapshot.data() : null
+  const entries = revisionEntries(indexSnapshot.exists ? indexSnapshot.data() : null)
+  if (current?.siteDefinition && !current.revisionId) {
+    return {
+      revisions: [{ revisionId: null, publishedAt: current.publishedAt, publishedByUserId: current.publishedByUserId, pageCount: Array.isArray(current.siteDefinition.pages) ? current.siteDefinition.pages.length : 0, isCurrent: true }]
+    }
+  }
+  return { revisions: entries.map((entry) => ({ ...entry, isCurrent: entry.revisionId === current?.revisionId })) }
+}
+
+export const restoreSiteRevision = async (tenantId, revisionId) => {
+  if (typeof revisionId !== 'string' || !revisionId) throw httpError(404, 'Published revision not found')
+  const refs = refsFor(tenantId)
+  const now = Date.now()
+  let definition
+  await firestore.runTransaction(async (transaction) => {
+    const { config, order } = await readWorkingSite(tenantId, transaction)
+    const [indexSnapshot, revisionSnapshot] = await Promise.all([
+      transaction.get(refs.revisionIndex),
+      transaction.get(refs.revision(revisionId))
+    ])
+    if (!revisionEntries(indexSnapshot.exists ? indexSnapshot.data() : null).some((entry) => entry.revisionId === revisionId) || !revisionSnapshot.exists) {
+      throw httpError(404, 'Published revision not found')
+    }
+    const record = revisionSnapshot.data()
+    if (!record || record.revisionId !== revisionId) throw revisionError()
+    const historical = validateRevisionDefinition(record.siteDefinition)
+    const restoredPages = historical.pages.map((page) => ({ ...page, createdAt: now, updatedAt: now }))
+    const nextConfig = {
+      ...config,
+      status: config.status,
+      pageOrder: historical.pageOrder,
+      branding: historical.branding,
+      theme: historical.theme,
+      header: historical.header,
+      footer: historical.footer,
+      updatedAt: now
+    }
+    if (historical.seo) nextConfig.seo = historical.seo
+    else delete nextConfig.seo
+    if (historical.businessProfile) nextConfig.businessProfile = historical.businessProfile
+    else delete nextConfig.businessProfile
+    if (historical.customCss) nextConfig.customCss = historical.customCss
+    else delete nextConfig.customCss
+    const restoredIds = new Set(historical.pageOrder)
+    for (const pageId of order) if (!restoredIds.has(pageId)) transaction.delete(refs.page(pageId))
+    for (const page of restoredPages) transaction.set(refs.page(page.id), page)
+    transaction.set(refs.config, nextConfig)
+    definition = toSiteDefinition(nextConfig, restoredPages)
+  })
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const unpublishSite = async (tenantId, actorUserId) => {
