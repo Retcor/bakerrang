@@ -63,6 +63,14 @@ const sites = {
     calls.push({ operation: 'unpublishSite', tenantId, actorId })
     return siteDefinition
   },
+  listSiteTemplates: async () => {
+    calls.push({ operation: 'listSiteTemplates' })
+    return [{ id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A template', tags: ['modern'] }]
+  },
+  applySiteTemplate: async (tenantId, templateId) => {
+    calls.push({ operation: 'applySiteTemplate', tenantId, templateId })
+    return siteDefinition
+  },
   updateSiteBranding: async (tenantId, body) => {
     calls.push({ operation: 'updateSiteBranding', tenantId, body })
     return siteDefinition
@@ -462,6 +470,27 @@ test('only PLATFORM_ADMIN can publish and unpublish a site', async () => {
       actorId: 'platform'
     })
   }
+})
+
+test('site templates are PLATFORM_ADMIN-only and apply ignores the request body', async () => {
+  const catalogPath = '/tenants/tenant-1/site/templates'
+  const applyPath = `${catalogPath}/modern-local-service/apply`
+  for (const path of [catalogPath, applyPath]) {
+    const method = path === catalogPath ? 'GET' : 'POST'
+    assert.equal((await request(path, { method })).status, 401)
+    for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+      assert.equal((await request(path, { userId, method, ...(method === 'POST' ? { body: { ignored: true } } : {}) })).status, 403)
+    }
+  }
+  const catalog = await request(catalogPath, { userId: 'platform' })
+  assert.equal(catalog.status, 200)
+  assert.equal(catalog.headers.get('cache-control'), 'no-store')
+  assert.equal((await catalog.json())[0].id, 'modern-local-service')
+  assert.deepEqual(calls.at(-1), { operation: 'listSiteTemplates' })
+
+  const applied = await request(applyPath, { userId: 'platform', method: 'POST', body: { ignored: true } })
+  assert.equal(applied.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'applySiteTemplate', tenantId: 'tenant-1', templateId: 'modern-local-service' })
 })
 
 test('custom domain lifecycle is PLATFORM_ADMIN-only and forwards explicit commands', async () => {

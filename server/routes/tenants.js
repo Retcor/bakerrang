@@ -87,6 +87,14 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.unpublishSite(req.params.tenantId, req.user.id)
   ))
 
+  router.get('/:tenantId/site/templates', platformAdmin, noStore, handle(
+    () => sites.listSiteTemplates()
+  ))
+
+  router.post('/:tenantId/site/templates/:templateId/apply', platformAdmin, handle(
+    (req) => sites.applySiteTemplate(req.params.tenantId, req.params.templateId)
+  ))
+
   router.get('/:tenantId/site/domain', platformAdmin, noStore, handle(
     (req) => domains.getSiteDomain(req.params.tenantId)
   ))

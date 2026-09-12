@@ -23,6 +23,7 @@ import {
   SINGLETON_SECTION_TYPES,
   createDefaultSection
 } from '../domain/sectionDefaults.js'
+import { SITE_TEMPLATES, getSiteTemplate, siteTemplateMetadata } from '../domain/siteTemplates.js'
 
 const TENANTS = 'tenants'
 const SECTION_TYPE_SET = new Set(SECTION_TYPES)
@@ -933,6 +934,94 @@ const validatePageRecord = (page, status = 400) => {
   return { ...page, title: page.title.trim() }
 }
 
+const TEMPLATE_ITEM_SECTION_TYPES = new Set(['services', 'gallery', 'testimonials', 'faq', 'process', 'stats', 'logos'])
+
+const copyTemplateSection = (templateSection) => {
+  const content = structuredClone(templateSection.content)
+  if (TEMPLATE_ITEM_SECTION_TYPES.has(templateSection.type) && Array.isArray(content.items)) {
+    content.items = content.items.map((item) => ({ ...item, id: randomUUID() }))
+  }
+  return { id: randomUUID(), type: templateSection.type, hidden: templateSection.hidden, content }
+}
+
+const materializeTemplateNavigation = (items, pageIdsByKey, label) => {
+  if (!Array.isArray(items)) throw httpError(500, `${label} is invalid`)
+  return items.map((item) => {
+    if (!isObject(item) || typeof item.pageKey !== 'string' || !pageIdsByKey.has(item.pageKey)) {
+      throw httpError(500, `${label} contains an unknown page key`)
+    }
+    return { pageId: pageIdsByKey.get(item.pageKey), ...(typeof item.label === 'string' ? { label: item.label } : {}) }
+  })
+}
+
+const validateMaterializedTemplatePages = (pages) => {
+  if (!Array.isArray(pages) || pages.length === 0 || pages.length > MAX_PAGES) {
+    throw httpError(500, 'Site template pages are invalid')
+  }
+  const home = pages[0]
+  if (!home || home.id !== 'home' || home.slug !== '/' || home.title !== 'Home' || pages.filter((page) => page?.id === 'home').length !== 1) {
+    throw httpError(500, 'Site template Home page is invalid')
+  }
+  for (const page of pages) {
+    if (page.id !== 'home') validatePageRecord(page, 500)
+    try {
+      requireUniquePageSlug(pages, page.slug, page.id)
+    } catch {
+      throw httpError(500, 'Site template page slug is duplicated')
+    }
+    validateSectionComposition(page.sections, page.id, 500)
+  }
+}
+
+export const materializeSiteTemplate = (template, config, now = Date.now()) => {
+  if (!template || !Array.isArray(template.pages) || template.pages.length === 0 || template.pages.length > MAX_PAGES) {
+    throw httpError(500, 'Site template is invalid')
+  }
+  const pageIdsByKey = new Map()
+  for (const page of template.pages) {
+    if (!isObject(page) || typeof page.key !== 'string' || !page.key || pageIdsByKey.has(page.key)) {
+      throw httpError(500, 'Site template has invalid page keys')
+    }
+    pageIdsByKey.set(page.key, page.key === 'home' ? 'home' : randomUUID())
+  }
+  if (pageIdsByKey.get('home') !== 'home') throw httpError(500, 'Site template must include Home')
+
+  const pageOrder = template.pages.map((page) => pageIdsByKey.get(page.key))
+  if (pageOrder[0] !== 'home') throw httpError(500, 'Site template must put Home first')
+  const pages = template.pages.map((templatePage) => ({
+    id: pageIdsByKey.get(templatePage.key),
+    slug: templatePage.slug,
+    title: templatePage.key === 'home' ? 'Home' : templatePage.title,
+    sections: Array.isArray(templatePage.sections) ? templatePage.sections.map(copyTemplateSection) : [],
+    createdAt: now,
+    updatedAt: now
+  }))
+  const header = {
+    ...structuredClone(template.header),
+    navigation: { items: materializeTemplateNavigation(template.header?.navigation?.items, pageIdsByKey, 'Template header navigation') }
+  }
+  const footer = {
+    ...structuredClone(template.footer),
+    ...(template.footer?.navigationMode === 'custom'
+      ? { navigationItems: materializeTemplateNavigation(template.footer.navigationItems, pageIdsByKey, 'Template footer navigation') }
+      : {})
+  }
+
+  // Validate the fully materialized runtime state, not the logical template source.
+  validateMaterializedTemplatePages(pages)
+  const theme = validateSiteTheme(template.theme)
+  validateSiteHeader(header, pageOrder)
+  validateSiteFooter(footer, pageOrder)
+  const nextConfig = { ...config, theme, header, footer, pageOrder, updatedAt: now }
+  const definition = toSiteDefinition(nextConfig, pages)
+  return { config: nextConfig, pages, definition }
+}
+
+export const validateSiteTemplate = (template) => {
+  materializeSiteTemplate(template, { status: 'DRAFT', branding: { siteName: 'Website' } }, 0)
+  return true
+}
+
 const requireSection = (sections, sectionId) => {
   const index = sections.findIndex((section) => section.id === sectionId)
   if (index === -1) throw httpError(400, 'Unknown section id')
@@ -1051,6 +1140,30 @@ export const initializeSite = async (tenantId, actorUserId) => {
 export const getSite = async (tenantId) => {
   const { config, pages } = await readWorkingSite(tenantId)
   return finalizeSiteDefinitionRead(tenantId, toSiteDefinition(config, pages))
+}
+
+export const listSiteTemplates = async () => SITE_TEMPLATES.map(siteTemplateMetadata)
+
+export const applySiteTemplate = async (tenantId, templateId) => {
+  const template = getSiteTemplate(templateId)
+  if (!template) throw httpError(404, 'Site template not found')
+  let definition
+
+  await firestore.runTransaction(async (transaction) => {
+    const { refs, config, order } = await readWorkingSite(tenantId, transaction)
+    // Firestore can rerun this callback after contention, so identifiers are minted here.
+    const now = Math.max(Date.now(), validTimestamp(config.updatedAt) ? config.updatedAt + 1 : 0)
+    const materialized = materializeSiteTemplate(template, config, now)
+    const nextPageIds = new Set(materialized.config.pageOrder)
+    for (const pageId of order) {
+      if (!nextPageIds.has(pageId)) transaction.delete(refs.page(pageId))
+    }
+    for (const page of materialized.pages) transaction.set(refs.page(page.id), page)
+    transaction.set(refs.config, materialized.config)
+    definition = materialized.definition
+  })
+
+  return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
 export const getPublishedSiteDefinition = async (tenantId) => {

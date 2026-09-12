@@ -2,16 +2,24 @@ import test, { afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   _setDb,
+  applySiteTemplate,
+  createPage,
   getPublicSite,
   getPublishedSiteDefinition,
   getSite,
   initializeSite,
+  listSiteTemplates,
+  materializeSiteTemplate,
   publishSite,
   unpublishSite,
-  updateSiteBranding
+  updateSiteBranding,
+  updateBusinessProfile,
+  updatePage,
+  validateSiteTemplate
 } from '../services/siteService.js'
 import { updateHomeHero, upsertHomeContact, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
+import { SITE_TEMPLATES } from '../domain/siteTemplates.js'
 
 let fakeDb
 
@@ -1012,4 +1020,237 @@ test('Contact working changes remain isolated until republish', async () => {
 
   await publishSite('tenant-1', 'admin')
   assert.equal(contactSection(await getPublicSite('tenant-1', normalPublicEnv)).content.title, 'Contact B')
+})
+
+test('curated site template catalog exposes metadata only and validates each source template', async () => {
+  const templates = await listSiteTemplates()
+  assert.deepEqual(templates.map((template) => template.id), [
+    'modern-local-service', 'classic-professional', 'bold-contractor'
+  ])
+  for (const [index, template] of templates.entries()) {
+    assert.deepEqual(Object.keys(template).sort(), ['description', 'id', 'name', 'tags', 'version'])
+    assert.equal(validateSiteTemplate(SITE_TEMPLATES[index]), true)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('mediaId'), false)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('testimonials'), false)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('stats'), false)
+  }
+})
+
+test('materialized templates reject invalid runtime Page composition instead of repairing it', () => {
+  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
+  const invalidTemplate = (mutate) => {
+    const template = structuredClone(SITE_TEMPLATES[0])
+    mutate(template)
+    assert.throws(() => materializeSiteTemplate(template, config, 10), { status: 500 })
+  }
+
+  invalidTemplate((template) => { template.pages[1].slug = 'Invalid slug' })
+  invalidTemplate((template) => { template.pages[1].slug = template.pages[2].slug })
+  invalidTemplate((template) => { template.pages[1].sections.unshift({ type: 'hero', hidden: false, content: { title: 'Not Home' } }) })
+  invalidTemplate((template) => { template.pages[0].sections.push(structuredClone(template.pages[0].sections.at(-1))) })
+  invalidTemplate((template) => { template.pages[0].sections[0].hidden = true })
+  invalidTemplate((template) => { template.header.navigation.items[0].pageKey = 'unknown-page' })
+})
+
+test('applying a site template replaces working pages and preserves tenant-owned configuration', async () => {
+  const originalNow = Date.now
+  let now = 50
+  Date.now = () => now
+  try {
+    fakeDb.seed('tenants/tenant-1', { name: 'Template customer' })
+    await initializeSite('tenant-1', 'admin')
+    now = 100
+    await publishSite('tenant-1', 'publisher')
+    const publishedBeforeApply = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const original = fakeDb.data('tenants/tenant-1/site/config')
+    fakeDb.seed('tenants/tenant-1/site/config', {
+      ...original,
+      branding: { siteName: 'Kept name' },
+      businessProfile: { phone: '+15555550100' },
+      seo: { defaultDescription: 'Keep global SEO', indexable: false },
+      customCss: '.kept { color: red; }',
+      pageOrder: ['home', 'old-page']
+    })
+    fakeDb.seed('tenants/tenant-1/site/config/pages/old-page', {
+      id: 'old-page', slug: 'old-page', title: 'Old page', sections: [], createdAt: 50, updatedAt: 50, seo: { title: 'Old SEO' }
+    })
+
+    now = 200
+    const applied = await applySiteTemplate('tenant-1', 'modern-local-service')
+    const config = fakeDb.data('tenants/tenant-1/site/config')
+    assert.equal(applied.status, 'PUBLISHED')
+    assert.equal(applied.hasUnpublishedChanges, true)
+    assert.equal(applied.lastPublishedAt, 100)
+    assert.deepEqual(config.branding, { siteName: 'Kept name' })
+    assert.deepEqual(config.businessProfile, { phone: '+15555550100' })
+    assert.deepEqual(config.seo, { defaultDescription: 'Keep global SEO', indexable: false })
+    assert.equal(config.customCss, '.kept { color: red; }')
+    assert.equal(config.lastPublishedAt, 100)
+    assert.equal(config.lastPublishedByUserId, 'publisher')
+    assert.equal(config.updatedAt, 200)
+    assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), publishedBeforeApply)
+    assert.equal(fakeDb.data('tenants/tenant-1/site/config/published/current').publishedAt, publishedBeforeApply.publishedAt)
+    assert.equal(applied.pages.some((page) => page.id !== 'home' && publishedBeforeApply.siteDefinition.pages.some((publishedPage) => publishedPage.id === page.id)), false)
+    assert.equal(fakeDb.data('tenants/tenant-1/site/config/pages/old-page'), undefined)
+    assert.equal(applied.pages[0].id, 'home')
+    assert.ok(applied.pages.slice(1).every((page) => page.id !== 'home'))
+    assert.ok(applied.pages.every((page) => !Object.hasOwn(page, 'seo')))
+    assert.ok(config.pageOrder.every((pageId) => !Object.hasOwn(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), 'seo')))
+
+    const pageIds = new Set(applied.pages.map((page) => page.id))
+    for (const item of [...applied.header.navigation.items, ...applied.footer.navigationItems]) {
+      assert.ok(pageIds.has(item.pageId))
+      assert.equal(Object.hasOwn(item, 'pageKey'), false)
+    }
+    const sections = applied.pages.flatMap((page) => page.sections)
+    assert.equal(new Set(sections.map((section) => section.id)).size, sections.length)
+    const itemIds = sections.flatMap((section) => section.content.items || []).map((item) => item.id)
+    assert.equal(new Set(itemIds).size, itemIds.length)
+  } finally {
+    Date.now = originalNow
+  }
+})
+
+test('template materialization regenerates every persisted identifier, including nested item ids', () => {
+  const template = {
+    ...SITE_TEMPLATES[0],
+    header: { brandDisplay: 'logo', navigation: { items: [{ pageKey: 'home' }] } },
+    footer: {
+      showBranding: true,
+      navigationMode: 'custom',
+      navigationItems: [{ pageKey: 'home' }],
+      showBusinessContact: false,
+      showSocialLinks: true,
+      showCopyright: true
+    },
+    pages: [{
+      key: 'home',
+      slug: '/',
+      title: 'Home',
+      sections: [
+        { type: 'hero', hidden: false, content: { title: 'Start' } },
+        { type: 'services', hidden: false, content: { title: 'Services', items: [{ name: 'One' }] } },
+        { type: 'gallery', hidden: false, content: { title: 'Gallery', items: [{ mediaId: 'test-media', altText: 'Test image' }] } },
+        { type: 'testimonials', hidden: false, content: { title: 'Testimonials', items: [{ customerName: 'Name', quote: 'Quote' }] } },
+        { type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ question: 'Question', answer: 'Answer' }] } },
+        { type: 'process', hidden: false, content: { items: [{ title: 'Step' }] } },
+        { type: 'stats', hidden: false, content: { items: [{ value: '1', label: 'One' }] } },
+        { type: 'logos', hidden: false, content: { items: [{ mediaId: 'test-logo', altText: 'Test logo' }] } }
+      ]
+    }]
+  }
+  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
+  const first = materializeSiteTemplate(template, config, 10)
+  const second = materializeSiteTemplate(template, config, 10)
+  const ids = (result) => result.pages.flatMap((page) => page.sections).flatMap((section) => [section.id, ...(section.content.items || []).map((item) => item.id)])
+  assert.equal(new Set(ids(first)).size, ids(first).length)
+  assert.equal(ids(first).some((id) => ids(second).includes(id)), false)
+  const preserved = materializeSiteTemplate(SITE_TEMPLATES[0], {
+    status: 'PUBLISHED',
+    branding: { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' },
+    businessProfile: { socialImageMediaId: 'social-1' },
+    seo: { defaultDescription: 'Kept' },
+    customCss: '.kept {}',
+    lastPublishedAt: 1,
+    lastPublishedByUserId: 'publisher'
+  }, 10)
+  assert.deepEqual(preserved.config.branding, { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' })
+  assert.deepEqual(preserved.config.businessProfile, { socialImageMediaId: 'social-1' })
+  assert.equal(preserved.config.customCss, '.kept {}')
+  assert.equal(preserved.config.lastPublishedAt, 1)
+})
+
+test('template application regenerates ids within Firestore retry callbacks without duplicate persisted pages', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Retry customer' })
+  await initializeSite('tenant-1', 'admin')
+  fakeDb.beforeCommit = ({ attempt }) => {
+    if (attempt === 1) {
+      const config = fakeDb.data('tenants/tenant-1/site/config')
+      fakeDb.seed('tenants/tenant-1/site/config', { ...config, updatedAt: config.updatedAt + 1 })
+    }
+  }
+  const applied = await applySiteTemplate('tenant-1', 'bold-contractor')
+  assert.equal(fakeDb.transactionAttempts, 3) // initialization plus one retry and a successful apply.
+  const storedPageIds = fakeDb.data('tenants/tenant-1/site/config').pageOrder
+  assert.deepEqual(storedPageIds, applied.pages.map((page) => page.id))
+  assert.equal(new Set(storedPageIds).size, storedPageIds.length)
+})
+
+test('Publish retries after Apply commits and snapshots one coherent template generation', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Publication race' })
+  await initializeSite('tenant-1', 'admin')
+  let interleaved = false
+  let publishAttempts = 0
+  let applied
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const publishing = writes.some((write) => write.ref.path.endsWith('/published/current'))
+    if (publishing) publishAttempts++
+    if (publishing && !interleaved) {
+      interleaved = true
+      applied = await applySiteTemplate('tenant-1', 'classic-professional')
+    }
+  }
+
+  await publishSite('tenant-1', 'publisher')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  const snapshot = fakeDb.data('tenants/tenant-1/site/config/published/current').siteDefinition
+  const publishedPageIds = snapshot.pages.map((page) => page.id)
+  assert.equal(publishAttempts, 2)
+  assert.deepEqual(publishedPageIds, config.pageOrder)
+  assert.equal(snapshot.pages[0].id, 'home')
+  assert.ok(config.pageOrder.slice(1).every((pageId) => snapshot.pages.some((page) => page.id === pageId)))
+  for (const item of snapshot.header.navigation.items) assert.ok(publishedPageIds.includes(item.pageId))
+  for (const item of snapshot.footer.navigationItems) assert.ok(publishedPageIds.includes(item.pageId))
+  assert.deepEqual(snapshot.pages, applied.pages)
+  assert.deepEqual(snapshot.header, applied.header)
+  assert.deepEqual(snapshot.footer, applied.footer)
+  assert.equal(JSON.stringify(snapshot).includes('pageKey'), false)
+  assert.equal(snapshot.pages.some((page) => page.sections.some((section) => section.content?.title === 'Publication race')), false)
+})
+
+test('Apply retries around a preserved Business Profile update without overwriting it', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Preservation race' })
+  await initializeSite('tenant-1', 'admin')
+  let interleaved = false
+  let applyAttempts = 0
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    if (applying) applyAttempts++
+    if (applying && !interleaved) {
+      interleaved = true
+      await updateBusinessProfile('tenant-1', { phone: '+17205550100' })
+    }
+  }
+
+  const applied = await applySiteTemplate('tenant-1', 'bold-contractor')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  assert.equal(applyAttempts, 2)
+  assert.equal(config.businessProfile.phone, '+17205550100')
+  assert.deepEqual(config.theme, SITE_TEMPLATES[2].theme)
+  assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
+  assert.deepEqual(applied.header.navigation.items.map((item) => item.pageId), config.header.navigation.items.map((item) => item.pageId))
+})
+
+test('Apply retries around a Page edit and intentionally supersedes the old Page generation', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Page race' })
+  await initializeSite('tenant-1', 'admin')
+  const { pageId } = await createPage('tenant-1', { title: 'Legacy page', slug: 'legacy-page' })
+  let interleaved = false
+  let applyAttempts = 0
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    if (applying) applyAttempts++
+    if (applying && !interleaved) {
+      interleaved = true
+      await updatePage('tenant-1', pageId, { title: 'Concurrent legacy edit' })
+    }
+  }
+
+  const applied = await applySiteTemplate('tenant-1', 'modern-local-service')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  assert.equal(applyAttempts, 2)
+  assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), undefined)
+  assert.equal(applied.pages.some((page) => page.title === 'Concurrent legacy edit'), false)
+  assert.equal(applied.pages.some((page) => page.slug === 'legacy-page'), false)
 })
