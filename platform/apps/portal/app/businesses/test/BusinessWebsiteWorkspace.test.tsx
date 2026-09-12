@@ -28,7 +28,8 @@ const mocks = vi.hoisted(() => ({
   updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(),
   updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(),
-  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn()
+  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn(),
+  getSiteRevisions: vi.fn(), restoreSiteRevision: vi.fn()
 }))
 
 const navigation = vi.hoisted(() => ({
@@ -55,6 +56,7 @@ describe('Website workspace', () => {
     mocks.createSitePreviewToken.mockResolvedValue({ token: 'preview', expiresAt: 1 })
     mocks.publishSite.mockResolvedValue({ ...baseSite, status: 'PUBLISHED', hasUnpublishedChanges: false, lastPublishedAt: 100 })
     mocks.unpublishSite.mockResolvedValue(baseSite)
+    mocks.getSiteRevisions.mockResolvedValue({ revisions: [] })
     mocks.getSiteTemplates.mockResolvedValue([
       { id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A practical local-service website.', tags: ['Local', 'Service'] },
       { id: 'classic-professional', version: 1, name: 'Classic Professional', description: 'A trustworthy professional website.', tags: ['Professional'] },
@@ -71,7 +73,7 @@ describe('Website workspace', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Templates', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Templates', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Revision History', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
@@ -79,6 +81,7 @@ describe('Website workspace', () => {
     const structure = within(nav).getByRole('heading', { name: 'Site structure' }).closest('section') as HTMLElement
     const advanced = within(nav).getByRole('heading', { name: 'Advanced' }).closest('section') as HTMLElement
     const search = within(nav).getByRole('heading', { name: 'Search & sharing' }).closest('section') as HTMLElement
+    const publishing = within(nav).getByRole('heading', { name: 'Publishing' }).closest('section') as HTMLElement
     expect(within(nav).getByRole('heading', { name: 'Site setup' })).toHaveClass('text-[0.6875rem]', 'font-semibold', 'tracking-[0.12em]')
     expect(structure).toHaveClass('border-t', 'border-border', 'pt-5')
     expect(within(nav).queryByRole('button', { name: 'Site setup' })).not.toBeInTheDocument()
@@ -90,6 +93,7 @@ describe('Website workspace', () => {
     expect(within(structure).getByRole('button', { name: 'Header & Navigation' })).toBeInTheDocument()
     expect(within(structure).getByRole('button', { name: 'Footer' })).toBeInTheDocument()
     expect(within(search).getByRole('button', { name: 'SEO & Social' })).toBeInTheDocument()
+    expect(within(publishing).getByRole('button', { name: 'Revision History' })).toBeInTheDocument()
     expect(within(advanced).getByRole('button', { name: 'Custom CSS' })).toBeInTheDocument()
   })
 
@@ -223,6 +227,45 @@ describe('Website workspace', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
     expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation guard before Revision History and keeps history clean while browsing', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Revision History' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Revision History' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByRole('heading', { name: 'Revision History' })).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+  })
+
+  it('accepts the authoritative restored site, remains in Revision History, and offers Preview Home', async () => {
+    const canonical = { ...baseSite, status: 'PUBLISHED' as const, hasUnpublishedChanges: true, branding: { siteName: 'Restored Bakery' } }
+    mocks.getSiteRevisions.mockResolvedValue({ revisions: [
+      { revisionId: 'current', publishedAt: 2, publishedByUserId: 'current', pageCount: 1, isCurrent: true },
+      { revisionId: 'older', publishedAt: 1, publishedByUserId: 'older', pageCount: 1, isCurrent: false }
+    ] })
+    mocks.restoreSiteRevision.mockResolvedValue(canonical)
+    const preview = vi.spyOn(window, 'open').mockReturnValue({ close: vi.fn(), location: { href: 'about:blank' }, opener: window } as unknown as Window)
+    navigation.search = 'editor=revisions'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Restore to Working' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Restore this published revision?' })).getByRole('button', { name: 'Restore to Working' }))
+    await waitFor(() => expect(mocks.restoreSiteRevision).toHaveBeenCalledWith('tenant-1', 'older'))
+    expect(await screen.findByText('Revision restored to the working site. Preview your changes, then Publish Site when ready.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Revision History' })).toBeInTheDocument()
+    expect(screen.getByText('Changes not published')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Home' }))
+    expect(preview).toHaveBeenCalledWith('about:blank', '_blank')
+    await waitFor(() => expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant-1'))
   })
 
   it('accepts the authoritative template response, remains on Templates, and previews Home', async () => {

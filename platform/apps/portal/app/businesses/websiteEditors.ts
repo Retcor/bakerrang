@@ -1,4 +1,4 @@
-export const websiteEditorGroups = ['Site setup', 'Design', 'Site structure', 'Search & sharing', 'Advanced'] as const
+export const websiteEditorGroups = ['Site setup', 'Design', 'Site structure', 'Search & sharing', 'Publishing', 'Advanced'] as const
 
 export type WebsiteEditorGroup = typeof websiteEditorGroups[number]
 
@@ -13,6 +13,7 @@ export const websiteEditors = [
   { id: 'header', label: 'Header & Navigation', group: 'Site structure', description: 'Configure the shared header, navigation, and optional call to action.' },
   { id: 'footer', label: 'Footer', group: 'Site structure', description: 'Configure the shared footer and its global information.' },
   { id: 'seo', label: 'SEO & Social', group: 'Search & sharing', description: 'Manage search descriptions, sharing images, and indexing preferences.' },
+  { id: 'revisions', label: 'Revision History', group: 'Publishing', description: 'Restore a recent published revision to the working site.' },
   { id: 'customCss', label: 'Custom CSS', group: 'Advanced', description: 'Add scoped styling overrides for the website.' }
 ] as const satisfies ReadonlyArray<{
   id: string

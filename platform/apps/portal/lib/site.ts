@@ -166,6 +166,18 @@ export interface SiteTemplateSummary {
   tags: string[]
 }
 
+export interface SiteRevision {
+  revisionId: string | null
+  publishedAt: number
+  publishedByUserId: string
+  pageCount: number
+  isCurrent: boolean
+}
+
+export interface SiteRevisionList {
+  revisions: SiteRevision[]
+}
+
 export const initializeSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site`)
 
@@ -231,6 +243,12 @@ export const publishSite = (tenantId: string) =>
 
 export const unpublishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/unpublish`)
+
+export const getSiteRevisions = (tenantId: string) =>
+  apiGet<SiteRevisionList>(`/tenants/${encodeURIComponent(tenantId)}/site/revisions`)
+
+export const restoreSiteRevision = (tenantId: string, revisionId: string) =>
+  apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/revisions/${encodeURIComponent(revisionId)}/restore`)
 
 const pagePath = (tenantId: string, pageId: string) =>
   `/tenants/${encodeURIComponent(tenantId)}/site/pages/${encodeURIComponent(pageId)}`

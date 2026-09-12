@@ -33,6 +33,7 @@ import { SeoEditor } from './SeoEditor'
 import { TestimonialsEditor } from './TestimonialsEditor'
 import { ThemeEditor } from './ThemeEditor'
 import { TemplatesEditor } from './TemplatesEditor'
+import { RevisionHistoryEditor } from './RevisionHistoryEditor'
 import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
 import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
 import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsitePaneId } from './websiteEditors'
@@ -98,6 +99,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
     case 'businessHours': return <BusinessHoursEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'templates': return <TemplatesEditor onSaved={onSaved} tenantId={tenantId} />
+    case 'revisions': return <RevisionHistoryEditor onSaved={onSaved} tenantId={tenantId} />
     case 'header': return <HeaderEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'footer': return <FooterEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'seo': return <SeoEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreviewPage={onPreviewPage} onSaved={onSaved} onSelectContext={onSelectSeoContext} pageId={pageId} site={site} tenantId={tenantId} />
