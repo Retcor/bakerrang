@@ -332,6 +332,30 @@ gcloud secrets get-iam-policy bakerrang-preview-token-secret --project $ProjectI
 
 Do not read secret version data during an audit. Do not blindly replace existing `bakerrang-api` environment variables. Preserve legacy configuration while adding platform-required configuration during a separately reviewed cutover.
 
+## Step 3 incremental API configuration
+
+The existing `bakerrang-api` service requires `NODE_ENV=production`. Step 3 adds these runtime values:
+
+| Kind | Name | Purpose |
+|---|---|---|
+| Secret Manager secret | `RESEND_API_KEY` | Resend API authentication for lead-notification delivery |
+| Secret Manager secret | `INTERNAL_DRAIN_TOKEN` | Exact bearer token for the internal Scheduler drain endpoint |
+| Plain environment variable | `LEAD_NOTIFICATION_FROM` | Verified Resend sender address |
+
+`MEDIA_BUCKET_NAME` remains an existing required API environment variable. It is used by streamed tenant export and by tenant deletion's tenant-scoped media-prefix cleanup. The API service account already has `roles/storage.objectAdmin` on `gs://bakerrang-media-marketing`, which covers those media reads and deletes. Its existing `roles/datastore.user` Firestore runtime grant covers the document deletes required by tenant `recursiveDelete`; verify that grant before changing IAM rather than replacing it.
+
+For the existing service, use only additive Cloud Run updates so unrelated values remain intact:
+
+```powershell
+gcloud run services update bakerrang-api `
+  --project $ProjectId --region $Region `
+  --update-env-vars "NODE_ENV=production,LEAD_NOTIFICATION_FROM=<verified-resend-sender>" `
+  --update-secrets "RESEND_API_KEY=bakerrang-resend-api-key:latest,INTERNAL_DRAIN_TOKEN=bakerrang-internal-drain-token:latest" `
+  --timeout 300s --memory 512Mi
+```
+
+The incremental procedure, including secret creation, Firestore-index readiness, Scheduler setup, live verification, and rollback considerations, is in the [Step 3 release runbook](../operations/step3-release.md). Do not use a configuration-replacing update for this existing service.
+
 ## Live-impact boundary
 
 **SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, bucket, WIF, service skeletons, and IP reservation. They are still infrastructure changes requiring operator review.

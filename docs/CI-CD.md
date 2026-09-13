@@ -58,6 +58,8 @@ guard-main → deploy-selected-service → live-deploy-passed
 
 The reusable workflow authenticates through WIF, builds a missing write-once `git-<SHA>` image or reuses that exact existing tag/digest, and updates Cloud Run with `repository@sha256:...`. It records the previous revision/image/runtime service account, updates only the image, and asserts that the runtime identity did not change. It never deploys `latest` and does not alter traffic, environment variables, secrets, resources, networking, or service accounts.
 
+Normal image deployments do **not** manage environment variables, secrets, Firestore indexes, Scheduler jobs, or Cloud Run timeout/memory. Those are operational prerequisites managed through the reviewed runbooks, including the [Step 3 release operations runbook](operations/step3-release.md), rather than through CI/CD workflows.
+
 MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` after the update:
 
 - API: `<status.url>/health` → HTTP 200 and body `Healthy`;
