@@ -6,6 +6,7 @@ import {
   isValidPhone
 } from '../validation/contactMethods.js'
 import { isLeadStatus } from '../domain/leadStatus.js'
+import { pendingLeadNotification } from './leadNotificationService.js'
 
 const TENANTS = 'tenants'
 let firestore = db
@@ -172,12 +173,20 @@ export const createPublicLead = async (tenantId, input) => {
   const lead = validateLead(input)
   const now = Date.now()
   const leadId = randomUUID()
-  await firestore.collection(TENANTS).doc(tenantId).collection('leads').doc(leadId).set({
+  const leadRecord = {
     ...lead,
     status: 'NEW',
     source: 'WEBSITE',
     createdAt: now,
     updatedAt: now
+  }
+  const leadRef = firestore.collection(TENANTS).doc(tenantId).collection('leads').doc(leadId)
+  const notificationRef = firestore.collection('leadNotifications').doc(leadId)
+
+  // Public form submits are independent from mail-provider availability.
+  await firestore.runTransaction(async (transaction) => {
+    transaction.set(leadRef, leadRecord)
+    transaction.set(notificationRef, pendingLeadNotification({ tenantId, leadId, lead, now }))
   })
 
   return { success: true }

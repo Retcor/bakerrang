@@ -44,6 +44,9 @@ export const validateServerRuntimeConfig = (env = process.env) => {
 
   if (env.NODE_ENV === 'production') {
     requireValue(env, 'PREVIEW_TOKEN_SECRET', 'PREVIEW_TOKEN_SECRET is not set. Refusing to start without preview signing.')
+    requireValue(env, 'RESEND_API_KEY', 'RESEND_API_KEY is required for lead notifications.')
+    requireValue(env, 'LEAD_NOTIFICATION_FROM', 'LEAD_NOTIFICATION_FROM is required for lead notifications.')
+    requireValue(env, 'INTERNAL_DRAIN_TOKEN', 'INTERNAL_DRAIN_TOKEN is required for the internal notification drain.')
   }
 
   return { firestoreProjectId, mediaBucketName, serverOrigin }

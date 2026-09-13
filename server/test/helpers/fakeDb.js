@@ -82,6 +82,10 @@ class FakeQuery {
     return new FakeQuery(this.database, this.path, this.orderField, this.direction, this.max, [...this.filters, { field, value }])
   }
 
+  orderBy (field, direction = 'asc') {
+    return new FakeQuery(this.database, this.path, field, direction, this.max, this.filters)
+  }
+
   limit (max) {
     return new FakeQuery(this.database, this.path, this.orderField, this.direction, max, this.filters)
   }

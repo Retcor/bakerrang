@@ -20,6 +20,21 @@ The marketing platform is a workspace alongside the original learning-playground
 
 The main flows are `Portal -> API -> Firestore` and `Public renderer -> sanitized API -> Firestore`; the renderer never connects directly to Firestore. Website edits update a working copy, Preview renders that copy, and Publish creates the public snapshot.
 
+### Lead notification worker
+
+Website-lead email is delivered asynchronously from the Firestore outbox
+`leadNotifications/{leadId}`. Production requires `RESEND_API_KEY`,
+`LEAD_NOTIFICATION_FROM`, and `INTERNAL_DRAIN_TOKEN`; configure Cloud Scheduler
+to `POST /internal/lead-notifications/drain` with `Authorization: Bearer
+<INTERNAL_DRAIN_TOKEN>`. The endpoint is not a public action and local/test
+runtime uses a no-op sender.
+
+There is intentionally no Portal setting surface yet. Until that arrives,
+server-side operators may set `leadNotifications` on
+`tenants/{tenantId}/site/config` as `{ enabled?: boolean, recipients?: string[] }`.
+Valid explicit recipients take precedence; otherwise the stored
+`businessProfile.email` is used. Do not put credentials in Firestore.
+
 For local setup, DEV configuration, safe image-only deployment, and the final smoke checklist, see [docs/DEV-DEPLOYMENT.md](docs/DEV-DEPLOYMENT.md). The Portal and renderer each currently include both `.env.example` and `.env.local.example`; the API uses `server/.env.example`.
 
 ### Setting Up Firestore Locally
