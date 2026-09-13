@@ -8,6 +8,7 @@ import * as mediaService from '../services/mediaService.js'
 import * as siteDomainService from '../services/siteDomainService.js'
 import * as previewTokenService from '../services/previewTokenService.js'
 import * as auditService from '../services/auditService.js'
+import * as tenantExportService from '../services/tenantExportService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -67,6 +68,7 @@ export const createTenantRouter = (deps = {}) => {
   const domains = deps.siteDomainService || siteDomainService
   const previewTokens = deps.previewTokenService || previewTokenService
   const audits = deps.auditService || auditService
+  const exports = deps.tenantExportService || tenantExportService
   // The authenticated session is the sole actor source. Test doubles receive
   // the same additional argument and may ignore it.
   const actor = (req) => auditService.actorFromUser(req.user)
@@ -286,6 +288,19 @@ export const createTenantRouter = (deps = {}) => {
   router.get('/:tenantId/audit-events', platformAdmin, noStore, handle(
     (req) => audits.listAuditEvents(req.params.tenantId, req.query)
   ))
+
+  router.get('/:tenantId/export', platformAdmin, noStore, async (req, res) => {
+    try {
+      await exports.assertTenantExistsForExport(req.params.tenantId)
+      const filename = `tenant-${String(req.params.tenantId).replace(/[^a-zA-Z0-9_-]/g, '_') || 'export'}.zip`
+      res.status(200).set('Content-Type', 'application/zip').set('Content-Disposition', `attachment; filename="${filename}"`)
+      await exports.streamTenantExport(req.params.tenantId, res)
+    } catch (err) {
+      if (res.headersSent) return res.destroy(err)
+      const status = err.status || 500
+      res.status(status).json({ error: status >= 500 ? 'Tenant export failed' : err.message })
+    }
+  })
 
   return router
 }

@@ -18,6 +18,10 @@ export const gcsStorage = {
     await bucket().file(objectName).delete({ ignoreNotFound: true })
   },
 
+  createReadStream (objectName) {
+    return bucket().file(objectName).createReadStream()
+  },
+
   publicUrl (objectName) {
     const encodedPath = objectName.split('/').map(encodeURIComponent).join('/')
     return `https://storage.googleapis.com/${encodeURIComponent(resolveMediaBucketName())}/${encodedPath}`

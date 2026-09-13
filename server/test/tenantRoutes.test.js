@@ -322,6 +322,11 @@ const auditEvents = {
   }
 }
 
+const tenantExports = {
+  assertTenantExistsForExport: async (tenantId) => { if (tenantId === 'missing') throw Object.assign(new Error('Tenant not found'), { status: 404 }) },
+  streamTenantExport: async (tenantId, output) => { calls.push({ operation: 'streamTenantExport', tenantId }); output.end('zip') }
+}
+
 before(async () => {
   const app = express()
   app.use(express.json())
@@ -337,6 +342,7 @@ before(async () => {
     leadService: leads,
     leadNotificationSettingsService: leadNotifications,
     auditService: auditEvents,
+    tenantExportService: tenantExports,
     mediaService: media,
     siteDomainService: domains,
     previewTokenService: previewTokens,
@@ -407,6 +413,22 @@ test('audit events are platform-admin only, no-store, and tenant scoped', async 
   const malformed = await request('/tenants/tenant-1/audit-events?cursor=bad', { userId: 'platform' })
   assert.equal(malformed.status, 400)
   assert.equal((await request('/tenants/tenant-1/audit-events', { userId: 'platform', method: 'POST', body: {} })).status, 404)
+})
+
+test('tenant export is platform-admin only and streams a safe ZIP response', async () => {
+  assert.equal((await request('/tenants/tenant-1/export')).status, 401)
+  assert.equal((await request('/tenants/tenant-1/export', { userId: 'staff' })).status, 403)
+  const response = await request('/tenants/tenant-1/export', { userId: 'platform' })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('cache-control'), 'no-store')
+  assert.equal(response.headers.get('content-type'), 'application/zip')
+  assert.match(response.headers.get('content-disposition') || '', /attachment; filename="tenant-tenant-1\.zip"/)
+  assert.deepEqual(calls.at(-1), { operation: 'streamTenantExport', tenantId: 'tenant-1' })
+  const missing = await request('/tenants/missing/export', { userId: 'platform' })
+  assert.equal(missing.status, 404)
+  assert.equal(missing.headers.get('content-type')?.includes('application/json'), true)
+  assert.equal(missing.headers.get('content-disposition'), null)
+  assert.equal((await request('/tenants/tenant-1/export', { userId: 'platform', method: 'POST', body: {} })).status, 404)
 })
 
 test('tenant read and member-list permissions match STAFF, ADMIN, and OWNER rules', async () => {
