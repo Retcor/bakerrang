@@ -303,6 +303,17 @@ const leads = {
   }
 }
 
+const leadNotifications = {
+  getLeadNotificationSettings: async (tenantId) => {
+    calls.push({ operation: 'getLeadNotificationSettings', tenantId })
+    return { enabled: true, recipients: [] }
+  },
+  updateLeadNotificationSettings: async (tenantId, body) => {
+    calls.push({ operation: 'updateLeadNotificationSettings', tenantId, body })
+    return { enabled: body.enabled, recipients: body.recipients }
+  }
+}
+
 before(async () => {
   const app = express()
   app.use(express.json())
@@ -316,6 +327,7 @@ before(async () => {
     tenantService: service,
     siteService: sites,
     leadService: leads,
+    leadNotificationSettingsService: leadNotifications,
     mediaService: media,
     siteDomainService: domains,
     previewTokenService: previewTokens,
@@ -627,6 +639,24 @@ test('only PLATFORM_ADMIN can PUT Business Profile and the route forwards tenant
   const response = await request(path, { userId: 'platform', method: 'PUT', body })
   assert.equal(response.status, 200)
   assert.deepEqual(calls.at(-1), { operation: 'updateBusinessProfile', tenantId: 'tenant-1', body })
+})
+
+test('lead notification settings are PLATFORM_ADMIN-only, tenant-scoped, and no-store', async () => {
+  const path = '/tenants/tenant-1/lead-notifications'
+  assert.equal((await request(path)).status, 401)
+  for (const userId of ['staff', 'admin', 'owner', 'ordinary']) {
+    assert.equal((await request(path, { userId })).status, 403)
+    assert.equal((await request(path, { userId, method: 'PUT', body: { enabled: false, recipients: [] } })).status, 403)
+  }
+  const get = await request(path, { userId: 'platform' })
+  assert.equal(get.status, 200)
+  assert.equal(get.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await get.json(), { enabled: true, recipients: [] })
+  const body = { enabled: false, recipients: ['ops@example.com'], ignored: true }
+  const put = await request(path, { userId: 'platform', method: 'PUT', body })
+  assert.equal(put.status, 200)
+  assert.equal(put.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(calls.at(-1), { operation: 'updateLeadNotificationSettings', tenantId: 'tenant-1', body })
 })
 
 test('only PLATFORM_ADMIN can PUT focused Business Hours and the route forwards tenantId and body', async () => {

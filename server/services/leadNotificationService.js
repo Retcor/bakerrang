@@ -65,8 +65,8 @@ const leadLines = (lead, siteName, portalDomain) => {
 }
 
 const deliverySnapshot = ({ tenantId, leadId, lead, config, tenant, portalDomain }) => {
-  // No Portal settings surface exists yet. Operators may set the server-owned
-  // config value { leadNotifications: { enabled?: boolean, recipients?: [] } }.
+  // Portal manages this server-owned config value:
+  // { leadNotifications: { enabled?: boolean, recipients?: [] } }.
   const settings = config?.leadNotifications && typeof config.leadNotifications === 'object'
     ? config.leadNotifications
     : {}

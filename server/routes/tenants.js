@@ -3,6 +3,7 @@ import multer from 'multer'
 import * as tenantService from '../services/tenantService.js'
 import * as siteService from '../services/siteService.js'
 import * as leadService from '../services/leadService.js'
+import * as leadNotificationSettingsService from '../services/leadNotificationSettingsService.js'
 import * as mediaService from '../services/mediaService.js'
 import * as siteDomainService from '../services/siteDomainService.js'
 import * as previewTokenService from '../services/previewTokenService.js'
@@ -60,6 +61,7 @@ export const createTenantRouter = (deps = {}) => {
   const service = deps.tenantService || tenantService
   const sites = deps.siteService || siteService
   const leads = deps.leadService || leadService
+  const leadNotifications = deps.leadNotificationSettingsService || leadNotificationSettingsService
   const media = deps.mediaService || mediaService
   const domains = deps.siteDomainService || siteDomainService
   const previewTokens = deps.previewTokenService || previewTokenService
@@ -149,6 +151,14 @@ export const createTenantRouter = (deps = {}) => {
 
   router.put('/:tenantId/site/profile', platformAdmin, handle(
     (req) => sites.updateBusinessProfile(req.params.tenantId, req.body)
+  ))
+
+  router.get('/:tenantId/lead-notifications', platformAdmin, noStore, handle(
+    (req) => leadNotifications.getLeadNotificationSettings(req.params.tenantId)
+  ))
+
+  router.put('/:tenantId/lead-notifications', platformAdmin, noStore, handle(
+    (req) => leadNotifications.updateLeadNotificationSettings(req.params.tenantId, req.body)
   ))
 
   router.put('/:tenantId/site/business-hours', platformAdmin, handle(
