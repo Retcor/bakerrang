@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../client/firestoreClient.js'
+import { writeAuditEvent } from './auditService.js'
 import { draftPreviewEnabled } from '../config/publicSite.js'
 import {
   EMAIL_MAX,
@@ -1139,6 +1140,10 @@ const mutateWorkingPage = async (tenantId, pageId, transformSections, mediaRequi
 
     transaction.set(refs.page(pageId), nextPage)
     transaction.set(configRef, nextConfig)
+    if (mediaRequirement?.audit?.actor) {
+      const event = typeof mediaRequirement.audit.event === 'function' ? mediaRequirement.audit.event() : mediaRequirement.audit.event
+      writeAuditEvent({ firestore, transaction, tenantId, actor: mediaRequirement.audit.actor, ...event })
+    }
     const nextPages = [...pages]
     nextPages[pageIndex] = nextPage
     definition = toSiteDefinition(nextConfig, nextPages)
@@ -1199,7 +1204,7 @@ export const getSite = async (tenantId) => {
 
 export const listSiteTemplates = async () => SITE_TEMPLATES.map(siteTemplateMetadata)
 
-export const applySiteTemplate = async (tenantId, templateId) => {
+export const applySiteTemplate = async (tenantId, templateId, actor) => {
   const template = getSiteTemplate(templateId)
   if (!template) throw httpError(404, 'Site template not found')
   let definition
@@ -1215,6 +1220,7 @@ export const applySiteTemplate = async (tenantId, templateId) => {
     }
     for (const page of materialized.pages) transaction.set(refs.page(page.id), page)
     transaction.set(refs.config, materialized.config)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'template.apply', entityType: 'template', entityId: templateId, summary: 'Applied site template', metadata: { templateId, templateName: template.name || templateId } })
     definition = materialized.definition
   })
 
@@ -1237,7 +1243,7 @@ export const getPublishedSiteDefinition = async (tenantId) => {
   return finalizeSiteDefinitionRead(tenantId, normalizePublishedSiteDefinition(snapshot.siteDefinition))
 }
 
-export const updateSiteBranding = async (tenantId, input) => {
+export const updateSiteBranding = async (tenantId, input, actor) => {
   const identity = validateSiteBranding(input)
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1257,12 +1263,13 @@ export const updateSiteBranding = async (tenantId, input) => {
     }
     const nextConfig = { ...config, branding, updatedAt: now }
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'branding.update', entityType: 'site', summary: 'Updated site branding', metadata: { changedFields: ['siteName', 'logoMediaId', 'faviconMediaId'] } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateSiteHeader = async (tenantId, input) => {
+export const updateSiteHeader = async (tenantId, input, actor) => {
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
@@ -1270,12 +1277,13 @@ export const updateSiteHeader = async (tenantId, input) => {
     const header = validateSiteHeader(input, order)
     const nextConfig = { ...config, header, updatedAt: now }
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'header.update', entityType: 'site', summary: 'Updated site header', metadata: { changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateSiteFooter = async (tenantId, input) => {
+export const updateSiteFooter = async (tenantId, input, actor) => {
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
@@ -1283,12 +1291,13 @@ export const updateSiteFooter = async (tenantId, input) => {
     const footer = validateSiteFooter(input, order)
     const nextConfig = { ...config, footer, updatedAt: now }
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'footer.update', entityType: 'site', summary: 'Updated site footer', metadata: { changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateSiteTheme = async (tenantId, input) => {
+export const updateSiteTheme = async (tenantId, input, actor) => {
   const theme = validateSiteTheme(input)
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1297,12 +1306,13 @@ export const updateSiteTheme = async (tenantId, input) => {
     const { config, pages } = await readWorkingSite(tenantId, transaction)
     const nextConfig = { ...config, theme, updatedAt: now }
     transaction.set(refs.config, { theme, updatedAt: now }, { merge: true })
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'theme.update', entityType: 'site', summary: 'Updated site theme', metadata: { changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateSiteSeo = async (tenantId, input) => {
+export const updateSiteSeo = async (tenantId, input, actor) => {
   const update = validateSiteSeo(input)
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1319,12 +1329,13 @@ export const updateSiteSeo = async (tenantId, input) => {
       else delete nextConfig.businessProfile
     }
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'seo.update', entityType: 'site', summary: 'Updated site SEO', metadata: { changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateBusinessProfile = async (tenantId, input) => {
+export const updateBusinessProfile = async (tenantId, input, actor) => {
   const businessProfile = validateBusinessProfile(input)
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1344,12 +1355,13 @@ export const updateBusinessProfile = async (tenantId, input) => {
     if (hasBusinessProfile(compatibleProfile)) nextConfig.businessProfile = compatibleProfile
     else delete nextConfig.businessProfile
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'profile.update', entityType: 'site', summary: 'Updated business profile', metadata: { changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, pages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateBusinessHours = async (tenantId, input, sectionId) => {
+export const updateBusinessHours = async (tenantId, input, sectionId, actor) => {
   const update = validateBusinessHoursUpdate(input)
   return mutateWorkingPage(tenantId, 'home', (sections) => {
     const nextSections = [...sections]
@@ -1389,11 +1401,12 @@ export const updateBusinessHours = async (tenantId, input, sectionId) => {
       if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
       else delete nextConfig.businessProfile
       return nextConfig
-    }
+    },
+    ...(actor ? { audit: { actor, event: { action: 'profile.update', entityType: 'site', summary: 'Updated business profile', metadata: { changedFields: ['businessHours'] } } } } : {})
   })
 }
 
-export const updateSocialLinks = async (tenantId, input) => {
+export const updateSocialLinks = async (tenantId, input, actor) => {
   const socialLinks = validateSocialLinksUpdate(input)
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1408,13 +1421,14 @@ export const updateSocialLinks = async (tenantId, input) => {
     if (hasBusinessProfile(nextProfile)) nextConfig.businessProfile = nextProfile
     else delete nextConfig.businessProfile
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'profile.update', entityType: 'site', summary: 'Updated business profile', metadata: { changedFields: ['socialLinks'] } })
     definition = toSiteDefinition(nextConfig, pages)
   })
 
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updateCustomCss = async (tenantId, input) => {
+export const updateCustomCss = async (tenantId, input, actor) => {
   const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
   const customCss = body.customCss === null ? undefined : validateCustomCss(body.customCss)
   const refs = refsFor(tenantId)
@@ -1427,6 +1441,7 @@ export const updateCustomCss = async (tenantId, input) => {
     if (customCss) nextConfig.customCss = customCss
     else delete nextConfig.customCss
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'customCss.update', entityType: 'site', summary: 'Updated custom CSS', metadata: { cssByteLength: Buffer.byteLength(customCss || '', 'utf8') } })
     definition = toSiteDefinition(nextConfig, pages)
   })
 
@@ -1447,7 +1462,7 @@ export const getPublicSite = async (tenantId, env = process.env) => {
   return getPublishedSiteDefinition(tenantId)
 }
 
-export const publishSite = async (tenantId, actorUserId) => {
+export const publishSite = async (tenantId, actorUserId, actor) => {
   const refs = refsFor(tenantId)
   const now = Date.now()
   let publishedDefinition
@@ -1510,6 +1525,7 @@ export const publishSite = async (tenantId, actorUserId) => {
     transaction.set(refs.published, publishedRecord)
     transaction.set(refs.revisionIndex, { entries: retained })
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'site.publish', entityType: 'site', summary: 'Published site', metadata: { revisionId, pageCount: storedPublishedDefinition.pages.length } })
   })
 
   return finalizeSiteDefinitionRead(tenantId, publishedDefinition)
@@ -1528,7 +1544,7 @@ export const listSiteRevisions = async (tenantId) => {
   return { revisions: entries.map((entry) => ({ ...entry, isCurrent: entry.revisionId === current?.revisionId })) }
 }
 
-export const restoreSiteRevision = async (tenantId, revisionId) => {
+export const restoreSiteRevision = async (tenantId, revisionId, actor) => {
   if (typeof revisionId !== 'string' || !revisionId) throw httpError(404, 'Published revision not found')
   const refs = refsFor(tenantId)
   const now = Date.now()
@@ -1566,12 +1582,13 @@ export const restoreSiteRevision = async (tenantId, revisionId) => {
     for (const pageId of order) if (!restoredIds.has(pageId)) transaction.delete(refs.page(pageId))
     for (const page of restoredPages) transaction.set(refs.page(page.id), page)
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'revision.restore', entityType: 'revision', entityId: revisionId, summary: 'Restored site revision', metadata: { revisionId } })
     definition = toSiteDefinition(nextConfig, restoredPages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const unpublishSite = async (tenantId, actorUserId) => {
+export const unpublishSite = async (tenantId, actorUserId, actor) => {
   const refs = refsFor(tenantId)
   const now = Date.now()
   let draftDefinition
@@ -1588,6 +1605,7 @@ export const unpublishSite = async (tenantId, actorUserId) => {
     draftDefinition = toSiteDefinition(nextConfig, pages)
 
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'site.unpublish', entityType: 'site', summary: 'Unpublished site' })
   })
 
   return finalizeSiteDefinitionRead(tenantId, draftDefinition)
@@ -1602,7 +1620,7 @@ const requireUniquePageSlug = (pages, slug, pageId) => {
   if (pages.some((page) => page.id !== pageId && page.slug === slug)) throw httpError(409, 'Page slug is already in use')
 }
 
-export const createPage = async (tenantId, input) => {
+export const createPage = async (tenantId, input, actor) => {
   const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
   const title = validatePageTitle(body.title)
   const slug = validatePageSlug(body.slug)
@@ -1617,12 +1635,13 @@ export const createPage = async (tenantId, input) => {
     const nextConfig = { ...config, pageOrder: [...order, pageId], updatedAt: now }
     transaction.set(refs.page(pageId), page)
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'page.create', entityType: 'page', entityId: pageId, summary: 'Created page', metadata: { pageId, pageTitle: title, pageSlug: slug } })
     definition = toSiteDefinition(nextConfig, [...pages, page])
   })
   return { site: await finalizeSiteDefinitionRead(tenantId, definition), pageId }
 }
 
-export const updatePage = async (tenantId, pageId, input) => {
+export const updatePage = async (tenantId, pageId, input, actor) => {
   const body = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
   const hasTitle = Object.prototype.hasOwnProperty.call(body, 'title')
   const hasSlug = Object.prototype.hasOwnProperty.call(body, 'slug')
@@ -1643,12 +1662,13 @@ export const updatePage = async (tenantId, pageId, input) => {
     const nextConfig = { ...config, updatedAt: now }
     transaction.set(refs.page(pageId), page)
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'page.update', entityType: 'page', entityId: pageId, summary: 'Updated page', metadata: { pageId, pageTitle: title, pageSlug: slug, changedFields: Object.keys(body) } })
     definition = toSiteDefinition(nextConfig, nextPages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const updatePageSeo = async (tenantId, pageId, input) => {
+export const updatePageSeo = async (tenantId, pageId, input, actor) => {
   const seo = validatePageSeo(input)
   const now = Date.now()
   let definition
@@ -1664,12 +1684,13 @@ export const updatePageSeo = async (tenantId, pageId, input) => {
     const nextConfig = { ...config, updatedAt: now }
     transaction.set(refs.page(pageId), page)
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'seo.update', entityType: 'page', entityId: pageId, summary: 'Updated page SEO', metadata: { pageId, changedFields: Object.keys(input || {}) } })
     definition = toSiteDefinition(nextConfig, nextPages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const movePage = async (tenantId, pageId, direction) => {
+export const movePage = async (tenantId, pageId, direction, actor) => {
   if (!['up', 'down'].includes(direction)) throw httpError(400, 'Move direction must be up or down')
   const now = Date.now()
   let definition
@@ -1687,12 +1708,13 @@ export const movePage = async (tenantId, pageId, direction) => {
     const footer = normalizeSiteFooter(config.footer, nextOrder)
     const nextConfig = { ...config, pageOrder: nextOrder, header, footer, updatedAt: now }
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'page.reorder', entityType: 'page', entityId: pageId, summary: 'Reordered page', metadata: { pageId } })
     definition = toSiteDefinition(nextConfig, nextPages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
 }
 
-export const deletePage = async (tenantId, pageId) => {
+export const deletePage = async (tenantId, pageId, actor) => {
   const now = Date.now()
   let definition
   await firestore.runTransaction(async (transaction) => {
@@ -1709,6 +1731,7 @@ export const deletePage = async (tenantId, pageId) => {
     const nextConfig = { ...config, pageOrder: nextOrder, header, footer, updatedAt: now }
     transaction.delete(refs.page(pageId))
     transaction.set(refs.config, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'page.delete', entityType: 'page', entityId: pageId, summary: 'Deleted page', metadata: { pageId } })
     definition = toSiteDefinition(nextConfig, nextPages)
   })
   return finalizeSiteDefinitionRead(tenantId, definition)
@@ -1734,7 +1757,7 @@ const resolveItemIds = (type, content, storedContent) => {
   }
 }
 
-export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}) => {
+export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}, actor) => {
   if (!SECTION_TYPE_SET.has(type)) throw httpError(400, 'Unknown section type')
   let sectionId
   const site = await mutateWorkingPage(tenantId, pageId, (sections, config) => {
@@ -1754,21 +1777,21 @@ export const addSection = async (tenantId, pageId, type, { afterSectionId } = {}
       next.splice(index + 1, 0, section)
     }
     return next
-  })
+  }, actor ? { audit: { actor, event: () => ({ action: 'section.add', entityType: 'section', entityId: sectionId, summary: 'Added section', metadata: { sectionId, sectionType: type, pageId } }) } } : undefined)
   return { site, sectionId }
 }
 
-export const removeSection = async (tenantId, pageId, sectionId) => {
+export const removeSection = async (tenantId, pageId, sectionId, actor) => {
   return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
     if (section.type === 'hero') throw httpError(400, 'Hero section cannot be removed')
     const next = [...sections]
     next.splice(index, 1)
     return next
-  })
+  }, actor ? { audit: { actor, event: { action: 'section.delete', entityType: 'section', entityId: sectionId, summary: 'Deleted section', metadata: { sectionId, pageId } } } } : undefined)
 }
 
-export const moveSection = async (tenantId, pageId, sectionId, direction) => {
+export const moveSection = async (tenantId, pageId, sectionId, direction, actor) => {
   if (!['up', 'down'].includes(direction)) throw httpError(400, 'Move direction must be up or down')
   return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
@@ -1778,10 +1801,10 @@ export const moveSection = async (tenantId, pageId, sectionId, direction) => {
     const next = [...sections]
     ;[next[index], next[target]] = [next[target], next[index]]
     return next
-  })
+  }, actor ? { audit: { actor, event: { action: 'section.reorder', entityType: 'section', entityId: sectionId, summary: 'Reordered section', metadata: { sectionId, pageId } } } } : undefined)
 }
 
-export const duplicateSection = async (tenantId, pageId, sectionId) => {
+export const duplicateSection = async (tenantId, pageId, sectionId, actor) => {
   let duplicateId
   const site = await mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
@@ -1797,12 +1820,13 @@ export const duplicateSection = async (tenantId, pageId, sectionId) => {
     return next
   }, {
     mediaIds: (sections) => sectionMediaIds(requireSection(sections, sectionId).section),
-    message: 'Section media not found'
+    message: 'Section media not found',
+    ...(actor ? { audit: { actor, event: { action: 'section.duplicate', entityType: 'section', entityId: sectionId, summary: 'Duplicated section', metadata: { sectionId, pageId } } } } : {})
   })
   return { site, sectionId: duplicateId }
 }
 
-export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden) => {
+export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden, actor) => {
   if (typeof hidden !== 'boolean') throw httpError(400, 'hidden must be a boolean')
   return mutateWorkingPage(tenantId, pageId, (sections) => {
     const { section, index } = requireSection(sections, sectionId)
@@ -1810,10 +1834,10 @@ export const setSectionVisibility = async (tenantId, pageId, sectionId, hidden) 
     const next = [...sections]
     next[index] = { ...section, hidden }
     return next
-  })
+  }, actor ? { audit: { actor, event: { action: 'section.visibility', entityType: 'section', entityId: sectionId, summary: 'Changed section visibility', metadata: { sectionId, pageId, hidden } } } } : undefined)
 }
 
-export const updateSectionContent = async (tenantId, pageId, sectionId, input) => {
+export const updateSectionContent = async (tenantId, pageId, sectionId, input, actor) => {
   let mediaIds = []
   let mediaMessage = 'Section media not found'
   return mutateWorkingPage(tenantId, pageId, (sections) => {
@@ -1828,5 +1852,5 @@ export const updateSectionContent = async (tenantId, pageId, sectionId, input) =
     const next = [...sections]
     next[index] = nextSection
     return next
-  }, { mediaIds: () => mediaIds, message: () => mediaMessage })
+  }, { mediaIds: () => mediaIds, message: () => mediaMessage, ...(actor ? { audit: { actor, event: { action: 'section.update', entityType: 'section', entityId: sectionId, summary: 'Updated section', metadata: { sectionId, pageId, changedFields: Object.keys(input || {}) } } } } : {}) })
 }

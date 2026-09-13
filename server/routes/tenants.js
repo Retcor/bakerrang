@@ -7,6 +7,7 @@ import * as leadNotificationSettingsService from '../services/leadNotificationSe
 import * as mediaService from '../services/mediaService.js'
 import * as siteDomainService from '../services/siteDomainService.js'
 import * as previewTokenService from '../services/previewTokenService.js'
+import * as auditService from '../services/auditService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -65,28 +66,32 @@ export const createTenantRouter = (deps = {}) => {
   const media = deps.mediaService || mediaService
   const domains = deps.siteDomainService || siteDomainService
   const previewTokens = deps.previewTokenService || previewTokenService
+  const audits = deps.auditService || auditService
+  // The authenticated session is the sole actor source. Test doubles receive
+  // the same additional argument and may ignore it.
+  const actor = (req) => auditService.actorFromUser(req.user)
   const platformAdmin = deps.requirePlatformAdmin || requirePlatformAdmin
   const tenantRole = deps.requireTenantRole || requireTenantRole
   const router = express.Router()
 
   router.post('/', platformAdmin, handle(
-    (req) => service.createTenant(req.user.id, req.body),
+    (req) => service.createTenant(req.user.id, req.body, actor(req)),
     201
   ))
 
   router.get('/', platformAdmin, handle(() => service.listTenants()))
 
   router.post('/:tenantId/site', platformAdmin, handle(
-    (req) => sites.initializeSite(req.params.tenantId, req.user.id),
+    (req) => sites.initializeSite(req.params.tenantId, req.user.id, actor(req)),
     201
   ))
 
   router.post('/:tenantId/site/publish', platformAdmin, handle(
-    (req) => sites.publishSite(req.params.tenantId, req.user.id)
+    (req) => sites.publishSite(req.params.tenantId, req.user.id, actor(req))
   ))
 
   router.post('/:tenantId/site/unpublish', platformAdmin, handle(
-    (req) => sites.unpublishSite(req.params.tenantId, req.user.id)
+    (req) => sites.unpublishSite(req.params.tenantId, req.user.id, actor(req))
   ))
 
   router.get('/:tenantId/site/revisions', platformAdmin, noStore, handle(
@@ -94,7 +99,7 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.post('/:tenantId/site/revisions/:revisionId/restore', platformAdmin, handle(
-    (req) => sites.restoreSiteRevision(req.params.tenantId, req.params.revisionId)
+    (req) => sites.restoreSiteRevision(req.params.tenantId, req.params.revisionId, actor(req))
   ))
 
   router.get('/:tenantId/site/templates', platformAdmin, noStore, handle(
@@ -102,7 +107,7 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.post('/:tenantId/site/templates/:templateId/apply', platformAdmin, handle(
-    (req) => sites.applySiteTemplate(req.params.tenantId, req.params.templateId)
+    (req) => sites.applySiteTemplate(req.params.tenantId, req.params.templateId, actor(req))
   ))
 
   router.get('/:tenantId/site/domain', platformAdmin, noStore, handle(
@@ -130,27 +135,27 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.put('/:tenantId/site/branding', platformAdmin, handle(
-    (req) => sites.updateSiteBranding(req.params.tenantId, req.body)
+    (req) => sites.updateSiteBranding(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/header', platformAdmin, handle(
-    (req) => sites.updateSiteHeader(req.params.tenantId, req.body)
+    (req) => sites.updateSiteHeader(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/footer', platformAdmin, handle(
-    (req) => sites.updateSiteFooter(req.params.tenantId, req.body)
+    (req) => sites.updateSiteFooter(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/theme', platformAdmin, handle(
-    (req) => sites.updateSiteTheme(req.params.tenantId, req.body)
+    (req) => sites.updateSiteTheme(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/seo', platformAdmin, handle(
-    (req) => sites.updateSiteSeo(req.params.tenantId, req.body)
+    (req) => sites.updateSiteSeo(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/profile', platformAdmin, handle(
-    (req) => sites.updateBusinessProfile(req.params.tenantId, req.body)
+    (req) => sites.updateBusinessProfile(req.params.tenantId, req.body, actor(req))
   ))
 
   router.get('/:tenantId/lead-notifications', platformAdmin, noStore, handle(
@@ -158,65 +163,65 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.put('/:tenantId/lead-notifications', platformAdmin, noStore, handle(
-    (req) => leadNotifications.updateLeadNotificationSettings(req.params.tenantId, req.body)
+    (req) => leadNotifications.updateLeadNotificationSettings(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/business-hours', platformAdmin, handle(
-    (req) => sites.updateBusinessHours(req.params.tenantId, req.body, req.body?.sectionId)
+    (req) => sites.updateBusinessHours(req.params.tenantId, req.body, req.body?.sectionId, actor(req))
   ))
 
   router.put('/:tenantId/site/social-links', platformAdmin, handle(
-    (req) => sites.updateSocialLinks(req.params.tenantId, req.body)
+    (req) => sites.updateSocialLinks(req.params.tenantId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/custom-css', platformAdmin, handle(
-    (req) => sites.updateCustomCss(req.params.tenantId, req.body)
+    (req) => sites.updateCustomCss(req.params.tenantId, req.body, actor(req))
   ))
 
   router.post('/:tenantId/site/pages', platformAdmin, handle(
-    (req) => sites.createPage(req.params.tenantId, req.body),
+    (req) => sites.createPage(req.params.tenantId, req.body, actor(req)),
     201
   ))
 
   router.patch('/:tenantId/site/pages/:pageId', platformAdmin, handle(
-    (req) => sites.updatePage(req.params.tenantId, req.params.pageId, req.body)
+    (req) => sites.updatePage(req.params.tenantId, req.params.pageId, req.body, actor(req))
   ))
 
   router.put('/:tenantId/site/pages/:pageId/seo', platformAdmin, handle(
-    (req) => sites.updatePageSeo(req.params.tenantId, req.params.pageId, req.body)
+    (req) => sites.updatePageSeo(req.params.tenantId, req.params.pageId, req.body, actor(req))
   ))
 
   router.post('/:tenantId/site/pages/:pageId/move', platformAdmin, handle(
-    (req) => sites.movePage(req.params.tenantId, req.params.pageId, req.body?.direction)
+    (req) => sites.movePage(req.params.tenantId, req.params.pageId, req.body?.direction, actor(req))
   ))
 
   router.delete('/:tenantId/site/pages/:pageId', platformAdmin, handle(
-    (req) => sites.deletePage(req.params.tenantId, req.params.pageId)
+    (req) => sites.deletePage(req.params.tenantId, req.params.pageId, actor(req))
   ))
 
   router.post('/:tenantId/site/pages/:pageId/sections', platformAdmin, handle(
-    (req) => sites.addSection(req.params.tenantId, req.params.pageId, req.body?.type, { afterSectionId: req.body?.afterSectionId }),
+    (req) => sites.addSection(req.params.tenantId, req.params.pageId, req.body?.type, { afterSectionId: req.body?.afterSectionId }, actor(req)),
     201
   ))
 
   router.post('/:tenantId/site/pages/:pageId/sections/:sectionId/duplicate', platformAdmin, handle(
-    (req) => sites.duplicateSection(req.params.tenantId, req.params.pageId, req.params.sectionId)
+    (req) => sites.duplicateSection(req.params.tenantId, req.params.pageId, req.params.sectionId, actor(req))
   ))
 
   router.delete('/:tenantId/site/pages/:pageId/sections/:sectionId', platformAdmin, handle(
-    (req) => sites.removeSection(req.params.tenantId, req.params.pageId, req.params.sectionId)
+    (req) => sites.removeSection(req.params.tenantId, req.params.pageId, req.params.sectionId, actor(req))
   ))
 
   router.post('/:tenantId/site/pages/:pageId/sections/:sectionId/move', platformAdmin, handle(
-    (req) => sites.moveSection(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.direction)
+    (req) => sites.moveSection(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.direction, actor(req))
   ))
 
   router.patch('/:tenantId/site/pages/:pageId/sections/:sectionId/visibility', platformAdmin, handle(
-    (req) => sites.setSectionVisibility(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.hidden)
+    (req) => sites.setSectionVisibility(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body?.hidden, actor(req))
   ))
 
   router.put('/:tenantId/site/pages/:pageId/sections/:sectionId', platformAdmin, handle(
-    (req) => sites.updateSectionContent(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body)
+    (req) => sites.updateSectionContent(req.params.tenantId, req.params.pageId, req.params.sectionId, req.body, actor(req))
   ))
 
   router.get('/:tenantId/media', platformAdmin, noStore, handle(
@@ -224,12 +229,12 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.post('/:tenantId/media', platformAdmin, noStore, parseMediaUpload, handle(
-    (req) => media.createMedia(req.params.tenantId, req.file, req.user.id),
+    (req) => media.createMedia(req.params.tenantId, req.file, req.user.id, actor(req)),
     201
   ))
 
   router.delete('/:tenantId/media/:mediaId', platformAdmin, noStore, handleNoContent(
-    (req) => media.deleteUnusedMedia(req.params.tenantId, req.params.mediaId)
+    (req) => media.deleteUnusedMedia(req.params.tenantId, req.params.mediaId, actor(req))
   ))
 
   router.get('/:tenantId/site', tenantRole(allTenantRoles), handle(
@@ -249,7 +254,7 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.post('/:tenantId/leads/:leadId/notes', tenantRole(allTenantRoles), noStore, handle(
-    (req) => leads.createLeadNote(req.params.tenantId, req.params.leadId, req.body, req.user.id),
+    (req) => leads.createLeadNote(req.params.tenantId, req.params.leadId, req.body, req.user.id, actor(req)),
     201
   ))
 
@@ -258,11 +263,11 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.patch('/:tenantId/leads/:leadId', tenantRole(allTenantRoles), noStore, handle(
-    (req) => leads.updateLeadStatus(req.params.tenantId, req.params.leadId, req.body)
+    (req) => leads.updateLeadStatus(req.params.tenantId, req.params.leadId, req.body, actor(req))
   ))
 
   router.delete('/:tenantId/leads/:leadId', platformAdmin, noStore, handleNoContent(
-    (req) => leads.deleteTenantLead(req.params.tenantId, req.params.leadId)
+    (req) => leads.deleteTenantLead(req.params.tenantId, req.params.leadId, actor(req))
   ))
 
   router.get('/:tenantId', tenantRole(allTenantRoles), handle(
@@ -270,12 +275,16 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.post('/:tenantId/members', platformAdmin, handle(
-    (req) => service.addMember(req.params.tenantId, req.body, req.user.id),
+    (req) => service.addMember(req.params.tenantId, req.body, req.user.id, actor(req)),
     201
   ))
 
   router.get('/:tenantId/members', tenantRole(tenantManagerRoles), handle(
     (req) => service.listMembers(req.params.tenantId)
+  ))
+
+  router.get('/:tenantId/audit-events', platformAdmin, noStore, handle(
+    (req) => audits.listAuditEvents(req.params.tenantId, req.query)
   ))
 
   return router

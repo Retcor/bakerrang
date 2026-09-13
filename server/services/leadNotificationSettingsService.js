@@ -1,5 +1,6 @@
 import { db } from '../client/firestoreClient.js'
 import { isValidEmail } from '../validation/contactMethods.js'
+import { writeAuditEvent } from './auditService.js'
 
 const TENANTS = 'tenants'
 const MAX_RECIPIENTS = 10
@@ -56,7 +57,7 @@ export const getLeadNotificationSettings = async (tenantId) => {
   return responseFrom(config.exists ? config.data()?.leadNotifications : undefined)
 }
 
-export const updateLeadNotificationSettings = async (tenantId, input) => {
+export const updateLeadNotificationSettings = async (tenantId, input, actor) => {
   const settings = validateSettings(input)
   const tenantRef = firestore.collection(TENANTS).doc(tenantId)
   const configRef = tenantRef.collection('site').doc('config')
@@ -65,6 +66,7 @@ export const updateLeadNotificationSettings = async (tenantId, input) => {
     if (!tenant.exists) throw httpError(404, 'Tenant not found')
     const nextConfig = { ...(config.exists ? config.data() : {}), leadNotifications: settings }
     transaction.set(configRef, nextConfig)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'leadNotifications.update', entityType: 'leadNotifications', summary: 'Updated lead notification settings', metadata: { enabled: settings.enabled, recipientCount: settings.recipients.length } })
     return settings
   })
 }

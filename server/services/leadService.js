@@ -7,6 +7,7 @@ import {
 } from '../validation/contactMethods.js'
 import { isLeadStatus } from '../domain/leadStatus.js'
 import { pendingLeadNotification } from './leadNotificationService.js'
+import { writeAuditEvent } from './auditService.js'
 
 const TENANTS = 'tenants'
 let firestore = db
@@ -225,7 +226,7 @@ const validateStatusUpdate = (input) => {
   return { status: body.status, expectedUpdatedAt: body.expectedUpdatedAt }
 }
 
-export const updateLeadStatus = async (tenantId, leadId, input) => {
+export const updateLeadStatus = async (tenantId, leadId, input, actor) => {
   const update = validateStatusUpdate(input)
   const tenantRef = firestore.collection(TENANTS).doc(tenantId)
   const leadRef = tenantRef.collection('leads').doc(leadId)
@@ -247,11 +248,12 @@ export const updateLeadStatus = async (tenantId, leadId, input) => {
 
     const updatedAt = Math.max(Date.now(), current.updatedAt + 1)
     transaction.set(leadRef, { status: update.status, updatedAt }, { merge: true })
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'lead.status.change', entityType: 'lead', entityId: leadId, summary: 'Changed lead status', metadata: { leadId, oldStatus: current.status, newStatus: update.status } })
     return { ...current, status: update.status, updatedAt }
   })
 }
 
-export const createLeadNote = async (tenantId, leadId, input, actorUserId) => {
+export const createLeadNote = async (tenantId, leadId, input, actorUserId, actor) => {
   const text = validateNote(input)
   const noteId = randomUUID()
   const createdAt = Date.now()
@@ -269,12 +271,13 @@ export const createLeadNote = async (tenantId, leadId, input, actorUserId) => {
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
     if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
     transaction.set(noteRef, note)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'lead.note.add', entityType: 'lead', entityId: leadId, summary: 'Added lead note', metadata: { leadId } })
   })
 
   return { id: noteId, text, createdAt, createdByUserId: actorUserId }
 }
 
-export const deleteTenantLead = async (tenantId, leadId) => {
+export const deleteTenantLead = async (tenantId, leadId, actor) => {
   const tenantRef = firestore.collection(TENANTS).doc(tenantId)
   const leadRef = tenantRef.collection('leads').doc(leadId)
   const notesCollection = leadRef.collection('notes')
@@ -292,6 +295,7 @@ export const deleteTenantLead = async (tenantId, leadId) => {
       transaction.delete(note.ref)
     }
     transaction.delete(leadRef)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'lead.delete', entityType: 'lead', entityId: leadId, summary: 'Deleted lead', metadata: { leadId } })
   })
 }
 

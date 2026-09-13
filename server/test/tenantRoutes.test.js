@@ -33,8 +33,8 @@ const siteDefinition = {
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [] }]
 }
 const service = {
-  createTenant: async (actorId, body) => {
-    calls.push({ operation: 'createTenant', actorId, body })
+  createTenant: async (actorId, body, auditActor) => {
+    calls.push({ operation: 'createTenant', actorId, body, auditActor })
     return { id: 'created-tenant', name: body.name, status: 'ACTIVE' }
   },
   listTenants: async () => [],
@@ -314,13 +314,21 @@ const leadNotifications = {
   }
 }
 
+const auditEvents = {
+  listAuditEvents: async (tenantId, query) => {
+    calls.push({ operation: 'listAuditEvents', tenantId, query })
+    if (query.cursor === 'bad') throw Object.assign(new Error('cursor is invalid'), { status: 400 })
+    return { events: [] }
+  }
+}
+
 before(async () => {
   const app = express()
   app.use(express.json())
   app.use((req, res, next) => {
     const userId = req.headers['x-test-user']
     req.isAuthenticated = () => Boolean(userId)
-    if (userId) req.user = { id: userId, platformRole: req.headers['x-session-role'] }
+    if (userId) req.user = { id: userId, email: `${userId}@example.test`, displayName: `User ${userId}`, platformRole: req.headers['x-session-role'] }
     next()
   })
   app.use('/tenants', isAuthenticated, createTenantRouter({
@@ -328,6 +336,7 @@ before(async () => {
     siteService: sites,
     leadService: leads,
     leadNotificationSettingsService: leadNotifications,
+    auditService: auditEvents,
     mediaService: media,
     siteDomainService: domains,
     previewTokenService: previewTokens,
@@ -376,6 +385,28 @@ test('PLATFORM_ADMIN can create/list tenants and access a tenant without members
   assert.equal((await created.json()).status, 'ACTIVE')
   assert.equal((await request('/tenants', { userId: 'platform' })).status, 200)
   assert.equal((await request('/tenants/tenant-1', { userId: 'platform' })).status, 200)
+})
+
+test('the authenticated session actor is always passed to mutation services', async () => {
+  const response = await request('/tenants', { userId: 'platform', method: 'POST', body: { name: 'Actor test' } })
+  assert.equal(response.status, 201)
+  assert.deepEqual(calls.at(-1).auditActor, {
+    id: 'platform',
+    email: 'platform@example.test',
+    name: 'User platform'
+  })
+})
+
+test('audit events are platform-admin only, no-store, and tenant scoped', async () => {
+  assert.equal((await request('/tenants/tenant-1/audit-events')).status, 401)
+  assert.equal((await request('/tenants/tenant-1/audit-events', { userId: 'staff' })).status, 403)
+  const success = await request('/tenants/tenant-1/audit-events?limit=10', { userId: 'platform' })
+  assert.equal(success.status, 200)
+  assert.equal(success.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(calls.at(-1), { operation: 'listAuditEvents', tenantId: 'tenant-1', query: { limit: '10' } })
+  const malformed = await request('/tenants/tenant-1/audit-events?cursor=bad', { userId: 'platform' })
+  assert.equal(malformed.status, 400)
+  assert.equal((await request('/tenants/tenant-1/audit-events', { userId: 'platform', method: 'POST', body: {} })).status, 404)
 })
 
 test('tenant read and member-list permissions match STAFF, ADMIN, and OWNER rules', async () => {

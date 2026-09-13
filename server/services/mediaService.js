@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { imageSize } from 'image-size'
 import { db } from '../client/firestoreClient.js'
+import { writeAuditEvent } from './auditService.js'
 import { gcsStorage } from '../client/gcsClient.js'
 
 const TENANTS = 'tenants'
@@ -112,7 +113,7 @@ const requireTenant = async (tenantId) => {
   if (!snapshot.exists) throw httpError(404, 'Tenant not found')
 }
 
-export const createMedia = async (tenantId, file, actorUserId) => {
+export const createMedia = async (tenantId, file, actorUserId, actor) => {
   const image = inspectImage(file)
   await requireTenant(tenantId)
 
@@ -146,7 +147,10 @@ export const createMedia = async (tenantId, file, actorUserId) => {
 
   const ref = mediaRef(tenantId, mediaId)
   try {
-    await ref.set(metadata)
+    await firestore.runTransaction(async (transaction) => {
+      transaction.set(ref, metadata)
+      if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'media.upload', entityType: 'media', entityId: mediaId, summary: 'Uploaded media', metadata: { mediaId, originalFilename: metadata.originalFilename, contentType: metadata.contentType, sizeBytes: metadata.sizeBytes } })
+    })
   } catch (error) {
     try {
       const confirmation = await ref.get()
@@ -352,7 +356,7 @@ export const findMediaUsage = async (tenantId, mediaId, transaction) => {
   ]
 }
 
-export const deleteUnusedMedia = async (tenantId, mediaId) => {
+export const deleteUnusedMedia = async (tenantId, mediaId, actor) => {
   await requireTenant(tenantId)
   const ref = mediaRef(tenantId, mediaId)
   // All reference writers read this same media document in their write transaction.
@@ -375,7 +379,16 @@ export const deleteUnusedMedia = async (tenantId, mediaId) => {
   }
   try {
     // IDs/object names are immutable and never reused; duplicate retries converge.
-    await ref.delete()
+    await firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref)
+      // A second cleanup attempt after a successful commit is harmless.
+      if (!snapshot.exists) return
+      transaction.delete(ref)
+      if (actor) {
+        const value = snapshot.data() || {}
+        writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'media.delete', entityType: 'media', entityId: mediaId, summary: 'Deleted media', metadata: { mediaId, originalFilename: value.originalFilename || null, contentType: value.contentType || null, sizeBytes: value.sizeBytes || null } })
+      }
+    })
   } catch {
     throw Object.assign(httpError(502, 'Image cleanup did not finish. Retry the deletion.'), { expose: true })
   }

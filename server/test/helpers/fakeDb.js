@@ -52,7 +52,7 @@ class FakeCollectionReference {
   }
 
   orderBy (field, direction) {
-    return new FakeQuery(this.database, this.path, field, direction)
+    return new FakeQuery(this.database, this.path).orderBy(field, direction)
   }
 
   async get () {
@@ -68,26 +68,35 @@ class FakeCollectionReference {
 }
 
 class FakeQuery {
-  constructor (database, path, orderField, direction = 'asc', max = null, filters = []) {
+  constructor (database, path, order = [], max = null, filters = [], after = null) {
     this.database = database
     this.path = path
-    this.orderField = orderField
-    this.direction = direction
+    this.order = order
+    // Compatibility for existing test hooks; queries may now have more than
+    // one ordering field, with the final field retained here for inspection.
+    this.orderField = order.at(-1)?.field
+    this.direction = order.at(-1)?.direction
     this.max = max
     this.filters = filters
+    this.after = after
   }
 
   where (field, operator, value) {
     if (operator !== '==') throw new Error('FakeQuery supports equality only')
-    return new FakeQuery(this.database, this.path, this.orderField, this.direction, this.max, [...this.filters, { field, value }])
+    return new FakeQuery(this.database, this.path, this.order, this.max, [...this.filters, { field, value }], this.after)
   }
 
   orderBy (field, direction = 'asc') {
-    return new FakeQuery(this.database, this.path, field, direction, this.max, this.filters)
+    return new FakeQuery(this.database, this.path, [...this.order, { field, direction }], this.max, this.filters, this.after)
   }
 
   limit (max) {
-    return new FakeQuery(this.database, this.path, this.orderField, this.direction, max, this.filters)
+    return new FakeQuery(this.database, this.path, this.order, max, this.filters, this.after)
+  }
+
+  startAfter (...values) {
+    if (values.length !== this.order.length) throw new Error('FakeQuery cursor does not match order')
+    return new FakeQuery(this.database, this.path, this.order, this.max, this.filters, values)
   }
 
   async get () {
@@ -96,15 +105,22 @@ class FakeQuery {
       .filter(([path, value]) =>
         path.startsWith(`${this.path}/`) &&
         path.split('/').length === depth &&
-        (!this.orderField || Object.prototype.hasOwnProperty.call(value, this.orderField)) &&
+        (!this.order.length || this.order.every(({ field }) => Object.prototype.hasOwnProperty.call(value, field))) &&
         this.filters.every((filter) => filter.field.split('.').reduce((v, key) => v?.[key], value) === filter.value)
       )
-      .sort(([, left], [, right]) => {
-        const comparison = left[this.orderField] < right[this.orderField]
-          ? -1
-          : left[this.orderField] > right[this.orderField] ? 1 : 0
-        return this.direction === 'desc' ? -comparison : comparison
-      })
+      .sort(([, left], [, right]) => this.order.reduce((result, { field, direction }) => {
+        if (result) return result
+        const comparison = left[field] < right[field] ? -1 : left[field] > right[field] ? 1 : 0
+        return direction === 'desc' ? -comparison : comparison
+      }, 0))
+    if (this.after) {
+      entries = entries.filter(([, value]) => this.order.some(({ field, direction }, index) => {
+        for (let prior = 0; prior < index; prior++) {
+          if (value[this.order[prior].field] !== this.after[prior]) return false
+        }
+        return direction === 'desc' ? value[field] < this.after[index] : value[field] > this.after[index]
+      }))
+    }
     if (this.max !== null) entries = entries.slice(0, this.max)
     const docs = entries.map(([path, value]) => new FakeDocumentSnapshot(
       new FakeDocumentReference(this.database, path),
@@ -119,6 +135,7 @@ export class FakeDb {
     this.records = new Map()
     this.versions = new Map()
     this.beforeCommit = null
+    this.beforeTransactionSet = null
     this.afterCommit = null
     this.maxAttempts = 5
     this.transactionAttempts = 0
@@ -172,7 +189,10 @@ export class FakeDb {
       const transaction = {
         get,
         getAll: (...refs) => Promise.all(refs.map(get)),
-        set: (ref, value, options) => writes.push({ type: 'set', ref, value: clone(value), options }),
+        set: (ref, value, options) => {
+          if (this.beforeTransactionSet) this.beforeTransactionSet({ ref, value })
+          writes.push({ type: 'set', ref, value: clone(value), options })
+        },
         delete: (ref) => writes.push({ type: 'delete', ref })
       }
       const result = await callback(transaction)
