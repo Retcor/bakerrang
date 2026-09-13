@@ -46,6 +46,22 @@ export async function apiGet<T> (path: string): Promise<T> {
   return responseData<T>(response)
 }
 
+/**
+ * Fetch an authenticated binary response without weakening the portal's
+ * session convention. Callers own the blob and any object URL they create.
+ */
+export async function apiDownload (path: string): Promise<{ blob: Blob, contentDisposition: string | null }> {
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
+    credentials: 'include'
+  })
+  const body = await parseResponseBody(response)
+  if (!response.ok) throw new ApiError(response.status, body)
+  return {
+    blob: await response.blob(),
+    contentDisposition: response.headers.get('content-disposition')
+  }
+}
+
 let csrfToken: string | null = null
 
 async function getCsrfToken (forceRefresh = false): Promise<string> {
