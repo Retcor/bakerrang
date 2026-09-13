@@ -316,6 +316,34 @@ test('deleteUnusedMedia blocks working social image only', async () => {
   await assertBlocked('Image is still used as the working social image')
 })
 
+test('deleteUnusedMedia protects Page SEO images in working and published definitions', async () => {
+  const objectName = seedMedia()
+  seedWorking()
+  const configPath = `${tenantPath()}/site/config`
+  fakeDb.write(configPath, { pageOrder: ['home', 'page-b'] }, { merge: true })
+  fakeDb.seed(`${configPath}/pages/page-b`, {
+    id: 'page-b', slug: 'page-b', title: 'Page B', sections: [], seo: { socialImageMediaId: 'media-1' }
+  })
+  await assertBlocked('Image is still used as the working page SEO social image')
+
+  fakeDb.write(`${configPath}/pages/page-b`, { seo: undefined }, { merge: true })
+  seedPublished({
+    status: 'PUBLISHED',
+    branding: {},
+    pages: [{ id: 'home', slug: '/', sections: [] }, {
+      id: 'page-b', slug: 'page-b', sections: [], seo: { socialImageMediaId: 'media-1' }
+    }]
+  })
+  await assertBlocked('Image is still used as the published page SEO social image')
+
+  seedPublished({
+    status: 'PUBLISHED', branding: {}, pages: [{ id: 'home', slug: '/', sections: [] }]
+  })
+  await deleteUnusedMedia('tenant-1', 'media-1')
+  assert.equal(fakeDb.data(mediaPath('media-1')), undefined)
+  assert.deepEqual(fakeStorage.deletes, [objectName])
+})
+
 test('deleteUnusedMedia blocks working about image only', async () => {
   seedMedia()
   seedWorking({

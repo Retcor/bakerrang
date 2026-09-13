@@ -14,8 +14,8 @@ export function sitePreviewOrigin (): string {
   }
 }
 
-export function sitePreviewUrl (tenantId: string, token: string): string {
-  const path = `/preview/${encodeURIComponent(tenantId)}`
+export function sitePreviewUrl (tenantId: string, token: string, pageId: string): string {
+  const path = `/preview/${encodeURIComponent(tenantId)}/page/${encodeURIComponent(pageId)}`
   const url = new URL(path, `${sitePreviewOrigin()}/`)
   url.searchParams.set('token', token)
   return url.toString()

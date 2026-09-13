@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream'
 const clone = (value) => value == null ? value : structuredClone(value)
 
 export class FakeStorage {
@@ -28,5 +29,11 @@ export class FakeStorage {
 
   publicUrl (objectName) {
     return `https://media.test/${objectName}`
+  }
+
+  createReadStream (objectName) {
+    const bytes = this.objects.get(objectName)
+    if (!bytes) throw new Error('Object not found')
+    return Readable.from(bytes)
   }
 }

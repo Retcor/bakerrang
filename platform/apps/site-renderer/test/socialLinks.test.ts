@@ -17,7 +17,7 @@ const links = [
 
 const site = (socialLinks: unknown, operational = true) => ({
   status: 'PUBLISHED',
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   businessProfile: {
     ...(operational ? { phone: '+1 303 555 0100' } : {}),
     ...(socialLinks !== undefined ? { socialLinks } : {})
@@ -30,7 +30,7 @@ const site = (socialLinks: unknown, operational = true) => ({
 test('Footer receives canonical profile links and renders restrained safe accessible icons in array order', async () => {
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
   const footer = await source('../../../packages/site-components/src/SiteFooter.tsx')
-  assert.match(shell, /socialLinks=\{site\.businessProfile\?\.socialLinks\}/)
+  assert.match(shell, /profile=\{site\.businessProfile\}/)
   assert.match(footer, /safeSocialLinks\.map\(\(link\) => <a/)
   assert.match(footer, /aria-label=\{socialLabels\[link\.platform\]\}/)
   assert.match(footer, /href=\{link\.url\}/)

@@ -9,7 +9,6 @@ vi.mock('../../../lib/site', () => ({
 }))
 
 import { BusinessHoursEditor } from '../BusinessHoursEditor'
-import { SectionCompositionEditor } from '../SectionCompositionEditor'
 
 const theme = {
   colors: { primary: '#334155', accent: '#0f766e', background: '#f8fafc', text: '#172033' },
@@ -23,12 +22,12 @@ const configuredHours = {
 }
 const site = (configured = false, section = false): SiteDefinition => ({
   status: 'DRAFT',
-  branding: { siteName: 'Bakery', primaryColor: '#334155', accentColor: '#0f766e' },
+  branding: { siteName: 'Bakery' },
   theme,
   ...(configured ? { businessProfile: { businessHours: configuredHours } } : {}),
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
-    { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
-    ...(section ? [{ id: 'businessHours' as const, type: 'businessHours' as const, content: { heading: 'Visit', intro: 'Come by.' } }] : [])
+    { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
+    ...(section ? [{ id: 'hours-id', type: 'businessHours' as const, hidden: false, content: { heading: 'Visit', intro: 'Come by.' } }] : [])
   ] }]
 })
 
@@ -49,12 +48,10 @@ describe('Business Hours editor', () => {
     expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
   })
 
-  it('loads existing hours and homepage presentation state', () => {
+  it('loads existing hours without homepage presence controls', () => {
     render(<BusinessHoursEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true, true)} tenantId="tenant-1" />)
     expect(screen.getByLabelText('Monday opening time')).toHaveValue('08:00')
-    expect(screen.getByRole('checkbox', { name: 'Show business hours on homepage' })).toBeChecked()
-    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Visit')
-    expect(screen.getByLabelText(/Intro/)).toHaveValue('Come by.')
+    expect(screen.queryByText('Show business hours on homepage')).not.toBeInTheDocument()
   })
 
   it('toggles closed days and copies Monday only through Friday in local state', () => {
@@ -79,9 +76,6 @@ describe('Business Hours editor', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Monday closing time must be later')
     expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
     fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '17:00' } })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Show business hours on homepage' }))
-    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: ' Our hours ' } })
-    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: ' Visit this week. ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateBusinessHours).toHaveBeenCalledWith('tenant-1', {
       businessHours: {
@@ -89,7 +83,7 @@ describe('Business Hours editor', () => {
         wednesday: { open: '09:00', close: '17:00' }, thursday: { open: '09:00', close: '17:00' },
         friday: { open: '09:00', close: '17:00' }, saturday: { closed: true }, sunday: { closed: true }
       },
-      homepage: { enabled: true, heading: 'Our hours', intro: 'Visit this week.' }
+      homepage: { enabled: false }, preserveSections: true
     }))
     expect(onSaved).toHaveBeenCalledWith(site(true, true))
   })
@@ -100,14 +94,8 @@ describe('Business Hours editor', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Remove hours' }))
     await waitFor(() => expect(mocks.updateBusinessHours).toHaveBeenCalledWith('tenant-1', {
-      businessHours: null, homepage: { enabled: false }
+      businessHours: null, homepage: { enabled: false }, preserveSections: true
     }))
   })
 
-  it('appears in generic Manage Sections with the canonical readable label', () => {
-    render(<SectionCompositionEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true, true)} tenantId="tenant-1" />)
-    expect(screen.getByText('Business Hours')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Move homepage section up' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove homepage section' })).toBeInTheDocument()
-  })
 })

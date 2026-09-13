@@ -23,14 +23,32 @@ beforeEach(async () => {
 })
 afterEach(() => { sites._setDb(); media._setDb(); media._setStorage() })
 const remove = () => media.deleteUnusedMedia(tenant, 'image')
+const sectionByType = (type) => db.data(homePath).sections.find((section) => section.type === type)
+const updateType = async (type, content) => {
+  let section = sectionByType(type)
+  if (!section) {
+    await sites.addSection(tenant, 'home', type)
+    section = sectionByType(type)
+  }
+  return sites.updateSectionContent(tenant, 'home', section.id, content)
+}
 const writers = [
   ['Logo', (id = 'image') => sites.updateSiteBranding(tenant, { siteName: 'Business', logoMediaId: id })],
   ['Favicon', (id = 'image') => sites.updateSiteBranding(tenant, { siteName: 'Business', faviconMediaId: id })],
   ['Social', (id = 'image') => sites.updateBusinessProfile(tenant, { socialImageMediaId: id })],
-  ['About', (id = 'image') => sites.upsertHomeAbout(tenant, { heading: 'About', body: 'Body', imageMediaId: id, imageAlt: 'Image' })],
-  ['Gallery', (id = 'image') => sites.upsertHomeGallery(tenant, { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })]
+  ['About', (id = 'image') => updateType('about', { heading: 'About', body: 'Body', imageMediaId: id, imageAlt: 'Image' })],
+  ['Gallery', (id = 'image') => updateType('gallery', { title: 'Gallery', items: [{ mediaId: id, altText: 'Image' }] })],
+  ['Logos', (id = 'image') => updateType('logos', { heading: 'Trusted by', items: [{ mediaId: id, altText: 'Logo' }] })]
 ]
-const refs = () => [...media.collectSiteMediaIds({ ...db.data(configPath), pages: [db.data(homePath)] }), ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)]
+const refs = () => {
+  const config = db.data(configPath)
+  const pageOrder = config.pageOrder || ['home']
+  const pages = pageOrder.map((pageId) => db.data(`${configPath}/pages/${pageId}`))
+  return [
+    ...media.collectSiteMediaIds({ ...config, pages }),
+    ...media.collectSiteMediaIds(db.data(publishedPath)?.siteDefinition)
+  ]
+}
 const assertIntact = () => {
   assert.ok(refs().includes('image'))
   assert.equal(db.data(mediaPath).deletion, undefined)
@@ -49,22 +67,43 @@ for (const [name, write] of writers) {
     onceBeforeCommit(write)
     await assert.rejects(remove(), { status: 400 })
     assertIntact()
-    assert.equal(db.transactionAttempts - attempts, 3)
+    assert.equal(db.transactionAttempts - attempts, ['About', 'Gallery', 'Logos'].includes(name) ? 4 : 3)
   })
   test(`${name}: deletion commits in writer gap; writer rejects`, async () => {
     onceBeforeCommit(remove)
-    await assert.rejects(write(), { status: 400, message: `${name} image not found` })
+    await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : `${name} image not found` })
     assertRemoved()
   })
   test(`${name}: pending media rejects references with storage retained`, async () => {
     storage.deleteError = new Error('unavailable')
     await assert.rejects(remove(), { status: 502 })
-    await assert.rejects(write(), { status: 400, message: `${name} image not found` })
+    await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : `${name} image not found` })
     assert.equal(refs().includes('image'), false)
     assert.ok(storage.objects.has(mediaPath))
     assert.equal(db.data(mediaPath).deletion.state, 'PENDING')
   })
 }
+test('duplicate commits in deletion gap and copied media keeps deletion blocked', async () => {
+  await writers[4][1]()
+  const gallery = sectionByType('gallery')
+  onceBeforeCommit(() => sites.duplicateSection(tenant, 'home', gallery.id))
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the working gallery' })
+  assertIntact()
+})
+
+test('a concurrent Page-B media reference forces deletion to retry and then blocks it', async () => {
+  onceBeforeCommit(async () => {
+    const { pageId } = await sites.createPage(tenant, { title: 'Page B', slug: 'page-b' })
+    const { sectionId } = await sites.addSection(tenant, pageId, 'gallery')
+    await sites.updateSectionContent(tenant, pageId, sectionId, {
+      title: 'Gallery', items: [{ mediaId: 'image', altText: 'Image' }]
+    })
+  })
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the working gallery' })
+  assertIntact()
+  assert.ok(db.transactionAttempts >= 4)
+})
+
 test('old unguarded writer pattern demonstrably leaves a dangling reference', async () => {
   await media.requireTenantMedia(tenant, ['image'])
   await remove()
@@ -79,8 +118,8 @@ test('old unguarded writer pattern demonstrably leaves a dangling reference', as
 })
 for (const [name, edit] of [
   ['publish', () => sites.publishSite(tenant, 'admin')],
-  ['composition', () => sites.composeHomeSections(tenant, { sectionIds: ['hero'] })],
-  ['hero', () => sites.updateHomeHero(tenant, { title: 'New title' })]
+  ['composition', () => sites.setSectionVisibility(tenant, 'home', sectionByType('hero').id, false)],
+  ['hero', () => sites.updateSectionContent(tenant, 'home', sectionByType('hero').id, { title: 'New title' })]
 ]) {
   test(`${name} commits first; deletion cannot leave references`, async () => { onceBeforeCommit(edit); await remove(); assertRemoved() })
   test(`${name} commits last; cannot resurrect deleted references`, async () => { onceBeforeCommit(remove); await edit(); assertRemoved() })
@@ -90,8 +129,60 @@ test('published reference retained after unpublish blocks deletion', async () =>
   await sites.publishSite(tenant, 'admin')
   await sites.updateSiteBranding(tenant, { siteName: 'Business' })
   await sites.unpublishSite(tenant)
-  await assert.rejects(remove(), { status: 400, message: 'Image is still used as the published favicon' })
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
   assertIntact()
+})
+
+test('a retained revision manifest protects media without scanning historical snapshots and releases it after pruning', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher')
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+  await sites.publishSite(tenant, 'publisher')
+
+  await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
+  assert.ok(db.data(mediaPath))
+  assert.ok(storage.objects.has(mediaPath))
+
+  for (let index = 0; index < 9; index += 1) await sites.publishSite(tenant, 'publisher')
+  await remove()
+  assertRemoved()
+})
+
+test('prune and media deletion serialize on the revision index before the last retained manifest disappears', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher')
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+  for (let index = 0; index < 9; index += 1) await sites.publishSite(tenant, 'publisher')
+
+  onceBeforeCommit(async () => {
+    await assert.rejects(remove(), { status: 400, message: 'Image is still used in published revision history' })
+  })
+  await sites.publishSite(tenant, 'publisher')
+  await remove()
+  assertRemoved()
+})
+
+test('legacy baseline capture cannot race a media delete past its retained manifest', async () => {
+  await writers[1][1]()
+  await sites.publishSite(tenant, 'publisher-a')
+  const legacy = db.data(publishedPath)
+  const oldRevisionId = legacy.revisionId
+  delete legacy.revisionId
+  db.seed(publishedPath, legacy)
+  db.remove(`${configPath}/revisions/${oldRevisionId}`)
+  db.remove(`${configPath}/revisionMedia/${oldRevisionId}`)
+  db.remove(`${configPath}/revisionIndex/current`)
+  await sites.updateSiteBranding(tenant, { siteName: 'Business' })
+
+  onceBeforeCommit(async () => {
+    await assert.rejects(remove(), { status: 400, message: 'Image is still used as the published favicon' })
+  })
+  await sites.publishSite(tenant, 'publisher-b')
+  const baseline = db.data(`${configPath}/revisionIndex/current`).entries[1]
+  assert.deepEqual(db.data(`${configPath}/revisionMedia/${baseline.revisionId}`), { mediaIds: ['image'] })
+  assert.ok(db.data(mediaPath))
+  assert.ok(storage.objects.has(mediaPath))
+  assert.equal(storage.deletes.length, 0)
 })
 test('duplicate deletes that observed marker converge; fresh request404', async () => {
   const original = storage.deleteObject.bind(storage)
@@ -148,7 +239,7 @@ test('retry exhaustion does not persist buffered marker or touch storage', async
   assert.equal(db.data(mediaPath).deletion, undefined)
   assert.ok(storage.objects.has(mediaPath))
 })
-test('pending hydration removes URLs and gallery items from working and published reads', async () => {
+test('pending hydration removes URLs and Gallery/Logo items from working and published reads', async () => {
   for (const [, write] of writers) await write()
   await sites.updateSiteBranding(tenant, { siteName: 'Business', logoMediaId: 'image', faviconMediaId: 'image' })
   const before = await sites.getSite(tenant)
@@ -160,8 +251,9 @@ test('pending hydration removes URLs and gallery items from working and publishe
     assert.equal(definition.branding.logoSrc, undefined)
     assert.equal(definition.branding.faviconSrc, undefined)
     assert.equal(definition.businessProfile.socialImageSrc, undefined)
-    assert.equal(definition.pages[0].sections.find((s) => s.id === 'about').content.imageSrc, undefined)
-    assert.deepEqual(definition.pages[0].sections.find((s) => s.id === 'gallery').content.items, [])
+    assert.equal(definition.pages[0].sections.find((s) => s.type === 'about').content.imageSrc, undefined)
+    assert.deepEqual(definition.pages[0].sections.find((s) => s.type === 'gallery').content.items, [])
+    assert.deepEqual(definition.pages[0].sections.find((s) => s.type === 'logos').content.items, [])
   }
 })
 test('pending query finds old items beyond newest50 and is bounded and tenant scoped', async () => {
@@ -181,7 +273,7 @@ test('pending query finds old items beyond newest50 and is bounded and tenant sc
 test('section removal overlapping deletion permits deletion only after reference removal commits', async () => {
   await writers[3][1]()
   onceBeforeCommit(async () => { await assert.rejects(remove(), { status: 400 }); assertIntact() })
-  await sites.composeHomeSections(tenant, { sectionIds: ['hero'] })
+  await sites.removeSection(tenant, 'home', sectionByType('about').id)
   await remove()
   assertRemoved()
 })
@@ -212,7 +304,7 @@ for (const [name, write] of writers) {
       assert.ok(refs().includes('other'))
       if (deletionFirst) {
         onceBeforeCommit(remove)
-        await assert.rejects(write(), { status: 400, message: name + ' image not found' })
+        await assert.rejects(write(), { status: 400, message: name === 'Logos' ? 'Logo image not found' : name + ' image not found' })
         assert.ok(refs().includes('other'))
         assertRemoved()
       } else {

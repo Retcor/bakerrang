@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isServicesSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isServicesSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { upsertHomeServices } from '../../lib/site'
+import { updateSectionContent } from '../../lib/site'
 import { RowActions } from './RowActions'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
@@ -16,6 +16,8 @@ interface EditorRow {
 }
 
 export interface ServicesEditorProps {
+  pageId: string
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -23,9 +25,10 @@ export interface ServicesEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
-  const home = findHomePage(site)
-  const services = home?.sections.find(isServicesSection)
+export function ServicesEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: ServicesEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedServices = page?.sections.find((section) => section.id === sectionId)
+  const services = selectedServices && isServicesSection(selectedServices) ? selectedServices : undefined
   const nextKey = useRef(1)
   const [title, setTitle] = useState(services?.content.title ?? 'Services')
   const [rows, setRows] = useState<EditorRow[]>(() => services
@@ -59,7 +62,8 @@ export function ServicesEditor ({ tenantId, site, onCancel, onDirtyChange = () =
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeServices(tenantId, {
+      if (!services) throw new Error('Services section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, services.id, {
         title: trimmedTitle,
         items: rows.map(({ id, name, description }) => ({
           ...(id ? { id } : {}),

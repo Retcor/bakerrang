@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { db } from '../client/firestoreClient.js'
+import { writeAuditEvent } from './auditService.js'
 
 const TENANTS = 'tenants'
 const USERS = 'users'
@@ -47,7 +48,7 @@ const validateRole = (role) => {
   return role
 }
 
-export const createTenant = async (createdByUserId, body = {}) => {
+export const createTenant = async (createdByUserId, body = {}, actor) => {
   const tenantId = randomUUID()
   const now = Date.now()
   const record = {
@@ -58,7 +59,10 @@ export const createTenant = async (createdByUserId, body = {}) => {
     createdByUserId
   }
 
-  await tenantRef(tenantId).set(record)
+  await firestore.runTransaction(async (transaction) => {
+    transaction.set(tenantRef(tenantId), record)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'tenant.create', entityType: 'tenant', entityId: tenantId, summary: 'Created tenant', metadata: { tenantName: record.name } })
+  })
   return { id: tenantId, ...record }
 }
 
@@ -83,7 +87,7 @@ export const getMembership = async (tenantId, userId) => {
   return snapshot.exists ? snapshot.data() : null
 }
 
-export const addMember = async (tenantId, body = {}, createdByUserId) => {
+export const addMember = async (tenantId, body = {}, createdByUserId, actor) => {
   const userId = validateUserId(body && body.userId)
   const role = validateRole(body && body.role)
   const now = Date.now()
@@ -110,6 +114,7 @@ export const addMember = async (tenantId, body = {}, createdByUserId) => {
     if (memberSnapshot.exists) throw httpError(409, 'Tenant membership already exists')
 
     transaction.set(targetMemberRef, record)
+    if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'member.add', entityType: 'member', entityId: userId, summary: 'Added tenant member', metadata: { memberRole: role } })
   })
 
   return record

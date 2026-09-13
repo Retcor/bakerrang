@@ -1,6 +1,7 @@
 import { SiteContainer } from './SitePrimitives'
 import type { SiteNavItem } from './SiteHeader'
-import type { SocialLink, SocialPlatform } from '@bakerrang/site-schema'
+import type { BusinessProfile, SiteBranding, SiteFooter as SiteFooterConfig, SocialPlatform } from '@bakerrang/site-schema'
+import { contactHref } from './contactHref'
 import { isSafeSocialUrl } from './socialLinks'
 
 const socialLabels: Record<SocialPlatform, string> = {
@@ -17,22 +18,37 @@ function SocialIcon ({ platform }: { platform: SocialPlatform }) {
   return <svg aria-hidden className="size-5" fill="none" viewBox="0 0 24 24"><path d="M5 4.5 19 19.5M19 4.5 5 19.5" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" /></svg>
 }
 
-export function SiteFooter ({ siteName, navItems, socialLinks }: { siteName: string, navItems: SiteNavItem[], socialLinks?: SocialLink[] }) {
+const addressLines = (address: BusinessProfile['address']) => address
+  ? [address.line1, address.line2, [address.city, address.region, address.postalCode].filter(Boolean).join(', '), address.country].filter(Boolean)
+  : []
+
+export function SiteFooter ({ branding, config, navItems, profile }: { branding: Pick<SiteBranding, 'siteName' | 'logoSrc' | 'logoWidth' | 'logoHeight'>, config: SiteFooterConfig, navItems: SiteNavItem[], profile?: BusinessProfile }) {
+  const siteName = branding.siteName
+  const socialLinks = profile?.socialLinks
   const safeSocialLinks = (Array.isArray(socialLinks) ? socialLinks : []).filter((link) =>
     link && socialLabels[link.platform] && isSafeSocialUrl(link.url)
   )
+  const phoneHref = profile?.phone ? contactHref({ type: 'phone', value: profile.phone }) : null
+  const emailHref = profile?.email ? contactHref({ type: 'email', value: profile.email }) : null
+  const address = addressLines(profile?.address)
+  const hasContact = Boolean(phoneHref || emailHref || address.length)
   return (
     <footer className="border-t-4 border-site-accent bg-site-footer py-12 text-site-footer-fg" data-br-role="footer">
       <SiteContainer className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-semibold">{siteName}</p>
-          <p className="mt-1 text-sm opacity-75">© {new Date().getFullYear()} {siteName}</p>
+        <div className="flex flex-col gap-3">
+          {config.showBranding && <div className="flex items-center gap-3">{branding.logoSrc && branding.logoWidth && branding.logoHeight ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt="" className="max-h-10 max-w-36 object-contain" height={branding.logoHeight} src={branding.logoSrc} width={branding.logoWidth} />
+          ) : null}<p className="font-semibold">{siteName}</p></div>}
+          {config.text && <p className="max-w-md text-sm opacity-85">{config.text}</p>}
+          {config.showBusinessContact && hasContact && <address className="not-italic text-sm opacity-85">{phoneHref && <a className="block hover:opacity-100" href={phoneHref}>{profile?.phone}</a>}{emailHref && <a className="block hover:opacity-100" href={emailHref}>{profile?.email}</a>}{address.map((line) => <span className="block" key={line}>{line}</span>)}</address>}
+          {config.showCopyright && <p className="text-sm opacity-75">© {new Date().getFullYear()} {siteName}</p>}
         </div>
         <div className="flex flex-col gap-4 sm:items-end">
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-3" data-br-role="nav">
-            {navItems.map((item) => <a className="text-sm opacity-85 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" href={item.href} key={item.href}>{item.label}</a>)}
-          </nav>
-          {safeSocialLinks.length > 0 && (
+          {navItems.length > 0 && <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-3" data-br-footer-navigation="" data-br-role="nav">
+            {navItems.map((item) => <a aria-current={item.current ? 'page' : undefined} className="text-sm opacity-85 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" data-br-navigation-item={item.pageId} href={item.href} key={item.pageId}>{item.label}</a>)}
+          </nav>}
+          {config.showSocialLinks && safeSocialLinks.length > 0 && (
             <nav aria-label="Social profiles" className="flex flex-wrap gap-2" data-br-role="social">
               {safeSocialLinks.map((link) => <a aria-label={socialLabels[link.platform]} className="site-radius-control inline-flex min-h-11 min-w-11 items-center justify-center opacity-80 hover:bg-white/10 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent" href={link.url} key={link.platform} rel="noopener noreferrer" target="_blank"><SocialIcon platform={link.platform} /></a>)}
             </nav>

@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isGallerySection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isGallerySection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button, FileInput, Input } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
-import { upsertHomeGallery } from '../../lib/site'
+import { updateSectionContent } from '../../lib/site'
 import { RowActions } from './RowActions'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
@@ -23,6 +23,8 @@ type LibraryState = 'loading' | 'ready' | 'error'
 type UploadState = 'idle' | 'uploading' | 'success' | 'validation-error' | 'server-error'
 
 export interface GalleryEditorProps {
+  pageId: string
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -32,8 +34,10 @@ export interface GalleryEditorProps {
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export function GalleryEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: GalleryEditorProps) {
-  const gallery = findHomePage(site)?.sections.find(isGallerySection)
+export function GalleryEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: GalleryEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedGallery = page?.sections.find((section) => section.id === sectionId)
+  const gallery = selectedGallery && isGallerySection(selectedGallery) ? selectedGallery : undefined
   const fileInput = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(gallery?.content.title ?? 'Gallery')
   const [rows, setRows] = useState<GalleryRow[]>(() => gallery?.content.items.map((item) => ({
@@ -143,7 +147,8 @@ export function GalleryEditor ({ tenantId, site, onCancel, onDirtyChange = () =>
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeGallery(tenantId, {
+      if (!gallery) throw new Error('Gallery section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, gallery.id, {
         title: heading,
         items: rows.map((row) => ({
           ...(row.id ? { id: row.id } : {}),

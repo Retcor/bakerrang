@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { isTestimonialsSection, type SiteDefinition } from '@bakerrang/site-schema'
 import { Button, Input, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { upsertHomeTestimonials } from '../../lib/site'
+import { updateSectionContent } from '../../lib/site'
 import { RowActions } from './RowActions'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
 
@@ -16,6 +16,8 @@ interface EditorRow {
 }
 
 export interface TestimonialsEditorProps {
+  pageId: string
+  sectionId: string
   tenantId: string
   site: SiteDefinition
   onCancel: () => void
@@ -23,8 +25,10 @@ export interface TestimonialsEditorProps {
   onDirtyChange?: (dirty: boolean) => void
 }
 
-export function TestimonialsEditor ({ tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: TestimonialsEditorProps) {
-  const testimonials = findHomePage(site)?.sections.find(isTestimonialsSection)
+export function TestimonialsEditor ({ pageId, sectionId, tenantId, site, onCancel, onDirtyChange = () => {}, onSaved }: TestimonialsEditorProps) {
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedTestimonials = page?.sections.find((section) => section.id === sectionId)
+  const testimonials = selectedTestimonials && isTestimonialsSection(selectedTestimonials) ? selectedTestimonials : undefined
   const nextKey = useRef(1)
   const [title, setTitle] = useState(testimonials?.content.title ?? 'Testimonials')
   const [rows, setRows] = useState<EditorRow[]>(() => testimonials
@@ -65,7 +69,8 @@ export function TestimonialsEditor ({ tenantId, site, onCancel, onDirtyChange = 
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeTestimonials(tenantId, {
+      if (!testimonials) throw new Error('Testimonials section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, testimonials.id, {
         title: title.trim(),
         items: rows.map(({ id, customerName, quote }) => ({
           ...(id ? { id } : {}),

@@ -48,7 +48,7 @@ export function appendSitePath (siteBaseUrl: string, path: string): string {
 export function sharedSiteRedirectTarget (
   siteStatus: string,
   canonicalHost: string | null,
-  path: '/' | '/contact'
+  path: string
 ): string | null {
   if (siteStatus !== 'PUBLISHED' || !canonicalHost) return null
   const base = resolveSiteBaseUrl('', {}, canonicalHost)

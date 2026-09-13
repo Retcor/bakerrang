@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { imageSize } from 'image-size'
 import { db } from '../client/firestoreClient.js'
+import { writeAuditEvent } from './auditService.js'
 import { gcsStorage } from '../client/gcsClient.js'
 
 const TENANTS = 'tenants'
@@ -102,7 +103,9 @@ const siteRefsFor = (tenantId) => {
   const config = tenant.collection('site').doc('config')
   const home = config.collection('pages').doc('home')
   const published = config.collection('published').doc('current')
-  return { tenant, config, home, published }
+  const revisionIndex = config.collection('revisionIndex').doc('current')
+  const revisionMedia = (revisionId) => config.collection('revisionMedia').doc(revisionId)
+  return { tenant, config, home, published, revisionIndex, revisionMedia }
 }
 
 const requireTenant = async (tenantId) => {
@@ -110,7 +113,7 @@ const requireTenant = async (tenantId) => {
   if (!snapshot.exists) throw httpError(404, 'Tenant not found')
 }
 
-export const createMedia = async (tenantId, file, actorUserId) => {
+export const createMedia = async (tenantId, file, actorUserId, actor) => {
   const image = inspectImage(file)
   await requireTenant(tenantId)
 
@@ -144,7 +147,10 @@ export const createMedia = async (tenantId, file, actorUserId) => {
 
   const ref = mediaRef(tenantId, mediaId)
   try {
-    await ref.set(metadata)
+    await firestore.runTransaction(async (transaction) => {
+      transaction.set(ref, metadata)
+      if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'media.upload', entityType: 'media', entityId: mediaId, summary: 'Uploaded media', metadata: { mediaId, originalFilename: metadata.originalFilename, contentType: metadata.contentType, sizeBytes: metadata.sizeBytes } })
+    })
   } catch (error) {
     try {
       const confirmation = await ref.get()
@@ -216,13 +222,15 @@ export const requireGalleryMedia = (tenantId, mediaIds) =>
 
 export const collectSiteMediaIds = (definition) => {
   const galleryItems = []
+  const logoItems = []
   const aboutSections = []
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
     for (const section of Array.isArray(page?.sections) ? page.sections : []) {
-      if (section?.id === 'about' && section?.type === 'about') aboutSections.push(section)
-      if (section?.id === 'gallery' && section?.type === 'gallery' && Array.isArray(section.content?.items)) {
+      if (section?.type === 'about') aboutSections.push(section)
+      if (section?.type === 'gallery' && Array.isArray(section.content?.items)) {
         galleryItems.push(...section.content.items)
       }
+      if (section?.type === 'logos' && Array.isArray(section.content?.items)) logoItems.push(...section.content.items)
     }
   }
   const logoMediaId = nonEmptyString(definition?.branding?.logoMediaId)
@@ -238,8 +246,10 @@ export const collectSiteMediaIds = (definition) => {
     ...(logoMediaId ? [logoMediaId] : []),
     ...(faviconMediaId ? [faviconMediaId] : []),
     ...(socialImageMediaId ? [socialImageMediaId] : []),
+    ...(Array.isArray(definition?.pages) ? definition.pages.map((page) => page?.seo?.socialImageMediaId).filter(nonEmptyString) : []),
     ...aboutSections.map((section) => section.content?.imageMediaId).filter(nonEmptyString),
-    ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString)
+    ...galleryItems.map((item) => item?.mediaId).filter(nonEmptyString),
+    ...logoItems.map((item) => item?.mediaId).filter(nonEmptyString)
   ])]
 }
 
@@ -247,13 +257,17 @@ const MEDIA_USAGE_ORDER = [
   ['working', 'logo'],
   ['working', 'favicon'],
   ['working', 'social image'],
+  ['working', 'page SEO social image'],
   ['working', 'about image'],
   ['working', 'gallery'],
+  ['working', 'logos'],
   ['published', 'logo'],
   ['published', 'favicon'],
   ['published', 'social image'],
+  ['published', 'page SEO social image'],
   ['published', 'about image'],
-  ['published', 'gallery']
+  ['published', 'gallery'],
+  ['published', 'logos']
 ]
 
 const collectMediaLocations = (definition, mediaId, surface) => {
@@ -262,12 +276,16 @@ const collectMediaLocations = (definition, mediaId, surface) => {
   if (definition?.branding?.faviconMediaId === mediaId) found.add('favicon')
   if (definition?.businessProfile?.socialImageMediaId === mediaId) found.add('social image')
   for (const page of Array.isArray(definition?.pages) ? definition.pages : []) {
+    if (page?.seo?.socialImageMediaId === mediaId) found.add('page SEO social image')
     for (const section of Array.isArray(page?.sections) ? page.sections : []) {
-      if (section?.id === 'about' && section?.type === 'about' && section.content?.imageMediaId === mediaId) {
+      if (section?.type === 'about' && section.content?.imageMediaId === mediaId) {
         found.add('about image')
       }
-      if (section?.id === 'gallery' && section?.type === 'gallery' && Array.isArray(section.content?.items)) {
+      if (section?.type === 'gallery' && Array.isArray(section.content?.items)) {
         if (section.content.items.some((item) => item?.mediaId === mediaId)) found.add('gallery')
+      }
+      if (section?.type === 'logos' && Array.isArray(section.content?.items)) {
+        if (section.content.items.some((item) => item?.mediaId === mediaId)) found.add('logos')
       }
     }
   }
@@ -275,6 +293,9 @@ const collectMediaLocations = (definition, mediaId, surface) => {
 }
 
 export const formatMediaInUseMessage = (locations) => {
+  if ((locations || []).some(([surface]) => surface === 'published revision history')) {
+    return 'Image is still used in published revision history'
+  }
   const selected = new Set((locations || []).map(([surface, field]) => `${surface}|${field}`))
   const labels = MEDIA_USAGE_ORDER
     .filter(([surface, field]) => selected.has(`${surface}|${field}`))
@@ -286,21 +307,27 @@ export const formatMediaInUseMessage = (locations) => {
 
 const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
   const refs = siteRefsFor(tenantId)
-  const [configSnapshot, homeSnapshot, publishedSnapshot] = await Promise.all([
-    transaction ? transaction.get(refs.config) : refs.config.get(),
-    transaction ? transaction.get(refs.home) : refs.home.get(),
+  const configSnapshot = await (transaction ? transaction.get(refs.config) : refs.config.get())
+  const config = configSnapshot.exists ? configSnapshot.data() : null
+  const pageOrder = config && Object.prototype.hasOwnProperty.call(config, 'pageOrder') ? config.pageOrder : ['home']
+  if (!Array.isArray(pageOrder) || pageOrder[0] !== 'home' || new Set(pageOrder).size !== pageOrder.length) throw httpError(500, 'Site page order is invalid')
+  const pageRefs = pageOrder.map((pageId) => refs.config.collection('pages').doc(pageId))
+  const [pageSnapshots, publishedSnapshot] = await Promise.all([
+    transaction ? transaction.getAll(...pageRefs) : firestore.getAll(...pageRefs),
     transaction ? transaction.get(refs.published) : refs.published.get()
   ])
-
-  const working = configSnapshot.exists
+  if (config && pageSnapshots.some((snapshot) => !snapshot.exists)) throw httpError(500, 'Site page is missing')
+  const working = config
     ? {
-        branding: configSnapshot.data().branding,
-        businessProfile: configSnapshot.data().businessProfile,
-        pages: [{
-          sections: homeSnapshot.exists && Array.isArray(homeSnapshot.data().sections)
-            ? homeSnapshot.data().sections
-            : []
-        }]
+        branding: config.branding,
+        businessProfile: config.businessProfile,
+        pages: pageSnapshots.map((snapshot) => ({
+          id: snapshot.data().id,
+          slug: snapshot.data().slug,
+          title: snapshot.data().title,
+          seo: snapshot.data().seo,
+          sections: Array.isArray(snapshot.data().sections) ? snapshot.data().sections : []
+        }))
       }
     : null
 
@@ -313,14 +340,23 @@ const readWorkingAndPublishedDefinitions = async (tenantId, transaction) => {
 }
 
 export const findMediaUsage = async (tenantId, mediaId, transaction) => {
+  const refs = siteRefsFor(tenantId)
+  const indexSnapshot = await (transaction ? transaction.get(refs.revisionIndex) : refs.revisionIndex.get())
+  const entries = Array.isArray(indexSnapshot.exists ? indexSnapshot.data()?.entries : null)
+    ? indexSnapshot.data().entries.filter((entry) => typeof entry?.revisionId === 'string' && entry.revisionId).slice(0, 10)
+    : []
+  const manifests = entries.length
+    ? await (transaction ? transaction.getAll(...entries.map((entry) => refs.revisionMedia(entry.revisionId))) : firestore.getAll(...entries.map((entry) => refs.revisionMedia(entry.revisionId))))
+    : []
   const { working, published } = await readWorkingAndPublishedDefinitions(tenantId, transaction)
   return [
+    ...(manifests.some((snapshot) => Array.isArray(snapshot.exists ? snapshot.data()?.mediaIds : null) && snapshot.data().mediaIds.includes(mediaId)) ? [['published revision history', '']] : []),
     ...(working ? collectMediaLocations(working, mediaId, 'working') : []),
     ...(published ? collectMediaLocations(published, mediaId, 'published') : [])
   ]
 }
 
-export const deleteUnusedMedia = async (tenantId, mediaId) => {
+export const deleteUnusedMedia = async (tenantId, mediaId, actor) => {
   await requireTenant(tenantId)
   const ref = mediaRef(tenantId, mediaId)
   // All reference writers read this same media document in their write transaction.
@@ -343,7 +379,16 @@ export const deleteUnusedMedia = async (tenantId, mediaId) => {
   }
   try {
     // IDs/object names are immutable and never reused; duplicate retries converge.
-    await ref.delete()
+    await firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref)
+      // A second cleanup attempt after a successful commit is harmless.
+      if (!snapshot.exists) return
+      transaction.delete(ref)
+      if (actor) {
+        const value = snapshot.data() || {}
+        writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'media.delete', entityType: 'media', entityId: mediaId, summary: 'Deleted media', metadata: { mediaId, originalFilename: value.originalFilename || null, contentType: value.contentType || null, sizeBytes: value.sizeBytes || null } })
+      }
+    })
   } catch {
     throw Object.assign(httpError(502, 'Image cleanup did not finish. Retry the deletion.'), { expose: true })
   }
@@ -400,43 +445,60 @@ export const hydrateSiteMedia = async (tenantId, definition) => {
           }
         }
       : {}),
-    pages: (Array.isArray(definition?.pages) ? definition.pages : []).map((page) => ({
-      ...page,
-      sections: (Array.isArray(page?.sections) ? page.sections : []).map((section) => {
-        if (section?.id === 'about' && section?.type === 'about') {
-          const content = { ...(section.content || {}) }
-          delete content.imageSrc
-          delete content.imageWidth
-          delete content.imageHeight
-          const mediaId = nonEmptyString(content.imageMediaId) ? content.imageMediaId : null
-          const media = mediaId && resolved.get(mediaId)
-          if (media && nonEmptyString(content.imageAlt)) {
-            content.imageSrc = objectStorage.publicUrl(media.objectName)
-            content.imageWidth = media.width
-            content.imageHeight = media.height
-          }
-          return { ...section, content }
-        }
-        if (section?.id !== 'gallery' || section?.type !== 'gallery') return section
-        const items = (Array.isArray(section.content?.items) ? section.content.items : [])
-          .map((item) => {
-            const media = item && resolved.get(item.mediaId)
-            if (!media || !nonEmptyString(item.id) || !nonEmptyString(item.altText)) return null
-            return {
-              id: item.id,
-              mediaId: item.mediaId,
-              altText: item.altText,
-              src: objectStorage.publicUrl(media.objectName),
-              width: media.width,
-              height: media.height
+    pages: (Array.isArray(definition?.pages) ? definition.pages : []).map((page) => {
+      const { socialImageSrc, socialImageWidth, socialImageHeight, ...seo } = page?.seo || {}
+      return {
+        ...page,
+        ...(page?.seo
+          ? {
+              seo: {
+                ...seo,
+                ...(nonEmptyString(seo.socialImageMediaId) && resolved.has(seo.socialImageMediaId)
+                  ? {
+                      socialImageSrc: objectStorage.publicUrl(resolved.get(seo.socialImageMediaId).objectName),
+                      socialImageWidth: resolved.get(seo.socialImageMediaId).width,
+                      socialImageHeight: resolved.get(seo.socialImageMediaId).height
+                    }
+                  : {})
+              }
             }
-          })
-          .filter(Boolean)
-        return {
-          ...section,
-          content: { ...section.content, items }
-        }
-      })
-    }))
+          : {}),
+        sections: (Array.isArray(page?.sections) ? page.sections : []).map((section) => {
+          if (section?.type === 'about') {
+            const content = { ...(section.content || {}) }
+            delete content.imageSrc
+            delete content.imageWidth
+            delete content.imageHeight
+            const mediaId = nonEmptyString(content.imageMediaId) ? content.imageMediaId : null
+            const media = mediaId && resolved.get(mediaId)
+            if (media && nonEmptyString(content.imageAlt)) {
+              content.imageSrc = objectStorage.publicUrl(media.objectName)
+              content.imageWidth = media.width
+              content.imageHeight = media.height
+            }
+            return { ...section, content }
+          }
+          if (section?.type !== 'gallery' && section?.type !== 'logos') return section
+          const items = (Array.isArray(section.content?.items) ? section.content.items : [])
+            .map((item) => {
+              const media = item && resolved.get(item.mediaId)
+              if (!media || !nonEmptyString(item.id) || !nonEmptyString(item.altText)) return null
+              return {
+                id: item.id,
+                mediaId: item.mediaId,
+                altText: item.altText,
+                src: objectStorage.publicUrl(media.objectName),
+                width: media.width,
+                height: media.height
+              }
+            })
+            .filter(Boolean)
+          return {
+            ...section,
+            content: { ...section.content, items }
+          }
+        })
+      }
+    })
   }
 }

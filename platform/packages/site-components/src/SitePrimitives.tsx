@@ -4,8 +4,8 @@ export function SiteContainer ({ children, className = '' }: { children: ReactNo
   return <div className={`site-container mx-auto w-full px-5 sm:px-8 ${className}`}>{children}</div>
 }
 
-export function SiteSection ({ children, id, className = '' }: { children: ReactNode, id: string, className?: string }) {
-  return <section className={`site-section scroll-mt-24 border-b border-site-border ${className}`} data-br-section={id} data-br-section-id={id} id={id}>{children}</section>
+export function SiteSection ({ anchorId, children, className = '', sectionType }: { anchorId: string, children: ReactNode, sectionType: string, className?: string }) {
+  return <section className={`site-section scroll-mt-24 border-b border-site-border ${className}`} data-br-section={sectionType} data-br-section-id={anchorId} id={`section-${anchorId}`}>{children}</section>
 }
 
 export function SectionHeading ({ children, eyebrow }: { children: ReactNode, eyebrow?: string }) {

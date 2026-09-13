@@ -15,15 +15,15 @@ test('SiteShell emits one conditional style node from scopedCustomCss only', asy
   assert.equal((shell.match(/id="br-custom-css"/g) ?? []).length, 1)
 })
 
-test('Home and Contact share the same site-level SiteShell injection path', async () => {
-  const [home, contact] = await Promise.all([
+test('the generic public page owns the single SiteShell injection path', async () => {
+  const [home, page] = await Promise.all([
     source('../components/PublicHome.tsx'),
-    source('../components/PublicContact.tsx')
+    source('../components/PublicPage.tsx')
   ])
-  assert.match(home, /<SiteShell currentPage="home" site=\{site\}/)
-  assert.match(contact, /<SiteShell currentPage="contact" site=\{site\}/)
-  assert.doesNotMatch(`${home}\n${contact}`, /br-custom-css|site\.customCss/)
-  assert.doesNotMatch(`${home}\n${contact}`, /data-preview-(?:frame|banner|site-layer)/)
+  assert.match(home, /<PublicPage navigationContext=\{navigationContext\} page=\{home\}/)
+  assert.match(page, /<SiteShell activePage=\{page\} footerNav=\{navigation\.footerItems\}/)
+  assert.doesNotMatch(`${home}\n${page}`, /br-custom-css|site\.customCss/)
+  assert.doesNotMatch(`${home}\n${page}`, /data-preview-(?:frame|banner|site-layer)/)
 })
 
 test('breakout-safe scoped CSS remains inert text in normal JSX rendering', () => {

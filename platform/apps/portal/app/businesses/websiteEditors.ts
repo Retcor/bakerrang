@@ -1,4 +1,4 @@
-export const websiteEditorGroups = ['Site setup', 'Homepage', 'Advanced'] as const
+export const websiteEditorGroups = ['Site setup', 'Design', 'Site structure', 'Search & sharing', 'Publishing', 'Advanced'] as const
 
 export type WebsiteEditorGroup = typeof websiteEditorGroups[number]
 
@@ -6,16 +6,14 @@ export const websiteEditors = [
   { id: 'branding', label: 'Branding', group: 'Site setup', description: 'Manage the site name, logo, and favicon.' },
   { id: 'theme', label: 'Theme', group: 'Site setup', description: 'Set the visual style, typography, spacing, and colors.' },
   { id: 'businessProfile', label: 'Business Profile', group: 'Site setup', description: 'Maintain the business details used across the website.' },
-  { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set weekly hours and their homepage presentation.' },
+  { id: 'businessHours', label: 'Business Hours', group: 'Site setup', description: 'Set the weekly schedule used across the website.' },
   { id: 'socialProfiles', label: 'Social Profiles', group: 'Site setup', description: 'Connect the business social profiles.' },
-  { id: 'hero', label: 'Hero', group: 'Homepage', description: 'Shape the first message visitors see on the homepage.' },
-  { id: 'about', label: 'About', group: 'Homepage', description: 'Tell visitors about the business.' },
-  { id: 'services', label: 'Services', group: 'Homepage', description: 'Present the services the business offers.' },
-  { id: 'gallery', label: 'Gallery', group: 'Homepage', description: 'Choose and arrange homepage gallery images.' },
-  { id: 'testimonials', label: 'Testimonials', group: 'Homepage', description: 'Show customer quotes on the homepage.' },
-  { id: 'faq', label: 'FAQ', group: 'Homepage', description: 'Answer common questions on the homepage.' },
-  { id: 'contact', label: 'Contact', group: 'Homepage', description: 'Configure the homepage contact call to action.' },
-  { id: 'sections', label: 'Manage Sections', group: 'Homepage', description: 'Choose and order the sections shown on the homepage.' },
+  { id: 'templates', label: 'Templates', group: 'Design', description: 'Apply a curated starting point to the working site.' },
+  { id: 'pages', label: 'Pages', group: 'Site structure', description: 'Create, organize, and edit the site’s pages.' },
+  { id: 'header', label: 'Header & Navigation', group: 'Site structure', description: 'Configure the shared header, navigation, and optional call to action.' },
+  { id: 'footer', label: 'Footer', group: 'Site structure', description: 'Configure the shared footer and its global information.' },
+  { id: 'seo', label: 'SEO & Social', group: 'Search & sharing', description: 'Manage search descriptions, sharing images, and indexing preferences.' },
+  { id: 'revisions', label: 'Revision History', group: 'Publishing', description: 'Restore a recent published revision to the working site.' },
   { id: 'customCss', label: 'Custom CSS', group: 'Advanced', description: 'Add scoped styling overrides for the website.' }
 ] as const satisfies ReadonlyArray<{
   id: string
@@ -24,13 +22,13 @@ export const websiteEditors = [
   description: string
 }>
 
-export type WebsiteEditorId = typeof websiteEditors[number]['id']
+export type WebsiteEditorId = typeof websiteEditors[number]['id'] | 'page'
 export type WebsitePaneId = WebsiteEditorId | 'overview'
 
 export const overviewEditor = {
   id: 'overview',
   label: 'Overview',
-  description: 'Review publication status and homepage structure.'
+  description: 'Review publication status and the working site structure.'
 } as const
 
 export const websiteEditorById = new Map<WebsiteEditorId, typeof websiteEditors[number]>(
@@ -38,7 +36,7 @@ export const websiteEditorById = new Map<WebsiteEditorId, typeof websiteEditors[
 )
 
 export function parseWebsiteEditor (value: string | null): WebsiteEditorId | null {
-  return value && websiteEditorById.has(value as WebsiteEditorId) ? value as WebsiteEditorId : null
+  return value === 'page' || (value && websiteEditorById.has(value as WebsiteEditorId)) ? value as WebsiteEditorId : null
 }
 
 export function websitePaneMetadata (id: WebsitePaneId) {

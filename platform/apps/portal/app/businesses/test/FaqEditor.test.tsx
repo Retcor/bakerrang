@@ -2,8 +2,8 @@ import type { SiteDefinition } from '@bakerrang/site-schema'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ upsertHomeFaq: vi.fn() }))
-vi.mock('../../../lib/site', () => ({ upsertHomeFaq: mocks.upsertHomeFaq }))
+const mocks = vi.hoisted(() => ({ updateSectionContent: vi.fn() }))
+vi.mock('../../../lib/site', () => ({ updateSectionContent: mocks.updateSectionContent }))
 
 import { FaqEditor } from '../FaqEditor'
 
@@ -14,11 +14,11 @@ const theme = {
 }
 const site = (withFaq = false): SiteDefinition => ({
   status: 'DRAFT',
-  branding: { siteName: 'Bakery', primaryColor: '#334155', accentColor: '#0f766e' },
+  branding: { siteName: 'Bakery' },
   theme,
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
-    { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
-    ...(withFaq ? [{ id: 'faq' as const, type: 'faq' as const, content: {
+    { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
+    ...(withFaq ? [{ id: 'faq-id', type: 'faq' as const, hidden: false, content: {
       heading: 'Questions', intro: 'Start here.', items: [
         { id: 'first', question: 'First?', answer: 'First answer.' },
         { id: 'second', question: 'Second?', answer: 'Second answer.' }
@@ -30,21 +30,21 @@ const site = (withFaq = false): SiteDefinition => ({
 describe('FAQ editor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.upsertHomeFaq.mockResolvedValue(site(true))
+    mocks.updateSectionContent.mockResolvedValue(site(true))
   })
 
   it('starts a new FAQ with one required row and validates incomplete content', () => {
-    render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} site={site()} tenantId="tenant-1" />)
+    render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site()} tenantId="tenant-1" sectionId="faq-id" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('Frequently Asked Questions')
     expect(screen.getAllByLabelText('Question')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Remove FAQ item' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('at least one complete question and answer')
-    expect(mocks.upsertHomeFaq).not.toHaveBeenCalled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
   })
 
   it('loads existing content and exposes accessible disabled ordering controls', () => {
-    render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} site={site(true)} tenantId="tenant-1" />)
+    render(<FaqEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site(true)} tenantId="tenant-1" sectionId="faq-id" />)
     expect(screen.getByLabelText('Heading')).toHaveValue('Questions')
     expect(screen.getByLabelText(/Intro/)).toHaveValue('Start here.')
     expect(screen.getAllByLabelText('Question')[0]).toHaveValue('First?')
@@ -55,7 +55,7 @@ describe('FAQ editor', () => {
 
   it('adds, edits, removes, reorders, preserves persisted IDs, and saves canonical input', async () => {
     const onSaved = vi.fn()
-    render(<FaqEditor onCancel={() => undefined} onSaved={onSaved} site={site(true)} tenantId="tenant-1" />)
+    render(<FaqEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site(true)} tenantId="tenant-1" sectionId="faq-id" />)
     fireEvent.click(screen.getAllByRole('button', { name: 'Move FAQ item up' })[1])
     let groups = screen.getAllByRole('group')
     expect(within(groups[0]).getByLabelText('Question')).toHaveValue('Second?')
@@ -67,7 +67,7 @@ describe('FAQ editor', () => {
     fireEvent.click(within(groups[1]).getByRole('button', { name: 'Remove FAQ item' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    await waitFor(() => expect(mocks.upsertHomeFaq).toHaveBeenCalledWith('tenant-1', {
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'faq-id', {
       heading: 'Questions', intro: 'Start here.', items: [
         { id: 'second', question: 'Second?', answer: 'Second answer.' },
         { question: 'Third?', answer: 'Third answer.' }

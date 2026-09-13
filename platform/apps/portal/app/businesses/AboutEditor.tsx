@@ -1,26 +1,35 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { findHomePage, isAboutSection, type SiteDefinition } from '@bakerrang/site-schema'
-import { Button, FileInput, Input, Textarea } from '@bakerrang/ui'
+import { isAboutSection, type SiteDefinition } from '@bakerrang/site-schema'
+import { Button, FileInput, Input, Select, Textarea } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { getMedia, uploadMedia, type MediaItem } from '../../lib/media'
-import { upsertHomeAbout } from '../../lib/site'
+import { updateSectionContent, type LinkActionInput } from '../../lib/site'
 import { WebsiteEditorShell } from './WebsiteEditorShell'
+import { SectionActionFields, type SectionActionType } from './SectionActionFields'
 
-export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
+export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, pageId, sectionId, site, tenantId }: {
+  pageId: string
+  sectionId: string
   onCancel: () => void
   onDirtyChange?: (dirty: boolean) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
 }) {
-  const about = findHomePage(site)?.sections.find(isAboutSection)
+  const page = site.pages.find((candidate) => candidate.id === pageId)
+  const selectedAbout = page?.sections.find((section) => section.id === sectionId)
+  const about = selectedAbout && isAboutSection(selectedAbout) ? selectedAbout : undefined
   const [eyebrow, setEyebrow] = useState(about?.content.eyebrow ?? '')
   const [heading, setHeading] = useState(about?.content.heading ?? '')
   const [body, setBody] = useState(about?.content.body ?? '')
   const [imageMediaId, setImageMediaId] = useState(about?.content.imageMediaId)
   const [imageAlt, setImageAlt] = useState(about?.content.imageAlt ?? '')
+  const [imagePosition, setImagePosition] = useState<'left' | 'right'>(about?.content.imagePosition ?? 'left')
+  const [buttonLabel, setButtonLabel] = useState(about?.content.buttonLabel ?? '')
+  const [actionType, setActionType] = useState<SectionActionType>(about?.content.action?.type ?? 'url')
+  const [actionValue, setActionValue] = useState(about?.content.action?.value ?? '')
   const [media, setMedia] = useState<MediaItem[]>([])
   const [loadingMedia, setLoadingMedia] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -74,14 +83,18 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
     if (eyebrow.trim().length > 60) return setError('Eyebrow must be 60 characters or fewer.')
     if (imageMediaId && !imageAlt.trim()) return setError('Image alt text is required when an About image is selected.')
     if (imageAlt.trim().length > 250) return setError('Image alt text must be 250 characters or fewer.')
+    if (Boolean(buttonLabel.trim()) !== Boolean(actionValue.trim())) return setError('Button label and action must be provided together.')
     setSaving(true)
     setError(null)
     try {
-      onSaved(await upsertHomeAbout(tenantId, {
+      if (!about) throw new Error('About section is unavailable')
+      onSaved(await updateSectionContent(tenantId, pageId, about.id, {
         ...(eyebrow.trim() ? { eyebrow: eyebrow.trim() } : {}),
         heading: heading.trim(),
         body: body.trim(),
-        ...(imageMediaId ? { imageMediaId, imageAlt: imageAlt.trim() } : {})
+        ...(imageMediaId ? { imageMediaId, imageAlt: imageAlt.trim() } : {}),
+        ...(imageMediaId && imagePosition === 'right' ? { imagePosition } : {}),
+        ...(buttonLabel.trim() ? { buttonLabel: buttonLabel.trim(), action: { type: actionType, value: actionValue.trim() } as LinkActionInput } : {})
       }))
     } catch (caught) {
       setError(caught instanceof ApiError && caught.status === 400 ? caught.message : 'Unable to save About. Please try again.')
@@ -91,7 +104,7 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   }
 
   return (
-    <WebsiteEditorShell dirtyValue={{ eyebrow: eyebrow.trim(), heading: heading.trim(), body: body.trim(), imageMediaId, imageAlt: imageMediaId ? imageAlt.trim() : '' }} editor="about" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploading} saving={saving}>
+    <WebsiteEditorShell dirtyValue={{ eyebrow: eyebrow.trim(), heading: heading.trim(), body: body.trim(), imageMediaId, imageAlt: imageMediaId ? imageAlt.trim() : '', imagePosition, buttonLabel: buttonLabel.trim(), actionType, actionValue: actionValue.trim() }} editor="about" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saveDisabled={uploading} saving={saving}>
       <p className="text-sm leading-6 text-fg-muted">Tell visitors what makes this business distinct. Save, then use Preview to review it on the website.</p>
 
       <label className="mt-5 block text-sm font-semibold text-fg" htmlFor={`about-eyebrow-${tenantId}`}>Eyebrow / label <span className="font-normal text-fg-muted">Optional</span></label>
@@ -124,7 +137,10 @@ export function AboutEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
           </ul>
         )}
         {imageMediaId && <><label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`about-image-alt-${tenantId}`}>Image alt text</label><Input className="mt-2" disabled={saving} id={`about-image-alt-${tenantId}`} maxLength={250} onChange={(event) => setImageAlt(event.target.value)} required value={imageAlt} /></>}
+        {imageMediaId && <><label className="mt-4 block text-sm font-semibold text-fg" htmlFor={`about-image-position-${tenantId}`}>Image position</label><Select className="mt-2" disabled={saving} id={`about-image-position-${tenantId}`} onChange={(event) => setImagePosition(event.target.value as 'left' | 'right')} value={imagePosition}><option value="left">Left</option><option value="right">Right</option></Select></>}
       </section>
+
+      <section className="mt-6" aria-labelledby={`about-button-${tenantId}`}><h4 className="text-sm font-semibold text-fg" id={`about-button-${tenantId}`}>Optional button</h4><label className="mt-3 block text-sm font-semibold text-fg" htmlFor={`about-button-label-${tenantId}`}>Button Label</label><Input className="mt-2" disabled={saving} id={`about-button-label-${tenantId}`} maxLength={60} onChange={(event) => setButtonLabel(event.target.value)} value={buttonLabel} /><SectionActionFields disabled={saving} id={`about-action-${tenantId}`} onTypeChange={setActionType} onValueChange={setActionValue} type={actionType} value={actionValue} /></section>
 
     </WebsiteEditorShell>
   )

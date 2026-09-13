@@ -1,11 +1,12 @@
 import type { SiteDefinition } from '@bakerrang/site-schema'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../../lib/api'
 
 const baseSite: SiteDefinition = {
   status: 'DRAFT',
   hasUnpublishedChanges: false,
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   theme: {
     colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' },
     headingFont: 'inter', bodyFont: 'inter', cornerStyle: 'soft', contentWidth: 'standard', sectionSpacing: 'comfortable'
@@ -13,9 +14,9 @@ const baseSite: SiteDefinition = {
   pages: [{
     id: 'home', slug: '/', title: 'Home',
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
-      { id: 'about', type: 'about', content: { heading: 'About', body: 'Our story' } },
-      { id: 'faq', type: 'faq', content: { heading: 'FAQ', items: [{ id: 'q1', question: 'When?', answer: 'Today' }] } }
+      { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
+      { id: 'about-id', type: 'about', hidden: false, content: { heading: 'About', body: 'Our story' } },
+      { id: 'faq-id', type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ id: 'q1', question: 'When?', answer: 'Today' }] } }
     ]
   }]
 }
@@ -26,7 +27,9 @@ const mocks = vi.hoisted(() => ({
   upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(),
   updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(),
   updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(),
-  updateCustomCss: vi.fn()
+  updateCustomCss: vi.fn(), updateSectionContent: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(),
+  updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn(),
+  getSiteRevisions: vi.fn(), restoreSiteRevision: vi.fn()
 }))
 
 const navigation = vi.hoisted(() => ({
@@ -53,41 +56,54 @@ describe('Website workspace', () => {
     mocks.createSitePreviewToken.mockResolvedValue({ token: 'preview', expiresAt: 1 })
     mocks.publishSite.mockResolvedValue({ ...baseSite, status: 'PUBLISHED', hasUnpublishedChanges: false, lastPublishedAt: 100 })
     mocks.unpublishSite.mockResolvedValue(baseSite)
+    mocks.getSiteRevisions.mockResolvedValue({ revisions: [] })
+    mocks.getSiteTemplates.mockResolvedValue([
+      { id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A practical local-service website.', tags: ['Local', 'Service'] },
+      { id: 'classic-professional', version: 1, name: 'Classic Professional', description: 'A trustworthy professional website.', tags: ['Professional'] },
+      { id: 'bold-contractor', version: 1, name: 'Bold Contractor', description: 'A strong contractor website.', tags: ['Contractor'] }
+    ])
   })
 
   it('opens to Overview and exposes the authoritative grouped desktop hierarchy', async () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     expect(await screen.findByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
     expect(screen.getAllByText('Draft').length).toBeGreaterThan(0)
-    expect(screen.getByText('3 homepage sections configured')).toBeInTheDocument()
-    expect(screen.getByText('Hero · About · FAQ')).toBeInTheDocument()
+    expect(screen.getByText('1 page · 3 sections')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Unpublish' })).not.toBeInTheDocument()
 
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Hero', 'About', 'Services', 'Gallery', 'Testimonials', 'FAQ', 'Contact', 'Manage Sections', 'Custom CSS']) {
+    for (const label of ['Branding', 'Theme', 'Business Profile', 'Business Hours', 'Social Profiles', 'Templates', 'Pages', 'Header & Navigation', 'Footer', 'SEO & Social', 'Revision History', 'Custom CSS']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument()
     }
     const setup = within(nav).getByRole('heading', { name: 'Site setup' }).closest('section') as HTMLElement
-    const homepage = within(nav).getByRole('heading', { name: 'Homepage' }).closest('section') as HTMLElement
+    const design = within(nav).getByRole('heading', { name: 'Design' }).closest('section') as HTMLElement
+    const structure = within(nav).getByRole('heading', { name: 'Site structure' }).closest('section') as HTMLElement
     const advanced = within(nav).getByRole('heading', { name: 'Advanced' }).closest('section') as HTMLElement
+    const search = within(nav).getByRole('heading', { name: 'Search & sharing' }).closest('section') as HTMLElement
+    const publishing = within(nav).getByRole('heading', { name: 'Publishing' }).closest('section') as HTMLElement
     expect(within(nav).getByRole('heading', { name: 'Site setup' })).toHaveClass('text-[0.6875rem]', 'font-semibold', 'tracking-[0.12em]')
-    expect(homepage).toHaveClass('border-t', 'border-border', 'pt-5')
+    expect(structure).toHaveClass('border-t', 'border-border', 'pt-5')
     expect(within(nav).queryByRole('button', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'Site setup' })).not.toBeInTheDocument()
     expect(within(setup).getByRole('button', { name: 'Social Profiles' })).toBeInTheDocument()
-    expect(within(setup).queryByRole('button', { name: 'Manage Sections' })).not.toBeInTheDocument()
-    expect(within(homepage).getByRole('button', { name: 'Manage Sections' })).toBeInTheDocument()
+    expect(within(setup).queryByRole('button', { name: 'Pages' })).not.toBeInTheDocument()
+    expect(within(design).getByRole('button', { name: 'Templates' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Pages' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Header & Navigation' })).toBeInTheDocument()
+    expect(within(structure).getByRole('button', { name: 'Footer' })).toBeInTheDocument()
+    expect(within(search).getByRole('button', { name: 'SEO & Social' })).toBeInTheDocument()
+    expect(within(publishing).getByRole('button', { name: 'Revision History' })).toBeInTheDocument()
     expect(within(advanced).getByRole('button', { name: 'Custom CSS' })).toBeInTheDocument()
   })
 
   it('selects valid deep links, fails invalid values to Overview, and keeps Preview persistent', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=page&pageId=home&sectionId=faq-id'
     const { unmount } = render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     expect(await screen.findByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Preview changes' })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
-    expect(within(nav).getByRole('button', { name: 'FAQ' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('button', { name: 'Pages' })).toHaveAttribute('aria-current', 'page')
     unmount()
 
     navigation.search = 'editor=not-real'
@@ -95,32 +111,38 @@ describe('Website workspace', () => {
     expect(await screen.findByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
   })
 
-  it('uses replace, preserves unrelated query parameters, avoids refetches, and Cancel returns to Overview', async () => {
+  it('returns to the exact page manager for a stale page section id', async () => {
+    navigation.search = 'editor=page&pageId=home&sectionId=deleted-section'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    expect(await screen.findByRole('heading', { name: 'Home sections' })).toBeInTheDocument()
+  })
+
+  it('uses replace, preserves unrelated query parameters, avoids refetches, and Overview returns from Pages', async () => {
     navigation.search = 'campaign=spring'
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     const nav = await screen.findByRole('navigation', { name: 'Website editor navigation' })
-    fireEvent.click(within(nav).getByRole('button', { name: 'FAQ' }))
-    expect(screen.getByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
-    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring&editor=faq', { scroll: false })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Pages' }))
+    expect(screen.getAllByRole('heading', { name: 'Pages' }).length).toBeGreaterThan(0)
+    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring&editor=pages', { scroll: false })
     expect(mocks.getSite).toHaveBeenCalledTimes(1)
     expect(mocks.getSiteDomain).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(within(nav).getByRole('button', { name: 'Overview' }))
     expect(screen.getByRole('heading', { name: 'Website Overview' })).toBeInTheDocument()
     expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?campaign=spring', { scroll: false })
     expect(mocks.getSite).toHaveBeenCalledTimes(1)
   })
 
   it('offers grouped dialog navigation below lg, shows the active pane, and closes after selection', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=page&pageId=home&sectionId=faq-id'
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
-    const change = await screen.findByRole('button', { name: /FAQ.*Change/ })
+    const change = await screen.findByRole('button', { name: /Pages.*Change/ })
     fireEvent.click(change)
     const dialog = screen.getByRole('dialog', { name: 'Website navigation' })
     const selector = within(dialog).getByRole('navigation', { name: 'Website editor selector' })
     expect(within(selector).getByRole('button', { name: 'Overview' })).toBeInTheDocument()
     expect(within(selector).getByRole('heading', { name: 'Site setup' })).toBeInTheDocument()
-    expect(within(selector).getByRole('heading', { name: 'Homepage' })).toBeInTheDocument()
+    expect(within(selector).getByRole('heading', { name: 'Site structure' })).toBeInTheDocument()
     expect(within(selector).getByRole('heading', { name: 'Advanced' })).toBeInTheDocument()
     fireEvent.click(within(selector).getByRole('button', { name: 'Theme' }))
     expect(screen.queryByRole('dialog', { name: 'Website navigation' })).not.toBeInTheDocument()
@@ -131,7 +153,7 @@ describe('Website workspace', () => {
     navigation.search = 'editor=theme'
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     await screen.findByRole('heading', { name: 'Theme' })
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Publish Site' }))
     await waitFor(() => expect(mocks.publishSite).toHaveBeenCalledWith('tenant-1'))
     expect(await screen.findByRole('button', { name: 'Republish' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
@@ -144,7 +166,7 @@ describe('Website workspace', () => {
     expect((await screen.findAllByText('Changes not published')).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Unpublish' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Republish' })).toBeInTheDocument()
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'FAQ' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'Pages' }))
     expect(screen.queryByRole('button', { name: 'Unpublish' })).not.toBeInTheDocument()
   })
 
@@ -162,14 +184,14 @@ describe('Website workspace', () => {
   })
 
   it('guards dirty editor navigation, blocks stale Preview and Publish, and protects beforeunload', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=page&pageId=home&sectionId=faq-id'
     const addListener = vi.spyOn(window, 'addEventListener')
     const removeListener = vi.spyOn(window, 'removeEventListener')
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     fireEvent.change(await screen.findByLabelText('Heading'), { target: { value: 'Unsaved FAQ' } })
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Preview changes' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Publish Site' })).toBeDisabled()
     expect(mocks.createSitePreviewToken).not.toHaveBeenCalled()
     expect(mocks.publishSite).not.toHaveBeenCalled()
     expect(addListener).toHaveBeenCalledWith('beforeunload', expect.any(Function))
@@ -188,26 +210,195 @@ describe('Website workspace', () => {
     expect(removeListener).toHaveBeenCalledWith('beforeunload', expect.any(Function))
   })
 
+  it('uses the shared dirty-navigation guard before opening Templates and leaves Templates clean while browsing', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Templates' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Templates' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByRole('heading', { name: 'Templates' })).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation guard before Revision History and keeps history clean while browsing', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Revision History' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Revision History' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByRole('heading', { name: 'Revision History' })).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+  })
+
+  it('accepts the authoritative restored site, remains in Revision History, and offers Preview Home', async () => {
+    const canonical = { ...baseSite, status: 'PUBLISHED' as const, hasUnpublishedChanges: true, branding: { siteName: 'Restored Bakery' } }
+    mocks.getSiteRevisions.mockResolvedValue({ revisions: [
+      { revisionId: 'current', publishedAt: 2, publishedByUserId: 'current', pageCount: 1, isCurrent: true },
+      { revisionId: 'older', publishedAt: 1, publishedByUserId: 'older', pageCount: 1, isCurrent: false }
+    ] })
+    mocks.restoreSiteRevision.mockResolvedValue(canonical)
+    const preview = vi.spyOn(window, 'open').mockReturnValue({ close: vi.fn(), location: { href: 'about:blank' }, opener: window } as unknown as Window)
+    navigation.search = 'editor=revisions'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Restore to Working' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Restore this published revision?' })).getByRole('button', { name: 'Restore to Working' }))
+    await waitFor(() => expect(mocks.restoreSiteRevision).toHaveBeenCalledWith('tenant-1', 'older'))
+    expect(await screen.findByText('Revision restored to the working site. Preview your changes, then Publish Site when ready.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Revision History' })).toBeInTheDocument()
+    expect(screen.getByText('Changes not published')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Home' }))
+    expect(preview).toHaveBeenCalledWith('about:blank', '_blank')
+    await waitFor(() => expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant-1'))
+  })
+
+  it('accepts the authoritative template response, remains on Templates, and previews Home', async () => {
+    const canonical: SiteDefinition = {
+      ...baseSite,
+      status: 'PUBLISHED',
+      hasUnpublishedChanges: true,
+      theme: { ...baseSite.theme, colors: { ...baseSite.theme.colors, primary: '#ff0000' } },
+      pages: [{ id: 'home', slug: '/', title: 'Home', sections: [] }, { id: 'server-page-id', slug: 'services', title: 'Services', sections: [] }]
+    }
+    mocks.applySiteTemplate.mockResolvedValue(canonical)
+    const preview = vi.spyOn(window, 'open').mockReturnValue({ close: vi.fn(), location: { href: 'about:blank' }, opener: window } as unknown as Window)
+    navigation.search = 'editor=templates'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    await screen.findByText('Modern Local Service')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Apply' })[0] as HTMLButtonElement)
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Template' }))
+    await waitFor(() => expect(mocks.applySiteTemplate).toHaveBeenCalledWith('tenant-1', 'modern-local-service'))
+    expect(await screen.findByText('Modern Local Service applied to the working site. Preview your changes, then Publish Site when ready.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Templates' })).toBeInTheDocument()
+    expect(screen.getByText('Changes not published')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Home' }))
+    expect(preview).toHaveBeenCalledWith('about:blank', '_blank')
+    await waitFor(() => expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant-1'))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Website editor navigation' })).getByRole('button', { name: 'Pages' }))
+    expect(await screen.findByRole('heading', { name: 'Services' })).toBeInTheDocument()
+  })
+
+  it('guards navigation after a local Theme preset is applied without saving', async () => {
+    navigation.search = 'editor=theme'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    await screen.findByRole('heading', { name: 'Theme' })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Midnight' }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Pages' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation confirmation for Header & Navigation', async () => {
+    navigation.search = 'editor=header'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all' }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Footer' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Header & Navigation' })).toBeInTheDocument()
+  })
+
+  it('uses the shared dirty-navigation confirmation when switching SEO & Social contexts', async () => {
+    navigation.search = 'editor=seo'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.change(await screen.findByLabelText('Default search description'), { target: { value: 'Unsaved site SEO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Home · /' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('Default search description')).toHaveValue('Unsaved site SEO')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home · /' }))
+    navigation.search = 'editor=seo&pageId=home'
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(await screen.findByLabelText('SEO title')).toBeInTheDocument()
+    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?editor=seo&pageId=home', { scroll: false })
+
+    fireEvent.change(screen.getByLabelText('SEO title'), { target: { value: 'Unsaved Home SEO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Site Defaults' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('SEO title')).toHaveValue('Unsaved Home SEO')
+  })
+
+  it('uses the shared dirty-navigation confirmation for Page Settings and keeps its draft on Cancel', async () => {
+    const pageSite = structuredClone(baseSite)
+    pageSite.pages.push({ id: 'about-page', slug: 'about', title: 'About', sections: [] })
+    mocks.getSite.mockResolvedValue(pageSite)
+    navigation.search = 'editor=pages'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Page settings' }))[0])
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Our bakery' } })
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('Title')).toHaveValue('Our bakery')
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
+  it('resets Page Settings after an authoritative save and preserves a validation-error draft', async () => {
+    const pageSite = structuredClone(baseSite)
+    pageSite.pages.push({ id: 'about-page', slug: 'about', title: 'About', sections: [] })
+    mocks.getSite.mockResolvedValue(pageSite)
+    mocks.updatePage.mockRejectedValueOnce(new ApiError(409, { error: 'That page URL is already in use.' })).mockResolvedValue(pageSite)
+    navigation.search = 'editor=pages'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Page settings' }))[0])
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Our bakery' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(await screen.findByText('That page URL is already in use.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue('Our bakery')
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(mocks.updatePage).toHaveBeenLastCalledWith('tenant-1', 'about-page', { title: 'Our bakery', slug: 'about' }))
+    const nav = screen.getByRole('navigation', { name: 'Website editor navigation' })
+    fireEvent.click(within(nav).getByRole('button', { name: 'Theme' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Theme' })).toBeInTheDocument()
+  })
+
   it('re-seeds an active multi-item editor from the authoritative save response', async () => {
-    navigation.search = 'editor=faq'
+    navigation.search = 'editor=page&pageId=home&sectionId=faq-id'
     const canonical = structuredClone(baseSite)
     const faq = canonical.pages[0]?.sections.find((section) => section.type === 'faq')
     if (!faq || faq.type !== 'faq') throw new Error('FAQ fixture missing')
     faq.content.items = [...faq.content.items, { id: 'server-generated', question: 'New?', answer: 'New answer' }]
-    mocks.upsertHomeFaq.mockResolvedValue(canonical)
+    mocks.updateSectionContent.mockResolvedValue(canonical)
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     fireEvent.click(await screen.findByRole('button', { name: 'Add Question' }))
     const groups = screen.getAllByRole('group')
     fireEvent.change(within(groups[1]).getByLabelText('Question'), { target: { value: 'New?' } })
     fireEvent.change(within(groups[1]).getByLabelText('Answer'), { target: { value: 'New answer' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeFaq).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(1))
 
     const reseededGroups = await screen.findAllByRole('group')
     fireEvent.change(within(reseededGroups[1]).getByLabelText('Answer'), { target: { value: 'Updated answer' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.upsertHomeFaq).toHaveBeenCalledTimes(2))
-    expect(mocks.upsertHomeFaq.mock.calls[1]?.[1].items[1]).toMatchObject({ id: 'server-generated', question: 'New?', answer: 'Updated answer' })
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+    expect(mocks.updateSectionContent.mock.calls[1]?.[3].items[1]).toMatchObject({ id: 'server-generated', question: 'New?', answer: 'Updated answer' })
   })
 
   it('resets the Custom CSS dirty baseline after an authoritative save', async () => {
@@ -223,6 +414,6 @@ describe('Website workspace', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Preview changes' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Publish Site' })).toBeEnabled()
   })
 })

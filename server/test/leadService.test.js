@@ -8,9 +8,9 @@ import {
   _setDb as setSiteDb,
   getPublicSite,
   initializeSite,
-  publishSite,
-  upsertHomeContact
+  publishSite
 } from '../services/siteService.js'
+import { upsertHomeContact } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
 
 let fakeDb
@@ -31,10 +31,11 @@ const definition = (action, sections = null) => ({
     slug: '/',
     title: 'Home',
     sections: sections || [
-      { id: 'hero', type: 'hero', content: { title: 'Business' } },
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Business' } },
       {
         id: 'contact',
         type: 'contact',
+        hidden: false,
         content: { title: 'Contact', buttonLabel: 'Contact', action }
       }
     ]
@@ -177,7 +178,7 @@ test('createPublicLead fails closed for every ineligible published state', async
 
   for (const action of [null, { type: 'email', value: 'a@example.com' }, { type: 'phone', value: '8015551234' }, { type: 'url', value: 'https://example.com/' }]) {
     const sections = action === null
-      ? [{ id: 'hero', type: 'hero', content: { title: 'Business' } }]
+      ? [{ id: 'hero', type: 'hero', hidden: false, content: { title: 'Business' } }]
       : null
     seedPublished(action, sections)
     await assert.rejects(createPublicLead('tenant-1', {}), {
@@ -188,6 +189,27 @@ test('createPublicLead fails closed for every ineligible published state', async
   seedPublished({ type: 'leadForm' })
   await createPublicLead('tenant-1', {
     name: 'Allowed', email: 'allowed@example.com', message: 'Published form'
+  })
+  assert.equal(leadPaths().length, 1)
+})
+
+test('a published lead-form Contact on any normal page authorizes the existing website lead endpoint', async () => {
+  seedPublished({ type: 'email', value: 'hello@example.com' })
+  const published = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  published.siteDefinition.pages.push({
+    id: 'page-contact',
+    slug: 'contact',
+    title: 'Contact',
+    sections: [{
+      id: 'contact-page-section',
+      type: 'contact',
+      hidden: false,
+      content: { title: 'Contact us', buttonLabel: 'Send', action: { type: 'leadForm' } }
+    }]
+  })
+  fakeDb.seed('tenants/tenant-1/site/config/published/current', published)
+  await createPublicLead('tenant-1', {
+    name: 'Visitor', email: 'visitor@example.com', message: 'From the normal contact page'
   })
   assert.equal(leadPaths().length, 1)
 })
@@ -204,7 +226,7 @@ test('lead write authority follows only the published snapshot through lifecycle
     title: 'Contact', buttonLabel: 'Form', action: { type: 'leadForm' }
   })
   const preview = await getPublicSite('tenant-1', previewEnv)
-  assert.equal(preview.pages[0].sections.find((section) => section.id === 'contact').content.action.type, 'leadForm')
+  assert.equal(preview.pages[0].sections.find((section) => section.type === 'contact').content.action.type, 'leadForm')
   await assert.rejects(createPublicLead('tenant-1', {}), {
     status: 404, message: 'Site not found'
   })
@@ -223,7 +245,7 @@ test('lead write authority follows only the published snapshot through lifecycle
   })
   assert.equal(leadPaths().length, 2)
   assert.equal((await getPublicSite('tenant-1', normalPublicEnv)).pages[0].sections
-    .find((section) => section.id === 'contact').content.action.type, 'leadForm')
+    .find((section) => section.type === 'contact').content.action.type, 'leadForm')
 
   await publishSite('tenant-1', 'admin')
   await assert.rejects(createPublicLead('tenant-1', {}), {

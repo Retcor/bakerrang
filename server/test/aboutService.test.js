@@ -2,14 +2,12 @@ import test, { afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   _setDb as setSiteDb,
-  composeHomeSections,
   getPublicSite,
   getSite,
   initializeSite,
-  publishSite,
-  upsertHomeAbout,
-  upsertHomeServices
+  publishSite
 } from '../services/siteService.js'
+import { composeHomeSections, upsertHomeAbout, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { _setDb as setMediaDb, _setStorage } from '../services/mediaService.js'
 import { FakeDb } from './helpers/fakeDb.js'
 import { FakeStorage } from './helpers/fakeStorage.js'
@@ -56,8 +54,9 @@ test('About validates, trims, persists only canonical fields, and handles option
     arbitraryHtml: '<script>alert(1)</script>'
   }))
   assert.deepEqual(aboutSection(created), {
-    id: 'about',
+    id: aboutSection(created).id,
     type: 'about',
+    hidden: false,
     content: { eyebrow: 'Who we are', heading: 'Our story', body: 'First.\n\nSecond.' }
   })
   assert.deepEqual(aboutSection({ pages: [{ sections: fakeDb.data(homePath()).sections }] }), aboutSection(created))
@@ -117,6 +116,7 @@ test('unresolved About media degrades to text-only and strips stored hydrated fi
   home.sections.push({
     id: 'about',
     type: 'about',
+    hidden: false,
     content: {
       heading: 'About',
       body: 'Text',
@@ -135,10 +135,10 @@ test('unresolved About media degrades to text-only and strips stored hydrated fi
   assert.equal(content.imageHeight, undefined)
 })
 
-test('About is canonical, single-instance, inserted after Hero, and updates in place', async () => {
+test('About has opaque identity, supports arbitrary order, and updates in place', async () => {
   await upsertHomeServices('tenant-1', { title: 'Services', items: [{ name: 'One' }] })
   const created = await upsertHomeAbout('tenant-1', input())
-  assert.deepEqual(created.pages[0].sections.map((section) => section.type), ['hero', 'about', 'services'])
+  assert.deepEqual(created.pages[0].sections.map((section) => section.type), ['hero', 'services', 'about'])
 
   await composeHomeSections('tenant-1', { sectionIds: ['hero', 'services', 'about'] })
   const updated = await upsertHomeAbout('tenant-1', input({ heading: 'Updated' }))
@@ -147,14 +147,13 @@ test('About is canonical, single-instance, inserted after Hero, and updates in p
 
   const original = fakeDb.data(homePath())
   for (const corrupt of [
-    [{ id: 'about', type: 'future', content: {} }],
-    [{ id: 'future', type: 'about', content: {} }],
+    [{ id: 'about', type: 'future', hidden: false, content: {} }],
     [aboutSection(updated), aboutSection(updated)]
   ]) {
     fakeDb.seed(homePath(), { ...original, sections: [original.sections[0], ...corrupt] })
     await assert.rejects(upsertHomeAbout('tenant-1', input()), {
       status: 500,
-      message: 'Home about section invalid'
+      message: 'Home sections invalid'
     })
   }
 })

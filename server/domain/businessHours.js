@@ -98,12 +98,16 @@ export const validateBusinessHoursUpdate = (input) => {
   }
   const heading = optionalText(input.homepage, 'heading', 'Business Hours heading', 120)
   const intro = optionalText(input.homepage, 'intro', 'Business Hours intro', 300)
+  if (Object.hasOwn(input, 'preserveSections') && typeof input.preserveSections !== 'boolean') {
+    throw httpError('preserveSections must be true or false')
+  }
   return {
     businessHours: input.businessHours === null ? null : validateBusinessHours(input.businessHours),
     homepage: {
       enabled: input.homepage.enabled,
       ...(heading ? { heading } : {}),
       ...(intro ? { intro } : {})
-    }
+    },
+    ...(input.preserveSections ? { preserveSections: true } : {})
   }
 }

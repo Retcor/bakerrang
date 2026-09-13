@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import type { BusinessProfile, SiteDefinition } from '@bakerrang/site-schema'
+import type { BusinessProfile, SiteDefinition, SitePage } from '@bakerrang/site-schema'
 import { appendSitePath, indexingEnvironmentEnabled, publicIndexingEnabled, resolveSiteBaseUrl, type PublicSiteEnvironment } from './siteUrl.ts'
 
 const schemaDays = {
@@ -27,7 +27,7 @@ export function brandingIcons (site?: SiteDefinition | null): Pick<Metadata, 'ic
   return src ? { icons: { icon: src } } : {}
 }
 
-const socialImage = (profile: BusinessProfile | undefined) => {
+const siteSocialImage = (profile: BusinessProfile | undefined) => {
   if (!profile?.socialImageMediaId || !profile.socialImageSrc) return undefined
   return {
     url: profile.socialImageSrc,
@@ -36,29 +36,60 @@ const socialImage = (profile: BusinessProfile | undefined) => {
   }
 }
 
-export function homeMetadata (
-  site: SiteDefinition,
-  tenantId: string,
-  env: PublicSiteEnvironment = process.env,
+const pageSocialImage = (page: SitePage) => {
+  if (!page.seo?.socialImageMediaId || !page.seo.socialImageSrc) return undefined
+  return {
+    url: page.seo.socialImageSrc,
+    ...(page.seo.socialImageWidth ? { width: page.seo.socialImageWidth } : {}),
+    ...(page.seo.socialImageHeight ? { height: page.seo.socialImageHeight } : {})
+  }
+}
+
+export interface PageMetadataContext {
   canonicalHost?: string | null
+  env?: PublicSiteEnvironment
+  preview?: boolean
+  tenantId: string
+}
+
+/** The sole policy for Home, Page, shared-host, custom-domain, and Preview metadata. */
+export function resolvePageMetadata (
+  site: SiteDefinition,
+  page: SitePage,
+  { canonicalHost, env = process.env, preview = false, tenantId }: PageMetadataContext
 ): Metadata {
-  const title = site.branding.siteName
-  const description = site.businessProfile?.description
-  const baseUrl = resolveSiteBaseUrl(tenantId, env, canonicalHost)
-  const image = socialImage(site.businessProfile)
-  const indexable = site.status !== 'DRAFT' && baseUrl !== null && (canonicalHost
-    ? indexingEnvironmentEnabled(env)
-    : publicIndexingEnabled(env))
+  const title = page.seo?.title || (page.id === 'home'
+    ? site.branding.siteName
+    : `${page.title} | ${site.branding.siteName}`)
+  const description = page.seo?.description || site.seo?.defaultDescription || site.businessProfile?.description
+  const image = pageSocialImage(page) || siteSocialImage(site.businessProfile)
+  const baseUrl = preview ? null : resolveSiteBaseUrl(tenantId, env, canonicalHost)
+  const canonical = baseUrl ? (page.id === 'home' ? baseUrl : appendSitePath(baseUrl, page.slug)) : undefined
+  const environmentIndexable = canonicalHost ? indexingEnvironmentEnabled(env) : publicIndexingEnabled(env)
+  const publicReady = site.status === 'PUBLISHED' && baseUrl !== null
+  const operatorBlocked = site.seo?.indexable === false || page.seo?.noIndex === true
+  const robots = preview
+    ? { index: false, follow: false }
+    : !environmentIndexable || !publicReady
+        ? { index: false, follow: false }
+        : operatorBlocked
+            ? { index: false, follow: true }
+            : { index: true, follow: true }
+
   return {
     title,
     ...(description ? { description } : {}),
-    robots: { index: indexable, follow: indexable },
-    ...(baseUrl ? { alternates: { canonical: baseUrl } } : {}),
+    robots,
+    ...(preview
+      ? { referrer: 'no-referrer' as const }
+      : canonical
+          ? { alternates: { canonical } }
+          : {}),
     openGraph: {
       title,
       ...(description ? { description } : {}),
-      ...(baseUrl ? { url: baseUrl } : {}),
-      siteName: title,
+      ...(!preview && canonical ? { url: canonical } : {}),
+      siteName: site.branding.siteName,
       type: 'website',
       ...(image ? { images: [image] } : {})
     },
@@ -72,19 +103,26 @@ export function homeMetadata (
   }
 }
 
-export function contactMetadata (
+export function homeMetadata (
   site: SiteDefinition,
   tenantId: string,
   env: PublicSiteEnvironment = process.env,
   canonicalHost?: string | null
 ): Metadata {
-  const baseUrl = resolveSiteBaseUrl(tenantId, env, canonicalHost)
-  return {
-    title: `Contact | ${site.branding.siteName}`,
-    robots: { index: false, follow: site.status !== 'DRAFT' && baseUrl !== null },
-    ...(baseUrl ? { alternates: { canonical: appendSitePath(baseUrl, 'contact') } } : {}),
-    ...brandingIcons(site)
-  }
+  const page = site.pages.find((candidate) => candidate.id === 'home')
+  return page
+    ? resolvePageMetadata(site, page, { tenantId, env, canonicalHost })
+    : { title: 'Website', robots: { index: false, follow: false } }
+}
+
+export function pageMetadata (
+  site: SiteDefinition,
+  page: SitePage,
+  tenantId: string,
+  env: PublicSiteEnvironment = process.env,
+  canonicalHost?: string | null
+): Metadata {
+  return resolvePageMetadata(site, page, { tenantId, env, canonicalHost })
 }
 
 export function localBusinessData (site: SiteDefinition, siteBaseUrl: string | null): Record<string, unknown> | null {

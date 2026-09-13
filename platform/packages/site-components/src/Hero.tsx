@@ -2,13 +2,14 @@ import type { HeroContent } from '@bakerrang/site-schema'
 import { SiteContainer } from './SitePrimitives'
 
 export interface HeroProps {
+  anchorId: string
   content: HeroContent
   contactHref?: string
 }
 
-export function Hero ({ content, contactHref }: HeroProps) {
+export function Hero ({ anchorId, content, contactHref }: HeroProps) {
   return (
-    <section className="site-hero flex min-h-[68vh] items-center border-b border-site-border bg-site-surface" data-br-section="hero" data-br-section-id="hero" id="top">
+    <section className="site-hero flex min-h-[68vh] items-center border-b border-site-border bg-site-surface" data-br-section="hero" data-br-section-id={anchorId} id={`section-${anchorId}`}>
       <SiteContainer>
         <div className="max-w-4xl">
           <div className="mb-7 h-1.5 w-20 rounded-full bg-site-accent" />

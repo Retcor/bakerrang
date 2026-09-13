@@ -8,9 +8,9 @@ import {
   initializeSite,
   publishSite,
   updateBusinessProfile,
-  updateSiteBranding,
-  upsertHomeGallery
+  updateSiteBranding
 } from '../services/siteService.js'
+import { upsertHomeGallery } from './helpers/legacySiteTestBridge.js'
 import { _setDb as setMediaDb, _setStorage } from '../services/mediaService.js'
 import { FieldValue } from '../client/firestoreClient.js'
 import { FakeDb } from './helpers/fakeDb.js'
@@ -105,12 +105,10 @@ afterEach(() => {
   _setStorage()
 })
 
-test('branding initializes from tenant name with provider-neutral defaults and no tenant mutation', async () => {
+test('branding initializes from tenant name with identity-only fields and no tenant mutation', async () => {
   const site = await initializeSite('tenant-1', 'admin')
   assert.deepEqual(site.branding, {
-    siteName: 'Acme Studio',
-    primaryColor: '#334155',
-    accentColor: '#0f766e'
+    siteName: 'Acme Studio'
   })
   assert.equal(fakeDb.data('tenants/tenant-1').name, '  Acme Studio  ')
   assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config').branding, site.branding)
@@ -122,37 +120,36 @@ test('branding initializes from tenant name with provider-neutral defaults and n
   assert.equal(fakeDb.data('tenants/tenant-long').name, longName)
 })
 
-test('branding validation normalizes colors and enforces exact shape and same-tenant logo ownership', async () => {
+test('branding ignores retired colors and enforces identity/media validation', async () => {
   await initializeSite('tenant-1', 'admin')
   for (const input of [
-    { siteName: '', primaryColor: '#112233', accentColor: '#445566' },
-    { siteName: 'A'.repeat(81), primaryColor: '#112233', accentColor: '#445566' },
-    { siteName: 'Site', primaryColor: '#123', accentColor: '#445566' },
-    { siteName: 'Site', primaryColor: '#112233', accentColor: '445566' }
+    { siteName: '' },
+    { siteName: 'A'.repeat(81) }
   ]) await assert.rejects(updateSiteBranding('tenant-1', input), { status: 400 })
   await assert.rejects(updateSiteBranding('tenant-1', {
-    siteName: 'Site', primaryColor: '#112233', accentColor: '#445566', logoMediaId: 'missing'
+    siteName: 'Site', logoMediaId: 'missing'
   }), { status: 400, message: 'Logo image not found' })
 
   fakeDb.seed('tenants/tenant-1/media/logo', mediaRecord('logo'))
   const site = await updateSiteBranding('tenant-1', {
-    siteName: '  New Name  ', primaryColor: '#AABBCC', accentColor: '#DDEEFF', logoMediaId: 'logo'
+    siteName: '  New Name  ', primaryColor: 'not-a-color', accentColor: 'also-not-a-color', logoMediaId: 'logo'
   })
-  assert.equal(site.branding.primaryColor, '#aabbcc')
+  assert.equal(Object.hasOwn(site.branding, 'primaryColor'), false)
+  assert.equal(Object.hasOwn(site.branding, 'accentColor'), false)
   assert.equal(site.branding.logoSrc, 'https://media.test/tenants/tenant-1/media/logo')
   assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config').branding, {
-    siteName: 'New Name', primaryColor: '#aabbcc', accentColor: '#ddeeff', logoMediaId: 'logo'
+    siteName: 'New Name', logoMediaId: 'logo'
   })
 })
 
 test('working branding stays isolated from public reads until republish', async () => {
   await initializeSite('tenant-1', 'admin')
   await updateSiteBranding('tenant-1', {
-    siteName: 'Version A', primaryColor: '#112233', accentColor: '#445566'
+    siteName: 'Version A'
   })
   await publishSite('tenant-1', 'admin')
   await updateSiteBranding('tenant-1', {
-    siteName: 'Version B', primaryColor: '#abcdef', accentColor: '#fedcba'
+    siteName: 'Version B'
   })
   assert.equal((await getSite('tenant-1')).branding.siteName, 'Version B')
   assert.equal((await getPublicSite('tenant-1', previewEnv)).branding.siteName, 'Version B')
@@ -164,12 +161,12 @@ test('working branding stays isolated from public reads until republish', async 
 test('legacy working and published sites derive branding from their own Hero snapshot without repair writes', async () => {
   fakeDb.seed('tenants/tenant-1/site/config', { status: 'PUBLISHED', createdAt: 1, updatedAt: 1 })
   fakeDb.seed('tenants/tenant-1/site/config/pages/home', {
-    id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', content: { title: 'Working Hero' } }]
+    id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title: 'Working Hero' } }]
   })
   fakeDb.seed('tenants/tenant-1/site/config/published/current', {
     siteDefinition: {
       status: 'PUBLISHED',
-      pages: [{ id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', content: { title: 'Published Hero' } }] }]
+      pages: [{ id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title: 'Published Hero' } }] }]
     },
     publishedAt: 1,
     publishedByUserId: 'admin'
@@ -187,7 +184,7 @@ test('logo, social image, and Gallery hydrate through one batch while storage re
   fakeDb.seed('tenants/tenant-1/media/gallery', mediaRecord('gallery'))
   fakeDb.seed('tenants/tenant-1/media/social', mediaRecord('social'))
   await updateSiteBranding('tenant-1', {
-    siteName: 'Site', primaryColor: '#112233', accentColor: '#445566', logoMediaId: 'logo', faviconMediaId: 'favicon'
+    siteName: 'Site', logoMediaId: 'logo', faviconMediaId: 'favicon'
   })
   await upsertHomeGallery('tenant-1', {
     title: 'Work', items: [{ mediaId: 'gallery', altText: 'A project' }]
@@ -200,7 +197,7 @@ test('logo, social image, and Gallery hydrate through one batch while storage re
     return originalGetAll(...refs)
   }
   const site = await getSite('tenant-1')
-  assert.deepEqual(batches, [['logo', 'favicon', 'social', 'gallery']])
+  assert.deepEqual(batches, [['home'], ['logo', 'favicon', 'social', 'gallery']])
   assert.equal(site.branding.logoSrc, 'https://media.test/tenants/tenant-1/media/logo')
   assert.equal(site.pages[0].sections.find((section) => section.type === 'gallery').content.items[0].src,
     'https://media.test/tenants/tenant-1/media/gallery')
@@ -237,7 +234,7 @@ test('favicon branding validates ownership, persists without src, and clears ind
   assert.equal(site.branding.faviconSrc, 'https://media.test/tenants/tenant-1/media/favicon')
   assert.equal(Object.hasOwn(fakeDb.data('tenants/tenant-1/site/config').branding, 'faviconSrc'), false)
   assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config').branding, {
-    siteName: 'Site', primaryColor: '#334155', accentColor: '#0f766e', logoMediaId: 'logo', faviconMediaId: 'favicon'
+    siteName: 'Site', logoMediaId: 'logo', faviconMediaId: 'favicon'
   })
 
   const droppedFavicon = await updateSiteBranding('tenant-1', {
