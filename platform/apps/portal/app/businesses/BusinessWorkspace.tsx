@@ -33,7 +33,8 @@ export function BusinessWorkspace ({ children, description, tenantId, title }: {
     { href: `${base}/website`, label: 'Website' },
     { href: `${base}/media`, label: 'Media' },
     { href: `${base}/leads`, label: 'Leads' },
-    { href: `${base}/domain`, label: 'Domain' }
+    { href: `${base}/domain`, label: 'Domain' },
+    { href: `${base}/activity`, label: 'Activity' }
   ]
   return (
     <BusinessNavigationGuardContext.Provider value={reportDirty}>
@@ -53,7 +54,8 @@ export function BusinessOverview ({ tenantId }: { tenantId: string }) {
   const areas = [
     { href: `${base}/website`, title: 'Website', description: 'Edit site content and control publishing.', action: 'Manage website →' },
     { href: `${base}/leads`, title: 'Leads', description: 'Review enquiries, update status, and add notes.', action: 'Review leads →' },
-    { href: `${base}/domain`, title: 'Custom domain', description: 'Configure ownership, HTTPS, and routing.', action: 'Manage domain →' }
+    { href: `${base}/domain`, title: 'Custom domain', description: 'Configure ownership, HTTPS, and routing.', action: 'Manage domain →' },
+    { href: `${base}/activity`, title: 'Activity', description: 'Review meaningful operator changes.', action: 'View activity →' }
   ]
   return <div className="grid gap-4 md:grid-cols-3">{areas.map((area) => <Link className="group rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" href={area.href} key={area.href}><Card className="h-full p-5 transition-colors group-hover:border-border-strong"><h2 className="font-semibold text-fg">{area.title}</h2><p className="mt-2 text-sm leading-6 text-fg-muted">{area.description}</p><span className="mt-5 inline-block text-sm font-semibold text-info-fg">{area.action}</span></Card></Link>)}</div>
 }
