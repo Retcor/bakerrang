@@ -64,6 +64,7 @@ export const updateLeadNotificationSettings = async (tenantId, input, actor) => 
   return firestore.runTransaction(async (transaction) => {
     const [tenant, config] = await Promise.all([transaction.get(tenantRef), transaction.get(configRef)])
     if (!tenant.exists) throw httpError(404, 'Tenant not found')
+    if (tenant.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     const nextConfig = { ...(config.exists ? config.data() : {}), leadNotifications: settings }
     transaction.set(configRef, nextConfig)
     if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'leadNotifications.update', entityType: 'leadNotifications', summary: 'Updated lead notification settings', metadata: { enabled: settings.enabled, recipientCount: settings.recipients.length } })

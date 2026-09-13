@@ -9,6 +9,7 @@ import * as siteDomainService from '../services/siteDomainService.js'
 import * as previewTokenService from '../services/previewTokenService.js'
 import * as auditService from '../services/auditService.js'
 import * as tenantExportService from '../services/tenantExportService.js'
+import * as tenantDeletionService from '../services/tenantDeletionService.js'
 import { requirePlatformAdmin, requireTenantRole } from '../middleware/tenantAuth.js'
 
 const allTenantRoles = ['OWNER', 'ADMIN', 'STAFF']
@@ -36,6 +37,18 @@ const handleNoContent = (fn) => async (req, res) => {
     res.status(status).json({
       error: status >= 500 && !error.expose ? 'Tenant operation failed' : error.message
     })
+  }
+}
+
+const handleDeletion = (fn) => async (req, res) => {
+  try {
+    res.status(200).json(await fn(req))
+  } catch (error) {
+    const status = error.status || 500
+    if (status >= 500) console.error(error)
+    res.status(status).json(status >= 500
+      ? { status: 'FAILED' }
+      : { error: error.message })
   }
 }
 
@@ -69,6 +82,7 @@ export const createTenantRouter = (deps = {}) => {
   const previewTokens = deps.previewTokenService || previewTokenService
   const audits = deps.auditService || auditService
   const exports = deps.tenantExportService || tenantExportService
+  const deletions = deps.tenantDeletionService || tenantDeletionService
   // The authenticated session is the sole actor source. Test doubles receive
   // the same additional argument and may ignore it.
   const actor = (req) => auditService.actorFromUser(req.user)
@@ -82,6 +96,18 @@ export const createTenantRouter = (deps = {}) => {
   ))
 
   router.get('/', platformAdmin, handle(() => service.listTenants()))
+
+  router.post('/:tenantId/delete', platformAdmin, noStore, handleDeletion(
+    (req) => deletions.deleteTenant(req.params.tenantId, req.body?.confirmation, req.user.id)
+  ))
+
+  router.post('/:tenantId/delete/resume', platformAdmin, noStore, handleDeletion(
+    (req) => deletions.resumeTenantDeletion(req.params.tenantId)
+  ))
+
+  router.get('/:tenantId/deletion', platformAdmin, noStore, handle(
+    (req) => deletions.getTenantDeletion(req.params.tenantId)
+  ))
 
   router.post('/:tenantId/site', platformAdmin, handle(
     (req) => sites.initializeSite(req.params.tenantId, req.user.id, actor(req)),

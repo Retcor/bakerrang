@@ -5,10 +5,12 @@ export class FakeStorage {
   constructor () {
     this.puts = []
     this.deletes = []
+    this.deletePrefixes = []
     this.objects = new Map()
     this.putError = null
     this.deleteError = null
     this.afterDeleteError = null
+    this.deleteFilesError = null
   }
 
   async putObject (input) {
@@ -25,6 +27,20 @@ export class FakeStorage {
     if (this.deleteError) throw this.deleteError
     this.objects.delete(objectName)
     if (this.afterDeleteError) throw this.afterDeleteError
+  }
+
+  async deleteFiles ({ prefix }) {
+    this.deletePrefixes.push(prefix)
+    if (this.deleteFilesError) throw this.deleteFilesError
+    for (const objectName of [...this.objects.keys()]) {
+      if (objectName.startsWith(prefix)) this.objects.delete(objectName)
+    }
+  }
+
+  async getFiles ({ prefix } = {}) {
+    return [...this.objects.keys()]
+      .filter((objectName) => !prefix || objectName.startsWith(prefix))
+      .map((name) => ({ name }))
   }
 
   publicUrl (objectName) {

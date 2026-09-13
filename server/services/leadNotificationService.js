@@ -123,13 +123,20 @@ const claim = async (candidateId, now, env) => firestore.runTransaction(async (t
   if (outbox.status === 'PROCESSING' && outbox.leaseUntil > now) return null
   if (!['PENDING', 'PROCESSING'].includes(outbox.status)) return null
 
+  const tenantRef = firestore.collection('tenants').doc(outbox.tenantId)
+  const configRef = tenantRef.collection('site').doc('config')
+  const [tenantSnapshot, configSnapshot] = await Promise.all([
+    transaction.get(tenantRef), transaction.get(configRef)
+  ])
+  // Deletion owns terminal cleanup. Do not turn a pending-deletion tenant into
+  // a new provider delivery, even if a prior attempt already has a snapshot.
+  if (!tenantSnapshot.exists || tenantSnapshot.data()?.status !== 'ACTIVE') {
+    transaction.delete(outboxRef)
+    return null
+  }
+
   let snapshot = outbox.deliverySnapshot
   if (!snapshot) {
-    const tenantRef = firestore.collection('tenants').doc(outbox.tenantId)
-    const configRef = tenantRef.collection('site').doc('config')
-    const [tenantSnapshot, configSnapshot] = await Promise.all([
-      transaction.get(tenantRef), transaction.get(configRef)
-    ])
     const resolved = deliverySnapshot({
       tenantId: outbox.tenantId,
       leadId: outbox.leadId,

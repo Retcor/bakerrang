@@ -9,6 +9,7 @@ import {
   isValidPhone
 } from '../validation/contactMethods.js'
 import { collectSiteMediaIds, hydrateSiteMedia, requireTenantMediaInTransaction } from './mediaService.js'
+import { assertTenantActiveInTransaction } from './tenantLifecycleService.js'
 import { siteBrandingResponse, validateSiteBranding } from '../domain/siteBranding.js'
 import { DEFAULT_SITE_THEME, normalizeSiteTheme, validateSiteTheme } from '../domain/siteTheme.js'
 import {
@@ -1103,6 +1104,7 @@ const readWorkingSite = async (tenantId, transaction) => {
   const refs = refsFor(tenantId)
   const configSnapshot = await (transaction ? transaction.get(refs.config) : refs.config.get())
   if (!configSnapshot.exists) throw httpError(404, 'Site not initialized')
+  if (transaction) await assertTenantActiveInTransaction(transaction, refs.tenant)
   const config = configSnapshot.data()
   const { order, snapshots } = await readPageSnapshots(transaction, refs, config)
   return { refs, config, order, snapshots, pages: pagesFromSnapshots(order, snapshots) }
@@ -1165,6 +1167,7 @@ export const initializeSite = async (tenantId, actorUserId) => {
     ])
 
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (tenantSnapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     if (configSnapshot.exists) throw httpError(409, 'Site already initialized')
 
     const config = {

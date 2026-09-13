@@ -3,6 +3,7 @@ import { imageSize } from 'image-size'
 import { db } from '../client/firestoreClient.js'
 import { writeAuditEvent } from './auditService.js'
 import { gcsStorage } from '../client/gcsClient.js'
+import { assertTenantActiveInTransaction } from './tenantLifecycleService.js'
 
 const TENANTS = 'tenants'
 const CACHE_CONTROL = 'public, max-age=31536000, immutable'
@@ -111,6 +112,7 @@ const siteRefsFor = (tenantId) => {
 const requireTenant = async (tenantId) => {
   const snapshot = await tenantRef(tenantId).get()
   if (!snapshot.exists) throw httpError(404, 'Tenant not found')
+  if (snapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
 }
 
 export const createMedia = async (tenantId, file, actorUserId, actor) => {
@@ -148,6 +150,7 @@ export const createMedia = async (tenantId, file, actorUserId, actor) => {
   const ref = mediaRef(tenantId, mediaId)
   try {
     await firestore.runTransaction(async (transaction) => {
+      await assertTenantActiveInTransaction(transaction, tenantRef(tenantId))
       transaction.set(ref, metadata)
       if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'media.upload', entityType: 'media', entityId: mediaId, summary: 'Uploaded media', metadata: { mediaId, originalFilename: metadata.originalFilename, contentType: metadata.contentType, sizeBytes: metadata.sizeBytes } })
     })
@@ -362,7 +365,10 @@ export const deleteUnusedMedia = async (tenantId, mediaId, actor) => {
   // All reference writers read this same media document in their write transaction.
   // A terminal marker commits before any non-transactional storage effects.
   const stored = await firestore.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref)
+    const [, snapshot] = await Promise.all([
+      assertTenantActiveInTransaction(transaction, tenantRef(tenantId)),
+      transaction.get(ref)
+    ])
     if (!snapshot.exists) throw httpError(404, 'Media not found')
     const value = snapshot.data() || {}
     const locations = await findMediaUsage(tenantId, mediaId, transaction)

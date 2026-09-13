@@ -110,6 +110,7 @@ export const addMember = async (tenantId, body = {}, createdByUserId, actor) => 
     ])
 
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (tenantSnapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     if (!userSnapshot.exists) throw httpError(404, 'User not found')
     if (memberSnapshot.exists) throw httpError(409, 'Tenant membership already exists')
 

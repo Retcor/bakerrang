@@ -327,6 +327,22 @@ const tenantExports = {
   streamTenantExport: async (tenantId, output) => { calls.push({ operation: 'streamTenantExport', tenantId }); output.end('zip') }
 }
 
+const tenantDeletions = {
+  deleteTenant: async (tenantId, confirmation, requestedByUserId) => {
+    calls.push({ operation: 'deleteTenant', tenantId, confirmation, requestedByUserId })
+    if (confirmation === 'fail') throw Object.assign(new Error('cleanup failure'), { status: 500 })
+    return { tenantId, status: 'COMPLETE' }
+  },
+  resumeTenantDeletion: async (tenantId) => {
+    calls.push({ operation: 'resumeTenantDeletion', tenantId })
+    return { tenantId, status: 'COMPLETE' }
+  },
+  getTenantDeletion: async (tenantId) => {
+    calls.push({ operation: 'getTenantDeletion', tenantId })
+    return { tenantId, status: 'FAILED' }
+  }
+}
+
 before(async () => {
   const app = express()
   app.use(express.json())
@@ -343,6 +359,7 @@ before(async () => {
     leadNotificationSettingsService: leadNotifications,
     auditService: auditEvents,
     tenantExportService: tenantExports,
+    tenantDeletionService: tenantDeletions,
     mediaService: media,
     siteDomainService: domains,
     previewTokenService: previewTokens,
@@ -1030,4 +1047,30 @@ test('media DELETE exposes only deliberate recovery errors and masks internal fa
     assert.equal(response.headers.get('cache-control'), 'no-store')
     assert.deepEqual(await response.json(), { error: message })
   }
+})
+
+test('tenant deletion routes are platform-admin only, confirmation-scoped, and no-store', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  const initial = '/tenants/tenant-1/delete'
+  assert.equal((await request(initial, { method: 'POST', body: { confirmation: 'Tenant' } })).status, 401)
+  assert.equal((await request(initial, { userId: 'owner', method: 'POST', body: { confirmation: 'Tenant' } })).status, 403)
+
+  const deleted = await request(initial, { userId: 'platform', method: 'POST', body: { confirmation: 'Tenant' } })
+  assert.equal(deleted.status, 200)
+  assert.equal(deleted.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await deleted.json(), { tenantId: 'tenant-1', status: 'COMPLETE' })
+  assert.deepEqual(calls.at(-1), { operation: 'deleteTenant', tenantId: 'tenant-1', confirmation: 'Tenant', requestedByUserId: 'platform' })
+
+  const failed = await request(initial, { userId: 'platform', method: 'POST', body: { confirmation: 'fail' } })
+  assert.equal(failed.status, 500)
+  assert.deepEqual(await failed.json(), { status: 'FAILED' })
+
+  const resumed = await request('/tenants/tenant-1/delete/resume', { userId: 'platform', method: 'POST' })
+  assert.equal(resumed.status, 200)
+  assert.deepEqual(calls.at(-1), { operation: 'resumeTenantDeletion', tenantId: 'tenant-1' })
+
+  const status = await request('/tenants/tenant-1/deletion', { userId: 'platform' })
+  assert.equal(status.status, 200)
+  assert.equal(status.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await status.json(), { tenantId: 'tenant-1', status: 'FAILED' })
 })

@@ -8,6 +8,7 @@ import {
 import { isLeadStatus } from '../domain/leadStatus.js'
 import { pendingLeadNotification } from './leadNotificationService.js'
 import { writeAuditEvent } from './auditService.js'
+import { assertTenantActiveInTransaction } from './tenantLifecycleService.js'
 
 const TENANTS = 'tenants'
 let firestore = db
@@ -186,6 +187,12 @@ export const createPublicLead = async (tenantId, input) => {
 
   // Public form submits are independent from mail-provider availability.
   await firestore.runTransaction(async (transaction) => {
+    try {
+      await assertTenantActiveInTransaction(transaction, firestore.collection(TENANTS).doc(tenantId))
+    } catch (error) {
+      if (error.status === 404 || error.status === 409) throw httpError(404, 'Site not found')
+      throw error
+    }
     transaction.set(leadRef, leadRecord)
     transaction.set(notificationRef, pendingLeadNotification({ tenantId, leadId, lead, now }))
   })
@@ -238,6 +245,7 @@ export const updateLeadStatus = async (tenantId, leadId, input, actor) => {
     ])
 
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (tenantSnapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
 
     const current = detailFrom(leadSnapshot)
@@ -269,6 +277,7 @@ export const createLeadNote = async (tenantId, leadId, input, actorUserId, actor
     ])
 
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (tenantSnapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
     transaction.set(noteRef, note)
     if (actor) writeAuditEvent({ firestore, transaction, tenantId, actor, action: 'lead.note.add', entityType: 'lead', entityId: leadId, summary: 'Added lead note', metadata: { leadId } })
@@ -288,6 +297,7 @@ export const deleteTenantLead = async (tenantId, leadId, actor) => {
       transaction.get(leadRef)
     ])
     if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
+    if (tenantSnapshot.data()?.status !== 'ACTIVE') throw httpError(409, 'Tenant is pending deletion')
     if (!leadSnapshot.exists) throw httpError(404, 'Lead not found')
 
     const notesSnapshot = await notesCollection.get()

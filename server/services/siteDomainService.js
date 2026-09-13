@@ -6,6 +6,7 @@ import {
   normalizeRequestHostname,
   siteDomainResponse
 } from '../domain/siteDomain.js'
+import { assertTenantActiveInTransaction } from './tenantLifecycleService.js'
 
 const SITE_DOMAINS = 'siteDomains'
 const TENANT_SITE_DOMAINS = 'tenantSiteDomains'
@@ -47,12 +48,11 @@ export const registerSiteDomain = async (tenantId, input, actorUserId) => {
   let result
 
   await firestore.runTransaction(async (transaction) => {
-    const [tenantSnapshot, pointerSnapshot, domainSnapshot] = await Promise.all([
-      transaction.get(refs.tenant),
+    const [, pointerSnapshot, domainSnapshot] = await Promise.all([
+      assertTenantActiveInTransaction(transaction, refs.tenant),
       transaction.get(refs.pointer),
       transaction.get(refs.domain)
     ])
-    if (!tenantSnapshot.exists) throw httpError(404, 'Tenant not found')
 
     const pointerHostname = pointerSnapshot.exists ? pointerSnapshot.data()?.hostname : null
     const existing = domainSnapshot.exists ? domainSnapshot.data() : null
@@ -118,7 +118,8 @@ export const verifySiteDomain = async (tenantId, actorUserId) => {
   const refs = refsFor(tenantId, current.hostname)
   let result
   await firestore.runTransaction(async (transaction) => {
-    const [pointerSnapshot, domainSnapshot] = await Promise.all([
+    const [, pointerSnapshot, domainSnapshot] = await Promise.all([
+      assertTenantActiveInTransaction(transaction, refs.tenant),
       transaction.get(refs.pointer),
       transaction.get(refs.domain)
     ])
@@ -150,9 +151,11 @@ export const verifySiteDomain = async (tenantId, actorUserId) => {
 }
 
 const transitionPointedDomain = async (tenantId, transition) => {
-  const pointerRef = refsFor(tenantId).pointer
+  const refs = refsFor(tenantId)
+  const pointerRef = refs.pointer
   let result
   await firestore.runTransaction(async (transaction) => {
+    await assertTenantActiveInTransaction(transaction, refs.tenant)
     const pointerSnapshot = await transaction.get(pointerRef)
     if (!pointerSnapshot.exists || typeof pointerSnapshot.data()?.hostname !== 'string') {
       throw httpError(404, 'Custom domain not found')
@@ -208,9 +211,11 @@ export const disableSiteDomain = async (tenantId, actorUserId) => {
 }
 
 export const removeSiteDomain = async (tenantId) => {
-  const pointerRef = refsFor(tenantId).pointer
+  const refs = refsFor(tenantId)
+  const pointerRef = refs.pointer
   let hostname
   await firestore.runTransaction(async (transaction) => {
+    await assertTenantActiveInTransaction(transaction, refs.tenant)
     const pointerSnapshot = await transaction.get(pointerRef)
     if (!pointerSnapshot.exists || typeof pointerSnapshot.data()?.hostname !== 'string') {
       throw httpError(404, 'Custom domain not found')
