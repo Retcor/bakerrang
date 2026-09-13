@@ -18,7 +18,7 @@ const hours = {
 
 const site = (businessHours: unknown, withSection = true, operational = true) => ({
   status: 'PUBLISHED',
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' },
+  branding: { siteName: 'Bakery' },
   businessProfile: { ...(operational ? { phone: '+1 303 555 0100' } : {}), ...(businessHours ? { businessHours } : {}) },
   pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
     { id: 'hero', type: 'hero', content: { title: 'Welcome' } },
@@ -37,7 +37,7 @@ test('Business Hours formatter is timezone-free and weekday order is determinist
 
 test('Business Hours component uses themed semantic markup, defaults its heading, and safely skips missing hours', async () => {
   const component = await source('../../../packages/site-components/src/BusinessHours.tsx')
-  assert.match(component, /<SiteSection className="bg-site-bg" id="businessHours">/)
+  assert.match(component, /<SiteSection anchorId=\{anchorId\} className="bg-site-bg" sectionType="businessHours">/)
   assert.match(component, /<SiteContainer>/)
   assert.match(component, /<SectionHeading>\{heading\}<\/SectionHeading>/)
   assert.match(component, /<dl className=/)
@@ -49,14 +49,13 @@ test('Business Hours component uses themed semantic markup, defaults its heading
   assert.doesNotMatch(component, /Date\(|Open now|Today/)
 })
 
-test('renderer dispatches canonical hours and navigation derives Hours only from the section list', async () => {
+test('renderer dispatches canonical hours while navigation is not derived from the section list', async () => {
   const renderer = await source('../components/SectionRenderer.tsx')
-  const home = await source('../components/PublicHome.tsx')
+  const page = await source('../components/PublicPage.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
-  assert.match(renderer, /case 'businessHours':[\s\S]*<BusinessHours content=\{section\.content\} hours=\{businessHours\}/)
-  assert.match(home, /businessHours=\{site\.businessProfile\?\.businessHours\}/)
-  assert.match(shell, /businessHours: 'Hours'/)
-  assert.match(shell, /sections\.filter\(\(section\) => section\.type !== 'hero'\)\.map/)
+  assert.match(renderer, /case 'businessHours':[\s\S]*<BusinessHours anchorId=\{section\.id\} content=\{section\.content\} hours=\{businessHours\}/)
+  assert.match(page, /businessHours=\{site\.businessProfile\?\.businessHours\}/)
+  assert.doesNotMatch(shell, /businessHours: 'Hours'|activePage\.sections/)
 })
 
 test('LocalBusiness opening specifications include only open canonical days without changing the emission gate', () => {

@@ -28,12 +28,13 @@ export default async function CustomDomainHomePage () {
   return (
     <PublicHome
       site={resolved.site}
+      navigationContext={{ kind: 'customDomain' }}
+      tenantId={resolved.domain.tenantId}
       siteBaseUrl={resolveSiteBaseUrl(
         resolved.domain.tenantId,
         process.env,
         resolved.domain.canonicalHost
       )}
-      sitePath=""
     />
   )
 }

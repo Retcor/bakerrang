@@ -48,5 +48,33 @@
       "Bash(find /c/Users/jakey/IdeaProjects/bakerrang/client/src -type f -name *[Gg]esture* -o -type f -name *[Ss]ign*)",
       "WebFetch(domain:dev.to)"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"C:\\\\Users\\\\jakey\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" ] || \"C:\\\\Users\\\\jakey\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" hook",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"C:\\\\Users\\\\jakey\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" ] || \"C:\\\\Users\\\\jakey\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" hook",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write on UI files, full-rule deep pass on Stop."
 }

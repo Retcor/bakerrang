@@ -2,14 +2,15 @@ import type { ServicesContent } from '@bakerrang/site-schema'
 import { SectionHeading, SiteContainer, SiteSection } from './SitePrimitives'
 
 export interface ServicesProps {
+  anchorId: string
   content: ServicesContent
 }
 
-export function Services ({ content }: ServicesProps) {
+export function Services ({ anchorId, content }: ServicesProps) {
   if (content.items.length === 0) return null
 
   return (
-    <SiteSection className="bg-site-bg" id="services">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="services">
       <SiteContainer>
         <SectionHeading>{content.title}</SectionHeading>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">

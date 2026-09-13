@@ -1,5 +1,3 @@
-export const DEFAULT_SITE_PRIMARY_COLOR = '#334155'
-export const DEFAULT_SITE_ACCENT_COLOR = '#0f766e'
 export const DEFAULT_SITE_NAME = 'Website'
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
@@ -30,12 +28,6 @@ export const siteBrandingResponse = (branding, definition) => {
     : fallbackSiteName(definition)
   return {
     siteName,
-    primaryColor: HEX_COLOR.test(branding?.primaryColor || '')
-      ? branding.primaryColor.toLowerCase()
-      : DEFAULT_SITE_PRIMARY_COLOR,
-    accentColor: HEX_COLOR.test(branding?.accentColor || '')
-      ? branding.accentColor.toLowerCase()
-      : DEFAULT_SITE_ACCENT_COLOR,
     ...(typeof branding?.logoMediaId === 'string' && branding.logoMediaId.trim()
       ? { logoMediaId: branding.logoMediaId.trim() }
       : {}),
@@ -58,15 +50,6 @@ export const validateSiteBranding = (input) => {
     error.status = 400
     throw error
   }
-  for (const [key, label] of [['primaryColor', 'Primary color'], ['accentColor', 'Accent color']]) {
-    if (Object.prototype.hasOwnProperty.call(body, key) && (
-      typeof body[key] !== 'string' || !HEX_COLOR.test(body[key])
-    )) {
-      const error = new Error(`${label} must use the #RRGGBB format`)
-      error.status = 400
-      throw error
-    }
-  }
   if (Object.prototype.hasOwnProperty.call(body, 'logoMediaId') && body.logoMediaId !== null && (
     typeof body.logoMediaId !== 'string' || !body.logoMediaId.trim()
   )) {
@@ -83,8 +66,6 @@ export const validateSiteBranding = (input) => {
   }
   return {
     siteName,
-    ...(typeof body.primaryColor === 'string' ? { primaryColor: body.primaryColor.toLowerCase() } : {}),
-    ...(typeof body.accentColor === 'string' ? { accentColor: body.accentColor.toLowerCase() } : {}),
     ...(typeof body.logoMediaId === 'string' ? { logoMediaId: body.logoMediaId.trim() } : {}),
     ...(typeof body.faviconMediaId === 'string' ? { faviconMediaId: body.faviconMediaId.trim() } : {})
   }

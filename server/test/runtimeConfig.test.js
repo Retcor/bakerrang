@@ -70,6 +70,9 @@ test('preview signing remains required only in production', () => {
   assert.doesNotThrow(() => validateServerRuntimeConfig({
     ...validEnv,
     NODE_ENV: 'production',
-    PREVIEW_TOKEN_SECRET: 'preview-secret'
+    PREVIEW_TOKEN_SECRET: 'preview-secret',
+    RESEND_API_KEY: 'resend-key',
+    LEAD_NOTIFICATION_FROM: 'leads@example.com',
+    INTERNAL_DRAIN_TOKEN: 'drain-token'
   }))
 })

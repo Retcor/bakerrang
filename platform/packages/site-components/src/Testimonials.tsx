@@ -2,10 +2,11 @@ import type { TestimonialsContent } from '@bakerrang/site-schema'
 import { SectionHeading, SiteContainer, SiteSection } from './SitePrimitives'
 
 export interface TestimonialsProps {
+  anchorId: string
   content: TestimonialsContent
 }
 
-export function Testimonials ({ content }: TestimonialsProps) {
+export function Testimonials ({ anchorId, content }: TestimonialsProps) {
   const title = typeof content?.title === 'string' ? content.title.trim() : ''
   const items = (Array.isArray(content?.items) ? content.items : []).filter((item) =>
     item &&
@@ -17,7 +18,7 @@ export function Testimonials ({ content }: TestimonialsProps) {
   if (!title || items.length === 0) return null
 
   return (
-    <SiteSection className="bg-site-bg" id="testimonials">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="testimonials">
       <SiteContainer>
         <SectionHeading>{title}</SectionHeading>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">

@@ -5,11 +5,9 @@ import {
   getPublicSite,
   getSite,
   initializeSite,
-  publishSite,
-  upsertHomeContact,
-  upsertHomeGallery,
-  upsertHomeServices
+  publishSite
 } from '../services/siteService.js'
+import { upsertHomeContact, upsertHomeGallery, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import {
   _setDb as setMediaDb,
   _setStorage,
@@ -54,7 +52,7 @@ afterEach(() => {
   _setStorage()
 })
 
-test('upsertHomeGallery inserts before Contact and persists provider-neutral items', async () => {
+test('Gallery appends at the sensible default and persists provider-neutral items', async () => {
   await upsertHomeServices('tenant-1', { title: 'Services', items: [{ name: 'One' }] })
   await upsertHomeContact('tenant-1', {
     title: 'Contact', buttonLabel: 'Email', action: { type: 'email', value: 'hello@example.com' }
@@ -65,7 +63,7 @@ test('upsertHomeGallery inserts before Contact and persists provider-neutral ite
     items: [{ mediaId: 'media-a', altText: '  Finished kitchen  ', src: 'https://evil.test/x' }]
   })
   assert.deepEqual(result.pages[0].sections.map((section) => section.type), [
-    'hero', 'services', 'gallery', 'contact'
+    'hero', 'services', 'contact', 'gallery'
   ])
   const hydrated = gallerySection(result)
   assert.equal(hydrated.content.title, 'Recent Work')
@@ -90,7 +88,7 @@ test('Gallery appends without Contact and preserves its existing section index',
     title: 'Updated', items: [{ id: itemId, mediaId: 'media-b', altText: 'B' }]
   })
   assert.deepEqual(updated.pages[0].sections.map((section) => section.type), [
-    'hero', 'services', 'gallery'
+    'hero', 'gallery', 'services'
   ])
 })
 
@@ -162,21 +160,21 @@ test('Gallery item identities are server-owned, stable, and corruption-aware', a
   fakeDb.seed(homePath(), home)
   await assert.rejects(upsertHomeGallery('tenant-1', {
     title: 'Gallery', items: [{ id, mediaId: 'media-a', altText: 'A' }]
-  }), { status: 500, message: 'Home gallery section invalid' })
+  }), { status: 500, message: 'Home sections invalid' })
 })
 
 test('Gallery reserved identity corruption fails controlled', async () => {
   fakeDb.seed(mediaPath('media-a'), mediaRecord('media-a'))
   for (const corrupt of [
-    { id: 'gallery', type: 'future', content: {} },
-    { id: 'future', type: 'gallery', content: {} }
+    { id: 'gallery', type: 'future', hidden: false, content: {} },
+    { id: 'future', type: 'gallery', hidden: false, content: {} }
   ]) {
     const home = fakeDb.data(homePath())
     home.sections = [home.sections[0], corrupt]
     fakeDb.seed(homePath(), home)
     await assert.rejects(upsertHomeGallery('tenant-1', {
       title: 'Gallery', items: [{ mediaId: 'media-a', altText: 'A' }]
-    }), { status: 500, message: 'Home gallery section invalid' })
+    }), { status: 500, message: 'Home sections invalid' })
   }
 })
 
@@ -229,6 +227,7 @@ test('Gallery hydration skips missing or malformed Media and strips arbitrary UR
   home.sections.push({
     id: 'gallery',
     type: 'gallery',
+    hidden: false,
     content: {
       title: 'Gallery',
       items: [

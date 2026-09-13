@@ -37,8 +37,9 @@ export default async function TenantSitePage ({ params }: TenantSitePageProps) {
   return (
     <PublicHome
       site={site}
+      navigationContext={{ kind: 'sharedHost', tenantId }}
+      tenantId={tenantId}
       siteBaseUrl={resolveSiteBaseUrl(tenantId)}
-      sitePath={`/site/${encodeURIComponent(tenantId)}`}
     />
   )
 }

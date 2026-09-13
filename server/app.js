@@ -24,6 +24,7 @@ import vaultRouter from './routes/vault.js'
 import tenantRouter from './routes/tenants.js'
 import publicSiteRouter from './routes/publicSites.js'
 import publicLeadRouter from './routes/publicLeads.js'
+import internalLeadNotificationRouter from './routes/internalLeadNotifications.js'
 import { resolveActiveDomain } from './services/siteDomainService.js'
 import { fileURLToPath } from 'url'
 
@@ -106,6 +107,8 @@ app.use('/chatbot', chatbotLimiter, chatbotRouter)
 app.use('/public', publicLeadRouter)
 app.use('/public/preview', previewReadLimiter)
 app.use('/public', publicSiteRouter)
+// Cloud Scheduler calls this with Authorization: Bearer $INTERNAL_DRAIN_TOKEN.
+app.use('/internal', internalLeadNotificationRouter)
 app.use('/auth', authLimiter, authRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)

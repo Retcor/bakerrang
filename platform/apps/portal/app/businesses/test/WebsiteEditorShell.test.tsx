@@ -11,9 +11,9 @@ describe('WebsiteEditorShell', () => {
         <input aria-label="Question" />
       </WebsiteEditorShell>
     )
-    expect(screen.getByText('Homepage')).toBeInTheDocument()
+    expect(screen.getByText('Page section')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
-    expect(screen.getByText('Answer common questions on the homepage.')).toBeInTheDocument()
+    expect(screen.getByText('Answer common questions on this page.')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Request failed')
     expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()

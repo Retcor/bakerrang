@@ -34,7 +34,7 @@ const mediaItem = (id: string, filename = `${id}.png`) => ({
 
 const site: SiteDefinition = {
   status: 'PUBLISHED',
-  branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566', logoMediaId: 'logo', logoSrc: 'https://media.test/logo.png' },
+  branding: { siteName: 'Bakery', logoMediaId: 'logo', logoSrc: 'https://media.test/logo.png' },
   theme: {
     colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' },
     headingFont: 'inter', bodyFont: 'inter', cornerStyle: 'soft',
@@ -76,7 +76,7 @@ describe('Branding editor favicon picker', () => {
     mocks.getMedia.mockResolvedValue({ media: [], hasMore: false })
     render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={{
       ...site,
-      branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' }
+      branding: { siteName: 'Bakery' }
     }} tenantId="tenant-1" />)
     await waitFor(() => expect(mocks.getMedia).toHaveBeenCalledWith('tenant-1'))
 
@@ -139,7 +139,7 @@ describe('Branding editor favicon picker', () => {
   it('allows the same media id for logo and favicon and saves both keys', async () => {
     render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={{
       ...site,
-      branding: { siteName: 'Bakery', primaryColor: '#112233', accentColor: '#445566' }
+      branding: { siteName: 'Bakery' }
     }} tenantId="tenant-1" />)
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Use as Logo' }).length).toBeGreaterThan(0))
     fireEvent.click(screen.getAllByRole('button', { name: 'Use as Logo' })[0])

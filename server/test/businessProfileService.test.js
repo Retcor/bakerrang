@@ -6,10 +6,9 @@ import {
   getSite,
   initializeSite,
   publishSite,
-  updateBusinessProfile,
-  upsertHomeContact,
-  updateHomeHero
+  updateBusinessProfile
 } from '../services/siteService.js'
+import { updateHomeHero, upsertHomeContact } from './helpers/legacySiteTestBridge.js'
 import { _setDb as setMediaDb, _setStorage } from '../services/mediaService.js'
 import { FakeDb } from './helpers/fakeDb.js'
 import { FakeStorage } from './helpers/fakeStorage.js'

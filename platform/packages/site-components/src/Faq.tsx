@@ -2,10 +2,11 @@ import type { FaqContent } from '@bakerrang/site-schema'
 import { SectionHeading, SiteContainer, SiteSection } from './SitePrimitives'
 
 export interface FaqProps {
+  anchorId: string
   content: FaqContent
 }
 
-export function Faq ({ content }: FaqProps) {
+export function Faq ({ anchorId, content }: FaqProps) {
   const heading = typeof content?.heading === 'string' ? content.heading.trim() : ''
   const intro = typeof content?.intro === 'string' ? content.intro.trim() : ''
   const items = (Array.isArray(content?.items) ? content.items : []).filter((item) =>
@@ -15,7 +16,7 @@ export function Faq ({ content }: FaqProps) {
   if (!heading || items.length === 0) return null
 
   return (
-    <SiteSection className="bg-site-bg" id="faq">
+    <SiteSection anchorId={anchorId} className="bg-site-bg" sectionType="faq">
       <SiteContainer>
         <div className="max-w-4xl">
           <SectionHeading>{heading}</SectionHeading>

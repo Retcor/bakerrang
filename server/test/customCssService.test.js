@@ -9,10 +9,10 @@ import {
   publishSite,
   updateBusinessProfile,
   updateCustomCss,
-  updateHomeHero,
   updateSiteBranding,
   updateSiteTheme
 } from '../services/siteService.js'
+import { updateHomeHero } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
 
 const configPath = (tenantId) => `tenants/${tenantId}/site/config`
@@ -146,7 +146,7 @@ test('read finalization fails corrupt CSS closed without repairing storage or tr
       theme: config.theme,
       customCss: unsafe,
       scopedCustomCss: 'body{display:none}',
-      pages: []
+      pages: [fakeDb.data(homePath('tenant-a'))]
     }
   })
   const published = await getPublishedSiteDefinition('tenant-a')

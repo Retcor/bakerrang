@@ -1,13 +1,16 @@
+import { Readable } from 'node:stream'
 const clone = (value) => value == null ? value : structuredClone(value)
 
 export class FakeStorage {
   constructor () {
     this.puts = []
     this.deletes = []
+    this.deletePrefixes = []
     this.objects = new Map()
     this.putError = null
     this.deleteError = null
     this.afterDeleteError = null
+    this.deleteFilesError = null
   }
 
   async putObject (input) {
@@ -26,7 +29,27 @@ export class FakeStorage {
     if (this.afterDeleteError) throw this.afterDeleteError
   }
 
+  async deleteFiles ({ prefix }) {
+    this.deletePrefixes.push(prefix)
+    if (this.deleteFilesError) throw this.deleteFilesError
+    for (const objectName of [...this.objects.keys()]) {
+      if (objectName.startsWith(prefix)) this.objects.delete(objectName)
+    }
+  }
+
+  async getFiles ({ prefix } = {}) {
+    return [...this.objects.keys()]
+      .filter((objectName) => !prefix || objectName.startsWith(prefix))
+      .map((name) => ({ name }))
+  }
+
   publicUrl (objectName) {
     return `https://media.test/${objectName}`
+  }
+
+  createReadStream (objectName) {
+    const bytes = this.objects.get(objectName)
+    if (!bytes) throw new Error('Object not found')
+    return Readable.from(bytes)
   }
 }

@@ -1,33 +1,18 @@
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { findHomePage, isContactSection } from '@bakerrang/site-schema'
-import { SiteShell } from '@bakerrang/site-components'
-import { BusinessJsonLd } from './BusinessJsonLd'
-import { SectionRenderer } from './SectionRenderer'
+import { findHomePage } from '@bakerrang/site-schema'
+import { PublicPage } from './PublicPage'
+import type { SiteNavigationContext } from '../lib/navigation'
 
-export function PublicHome ({ previewToken, site, siteBaseUrl, sitePath }: {
+export function PublicHome ({ navigationContext = { kind: 'customDomain' }, previewToken, site, siteBaseUrl, tenantId = '' }: {
+  navigationContext?: SiteNavigationContext
   previewToken?: string
   site: SiteDefinition
   siteBaseUrl: string | null
-  sitePath: string
+  /** Legacy compatibility only; route generation uses navigationContext. */
+  sitePath?: string
+  tenantId?: string
 }) {
   const home = findHomePage(site)
   if (!home) return null
-  const hasContact = home.sections.some(isContactSection)
-  return (
-    <SiteShell currentPage="home" site={site} sitePath={sitePath}>
-      <BusinessJsonLd site={site} siteBaseUrl={siteBaseUrl} />
-      <main data-br-role="main">
-        {home.sections.map((section) => (
-          <SectionRenderer
-            businessHours={site.businessProfile?.businessHours}
-            heroContactHref={hasContact ? '#contact' : undefined}
-            key={section.id}
-            previewToken={previewToken}
-            section={section}
-            sitePath={sitePath}
-          />
-        ))}
-      </main>
-    </SiteShell>
-  )
+  return <PublicPage navigationContext={navigationContext} page={home} preview={Boolean(previewToken)} site={site} siteBaseUrl={siteBaseUrl} tenantId={tenantId} />
 }

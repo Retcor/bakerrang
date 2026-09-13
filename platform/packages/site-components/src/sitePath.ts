@@ -1,7 +1,6 @@
-export function siteNavigationPaths (sitePath: string, currentPage: 'home' | 'contact') {
+export function siteNavigationPaths (sitePath: string) {
   return {
     homeHref: sitePath || '/',
-    sectionPrefix: currentPage === 'home' ? '' : (sitePath || '/'),
-    contactPageHref: `${sitePath}/contact`
+    sectionPrefix: ''
   }
 }

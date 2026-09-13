@@ -1,8 +1,3 @@
-import {
-  DEFAULT_SITE_ACCENT_COLOR,
-  DEFAULT_SITE_PRIMARY_COLOR
-} from './siteBranding.js'
-
 export const SITE_FONTS = Object.freeze([
   'inter', 'poppins', 'montserrat', 'workSans',
   'lora', 'merriweather', 'playfair', 'sourceSerif'
@@ -13,8 +8,8 @@ export const SECTION_SPACINGS = Object.freeze(['compact', 'comfortable', 'spacio
 
 export const DEFAULT_SITE_THEME = Object.freeze({
   colors: Object.freeze({
-    primary: DEFAULT_SITE_PRIMARY_COLOR,
-    accent: DEFAULT_SITE_ACCENT_COLOR,
+    primary: '#334155',
+    accent: '#0f766e',
     background: '#f8fafc',
     text: '#172033'
   }),
@@ -31,21 +26,15 @@ const validColor = (value) => typeof value === 'string' && HEX_COLOR.test(value)
 const normalizedColor = (value, fallback) => validColor(value) ? value.toLowerCase() : fallback
 const enumValue = (value, allowed, fallback) => allowed.includes(value) ? value : fallback
 
-export const normalizeSiteTheme = (theme, legacyBranding) => {
+export const normalizeSiteTheme = (theme) => {
   const value = theme && typeof theme === 'object' && !Array.isArray(theme) ? theme : {}
   const colors = value.colors && typeof value.colors === 'object' && !Array.isArray(value.colors)
     ? value.colors
     : {}
   return {
     colors: {
-      primary: normalizedColor(
-        colors.primary,
-        normalizedColor(legacyBranding?.primaryColor, DEFAULT_SITE_THEME.colors.primary)
-      ),
-      accent: normalizedColor(
-        colors.accent,
-        normalizedColor(legacyBranding?.accentColor, DEFAULT_SITE_THEME.colors.accent)
-      ),
+      primary: normalizedColor(colors.primary, DEFAULT_SITE_THEME.colors.primary),
+      accent: normalizedColor(colors.accent, DEFAULT_SITE_THEME.colors.accent),
       background: normalizedColor(colors.background, DEFAULT_SITE_THEME.colors.background),
       text: normalizedColor(colors.text, DEFAULT_SITE_THEME.colors.text)
     },

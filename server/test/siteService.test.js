@@ -1,29 +1,47 @@
 import test, { afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import {
   _setDb,
+  applySiteTemplate,
+  createPage,
   getPublicSite,
   getPublishedSiteDefinition,
   getSite,
   initializeSite,
+  listSiteRevisions,
+  listSiteTemplates,
+  materializeSiteTemplate,
   publishSite,
+  restoreSiteRevision,
   unpublishSite,
   updateSiteBranding,
-  updateHomeHero,
-  upsertHomeContact,
-  upsertHomeServices
+  updateBusinessProfile,
+  updateCustomCss,
+  updatePage,
+  updatePageSeo,
+  updateSiteFooter,
+  updateSiteHeader,
+  updateSiteSeo,
+  updateSiteTheme,
+  validateSiteTemplate
 } from '../services/siteService.js'
+import { updateHomeHero, upsertHomeContact, upsertHomeServices } from './helpers/legacySiteTestBridge.js'
 import { FakeDb } from './helpers/fakeDb.js'
+import { SITE_TEMPLATES } from '../domain/siteTemplates.js'
+import { _setDb as setMediaDb } from '../services/mediaService.js'
 
 let fakeDb
 
 beforeEach(() => {
   fakeDb = new FakeDb()
   _setDb(fakeDb)
+  setMediaDb(fakeDb)
 })
 
 afterEach(() => {
   _setDb()
+  setMediaDb()
 })
 
 test('initializeSite rejects a missing tenant without writing site data', async () => {
@@ -45,17 +63,19 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     'branding',
     'createdAt',
     'createdByUserId',
+    'footer',
+    'header',
+    'pageOrder',
     'status',
     'theme',
     'updatedAt'
   ])
   assert.equal(config.status, 'DRAFT')
+  assert.deepEqual(config.pageOrder, ['home'])
   assert.equal(config.createdByUserId, 'platform-admin')
   assert.equal(config.createdAt, config.updatedAt)
   assert.deepEqual(config.branding, {
-    siteName: 'Baker Street Cafe',
-    primaryColor: '#334155',
-    accentColor: '#0f766e'
+    siteName: 'Baker Street Cafe'
   })
   assert.deepEqual(config.theme, {
     colors: {
@@ -66,6 +86,14 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     cornerStyle: 'soft',
     contentWidth: 'standard',
     sectionSpacing: 'comfortable'
+  })
+  assert.deepEqual(config.header, { brandDisplay: 'logo', navigation: { items: [] } })
+  assert.deepEqual(config.footer, {
+    showBranding: true,
+    navigationMode: 'header',
+    showBusinessContact: false,
+    showSocialLinks: true,
+    showCopyright: true
   })
 
   assert.deepEqual(Object.keys(home).sort(), [
@@ -82,8 +110,9 @@ test('initializeSite atomically creates the exact config and home page shapes', 
   assert.equal(home.createdAt, home.updatedAt)
   assert.equal(home.sections.length, 1)
   assert.deepEqual(home.sections[0], {
-    id: 'hero',
+    id: home.sections[0].id,
     type: 'hero',
+    hidden: false,
     content: { title: 'Baker Street Cafe' }
   })
   assert.equal(Object.hasOwn(home.sections[0].content, 'subtitle'), false)
@@ -93,18 +122,19 @@ test('initializeSite atomically creates the exact config and home page shapes', 
     status: 'DRAFT',
     hasUnpublishedChanges: false,
     branding: {
-      siteName: 'Baker Street Cafe',
-      primaryColor: '#334155',
-      accentColor: '#0f766e'
+      siteName: 'Baker Street Cafe'
     },
     theme: config.theme,
+    header: config.header,
+    footer: config.footer,
     pages: [{
       id: 'home',
       slug: '/',
       title: 'Home',
       sections: [{
-        id: 'hero',
+        id: home.sections[0].id,
         type: 'hero',
+        hidden: false,
         content: { title: 'Baker Street Cafe' }
       }]
     }]
@@ -166,20 +196,27 @@ test('publish creates a sanitized snapshot and persists publication audit metada
   const published = await publishSite('tenant-1', 'publisher')
   const snapshot = fakeDb.data('tenants/tenant-1/site/config/published/current')
   const config = fakeDb.data('tenants/tenant-1/site/config')
+  const revision = fakeDb.data(`tenants/tenant-1/site/config/revisions/${snapshot.revisionId}`)
+  const revisionIndex = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+  const revisionMedia = fakeDb.data(`tenants/tenant-1/site/config/revisionMedia/${snapshot.revisionId}`)
 
   assert.deepEqual(Object.keys(snapshot).sort(), [
     'publishedAt',
     'publishedByUserId',
+    'revisionId',
     'siteDefinition'
   ])
+  assert.match(snapshot.revisionId, /^[0-9a-f-]{36}$/i)
   assert.deepEqual(snapshot.siteDefinition, {
     status: published.status,
     pages: published.pages,
     branding: published.branding,
-    theme: published.theme
+    theme: published.theme,
+    header: published.header,
+    footer: published.footer
   })
   assert.deepEqual(Object.keys(published), [
-    'status', 'hasUnpublishedChanges', 'lastPublishedAt', 'pages', 'branding', 'theme'
+    'status', 'hasUnpublishedChanges', 'lastPublishedAt', 'pages', 'branding', 'theme', 'header', 'footer'
   ])
   assert.deepEqual(Object.keys(published.pages[0]).sort(), ['id', 'sections', 'slug', 'title'])
   assert.equal(published.status, 'PUBLISHED')
@@ -188,11 +225,235 @@ test('publish creates a sanitized snapshot and persists publication audit metada
   assert.equal(Object.hasOwn(snapshot.siteDefinition, 'hasUnpublishedChanges'), false)
   assert.equal(Object.hasOwn(snapshot.siteDefinition, 'lastPublishedAt'), false)
   assert.equal(snapshot.publishedByUserId, 'publisher')
+  assert.deepEqual(revision, snapshot)
+  assert.deepEqual(revisionIndex.entries, [{
+    revisionId: snapshot.revisionId,
+    publishedAt: snapshot.publishedAt,
+    publishedByUserId: snapshot.publishedByUserId,
+    pageCount: 1
+  }])
+  assert.deepEqual(revisionMedia, { mediaIds: [] })
   assert.equal(config.status, 'PUBLISHED')
   assert.equal(config.updatedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedAt, snapshot.publishedAt)
   assert.equal(config.lastPublishedByUserId, 'publisher')
   assert.notEqual(config.updatedAt, 1)
+})
+
+test('published revisions are immutable, retained newest-first, and restore only Working', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision A' })
+  await initializeSite('tenant-1', 'admin')
+  const first = await publishSite('tenant-1', 'publisher-a')
+  const firstCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const firstRevision = fakeDb.data(`tenants/tenant-1/site/config/revisions/${firstCurrent.revisionId}`)
+
+  await updateSiteBranding('tenant-1', { siteName: 'Revision B' })
+  const second = await publishSite('tenant-1', 'publisher-b')
+  const secondCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const listed = await listSiteRevisions('tenant-1')
+
+  assert.equal(listed.revisions.length, 2)
+  assert.equal(listed.revisions[0].revisionId, secondCurrent.revisionId)
+  assert.equal(listed.revisions[0].isCurrent, true)
+  assert.equal(listed.revisions[1].revisionId, firstCurrent.revisionId)
+  assert.equal(listed.revisions[1].isCurrent, false)
+  assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/revisions/${firstCurrent.revisionId}`), firstRevision)
+
+  const restored = await restoreSiteRevision('tenant-1', firstCurrent.revisionId)
+  assert.equal(restored.branding.siteName, first.branding.siteName)
+  assert.equal((await getSite('tenant-1')).branding.siteName, first.branding.siteName)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), secondCurrent)
+  assert.equal((await getPublishedSiteDefinition('tenant-1')).branding.siteName, second.branding.siteName)
+})
+
+test('published revision retention keeps current and prunes the oldest revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Retention' })
+  await initializeSite('tenant-1', 'admin')
+  const ids = []
+  for (let index = 0; index < 11; index += 1) {
+    await updateSiteBranding('tenant-1', { siteName: `Retention ${index}` })
+    await publishSite('tenant-1', 'publisher')
+    ids.push(fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId)
+  }
+  const index = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+  assert.equal(index.entries.length, 10)
+  assert.equal(index.entries[0].revisionId, ids.at(-1))
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/revisions/${ids[0]}`), undefined)
+  await assert.rejects(restoreSiteRevision('tenant-1', ids[0]), { status: 404 })
+})
+
+test('restore replaces the full working site with historical globals, pages, SEO, and stable ids', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Restore' })
+  await initializeSite('tenant-1', 'admin')
+  const { pageId: historicalPageId } = await createPage('tenant-1', { title: 'History page', slug: 'history' })
+  await updateHomeHero('tenant-1', { title: 'Historical hero' })
+  await updateSiteBranding('tenant-1', { siteName: 'Historical brand' })
+  await updateBusinessProfile('tenant-1', { description: 'Historical profile', phone: '+15555550100' })
+  await updateSiteSeo('tenant-1', { defaultDescription: 'Historical SEO', indexable: false })
+  await updatePageSeo('tenant-1', historicalPageId, { title: 'Historical page SEO', noIndex: true })
+  await updateSiteHeader('tenant-1', { brandDisplay: 'name', navigation: { items: [{ pageId: historicalPageId }] } })
+  await updateSiteFooter('tenant-1', { showBranding: false, navigationMode: 'custom', navigationItems: [{ pageId: historicalPageId }], showBusinessContact: true, showSocialLinks: false, showCopyright: true, text: 'Historical footer' })
+  await updateSiteTheme('tenant-1', { colors: { primary: '#112233', accent: '#445566', background: '#f8fafc', text: '#172033' }, headingFont: 'lora', bodyFont: 'inter', cornerStyle: 'square', contentWidth: 'wide', sectionSpacing: 'spacious' })
+  await updateCustomCss('tenant-1', { customCss: '[data-br-site] { color: red; }' })
+  await publishSite('tenant-1', 'publisher-a')
+  const historicalCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const historicalPage = fakeDb.data(`tenants/tenant-1/site/config/pages/${historicalPageId}`)
+
+  await updateHomeHero('tenant-1', { title: 'Working B' })
+  await updateSiteBranding('tenant-1', { siteName: 'Working B' })
+  const { pageId: displacedPageId } = await createPage('tenant-1', { title: 'Displaced', slug: 'displaced' })
+  await publishSite('tenant-1', 'publisher-b')
+  const currentBeforeRestore = fakeDb.data('tenants/tenant-1/site/config/published/current')
+
+  const restored = await restoreSiteRevision('tenant-1', historicalCurrent.revisionId)
+  assert.equal(restored.branding.siteName, 'Historical brand')
+  assert.equal(restored.businessProfile.description, 'Historical profile')
+  assert.equal(restored.seo.defaultDescription, 'Historical SEO')
+  assert.equal(restored.customCss, '[data-br-site] { color: red; }')
+  assert.equal(restored.theme.headingFont, 'lora')
+  assert.deepEqual(restored.pages.map((page) => page.id), ['home', historicalPageId])
+  assert.equal(restored.pages[0].sections[0].content.title, 'Historical hero')
+  assert.deepEqual(restored.pages[1].seo, { title: 'Historical page SEO', noIndex: true })
+  assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/pages/${historicalPageId}`).sections, historicalPage.sections)
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${displacedPageId}`), undefined)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), currentBeforeRestore)
+})
+
+test('first post-history publish captures a legacy current snapshot with its original metadata', async () => {
+  const originalNow = Date.now
+  let now = 100
+  Date.now = () => now
+  try {
+    fakeDb.seed('tenants/tenant-1', { name: 'Legacy A' })
+    await initializeSite('tenant-1', 'admin')
+    await publishSite('tenant-1', 'publisher-a')
+    const legacyCurrent = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const oldRevisionId = legacyCurrent.revisionId
+    delete legacyCurrent.revisionId
+    fakeDb.seed('tenants/tenant-1/site/config/published/current', legacyCurrent)
+    fakeDb.remove(`tenants/tenant-1/site/config/revisions/${oldRevisionId}`)
+    fakeDb.remove(`tenants/tenant-1/site/config/revisionMedia/${oldRevisionId}`)
+    fakeDb.remove('tenants/tenant-1/site/config/revisionIndex/current')
+
+    now = 200
+    await updateSiteBranding('tenant-1', { siteName: 'Legacy B' })
+    now = 300
+    await publishSite('tenant-1', 'publisher-b')
+
+    const index = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current').entries
+    const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const baseline = fakeDb.data(`tenants/tenant-1/site/config/revisions/${index[1].revisionId}`)
+    assert.equal(index.length, 2)
+    assert.equal(index[0].revisionId, current.revisionId)
+    assert.equal(baseline.publishedAt, 100)
+    assert.equal(baseline.publishedByUserId, 'publisher-a')
+    assert.equal(baseline.siteDefinition.branding.siteName, 'Legacy A')
+    assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/revisionMedia/${baseline.revisionId}`).mediaIds, [])
+  } finally {
+    Date.now = originalNow
+  }
+})
+
+test('restore rejects a malformed retained revision without repairing or changing Working', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Corrupt revision' })
+  await initializeSite('tenant-1', 'admin')
+  await publishSite('tenant-1', 'publisher')
+  const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const revisionPath = `tenants/tenant-1/site/config/revisions/${current.revisionId}`
+  const corrupt = fakeDb.data(revisionPath)
+  fakeDb.seed(revisionPath, { ...corrupt, siteDefinition: { status: 'PUBLISHED', pages: [] } })
+  const workingBefore = fakeDb.data('tenants/tenant-1/site/config')
+
+  await assert.rejects(restoreSiteRevision('tenant-1', current.revisionId), {
+    status: 500,
+    message: 'Published revision is invalid'
+  })
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config'), workingBefore)
+})
+
+test('restore retries against concurrent working edits and publishes without altering the live current revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision A' })
+  await initializeSite('tenant-1', 'admin')
+  await publishSite('tenant-1', 'publisher-a')
+  const revisionA = fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId
+  await updateSiteBranding('tenant-1', { siteName: 'Working B' })
+
+  const attemptsBeforeEdit = fakeDb.transactionAttempts
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await updateSiteBranding('tenant-1', { siteName: 'Concurrent edit' })
+  }
+  await restoreSiteRevision('tenant-1', revisionA)
+  assert.equal((await getSite('tenant-1')).branding.siteName, 'Revision A')
+  assert.ok(fakeDb.transactionAttempts - attemptsBeforeEdit >= 3)
+
+  await updateSiteBranding('tenant-1', { siteName: 'Working C' })
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await publishSite('tenant-1', 'publisher-b')
+  }
+  await restoreSiteRevision('tenant-1', revisionA)
+  const live = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  assert.equal((await getSite('tenant-1')).branding.siteName, 'Revision A')
+  assert.equal((await getPublishedSiteDefinition('tenant-1')).branding.siteName, 'Working C')
+  assert.notEqual(live.revisionId, revisionA)
+})
+
+test('restore retries then rejects when a concurrent publish prunes its selected revision', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision 0' })
+  await initializeSite('tenant-1', 'admin')
+  const revisionIds = []
+  for (let index = 0; index < 10; index += 1) {
+    await updateSiteBranding('tenant-1', { siteName: `Revision ${index}` })
+    await publishSite('tenant-1', 'publisher')
+    revisionIds.push(fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId)
+  }
+  fakeDb.beforeCommit = async () => {
+    fakeDb.beforeCommit = null
+    await publishSite('tenant-1', 'publisher')
+  }
+  await assert.rejects(restoreSiteRevision('tenant-1', revisionIds[0]), {
+    status: 404,
+    message: 'Published revision not found'
+  })
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/revisions/${revisionIds[0]}`), undefined)
+})
+
+test('publish writes one bounded media manifest for hundreds of referenced media ids', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Many media' })
+  await initializeSite('tenant-1', 'admin')
+  const mediaRecord = (id) => ({
+    originalFilename: `${id}.png`,
+    objectName: `tenants/tenant-1/media/${id}`,
+    contentType: 'image/png',
+    sizeBytes: 1,
+    width: 1,
+    height: 1,
+    createdAt: 1,
+    createdByUserId: 'admin'
+  })
+  for (let pageIndex = 0; pageIndex < 24; pageIndex += 1) {
+    const { pageId } = await createPage('tenant-1', { title: `Page ${pageIndex}`, slug: `page-${pageIndex}` })
+    const items = Array.from({ length: 20 }, (_, itemIndex) => {
+      const id = `image-${pageIndex}-${itemIndex}`
+      fakeDb.seed(`tenants/tenant-1/media/${id}`, mediaRecord(id))
+      return { id: randomUUID(), mediaId: id, altText: id }
+    })
+    const page = fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`)
+    fakeDb.seed(`tenants/tenant-1/site/config/pages/${pageId}`, {
+      ...page,
+      sections: [{ id: randomUUID(), type: 'gallery', hidden: false, content: { title: 'Gallery', items } }]
+    })
+  }
+  let writes
+  fakeDb.beforeCommit = ({ writes: transactionWrites }) => {
+    fakeDb.beforeCommit = null
+    writes = transactionWrites
+  }
+  await publishSite('tenant-1', 'publisher')
+  assert.equal(writes.filter((write) => write.ref.path.includes('/revisionMedia/')).length, 1)
+  assert.equal(writes.filter((write) => write.ref.path.includes('/media/')).length, 0)
+  assert.equal(fakeDb.data('tenants/tenant-1/site/config/revisionMedia/' + fakeDb.data('tenants/tenant-1/site/config/published/current').revisionId).mediaIds.length, 480)
 })
 
 test('publication status follows config and home working timestamps across publish cycles', async () => {
@@ -402,17 +663,17 @@ test('updateHomeHero validates title and subtitle authoritatively', async () => 
     ctaLabel: 'not accepted'
   })
   assert.equal(updated.pages[0].sections[0].content.title, 'Trimmed title')
-  assert.equal(Object.hasOwn(updated.pages[0].sections[0].content, 'ctaLabel'), false)
+  assert.equal(updated.pages[0].sections[0].content.ctaLabel, 'not accepted')
 })
 
-test('updateHomeHero distinguishes omitted, set, and cleared subtitle patches', async () => {
+test('updateHomeHero treats content as full state and normalizes subtitle', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Initial' })
   await initializeSite('tenant-1', 'admin')
   await updateHomeHero('tenant-1', { title: 'Initial', subtitle: 'Existing' })
 
   let updated = await updateHomeHero('tenant-1', { title: 'Changed' })
   assert.equal(updated.status, 'DRAFT')
-  assert.equal(updated.pages[0].sections[0].content.subtitle, 'Existing')
+  assert.equal(updated.pages[0].sections[0].content.subtitle, undefined)
 
   updated = await updateHomeHero('tenant-1', {
     title: 'Changed',
@@ -443,10 +704,10 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
     updatedAt: 21,
     customPageField: true,
     sections: [
-      { id: 'before', type: 'future', content: { value: 1 } },
       {
         id: 'hero',
         type: 'hero',
+        hidden: false,
         customSectionField: 'preserved',
         content: {
           title: 'Old',
@@ -455,7 +716,7 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
           futureField: true
         }
       },
-      { id: 'after', type: 'future', content: { value: 2 } }
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -466,18 +727,17 @@ test('updateHomeHero preserves content, section order, metadata, timestamps, and
   })
   const config = fakeDb.data(configPath)
   const home = fakeDb.data(homePath)
-  const hero = home.sections[1]
+  const hero = home.sections[0]
 
   assert.equal(updated.status, 'PUBLISHED')
-  assert.deepEqual(home.sections.map((section) => section.id), ['before', 'hero', 'after'])
+  assert.deepEqual(home.sections.map((section) => section.id), ['hero', 'after'])
   assert.equal(hero.id, 'hero')
   assert.equal(hero.type, 'hero')
   assert.equal(hero.customSectionField, 'preserved')
   assert.deepEqual(hero.content, {
     title: 'New title',
     subtitle: 'Updated subtitle',
-    ctaLabel: 'Keep me',
-    futureField: true
+    ctaLabel: 'Attacker value'
   })
   assert.equal(home.customPageField, true)
   assert.equal(home.createdAt, 11)
@@ -507,16 +767,16 @@ test('updateHomeHero reports missing site, Home, and Hero explicitly', async () 
     id: 'home',
     slug: '/',
     title: 'Home',
-    sections: [{ id: 'other', type: 'hero', content: { title: 'Wrong id' } }]
+    sections: [{ id: 'other', type: 'about', hidden: false, content: { heading: 'About', body: 'Body' } }]
   })
   await assert.rejects(updateHomeHero('no-hero', { title: 'Valid' }), {
     status: 500,
-    message: 'Home hero section missing'
+    message: 'Home sections invalid'
   })
 })
 
 const servicesSection = (site) => site.pages[0].sections.find((section) =>
-  section.id === 'services' && section.type === 'services'
+  section.type === 'services'
 )
 
 test('upsertHomeServices validates the full request and server-owned ids', async () => {
@@ -572,13 +832,13 @@ test('upsertHomeServices validates the full request and server-owned ids', async
   }), { status: 400, message: 'Duplicate service item id' })
   await assert.rejects(upsertHomeServices('tenant-1', {
     title: 'Services', items: [{ id: 'client-created', name: 'Item' }]
-  }), { status: 400, message: 'Unknown service item id' })
+  }), { status: 400, message: 'Unknown services item id' })
   await assert.rejects(upsertHomeServices('tenant-1', {
     title: 'Services', items: [{ id: '', name: 'Item' }]
-  }), { status: 400, message: 'Unknown service item id' })
+  }), { status: 400, message: 'Unknown services item id' })
 })
 
-test('upsertHomeServices inserts after Hero with generated ids and request order', async () => {
+test('upsertHomeServices appends by default with generated ids and request order', async () => {
   const configPath = 'tenants/tenant-1/site/config'
   const homePath = 'tenants/tenant-1/site/config/pages/home'
   fakeDb.seed(configPath, { status: 'DRAFT', createdAt: 10, updatedAt: 20, createdByUserId: 'admin' })
@@ -589,9 +849,8 @@ test('upsertHomeServices inserts after Hero with generated ids and request order
     createdAt: 11,
     updatedAt: 21,
     sections: [
-      { id: 'before', type: 'future', content: {} },
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'after', type: 'future', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -607,7 +866,7 @@ test('upsertHomeServices inserts after Hero with generated ids and request order
   const home = fakeDb.data(homePath)
   const config = fakeDb.data(configPath)
 
-  assert.deepEqual(home.sections.map((section) => section.id), ['before', 'hero', 'services', 'after'])
+  assert.deepEqual(home.sections.map((section) => section.id), ['hero', 'after', services.id])
   assert.equal(services.content.title, 'Our Services')
   assert.deepEqual(services.content.items.map((item) => item.name), ['Second', 'First'])
   assert.match(services.content.items[0].id, /^[0-9a-f-]{36}$/)
@@ -638,11 +897,12 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
     createdAt: 1,
     updatedAt: 2,
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'middle', type: 'future', content: {} },
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'middle', type: 'about', hidden: false, content: { heading: 'Middle', body: 'Body' } },
       {
         id: 'services',
         type: 'services',
+        hidden: false,
         sectionFuture: true,
         content: {
           title: 'Old',
@@ -653,7 +913,7 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
           ]
         }
       },
-      { id: 'after', type: 'future', content: {} }
+      { id: 'after', type: 'about', hidden: false, content: { heading: 'After', body: 'Body' } }
     ]
   })
 
@@ -663,8 +923,8 @@ test('upsertHomeServices preserves identity and metadata with full-state descrip
   let services = servicesSection(updated)
   assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'middle', 'services', 'after'])
   assert.equal(services.sectionFuture, true)
-  assert.equal(services.content.contentFuture, true)
-  assert.deepEqual(services.content.items, [{ id: 'abc', name: 'Changed', futureField: 'keep' }])
+  assert.equal(services.content.contentFuture, undefined)
+  assert.deepEqual(services.content.items, [{ id: 'abc', name: 'Changed' }])
 
   updated = await upsertHomeServices('tenant-1', {
     title: 'Changed',
@@ -694,24 +954,25 @@ test('upsertHomeServices rejects missing documents and invalid reserved section 
   fakeDb.seed('tenants/no-hero/site/config', { status: 'DRAFT' })
   fakeDb.seed('tenants/no-hero/site/config/pages/home', { sections: [] })
   await assert.rejects(upsertHomeServices('no-hero', valid), {
-    status: 500, message: 'Home hero section missing'
+    status: 500, message: 'Home sections invalid'
   })
 
   const cases = [
     [
-      { id: 'hero', type: 'hero', content: {} },
-      { id: 'services', type: 'services', content: { items: [] } },
-      { id: 'other', type: 'services', content: { items: [] } }
+      { id: 'hero', type: 'hero', hidden: true, content: { title: 'Hero' } }
     ],
-    [{ id: 'services', type: 'hero', content: {} }],
-    [{ id: 'other', type: 'services', content: { items: [] } }]
+    [{ id: 'services', type: 'services', hidden: false, content: { title: 'Services', items: [] } }],
+    [
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'hero', type: 'services', hidden: false, content: { title: 'Services', items: [] } }
+    ]
   ]
   for (const [index, sections] of cases.entries()) {
     const tenantId = `invalid-${index}`
     fakeDb.seed(`tenants/${tenantId}/site/config`, { status: 'DRAFT' })
     fakeDb.seed(`tenants/${tenantId}/site/config/pages/home`, { sections })
     await assert.rejects(upsertHomeServices(tenantId, valid), {
-      status: 500, message: 'Home services section invalid'
+      status: 500, message: 'Home sections invalid'
     })
   }
 })
@@ -746,7 +1007,7 @@ test('Services working edits remain isolated until republish', async () => {
 })
 
 const contactSection = (site) => site.pages[0].sections.find((section) =>
-  section.id === 'contact' && section.type === 'contact'
+  section.type === 'contact'
 )
 
 const validContact = (overrides = {}) => ({
@@ -913,14 +1174,14 @@ test('upsertHomeContact appends, preserves position and metadata, and owns its f
     createdAt: 1,
     updatedAt: 2,
     sections: [
-      { id: 'hero', type: 'hero', content: { title: 'Hero' } },
-      { id: 'future', type: 'future', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'future', type: 'about', hidden: false, content: { heading: 'Future', body: 'Body' } }
     ]
   })
   fakeDb.seed('tenants/tenant-1/site/config/published/current', { untouched: true })
 
   let updated = await upsertHomeContact('tenant-1', validContact({ text: '  Initial text  ' }))
-  assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'future', 'contact'])
+  assert.deepEqual(updated.pages[0].sections.map((section) => section.type), ['hero', 'about', 'contact'])
   assert.equal(contactSection(updated).content.text, 'Initial text')
 
   const stored = fakeDb.data(homePath)
@@ -937,9 +1198,9 @@ test('upsertHomeContact appends, preserves position and metadata, and owns its f
   const contact = contactSection(updated)
   const config = fakeDb.data(configPath)
   const home = fakeDb.data(homePath)
-  assert.deepEqual(updated.pages[0].sections.map((section) => section.id), ['hero', 'future', 'contact'])
+  assert.deepEqual(updated.pages[0].sections.map((section) => section.type), ['hero', 'about', 'contact'])
   assert.equal(contact.sectionFuture, true)
-  assert.equal(contact.content.contentFuture, true)
+  assert.equal(contact.content.contentFuture, undefined)
   assert.equal(Object.hasOwn(contact.content, 'text'), false)
   assert.deepEqual(contact.content.action, { type: 'email', value: 'updated@example.com' })
   assert.equal(home.updatedAt, config.updatedAt)
@@ -960,18 +1221,19 @@ test('upsertHomeContact rejects missing documents and invalid reserved section s
 
   const cases = [
     [
-      { id: 'contact', type: 'contact', content: {} },
-      { id: 'other', type: 'contact', content: {} }
+      { id: 'hero', type: 'hero', hidden: false, content: { title: 'Hero' } },
+      { id: 'contact', type: 'contact', hidden: false, content: {} },
+      { id: 'other', type: 'contact', hidden: false, content: {} }
     ],
-    [{ id: 'contact', type: 'hero', content: {} }],
-    [{ id: 'other', type: 'contact', content: {} }]
+    [{ id: 'contact', type: 'hero', hidden: true, content: { title: 'Hero' } }],
+    [{ id: 'other', type: 'contact', hidden: false, content: {} }]
   ]
   for (const [index, sections] of cases.entries()) {
     const tenantId = `invalid-contact-${index}`
     fakeDb.seed(`tenants/${tenantId}/site/config`, { status: 'DRAFT' })
     fakeDb.seed(`tenants/${tenantId}/site/config/pages/home`, { sections })
     await assert.rejects(upsertHomeContact(tenantId, validContact()), {
-      status: 500, message: 'Home contact section invalid'
+      status: 500, message: 'Home sections invalid'
     })
   }
 })
@@ -999,4 +1261,237 @@ test('Contact working changes remain isolated until republish', async () => {
 
   await publishSite('tenant-1', 'admin')
   assert.equal(contactSection(await getPublicSite('tenant-1', normalPublicEnv)).content.title, 'Contact B')
+})
+
+test('curated site template catalog exposes metadata only and validates each source template', async () => {
+  const templates = await listSiteTemplates()
+  assert.deepEqual(templates.map((template) => template.id), [
+    'modern-local-service', 'classic-professional', 'bold-contractor'
+  ])
+  for (const [index, template] of templates.entries()) {
+    assert.deepEqual(Object.keys(template).sort(), ['description', 'id', 'name', 'tags', 'version'])
+    assert.equal(validateSiteTemplate(SITE_TEMPLATES[index]), true)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('mediaId'), false)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('testimonials'), false)
+    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('stats'), false)
+  }
+})
+
+test('materialized templates reject invalid runtime Page composition instead of repairing it', () => {
+  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
+  const invalidTemplate = (mutate) => {
+    const template = structuredClone(SITE_TEMPLATES[0])
+    mutate(template)
+    assert.throws(() => materializeSiteTemplate(template, config, 10), { status: 500 })
+  }
+
+  invalidTemplate((template) => { template.pages[1].slug = 'Invalid slug' })
+  invalidTemplate((template) => { template.pages[1].slug = template.pages[2].slug })
+  invalidTemplate((template) => { template.pages[1].sections.unshift({ type: 'hero', hidden: false, content: { title: 'Not Home' } }) })
+  invalidTemplate((template) => { template.pages[0].sections.push(structuredClone(template.pages[0].sections.at(-1))) })
+  invalidTemplate((template) => { template.pages[0].sections[0].hidden = true })
+  invalidTemplate((template) => { template.header.navigation.items[0].pageKey = 'unknown-page' })
+})
+
+test('applying a site template replaces working pages and preserves tenant-owned configuration', async () => {
+  const originalNow = Date.now
+  let now = 50
+  Date.now = () => now
+  try {
+    fakeDb.seed('tenants/tenant-1', { name: 'Template customer' })
+    await initializeSite('tenant-1', 'admin')
+    now = 100
+    await publishSite('tenant-1', 'publisher')
+    const publishedBeforeApply = fakeDb.data('tenants/tenant-1/site/config/published/current')
+    const original = fakeDb.data('tenants/tenant-1/site/config')
+    fakeDb.seed('tenants/tenant-1/site/config', {
+      ...original,
+      branding: { siteName: 'Kept name' },
+      businessProfile: { phone: '+15555550100' },
+      seo: { defaultDescription: 'Keep global SEO', indexable: false },
+      customCss: '.kept { color: red; }',
+      pageOrder: ['home', 'old-page']
+    })
+    fakeDb.seed('tenants/tenant-1/site/config/pages/old-page', {
+      id: 'old-page', slug: 'old-page', title: 'Old page', sections: [], createdAt: 50, updatedAt: 50, seo: { title: 'Old SEO' }
+    })
+
+    now = 200
+    const applied = await applySiteTemplate('tenant-1', 'modern-local-service')
+    const config = fakeDb.data('tenants/tenant-1/site/config')
+    assert.equal(applied.status, 'PUBLISHED')
+    assert.equal(applied.hasUnpublishedChanges, true)
+    assert.equal(applied.lastPublishedAt, 100)
+    assert.deepEqual(config.branding, { siteName: 'Kept name' })
+    assert.deepEqual(config.businessProfile, { phone: '+15555550100' })
+    assert.deepEqual(config.seo, { defaultDescription: 'Keep global SEO', indexable: false })
+    assert.equal(config.customCss, '.kept { color: red; }')
+    assert.equal(config.lastPublishedAt, 100)
+    assert.equal(config.lastPublishedByUserId, 'publisher')
+    assert.equal(config.updatedAt, 200)
+    assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), publishedBeforeApply)
+    assert.equal(fakeDb.data('tenants/tenant-1/site/config/published/current').publishedAt, publishedBeforeApply.publishedAt)
+    assert.equal(applied.pages.some((page) => page.id !== 'home' && publishedBeforeApply.siteDefinition.pages.some((publishedPage) => publishedPage.id === page.id)), false)
+    assert.equal(fakeDb.data('tenants/tenant-1/site/config/pages/old-page'), undefined)
+    assert.equal(applied.pages[0].id, 'home')
+    assert.ok(applied.pages.slice(1).every((page) => page.id !== 'home'))
+    assert.ok(applied.pages.every((page) => !Object.hasOwn(page, 'seo')))
+    assert.ok(config.pageOrder.every((pageId) => !Object.hasOwn(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), 'seo')))
+
+    const pageIds = new Set(applied.pages.map((page) => page.id))
+    for (const item of [...applied.header.navigation.items, ...applied.footer.navigationItems]) {
+      assert.ok(pageIds.has(item.pageId))
+      assert.equal(Object.hasOwn(item, 'pageKey'), false)
+    }
+    const sections = applied.pages.flatMap((page) => page.sections)
+    assert.equal(new Set(sections.map((section) => section.id)).size, sections.length)
+    const itemIds = sections.flatMap((section) => section.content.items || []).map((item) => item.id)
+    assert.equal(new Set(itemIds).size, itemIds.length)
+  } finally {
+    Date.now = originalNow
+  }
+})
+
+test('template materialization regenerates every persisted identifier, including nested item ids', () => {
+  const template = {
+    ...SITE_TEMPLATES[0],
+    header: { brandDisplay: 'logo', navigation: { items: [{ pageKey: 'home' }] } },
+    footer: {
+      showBranding: true,
+      navigationMode: 'custom',
+      navigationItems: [{ pageKey: 'home' }],
+      showBusinessContact: false,
+      showSocialLinks: true,
+      showCopyright: true
+    },
+    pages: [{
+      key: 'home',
+      slug: '/',
+      title: 'Home',
+      sections: [
+        { type: 'hero', hidden: false, content: { title: 'Start' } },
+        { type: 'services', hidden: false, content: { title: 'Services', items: [{ name: 'One' }] } },
+        { type: 'gallery', hidden: false, content: { title: 'Gallery', items: [{ mediaId: 'test-media', altText: 'Test image' }] } },
+        { type: 'testimonials', hidden: false, content: { title: 'Testimonials', items: [{ customerName: 'Name', quote: 'Quote' }] } },
+        { type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ question: 'Question', answer: 'Answer' }] } },
+        { type: 'process', hidden: false, content: { items: [{ title: 'Step' }] } },
+        { type: 'stats', hidden: false, content: { items: [{ value: '1', label: 'One' }] } },
+        { type: 'logos', hidden: false, content: { items: [{ mediaId: 'test-logo', altText: 'Test logo' }] } }
+      ]
+    }]
+  }
+  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
+  const first = materializeSiteTemplate(template, config, 10)
+  const second = materializeSiteTemplate(template, config, 10)
+  const ids = (result) => result.pages.flatMap((page) => page.sections).flatMap((section) => [section.id, ...(section.content.items || []).map((item) => item.id)])
+  assert.equal(new Set(ids(first)).size, ids(first).length)
+  assert.equal(ids(first).some((id) => ids(second).includes(id)), false)
+  const preserved = materializeSiteTemplate(SITE_TEMPLATES[0], {
+    status: 'PUBLISHED',
+    branding: { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' },
+    businessProfile: { socialImageMediaId: 'social-1' },
+    seo: { defaultDescription: 'Kept' },
+    customCss: '.kept {}',
+    lastPublishedAt: 1,
+    lastPublishedByUserId: 'publisher'
+  }, 10)
+  assert.deepEqual(preserved.config.branding, { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' })
+  assert.deepEqual(preserved.config.businessProfile, { socialImageMediaId: 'social-1' })
+  assert.equal(preserved.config.customCss, '.kept {}')
+  assert.equal(preserved.config.lastPublishedAt, 1)
+})
+
+test('template application regenerates ids within Firestore retry callbacks without duplicate persisted pages', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Retry customer' })
+  await initializeSite('tenant-1', 'admin')
+  fakeDb.beforeCommit = ({ attempt }) => {
+    if (attempt === 1) {
+      const config = fakeDb.data('tenants/tenant-1/site/config')
+      fakeDb.seed('tenants/tenant-1/site/config', { ...config, updatedAt: config.updatedAt + 1 })
+    }
+  }
+  const applied = await applySiteTemplate('tenant-1', 'bold-contractor')
+  assert.equal(fakeDb.transactionAttempts, 3) // initialization plus one retry and a successful apply.
+  const storedPageIds = fakeDb.data('tenants/tenant-1/site/config').pageOrder
+  assert.deepEqual(storedPageIds, applied.pages.map((page) => page.id))
+  assert.equal(new Set(storedPageIds).size, storedPageIds.length)
+})
+
+test('Publish retries after Apply commits and snapshots one coherent template generation', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Publication race' })
+  await initializeSite('tenant-1', 'admin')
+  let interleaved = false
+  let publishAttempts = 0
+  let applied
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const publishing = writes.some((write) => write.ref.path.endsWith('/published/current'))
+    if (publishing) publishAttempts++
+    if (publishing && !interleaved) {
+      interleaved = true
+      applied = await applySiteTemplate('tenant-1', 'classic-professional')
+    }
+  }
+
+  await publishSite('tenant-1', 'publisher')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  const snapshot = fakeDb.data('tenants/tenant-1/site/config/published/current').siteDefinition
+  const publishedPageIds = snapshot.pages.map((page) => page.id)
+  assert.equal(publishAttempts, 2)
+  assert.deepEqual(publishedPageIds, config.pageOrder)
+  assert.equal(snapshot.pages[0].id, 'home')
+  assert.ok(config.pageOrder.slice(1).every((pageId) => snapshot.pages.some((page) => page.id === pageId)))
+  for (const item of snapshot.header.navigation.items) assert.ok(publishedPageIds.includes(item.pageId))
+  for (const item of snapshot.footer.navigationItems) assert.ok(publishedPageIds.includes(item.pageId))
+  assert.deepEqual(snapshot.pages, applied.pages)
+  assert.deepEqual(snapshot.header, applied.header)
+  assert.deepEqual(snapshot.footer, applied.footer)
+  assert.equal(JSON.stringify(snapshot).includes('pageKey'), false)
+  assert.equal(snapshot.pages.some((page) => page.sections.some((section) => section.content?.title === 'Publication race')), false)
+})
+
+test('Apply retries around a preserved Business Profile update without overwriting it', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Preservation race' })
+  await initializeSite('tenant-1', 'admin')
+  let interleaved = false
+  let applyAttempts = 0
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    if (applying) applyAttempts++
+    if (applying && !interleaved) {
+      interleaved = true
+      await updateBusinessProfile('tenant-1', { phone: '+17205550100' })
+    }
+  }
+
+  const applied = await applySiteTemplate('tenant-1', 'bold-contractor')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  assert.equal(applyAttempts, 2)
+  assert.equal(config.businessProfile.phone, '+17205550100')
+  assert.deepEqual(config.theme, SITE_TEMPLATES[2].theme)
+  assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
+  assert.deepEqual(applied.header.navigation.items.map((item) => item.pageId), config.header.navigation.items.map((item) => item.pageId))
+})
+
+test('Apply retries around a Page edit and intentionally supersedes the old Page generation', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Page race' })
+  await initializeSite('tenant-1', 'admin')
+  const { pageId } = await createPage('tenant-1', { title: 'Legacy page', slug: 'legacy-page' })
+  let interleaved = false
+  let applyAttempts = 0
+  fakeDb.beforeCommit = async ({ writes }) => {
+    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    if (applying) applyAttempts++
+    if (applying && !interleaved) {
+      interleaved = true
+      await updatePage('tenant-1', pageId, { title: 'Concurrent legacy edit' })
+    }
+  }
+
+  const applied = await applySiteTemplate('tenant-1', 'modern-local-service')
+  const config = fakeDb.data('tenants/tenant-1/site/config')
+  assert.equal(applyAttempts, 2)
+  assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), undefined)
+  assert.equal(applied.pages.some((page) => page.title === 'Concurrent legacy edit'), false)
+  assert.equal(applied.pages.some((page) => page.slug === 'legacy-page'), false)
 })

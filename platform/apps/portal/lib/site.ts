@@ -1,4 +1,4 @@
-import type { BusinessHours, SiteDefinition, SiteTheme, SocialLink } from '@bakerrang/site-schema'
+import type { BusinessHours, SectionType, SiteDefinition, SiteFooter, SiteHeader, SiteSeo, SiteTheme, SocialLink } from '@bakerrang/site-schema'
 import type { PostalAddress } from '@bakerrang/site-schema'
 import { apiGet, apiSend } from './api'
 
@@ -24,12 +24,18 @@ export interface AboutInput {
   body: string
   imageMediaId?: string
   imageAlt?: string
+  imagePosition?: 'left' | 'right'
+  buttonLabel?: string
+  action?: LinkActionInput
 }
 
-export type ContactActionInput =
+export type LinkActionInput =
   | { type: 'email', value: string }
   | { type: 'phone', value: string }
   | { type: 'url', value: string }
+
+export type ContactActionInput =
+  | LinkActionInput
   | { type: 'leadForm' }
 
 export interface ContactInput {
@@ -73,9 +79,10 @@ export interface FaqInput {
   items: FaqItemInput[]
 }
 
-export interface CompositionInput {
-  sectionIds: string[]
-}
+export interface ProcessInput { heading?: string, intro?: string, items: Array<{ id?: string, title: string, description?: string }> }
+export interface StatsInput { heading?: string, intro?: string, items: Array<{ id?: string, value: string, label: string }> }
+export interface CtaInput { heading: string, body?: string, buttonLabel?: string, action?: LinkActionInput }
+export interface LogosInput { heading?: string, items: Array<{ id?: string, mediaId: string, altText: string }> }
 
 export interface BrandingInput {
   siteName: string
@@ -99,6 +106,7 @@ export interface BusinessHoursUpdateInput {
     heading?: string
     intro?: string
   }
+  preserveSections?: boolean
 }
 
 export interface SocialLinksUpdateInput {
@@ -109,10 +117,27 @@ export interface CustomCssUpdateInput {
   customCss: string | null
 }
 
+export interface SiteSeoUpdateInput extends SiteSeo {
+  /** Omit to retain the current BusinessProfile-owned social image; null clears it. */
+  socialImageMediaId?: string | null
+}
+
+/** Persisted SEO fields only; hydrated image values are intentionally excluded. */
+export interface PageSeoUpdateInput {
+  title?: string
+  description?: string
+  socialImageMediaId?: string | null
+  noIndex?: boolean
+}
+
 export interface SitePreviewToken {
   token: string
   expiresAt: number
 }
+
+export interface PageInput { title: string, slug: string }
+export interface UpdatePageInput { title?: string, slug?: string }
+export interface CreatePageResponse { site: SiteDefinition, pageId: string }
 
 export type SiteDomainStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'ACTIVE' | 'DISABLED'
 
@@ -132,11 +157,38 @@ export interface SiteDomain {
   disabledByUserId?: string
 }
 
+/** Curated server-owned template metadata. Template definitions remain private to the API. */
+export interface SiteTemplateSummary {
+  id: string
+  version: number
+  name: string
+  description: string
+  tags: string[]
+}
+
+export interface SiteRevision {
+  revisionId: string | null
+  publishedAt: number
+  publishedByUserId: string
+  pageCount: number
+  isCurrent: boolean
+}
+
+export interface SiteRevisionList {
+  revisions: SiteRevision[]
+}
+
 export const initializeSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site`)
 
 export const getSite = (tenantId: string) =>
   apiGet<SiteDefinition>(`/tenants/${encodeURIComponent(tenantId)}/site`)
+
+export const getSiteTemplates = (tenantId: string) =>
+  apiGet<SiteTemplateSummary[]>(`/tenants/${encodeURIComponent(tenantId)}/site/templates`)
+
+export const applySiteTemplate = (tenantId: string, templateId: string) =>
+  apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/templates/${encodeURIComponent(templateId)}/apply`)
 
 export const createSitePreviewToken = (tenantId: string) =>
   apiSend<SitePreviewToken>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/preview-token`)
@@ -165,6 +217,12 @@ export const updateSiteBranding = (tenantId: string, input: BrandingInput) =>
 export const updateSiteTheme = (tenantId: string, input: SiteTheme) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/theme`, input)
 
+export const updateSiteHeader = (tenantId: string, input: SiteHeader) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/header`, input)
+
+export const updateSiteFooter = (tenantId: string, input: SiteFooter) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/footer`, input)
+
 export const updateBusinessProfile = (tenantId: string, input: BusinessProfileInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/profile`, input)
 
@@ -177,64 +235,46 @@ export const updateSocialLinks = (tenantId: string, input: SocialLinksUpdateInpu
 export const updateCustomCss = (tenantId: string, input: CustomCssUpdateInput) =>
   apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/custom-css`, input)
 
+export const updateSiteSeo = (tenantId: string, input: SiteSeoUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `/tenants/${encodeURIComponent(tenantId)}/site/seo`, input)
+
 export const publishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/publish`)
 
 export const unpublishSite = (tenantId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/unpublish`)
 
-export const updateHomeHero = (tenantId: string, input: HeroInput) =>
-  apiSend<SiteDefinition>(
-    'PATCH',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/hero`,
-    input
-  )
+export const getSiteRevisions = (tenantId: string) =>
+  apiGet<SiteRevisionList>(`/tenants/${encodeURIComponent(tenantId)}/site/revisions`)
 
-export const upsertHomeServices = (tenantId: string, input: ServicesInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/services`,
-    input
-  )
+export const restoreSiteRevision = (tenantId: string, revisionId: string) =>
+  apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/revisions/${encodeURIComponent(revisionId)}/restore`)
 
-export const upsertHomeAbout = (tenantId: string, input: AboutInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/about`,
-    input
-  )
+const pagePath = (tenantId: string, pageId: string) =>
+  `/tenants/${encodeURIComponent(tenantId)}/site/pages/${encodeURIComponent(pageId)}`
+const sectionPath = (tenantId: string, pageId: string, sectionId: string) =>
+  `${pagePath(tenantId, pageId)}/sections/${encodeURIComponent(sectionId)}`
 
-export const upsertHomeContact = (tenantId: string, input: ContactInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/contact`,
-    input
-  )
+export const createPage = (tenantId: string, input: PageInput) =>
+  apiSend<CreatePageResponse>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/pages`, input)
+export const updatePage = (tenantId: string, pageId: string, input: UpdatePageInput) =>
+  apiSend<SiteDefinition>('PATCH', pagePath(tenantId, pageId), input)
+export const updatePageSeo = (tenantId: string, pageId: string, input: PageSeoUpdateInput) =>
+  apiSend<SiteDefinition>('PUT', `${pagePath(tenantId, pageId)}/seo`, input)
+export const movePage = (tenantId: string, pageId: string, direction: 'up' | 'down') =>
+  apiSend<SiteDefinition>('POST', `${pagePath(tenantId, pageId)}/move`, { direction })
+export const deletePage = (tenantId: string, pageId: string) =>
+  apiSend<SiteDefinition>('DELETE', pagePath(tenantId, pageId))
 
-export const upsertHomeGallery = (tenantId: string, input: GalleryInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/gallery`,
-    input
-  )
-
-export const upsertHomeTestimonials = (tenantId: string, input: TestimonialsInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/testimonials`,
-    input
-  )
-
-export const upsertHomeFaq = (tenantId: string, input: FaqInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/sections/faq`,
-    input
-  )
-
-export const composeHomeSections = (tenantId: string, input: CompositionInput) =>
-  apiSend<SiteDefinition>(
-    'PUT',
-    `/tenants/${encodeURIComponent(tenantId)}/site/pages/home/composition`,
-    input
-  )
+export const removeSection = (tenantId: string, pageId: string, sectionId: string) =>
+  apiSend<SiteDefinition>('DELETE', sectionPath(tenantId, pageId, sectionId))
+export const moveSection = (tenantId: string, pageId: string, sectionId: string, direction: 'up' | 'down') =>
+  apiSend<SiteDefinition>('POST', `${sectionPath(tenantId, pageId, sectionId)}/move`, { direction })
+export const addSection = (tenantId: string, pageId: string, type: SectionType, afterSectionId?: string) =>
+  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `${pagePath(tenantId, pageId)}/sections`, { type, ...(afterSectionId ? { afterSectionId } : {}) })
+export const duplicateSection = (tenantId: string, pageId: string, sectionId: string) =>
+  apiSend<{ site: SiteDefinition, sectionId: string }>('POST', `${sectionPath(tenantId, pageId, sectionId)}/duplicate`)
+export const setSectionVisibility = (tenantId: string, pageId: string, sectionId: string, hidden: boolean) =>
+  apiSend<SiteDefinition>('PATCH', `${sectionPath(tenantId, pageId, sectionId)}/visibility`, { hidden })
+export const updateSectionContent = <T>(tenantId: string, pageId: string, sectionId: string, input: T) =>
+  apiSend<SiteDefinition>('PUT', sectionPath(tenantId, pageId, sectionId), input)

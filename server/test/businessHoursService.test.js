@@ -3,15 +3,14 @@ import assert from 'node:assert/strict'
 import { normalizeBusinessHours, validateBusinessHours } from '../domain/businessHours.js'
 import {
   _setDb as setSiteDb,
-  composeHomeSections,
   getPublicSite,
   getSite,
   initializeSite,
   publishSite,
-  updateBusinessHours,
-  updateBusinessProfile,
-  upsertHomeContact
+  updateBusinessHours as updateBusinessHoursService,
+  updateBusinessProfile
 } from '../services/siteService.js'
+import { composeHomeSections, upsertHomeContact } from './helpers/legacySiteTestBridge.js'
 import { _setDb as setMediaDb, _setStorage } from '../services/mediaService.js'
 import { FakeDb } from './helpers/fakeDb.js'
 import { FakeStorage } from './helpers/fakeStorage.js'
@@ -38,6 +37,11 @@ const configPath = 'tenants/tenant-1/site/config'
 const homePath = `${configPath}/pages/home`
 const normalEnv = { NODE_ENV: 'development', ALLOW_DRAFT_PUBLIC_SITES: 'false' }
 const previewEnv = { NODE_ENV: 'development', ALLOW_DRAFT_PUBLIC_SITES: 'true' }
+const updateBusinessHours = (tenantId, input) => updateBusinessHoursService(
+  tenantId,
+  input,
+  fakeDb.data(homePath)?.sections.find((section) => section.type === 'businessHours')?.id
+)
 
 beforeEach(async () => {
   fakeDb = new FakeDb().seed('tenants/tenant-1', { name: 'Business' })
@@ -114,7 +118,10 @@ test('focused mutation preserves every unrelated profile field and stores presen
   assert.deepEqual(fakeDb.data(configPath).businessProfile, { ...profile, businessHours: schedule() })
   const section = result.pages[0].sections.find((item) => item.type === 'businessHours')
   assert.deepEqual(section, {
-    id: 'businessHours', type: 'businessHours', content: { heading: 'Visit us', intro: 'Open weekly.' }
+    id: section.id,
+    type: 'businessHours',
+    hidden: false,
+    content: { heading: 'Visit us', intro: 'Open weekly.' }
   })
   assert.equal(Object.hasOwn(section.content, 'businessHours'), false)
 })
@@ -124,26 +131,26 @@ test('focused section creation inserts before Contact, preserves position when e
     title: 'Contact', buttonLabel: 'Email', action: { type: 'email', value: 'hello@example.com' }
   })
   await updateBusinessHours('tenant-1', update())
-  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.id), ['hero', 'businessHours', 'contact'])
+  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.type), ['hero', 'businessHours', 'contact'])
   await composeHomeSections('tenant-1', { sectionIds: ['hero', 'contact', 'businessHours'] })
   await updateBusinessHours('tenant-1', update(schedule({ monday: open('10:00', '18:00') }), true, { heading: 'New' }))
-  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.id), ['hero', 'contact', 'businessHours'])
+  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.type), ['hero', 'contact', 'businessHours'])
   await updateBusinessHours('tenant-1', update(schedule(), false))
-  assert.equal(fakeDb.data(homePath).sections.some((item) => item.id === 'businessHours'), false)
+  assert.equal(fakeDb.data(homePath).sections.some((item) => item.type === 'businessHours'), false)
   assert.deepEqual(fakeDb.data(configPath).businessProfile.businessHours, schedule())
   await updateBusinessHours('tenant-1', update())
-  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.id), ['hero', 'businessHours', 'contact'])
+  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.type), ['hero', 'businessHours', 'contact'])
 })
 
 test('Contact-absent section appends; generic removal preserves hours; null removes both atomically', async () => {
   await updateBusinessHours('tenant-1', update())
-  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.id), ['hero', 'businessHours'])
+  assert.deepEqual(fakeDb.data(homePath).sections.map((item) => item.type), ['hero', 'businessHours'])
   await composeHomeSections('tenant-1', { sectionIds: ['hero'] })
   assert.deepEqual(fakeDb.data(configPath).businessProfile.businessHours, schedule())
   await updateBusinessHours('tenant-1', update())
   await updateBusinessHours('tenant-1', update(null, false))
   assert.equal(fakeDb.data(configPath).businessProfile?.businessHours, undefined)
-  assert.equal(fakeDb.data(homePath).sections.some((item) => item.id === 'businessHours'), false)
+  assert.equal(fakeDb.data(homePath).sections.some((item) => item.type === 'businessHours'), false)
 })
 
 test('general Business Profile save omitting hours preserves configured hours while replacing legacy fields', async () => {
