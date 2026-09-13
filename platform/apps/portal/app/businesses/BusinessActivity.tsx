@@ -79,7 +79,7 @@ export function BusinessActivity ({ tenantId }: { tenantId: string }) {
   }
 
   if (loading) return <Card className="p-5" role="status">Loading activity…</Card>
-  if (error) return <StatusMessage tone="error"><p>{error}</p><Button className="mt-3" onClick={() => void loadInitial()} type="button">Retry</Button></StatusMessage>
+  if (error) return <StatusMessage tone="error">{error}<Button className="mt-3" onClick={() => void loadInitial()} type="button">Retry</Button></StatusMessage>
   if (!events.length) return <Card className="p-5"><h2 className="text-lg font-semibold text-fg">No activity yet</h2><p className="mt-2 text-sm leading-6 text-fg-muted">Activity records meaningful operator changes to this business.</p></Card>
 
   return <section aria-labelledby="activity-heading">
