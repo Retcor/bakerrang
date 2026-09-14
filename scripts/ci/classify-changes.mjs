@@ -14,6 +14,7 @@ const PATH_RULES = [
   { prefix: 'platform/packages/site-schema/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'platform/packages/ui/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'platform/packages/site-components/', ci: ['renderer'], deploy: ['renderer'] },
+  { prefix: 'platform/packages/site-runtime/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
 
   { exact: 'platform/package.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { exact: 'platform/package-lock.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },

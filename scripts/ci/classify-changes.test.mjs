@@ -28,6 +28,7 @@ test('fans shared packages out according to the dependency graph', () => {
   assert.deepEqual(classifyChanges(['platform/packages/site-schema/src/index.ts']), expected({ portal: true, renderer: true }))
   assert.deepEqual(classifyChanges(['platform/packages/ui/src/Button.tsx']), expected({ portal: true, renderer: true }))
   assert.deepEqual(classifyChanges(['platform/packages/site-components/src/Hero.tsx']), expected({ renderer: true }))
+  assert.deepEqual(classifyChanges(['platform/packages/site-runtime/src/SitePageRenderer.tsx']), expected({ portal: true, renderer: true }))
 })
 
 test('classifies shared platform build inputs for CI and deployment', () => {

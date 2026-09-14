@@ -3,6 +3,7 @@ import type { SiteNavItem } from './SiteHeader'
 import type { BusinessProfile, SiteBranding, SiteFooter as SiteFooterConfig, SocialPlatform } from '@bakerrang/site-schema'
 import { contactHref } from './contactHref'
 import { isSafeSocialUrl } from './socialLinks'
+import type { MouseEvent } from 'react'
 
 const socialLabels: Record<SocialPlatform, string> = {
   facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn',
@@ -22,7 +23,7 @@ const addressLines = (address: BusinessProfile['address']) => address
   ? [address.line1, address.line2, [address.city, address.region, address.postalCode].filter(Boolean).join(', '), address.country].filter(Boolean)
   : []
 
-export function SiteFooter ({ branding, config, navItems, profile }: { branding: Pick<SiteBranding, 'siteName' | 'logoSrc' | 'logoWidth' | 'logoHeight'>, config: SiteFooterConfig, navItems: SiteNavItem[], profile?: BusinessProfile }) {
+export function SiteFooter ({ branding, config, navItems, onNavigate, onSelectPage, profile }: { branding: Pick<SiteBranding, 'siteName' | 'logoSrc' | 'logoWidth' | 'logoHeight'>, config: SiteFooterConfig, navItems: SiteNavItem[], profile?: BusinessProfile, onSelectPage?: (pageId: string) => void, onNavigate?: (target: { href: string, pageId?: string }) => void }) {
   const siteName = branding.siteName
   const socialLinks = profile?.socialLinks
   const safeSocialLinks = (Array.isArray(socialLinks) ? socialLinks : []).filter((link) =>
@@ -32,6 +33,12 @@ export function SiteFooter ({ branding, config, navItems, profile }: { branding:
   const emailHref = profile?.email ? contactHref({ type: 'email', value: profile.email }) : null
   const address = addressLines(profile?.address)
   const hasContact = Boolean(phoneHref || emailHref || address.length)
+  const interceptPage = (event: MouseEvent<HTMLAnchorElement>, item: SiteNavItem) => {
+    if (!onSelectPage && !onNavigate) return
+    event.preventDefault()
+    onSelectPage?.(item.pageId)
+    onNavigate?.({ href: item.href, pageId: item.pageId })
+  }
   return (
     <footer className="border-t-4 border-site-accent bg-site-footer py-12 text-site-footer-fg" data-br-role="footer">
       <SiteContainer className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -46,7 +53,7 @@ export function SiteFooter ({ branding, config, navItems, profile }: { branding:
         </div>
         <div className="flex flex-col gap-4 sm:items-end">
           {navItems.length > 0 && <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-3" data-br-footer-navigation="" data-br-role="nav">
-            {navItems.map((item) => <a aria-current={item.current ? 'page' : undefined} className="text-sm opacity-85 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" data-br-navigation-item={item.pageId} href={item.href} key={item.pageId}>{item.label}</a>)}
+            {navItems.map((item) => <a aria-current={item.current ? 'page' : undefined} className="text-sm opacity-85 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-site-accent" data-br-navigation-item={item.pageId} href={item.href} key={item.pageId} onClick={(event) => interceptPage(event, item)}>{item.label}</a>)}
           </nav>}
           {config.showSocialLinks && safeSocialLinks.length > 0 && (
             <nav aria-label="Social profiles" className="flex flex-wrap gap-2" data-br-role="social">
