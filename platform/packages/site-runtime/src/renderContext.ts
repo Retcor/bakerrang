@@ -1,4 +1,4 @@
-export type RenderMode = 'PUBLIC' | 'EDITOR' | 'TEMPLATE_PREVIEW'
+export type RenderMode = 'PUBLIC' | 'WORKING_PREVIEW' | 'EDITOR' | 'TEMPLATE_PREVIEW'
 
 /**
  * The route shape belongs to the consuming app; the rendering runtime only

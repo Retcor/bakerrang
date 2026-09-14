@@ -53,6 +53,7 @@ test('PUBLIC lead submissions retain their side effect while editor modes are in
   assert.equal(await submitLeadForContext('PUBLIC', submit), null)
   assert.equal(submissions, 1)
   assert.equal(await submitLeadForContext('EDITOR', submit), PREVIEW_FORM_MESSAGE)
+  assert.equal(await submitLeadForContext('WORKING_PREVIEW', submit), PREVIEW_FORM_MESSAGE)
   assert.equal(await submitLeadForContext('TEMPLATE_PREVIEW', submit), PREVIEW_FORM_MESSAGE)
   assert.equal(submissions, 1)
 })

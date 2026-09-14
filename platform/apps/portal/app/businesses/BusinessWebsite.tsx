@@ -35,6 +35,7 @@ import { ThemeEditor } from './ThemeEditor'
 import { TemplatesEditor } from './TemplatesEditor'
 import { RevisionHistoryEditor } from './RevisionHistoryEditor'
 import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
+import { SitePreviewFrame } from './SitePreviewFrame'
 import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
 import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsitePaneId } from './websiteEditors'
 
@@ -296,6 +297,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
         </div>
       </header>
       {(error || previewFallback || feedback) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{feedback && <StatusMessage tone="success">{feedback}</StatusMessage>}{offerHomePreview && <Button onClick={() => handlePreview('home')} variant="secondary">Preview Home</Button>}</div>}
+      <SitePreviewFrame pageId={queryPageId ?? 'home'} site={site} />
       <div className="grid min-w-0 gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
         <WebsiteEditorNavigation active={activePane} onSelect={selectEditor} />
         <main className="min-w-0">

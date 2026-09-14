@@ -5,6 +5,7 @@ import { SiteShell } from '@bakerrang/site-components'
 import { resolveSiteNavigation } from './navigation'
 import type { RenderContext } from './renderContext'
 import { SectionRenderer } from './SectionRenderer'
+import { SectionSelectionBoundary } from './SectionSelectionBoundary'
 
 export interface SitePageRendererProps {
   context: RenderContext
@@ -30,7 +31,12 @@ export function SitePageRenderer ({ beforeMain, context, leadForm, page, site }:
     >
       {beforeMain}
       <main data-br-role="main">
-        {page.sections.filter((section) => !section.hidden).map((section) => <SectionRenderer businessHours={site.businessProfile?.businessHours} heroContactHref={contact ? `#section-${contact.id}` : undefined} key={section.id} leadForm={section.type === 'contact' && section.content.action.type === 'leadForm' ? leadForm : undefined} section={section} />)}
+        {page.sections.filter((section) => !section.hidden).map((section) => {
+          const rendered = <SectionRenderer businessHours={site.businessProfile?.businessHours} heroContactHref={contact ? `#section-${contact.id}` : undefined} key={section.id} leadForm={section.type === 'contact' && section.content.action.type === 'leadForm' ? leadForm : undefined} section={section} />
+          return context.onSelectSection && context.mode !== 'PUBLIC'
+            ? <SectionSelectionBoundary key={section.id} onSelect={context.onSelectSection} sectionId={section.id}>{rendered}</SectionSelectionBoundary>
+            : rendered
+        })}
       </main>
     </SiteShell>
   )

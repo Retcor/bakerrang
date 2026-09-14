@@ -21,7 +21,7 @@ test('the shared runtime owns the single SiteShell composition path', async () =
     source('../components/PublicPage.tsx'),
     source('../../../packages/site-runtime/src/SitePageRenderer.tsx')
   ])
-  assert.match(home, /<PublicPage navigationContext=\{navigationContext\} page=\{home\}/)
+  assert.match(home, /<PublicPage mode=\{mode\} navigationContext=\{navigationContext\} page=\{home\}/)
   assert.match(page, /<SitePageRenderer/)
   assert.match(runtime, /<SiteShell[\s\S]*activePage=\{page\}/)
   assert.doesNotMatch(`${home}\n${page}\n${runtime}`, /br-custom-css|site\.customCss/)

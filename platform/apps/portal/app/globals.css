@@ -1,7 +1,10 @@
 @import "tailwindcss";
 @import "@bakerrang/ui/tokens.css";
 @import "@bakerrang/ui/tokens-portal.css";
+@import "@bakerrang/site-components/site-theme.css";
 @source "../../../packages/ui/src";
+@source "../../../packages/site-components/src";
+@source "../../../packages/site-runtime/src";
 
 * {
   box-sizing: border-box;

@@ -81,13 +81,18 @@ test('preview contact is explicitly inert while published lead submission code r
   assert.equal(PREVIEW_FORM_MESSAGE, "This is a preview — the form isn't active.")
   let submissions = 0
   const submit = async () => { submissions += 1 }
-  assert.equal(await submitLeadForContext('TEMPLATE_PREVIEW', submit), PREVIEW_FORM_MESSAGE)
+  assert.equal(await submitLeadForContext('WORKING_PREVIEW', submit), PREVIEW_FORM_MESSAGE)
   assert.equal(submissions, 0)
   assert.equal(await submitLeadForContext('PUBLIC', submit), null)
   assert.equal(submissions, 1)
   const source = await readFile(fileURLToPath(new URL('../../../packages/site-runtime/src/LeadForm.tsx', import.meta.url)), 'utf8')
   assert.match(source, /context\.mode !== 'PUBLIC'[\s\S]*submitLeadForContext\(context\.mode[\s\S]*return/)
   assert.match(source, /submitLeadForContext\(context\.mode/)
+})
+
+test('working-site preview uses its distinct inert render mode', async () => {
+  const route = await readFile(fileURLToPath(new URL('../app/preview/[tenantId]/page.tsx', import.meta.url)), 'utf8')
+  assert.match(route, /<PublicHome[\s\S]*mode="WORKING_PREVIEW"/)
 })
 
 test('preview routes are dynamic, use the preview API, and contain no domain redirect path', async () => {
