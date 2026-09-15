@@ -8,12 +8,12 @@ import { isSitePreviewParentMessage, type SitePreviewChildMessage } from '../../
 const parentOrigin = () => window.location.origin
 
 export function SitePreviewFrameHost () {
-  const [preview, setPreview] = useState<{ site: SiteDefinition, pageId: string } | null>(null)
+  const [preview, setPreview] = useState<{ site: SiteDefinition, pageId: string, selectedSectionId?: string } | null>(null)
 
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
       if (event.origin !== parentOrigin() || !isSitePreviewParentMessage(event.data)) return
-      setPreview({ site: event.data.siteDefinition, pageId: event.data.pageId })
+      setPreview({ site: event.data.siteDefinition, pageId: event.data.pageId, selectedSectionId: event.data.selectedSectionId })
     }
     window.addEventListener('message', receive)
     // The parent waits for this signal, so it cannot race this listener.
@@ -37,6 +37,7 @@ export function SitePreviewFrameHost () {
   const context: RenderContext = {
     mode: 'EDITOR',
     navigation: { kind: 'customDomain' },
+    selectedSectionId: preview.selectedSectionId,
     onSelectPage: (pageId) => notify({ type: 'PAGE_SELECTED', pageId }),
     onNavigate: () => undefined,
     onSelectSection: (sectionId) => notify({ type: 'SECTION_SELECTED', sectionId })

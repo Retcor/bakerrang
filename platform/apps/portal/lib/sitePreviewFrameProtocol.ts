@@ -6,6 +6,7 @@ export type SitePreviewParentMessage = {
   type: 'INIT' | 'UPDATE_SITE'
   siteDefinition: SiteDefinition
   pageId: string
+  selectedSectionId?: string
 }
 
 export type SitePreviewChildMessage =
@@ -18,6 +19,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 /** Message validation deliberately accepts only render-ready site data. */
 export const isSitePreviewParentMessage = (value: unknown): value is SitePreviewParentMessage => {
   if (!isRecord(value) || (value.type !== 'INIT' && value.type !== 'UPDATE_SITE') || typeof value.pageId !== 'string' || !isRecord(value.siteDefinition)) return false
+  if ('selectedSectionId' in value && typeof value.selectedSectionId !== 'string') return false
   const pages = value.siteDefinition.pages
   return Array.isArray(pages) && pages.some((page) => isRecord(page) && page.id === value.pageId)
 }

@@ -108,11 +108,11 @@ describe('Website editor canvas', () => {
   it('blocks publish while the local draft is dirty, then publishes after saving', async () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     fireEvent.change(await screen.findByLabelText('Headline'), { target: { value: 'Unsaved' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }))
-    expect(await screen.findByText('Save changes before publishing.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
     expect(mocks.publishSite).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(mocks.publishSite).toHaveBeenCalledWith('tenant-1'))
   })

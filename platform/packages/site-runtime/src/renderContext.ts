@@ -21,7 +21,14 @@ export interface NavigationTarget {
 export interface RenderContext {
   mode: RenderMode
   navigation: SiteNavigationContext
+  /** The parent editor's selected section; only EDITOR mode renders its chrome. */
+  selectedSectionId?: string
   onSelectSection?: (sectionId: string) => void
   onSelectPage?: (pageId: string) => void
   onNavigate?: (target: NavigationTarget) => void
+}
+
+/** PUBLIC pages stay server-renderable; only preview/editor contexts may intercept links. */
+export function canInterceptNavigation (context: RenderContext) {
+  return context.mode !== 'PUBLIC' && Boolean(context.onSelectPage || context.onNavigate)
 }

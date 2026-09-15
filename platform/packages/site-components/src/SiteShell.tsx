@@ -4,13 +4,14 @@ import { resolveSiteTheme } from './theme'
 import { SiteHeader, type SiteNavItem } from './SiteHeader'
 import { SiteFooter } from './SiteFooter'
 
-export function SiteShell ({ activePage, children, footerNav, homeHref, onNavigate, onSelectPage, primaryNav, site }: {
+export function SiteShell ({ activePage, children, footerNav, homeHref, interceptNavigation = false, onNavigate, onSelectPage, primaryNav, site }: {
   activePage: SitePage
   children: ReactNode
   site: SiteDefinition
   homeHref: string
   primaryNav: SiteNavItem[]
   footerNav: SiteNavItem[]
+  interceptNavigation?: boolean
   onSelectPage?: (pageId: string) => void
   onNavigate?: (target: { href: string, pageId?: string }) => void
 }) {
@@ -23,7 +24,7 @@ export function SiteShell ({ activePage, children, footerNav, homeHref, onNaviga
       {site.scopedCustomCss ? <style id="br-custom-css">{site.scopedCustomCss}</style> : null}
       <SiteHeader brandDisplay={header.brandDisplay} branding={site.branding} cta={header.cta} homeHref={homeHref} navItems={primaryNav} onNavigate={onNavigate} onSelectPage={onSelectPage} />
       {children}
-      <SiteFooter branding={site.branding} config={footer} navItems={footerNav} onNavigate={onNavigate} onSelectPage={onSelectPage} profile={site.businessProfile} />
+      <SiteFooter branding={site.branding} config={footer} interceptNavigation={interceptNavigation} navItems={footerNav} onNavigate={onNavigate} onSelectPage={onSelectPage} profile={site.businessProfile} />
     </div>
   )
 }

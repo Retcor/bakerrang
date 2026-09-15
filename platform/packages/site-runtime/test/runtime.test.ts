@@ -5,7 +5,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { PREVIEW_FORM_MESSAGE, SectionRenderer, SitePageRenderer, resolveSiteNavigation, submitLeadForContext } from '../src/index.ts'
+import { PREVIEW_FORM_MESSAGE, SectionRenderer, SitePageRenderer, canInterceptNavigation, resolveSiteNavigation, submitLeadForContext } from '../src/index.ts'
 
 const site = (): SiteDefinition => ({
   status: 'PUBLISHED',
@@ -45,6 +45,28 @@ test('navigation retains custom-domain, shared-host, and preview paths', () => {
   assert.equal(resolveSiteNavigation(definition, activePage, { kind: 'customDomain' }).headerItems[0].href, '/services')
   assert.equal(resolveSiteNavigation(definition, activePage, { kind: 'sharedHost', tenantId: 'tenant-1' }).headerItems[0].href, '/site/tenant-1/services')
   assert.equal(resolveSiteNavigation(definition, activePage, { kind: 'preview', tenantId: 'tenant-1', token: 'a b' }).headerItems[0].href, '/preview/tenant-1/page/services?token=a%20b')
+})
+
+test('PUBLIC navigation remains server-renderable while editor navigation may intercept', () => {
+  const publicContext = { mode: 'PUBLIC' as const, navigation: { kind: 'customDomain' as const }, onSelectPage: () => undefined }
+  const editorContext = { ...publicContext, mode: 'EDITOR' as const }
+  assert.equal(canInterceptNavigation(publicContext), false)
+  assert.equal(canInterceptNavigation(editorContext), true)
+
+  const html = renderToStaticMarkup(createElement(SitePageRenderer, { context: publicContext, page: site().pages[0], site: site() }))
+  assert.match(html, /href="\/services"/)
+  assert.doesNotMatch(html, /data-br-editor-selection|selected<\/span>/)
+})
+
+test('selected-section chrome is emitted only for the EDITOR render mode', () => {
+  const definition = site()
+  const context = { mode: 'EDITOR' as const, navigation: { kind: 'customDomain' as const }, onSelectSection: () => undefined, selectedSectionId: 'hero-one' }
+  const editorHtml = renderToStaticMarkup(createElement(SitePageRenderer, { context, page: definition.pages[0], site: definition }))
+  assert.match(editorHtml, /data-br-editor-selection="hero-one"/)
+  assert.match(editorHtml, /Hero • selected/)
+
+  const previewHtml = renderToStaticMarkup(createElement(SitePageRenderer, { context: { ...context, mode: 'WORKING_PREVIEW' as const }, page: definition.pages[0], site: definition }))
+  assert.doesNotMatch(previewHtml, /data-br-editor-selection|selected<\/span>/)
 })
 
 test('PUBLIC lead submissions retain their side effect while editor modes are inert', async () => {

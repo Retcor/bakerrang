@@ -50,6 +50,17 @@ describe('Portal SitePreviewFrame', () => {
     expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: updated, pageId: 'home' }, window.location.origin)
   })
 
+  it('sends the active editor section through the established preview update channel', () => {
+    const { rerender } = render(<SitePreviewFrame pageId="home" selectedSectionId="hero" site={site()} />)
+    const frame = screen.getByTitle('Website preview') as HTMLIFrameElement
+    const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
+    ready(frame)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'INIT', siteDefinition: site(), pageId: 'home', selectedSectionId: 'hero' }, window.location.origin)
+
+    rerender(<SitePreviewFrame pageId="home" selectedSectionId={undefined} site={site()} />)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: site(), pageId: 'home' }, window.location.origin)
+  })
+
   it('ignores READY from another origin or a same-origin window other than the iframe', () => {
     render(<SitePreviewFrame pageId="home" site={site()} />)
     const frame = screen.getByTitle('Website preview') as HTMLIFrameElement

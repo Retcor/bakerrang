@@ -5,31 +5,32 @@ import type { SiteDefinition } from '@bakerrang/site-schema'
 import { SITE_PREVIEW_FRAME_ROUTE, isSitePreviewChildMessage, type SitePreviewParentMessage } from '../../lib/sitePreviewFrameProtocol'
 
 /** Selection callbacks are deliberately reserved for the Phase 4.0b editor wiring. */
-export function SitePreviewFrame ({ onPageSelected, onSectionSelected, pageId, site, viewport = 'desktop' }: {
+export function SitePreviewFrame ({ onPageSelected, onSectionSelected, pageId, selectedSectionId, site, viewport = 'desktop' }: {
   onPageSelected?: (pageId: string) => void
   onSectionSelected?: (sectionId: string) => void
   pageId: string
+  selectedSectionId?: string
   site: SiteDefinition
   viewport?: 'desktop' | 'tablet' | 'mobile'
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const readySourceRef = useRef<Window | null>(null)
-  const sentRef = useRef<{ site: SiteDefinition, pageId: string } | null>(null)
-  const currentRef = useRef({ site, pageId })
+  const sentRef = useRef<{ site: SiteDefinition, pageId: string, selectedSectionId?: string } | null>(null)
+  const currentRef = useRef({ site, pageId, selectedSectionId })
   const send = useCallback((frame: Window, type: SitePreviewParentMessage['type']) => {
     const current = currentRef.current
-    frame.postMessage({ type, siteDefinition: current.site, pageId: current.pageId } satisfies SitePreviewParentMessage, window.location.origin)
+    frame.postMessage({ type, siteDefinition: current.site, pageId: current.pageId, ...(current.selectedSectionId ? { selectedSectionId: current.selectedSectionId } : {}) } satisfies SitePreviewParentMessage, window.location.origin)
     sentRef.current = current
   }, [])
 
   useEffect(() => {
-    currentRef.current = { site, pageId }
-  }, [pageId, site])
+    currentRef.current = { site, pageId, selectedSectionId }
+  }, [pageId, selectedSectionId, site])
   useEffect(() => {
     const frame = readySourceRef.current
-    if (!frame || (sentRef.current?.site === site && sentRef.current.pageId === pageId)) return
+    if (!frame || (sentRef.current?.site === site && sentRef.current.pageId === pageId && sentRef.current.selectedSectionId === selectedSectionId)) return
     send(frame, 'UPDATE_SITE')
-  }, [pageId, send, site])
+  }, [pageId, selectedSectionId, send, site])
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
       if (event.origin !== window.location.origin || !isSitePreviewChildMessage(event.data)) return
@@ -51,7 +52,7 @@ export function SitePreviewFrame ({ onPageSelected, onSectionSelected, pageId, s
   return (
     <section aria-label="Website preview" className="min-w-0 overflow-hidden bg-bg" data-preview-viewport={viewport}>
       <div className="min-w-0 overflow-auto" data-site-preview-viewport="">
-        <iframe className={`mx-auto block h-[38rem] border-0 bg-white ${viewport === 'desktop' ? 'w-full' : viewport === 'tablet' ? 'w-[834px] max-w-full' : 'w-[390px] max-w-full'}`} onLoad={() => { readySourceRef.current = null; sentRef.current = null }} ref={frameRef} src={SITE_PREVIEW_FRAME_ROUTE} title="Website preview" />
+        <iframe className={`mx-auto block h-[38rem] border-0 bg-white lg:h-[calc(100svh-9rem)] ${viewport === 'desktop' ? 'w-full' : viewport === 'tablet' ? 'w-[834px] max-w-full' : 'w-[390px] max-w-full'}`} onLoad={() => { readySourceRef.current = null; sentRef.current = null }} ref={frameRef} src={SITE_PREVIEW_FRAME_ROUTE} title="Website preview" />
       </div>
     </section>
   )

@@ -46,7 +46,7 @@ describe('site-preview-frame host', () => {
     expect(screen.queryByText('Welcome')).toBeNull()
   })
 
-  it('keeps editor lead forms and links inert while reporting internal and section selection', async () => {
+  it('in EDITOR mode intercepts iframe navigation while reporting internal and section selection', async () => {
     const postMessage = vi.spyOn(window.parent, 'postMessage')
     render(<SitePreviewFrameHost />)
     deliver({ type: 'INIT', siteDefinition: site(), pageId: 'home' })
@@ -63,6 +63,18 @@ describe('site-preview-frame host', () => {
     const click = new MouseEvent('click', { bubbles: true, cancelable: true })
     external.dispatchEvent(click)
     expect(click.defaultPrevented).toBe(true)
+  })
+
+  it('renders and updates editor-only selection chrome from the existing preview message', async () => {
+    render(<SitePreviewFrameHost />)
+    deliver({ type: 'INIT', siteDefinition: site(), pageId: 'home', selectedSectionId: 'hero' })
+    expect(await screen.findByText('Hero • selected')).toBeInTheDocument()
+    expect(document.querySelector('[data-br-editor-selection="hero"] [data-br-editor-selection-outline]')).toHaveStyle({ border: '2px solid #ffd500' })
+
+    deliver({ type: 'UPDATE_SITE', siteDefinition: site(), pageId: 'home', selectedSectionId: 'contact' })
+    expect(await screen.findByText('Contact • selected')).toBeInTheDocument()
+    expect(document.querySelector('[data-br-editor-selection="hero"]')).toBeNull()
+    expect(document.querySelector('[data-br-editor-selection="contact"]')).toBeInTheDocument()
   })
 
   it('inserts tenant scoped custom CSS in the iframe document only', async () => {

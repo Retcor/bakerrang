@@ -4,4 +4,4 @@ export { resolveNavigationItems, resolveSiteNavigation, type ResolvedNavigationI
 export { SectionRenderer, type SectionRendererProps } from './SectionRenderer'
 export { SectionSelectionBoundary } from './SectionSelectionBoundary'
 export { SitePageRenderer, type SitePageRendererProps } from './SitePageRenderer'
-export type { NavigationTarget, RenderContext, RenderMode, SiteNavigationContext } from './renderContext'
+export { canInterceptNavigation, type NavigationTarget, type RenderContext, type RenderMode, type SiteNavigationContext } from './renderContext'
