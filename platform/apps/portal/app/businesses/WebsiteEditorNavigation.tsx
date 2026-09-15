@@ -20,18 +20,21 @@ function NavigationItems ({ active, onSelect }: {
       <button aria-current={active === 'overview' ? 'page' : undefined} className={itemClass(active === 'overview')} onClick={() => onSelect('overview')} type="button">
         {overviewEditor.label}
       </button>
-      {websiteEditorGroups.map((group, index) => (
+      {websiteEditorGroups.map((group, index) => {
+        const editors = websiteEditors.filter((editor) => editor.group === group && editor.id !== 'templates' && editor.id !== 'revisions')
+        if (!editors.length) return null
+        return (
         <section aria-labelledby={`website-nav-${group.replace(' ', '-').toLowerCase()}`} className={index === 0 ? 'mt-6' : 'mt-6 border-t border-border pt-5'} key={group}>
           <h3 className="px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-fg-subtle" id={`website-nav-${group.replace(' ', '-').toLowerCase()}`}>{group}</h3>
           <div className="mt-2 space-y-1">
-            {websiteEditors.filter((editor) => editor.group === group).map((editor) => (
+            {editors.map((editor) => (
               <button aria-current={active === editor.id ? 'page' : undefined} className={itemClass(active === editor.id)} key={editor.id} onClick={() => onSelect(editor.id)} type="button">
                 {editor.label}
               </button>
             ))}
           </div>
         </section>
-      ))}
+      )})}
     </>
   )
 }
