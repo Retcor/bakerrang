@@ -73,10 +73,27 @@ test('explicitly classifies docs, non-service applications, workflows, and ops a
   }
 })
 
+test('classifies nested Impeccable and agent tooling as repository-only paths', () => {
+  for (const repositoryPath of [
+    '.impeccable/mocks/builder-rail-states.html',
+    '.impeccable/config.json',
+    '.agents/skills/impeccable/reference/polish.md'
+  ]) {
+    assert.deepEqual(classifyChanges([repositoryPath]), expected({}), repositoryPath)
+  }
+})
+
 test('combines API and Portal changes', () => {
   assert.deepEqual(
     classifyChanges(['server/app.js', 'platform/apps/portal/app/page.tsx']),
     expected({ api: true, portal: true })
+  )
+})
+
+test('keeps repository-only tooling out of a mixed Portal change', () => {
+  assert.deepEqual(
+    classifyChanges(['.impeccable/mocks/x.html', 'platform/apps/portal/app/page.tsx']),
+    expected({ portal: true })
   )
 })
 
