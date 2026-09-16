@@ -35,6 +35,7 @@ const PATH_RULES = [
   { prefix: '.codex/', ci: [], deploy: [] },
   { prefix: 'scripts/ci/', ci: [], deploy: [] },
   { exact: 'scripts/verify-live.ps1', ci: [], deploy: [] },
+  { exact: '.impeccable/', ci: [], deploy: [] },
   // Historical tombstone: deleted-path and stale ranges must remain classifiable.
   { exact: 'scripts/deploy-dev.ps1', ci: [], deploy: [] },
   { exact: 'firestore.indexes.json', ci: [], deploy: [] },
