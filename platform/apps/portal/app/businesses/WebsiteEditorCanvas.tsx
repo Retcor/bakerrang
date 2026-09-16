@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import type { SiteDefinition, SitePage } from '@bakerrang/site-schema'
+import type { SiteDefinition, SitePage, SiteSection } from '@bakerrang/site-schema'
 import { Badge, Button } from '@bakerrang/ui'
 import { sectionLabel } from './sectionDefinitions'
 import { SitePreviewFrame } from './SitePreviewFrame'
@@ -31,22 +31,36 @@ function SiteToolIcon ({ type }: { type: 'templates' | 'revisions' }) {
     : <svg aria-hidden className="size-4" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.7" /><path d="M12 7v5l3 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" /></svg>
 }
 
-export function WebsiteEditorCanvas ({ canSave, canonical, dirty, inspector, onManageSections, onOpenPreview, onPageSelected, onPublish, onSave, onSectionSelected, onSiteTool, page, saving, selectedSectionId, site }: {
+function VisibilityIcon ({ hidden }: { hidden: boolean }) {
+  return hidden
+    ? <svg aria-hidden className="size-4" fill="none" viewBox="0 0 24 24"><path d="M3 3 21 21M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 5.1A10.7 10.7 0 0 1 12 5c5.1 0 8.6 5.1 8.6 7s-1.2 3.3-3 4.7M6.2 6.2C4.3 7.7 3.4 10.2 3.4 12c0 1.9 3.5 7 8.6 7 1 0 1.9-.2 2.8-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
+    : <svg aria-hidden className="size-4" fill="none" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" /><circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" /></svg>
+}
+
+function LockIcon () {
+  return <svg aria-hidden className="size-3.5" fill="none" viewBox="0 0 24 24"><rect height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="12" x="6" y="11" /><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" /></svg>
+}
+
+export function WebsiteEditorCanvas ({ canSave, canonical, dirty, inspector, onAddSection, onOpenPreview, onPageSelected, onPublish, onSave, onSectionSelected, onSiteTool, onToggleVisibility, page, railOverride, saving, selectedSectionId, site, visibilityDisabled, visibilityDisabledReason }: {
   canSave: boolean
   canonical: SiteDefinition
   dirty: boolean
   inspector: ReactNode
-  onManageSections: () => void
+  onAddSection: () => void
   onOpenPreview: () => void
   onPageSelected: (pageId: string) => void
   onPublish: () => void
   onSave: () => void
   onSectionSelected: (sectionId: string) => void
   onSiteTool: (tool: 'templates' | 'revisions') => void
+  onToggleVisibility: (section: SiteSection) => void
   page: SitePage
+  railOverride?: ReactNode
   saving: boolean
   selectedSectionId?: string
   site: SiteDefinition
+  visibilityDisabled: boolean
+  visibilityDisabledReason?: string
 }) {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const status = dirty ? { label: 'Unsaved changes', tone: 'warning' as const } : canonical.status === 'DRAFT' ? { label: 'Draft', tone: 'warning' as const } : canonical.hasUnpublishedChanges ? { label: 'Changes not published', tone: 'warning' as const } : { label: 'Published', tone: 'success' as const }
@@ -75,24 +89,33 @@ export function WebsiteEditorCanvas ({ canSave, canonical, dirty, inspector, onM
       </header>
       <div className="grid min-h-0 min-w-0 flex-1 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[21rem_minmax(0,1fr)]">
         <aside className="flex min-h-0 min-w-0 flex-col border-b border-border bg-surface lg:border-r lg:border-b-0" aria-label="Website builder controls">
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          {railOverride ?? <><div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">Page</p>
             <div className="mt-2 space-y-1" role="list" aria-label="Website pages">
               {site.pages.map((candidate) => <button aria-current={candidate.id === page.id ? 'page' : undefined} className={`flex min-h-10 w-full items-center justify-between rounded-md border px-3 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${candidate.id === page.id ? 'border-border-strong bg-surface text-fg shadow-xs' : 'border-transparent text-fg-muted hover:bg-surface-muted hover:text-fg'}`} key={candidate.id} onClick={() => onPageSelected(candidate.id)} type="button"><span className="truncate">{candidate.id === 'home' ? 'Home' : candidate.title}</span><span className="text-xs font-medium text-fg-subtle">{candidate.sections.length} {candidate.sections.length === 1 ? 'section' : 'sections'}</span></button>)}
             </div>
-            <div className="mt-6 flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">Sections</p><button aria-label="Manage sections" className="grid size-7 place-items-center rounded-md text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" onClick={onManageSections} type="button">+</button></div>
+            <div className="mt-6 flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">Sections</p><button aria-label="Add section" className="grid size-7 place-items-center rounded-md text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" onClick={onAddSection} type="button">+</button></div>
             <div className="mt-2 space-y-1" role="list" aria-label={`Sections on ${page.title}`}>
               {page.sections.map((section) => {
                 const selected = section.id === selectedSectionId
-                return <button aria-current={selected ? 'true' : undefined} className={`flex min-h-10 w-full items-center gap-2 rounded-md border px-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${selected ? 'border-brand/70 bg-brand-subtle text-brand-ink shadow-[inset_0_0_0_1px_rgb(254_197_28_/_0.24)]' : 'border-transparent text-fg-muted hover:border-border hover:bg-surface-muted hover:text-fg'}`} key={section.id} onClick={() => onSectionSelected(section.id)} type="button"><span className="min-w-0 flex-1 truncate text-sm font-semibold">{sectionLabel(section)}</span>{section.hidden && <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-fg-subtle">Hidden</span>}</button>
+                const isHero = section.type === 'hero'
+                const visibilityLabel = section.hidden ? `Show ${sectionLabel(section)}` : `Hide ${sectionLabel(section)}`
+                return <div aria-current={selected ? 'true' : undefined} className={`flex min-h-10 w-full items-center gap-1 rounded-md border pl-3 pr-1 text-left transition-colors ${selected ? 'border-brand/70 bg-brand-subtle text-brand-ink shadow-[inset_0_0_0_1px_rgb(254_197_28_/_0.24)]' : `border-transparent text-fg-muted hover:border-border hover:bg-surface-muted hover:text-fg ${section.hidden ? 'opacity-60' : ''}`}`} key={section.id}>
+                  <button className="min-w-0 flex-1 self-stretch truncate text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" onClick={() => onSectionSelected(section.id)} type="button">{sectionLabel(section)}</button>
+                  {section.hidden && <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-fg-subtle">Hidden</span>}
+                  {isHero
+                    ? <span aria-label="Hero is always visible" className="grid size-8 place-items-center text-fg-subtle" title="Hero is always visible"><LockIcon /></span>
+                    : <button aria-describedby={visibilityDisabledReason ? 'section-visibility-disabled-reason' : undefined} aria-label={visibilityLabel} className="grid size-8 place-items-center rounded text-fg-muted transition-colors hover:bg-surface hover:text-fg disabled:cursor-not-allowed disabled:opacity-50" disabled={visibilityDisabled} onClick={() => onToggleVisibility(section)} title={visibilityDisabledReason ?? visibilityLabel} type="button"><VisibilityIcon hidden={Boolean(section.hidden)} /></button>}
+                </div>
               })}
             </div>
+            {visibilityDisabledReason && <p className="mt-2 text-xs leading-5 text-fg-subtle" id="section-visibility-disabled-reason">{visibilityDisabledReason}</p>}
             <div className="mt-6">{inspector}</div>
           </div>
           <div className="border-t border-border bg-surface-muted px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">Site tools</p>
             <div className="mt-2 grid gap-1"><button className="flex min-h-10 items-center gap-2 rounded-md px-2.5 text-left text-sm font-semibold text-fg-muted transition-colors hover:bg-surface hover:text-fg hover:shadow-xs focus-visible:outline-2 focus-visible:outline-focus" onClick={() => onSiteTool('templates')} type="button"><SiteToolIcon type="templates" />Templates <span aria-hidden className="ml-auto text-fg-subtle">›</span></button><button className="flex min-h-10 items-center gap-2 rounded-md px-2.5 text-left text-sm font-semibold text-fg-muted transition-colors hover:bg-surface hover:text-fg hover:shadow-xs focus-visible:outline-2 focus-visible:outline-focus" onClick={() => onSiteTool('revisions')} type="button"><SiteToolIcon type="revisions" />Revision History <span aria-hidden className="ml-auto text-fg-subtle">›</span></button></div>
-          </div>
+          </div></>}
         </aside>
         <div className="order-first min-h-0 min-w-0 overflow-auto bg-bg p-4 sm:p-6 lg:order-none" data-testid="website-preview-canvas">
           <div className="mx-auto min-h-0 overflow-hidden rounded-lg border border-border bg-surface shadow-md" style={{ maxWidth: viewportWidth[viewport] }}>

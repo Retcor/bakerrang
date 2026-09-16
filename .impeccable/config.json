@@ -27,6 +27,42 @@
         ],
         "createdAt": "2026-09-14T03:50:57.678Z",
         "reason": "tenant preview theme: Playfair is the sample tenant site's own serif (a renderer-supported font), deliberately distinct from the Portal's Inter to show preview isolation; not Portal chrome"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "playfair display",
+        "files": [
+          ".impeccable/mocks/builder-rail-states.html"
+        ],
+        "createdAt": "2026-09-15T03:41:20.906Z",
+        "reason": "tenant preview serif (renderer-supported); not Portal chrome"
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/builder-rail-states.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.080Z",
+        "reason": "device/browser preview frame clips the rendered site to its rounded viewport by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "playfair display",
+        "files": [
+          ".impeccable/mocks/builder-overlays.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.247Z",
+        "reason": "tenant/template preview serif (renderer-supported); not Portal chrome"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "space grotesk",
+        "files": [
+          ".impeccable/mocks/builder-overlays.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.411Z",
+        "reason": "Slate template preview heading font; a template's own type, not Portal chrome"
       }
     ]
   }

@@ -19,7 +19,7 @@ const baseSite: SiteDefinition = {
 }
 
 const mocks = vi.hoisted(() => ({
-  getSite: vi.fn(), getSiteDomain: vi.fn(), createSitePreviewToken: vi.fn(), initializeSite: vi.fn(), publishSite: vi.fn(), unpublishSite: vi.fn(), updateSectionContent: vi.fn(),
+  addSection: vi.fn(), getSite: vi.fn(), getSiteDomain: vi.fn(), createSitePreviewToken: vi.fn(), initializeSite: vi.fn(), publishSite: vi.fn(), setSectionVisibility: vi.fn(), unpublishSite: vi.fn(), updateSectionContent: vi.fn(),
   updateBusinessProfile: vi.fn(), updateHomeHero: vi.fn(), upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(), updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(), updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(), updateCustomCss: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(), updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn(), getSiteRevisions: vi.fn(), restoreSiteRevision: vi.fn()
 }))
 
@@ -44,6 +44,8 @@ describe('Website editor canvas', () => {
     mocks.getSite.mockResolvedValue(structuredClone(baseSite))
     mocks.getSiteDomain.mockResolvedValue(null)
     mocks.updateSectionContent.mockResolvedValue(structuredClone(baseSite))
+    mocks.addSection.mockResolvedValue({ site: structuredClone(baseSite), sectionId: 'new-gallery' })
+    mocks.setSectionVisibility.mockResolvedValue(structuredClone(baseSite))
     mocks.publishSite.mockResolvedValue({ ...structuredClone(baseSite), status: 'PUBLISHED', hasUnpublishedChanges: false })
     mocks.getSiteTemplates.mockResolvedValue([])
     mocks.getSiteRevisions.mockResolvedValue({ revisions: [] })
@@ -141,10 +143,100 @@ describe('Website editor canvas', () => {
     expect(screen.getByTestId('shared-site-preview')).toHaveAttribute('data-viewport', 'mobile')
   })
 
-  it('takes the section rail control to the existing section manager', async () => {
+  it('opens the Add Section rail replacement without changing the canvas', async () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Manage sections' }))
-    expect(await screen.findByRole('heading', { name: 'Home sections' })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add section' }))
+    expect(await screen.findByRole('heading', { name: 'Add a section' })).toBeInTheDocument()
+    expect(screen.queryByText('More site settings')).not.toBeInTheDocument()
+    expect(screen.getByTestId('shared-site-preview')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Hero.*Shape the first message/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('list', { name: 'Sections on Home' })).toBeInTheDocument()
+  })
+
+  it('hides and shows a non-Hero rail section through the working-site mutation', async () => {
+    const hidden = structuredClone(baseSite)
+    hidden.pages[0]?.sections.forEach((section) => { if (section.id === 'about-id') section.hidden = true })
+    mocks.setSectionVisibility.mockResolvedValueOnce(hidden).mockResolvedValueOnce(baseSite)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Hide About' }))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'home', 'about-id', true))
+    expect(screen.queryByText('Section hidden')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Show About' })).toBeInTheDocument()
+    expect(screen.getByText('Hidden')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show About' }))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenLastCalledWith('tenant-1', 'home', 'about-id', false))
+    expect(screen.queryByText('Section shown')).not.toBeInTheDocument()
+  })
+
+  it('keeps the selected section stable and reports a failed visibility mutation', async () => {
+    mocks.setSectionVisibility.mockRejectedValueOnce(new Error('offline'))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide About' }))
+    expect(await screen.findByText('Unable to update section visibility. Please try again.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'About' }).parentElement).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: 'Hide About' })).toBeEnabled()
+  })
+
+  it('scopes visibility mutations to the active page', async () => {
+    const current = structuredClone(baseSite)
+    current.pages[1]?.sections.push({ id: 'about-gallery', type: 'gallery', hidden: false, content: { title: 'Our work', items: [] } })
+    mocks.getSite.mockResolvedValue(current)
+    mocks.setSectionVisibility.mockResolvedValue(current)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: /Our bakery/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Hide Gallery' }))
+    await waitFor(() => expect(mocks.setSectionVisibility).toHaveBeenCalledWith('tenant-1', 'about', 'about-gallery', true))
+  })
+
+  it('keeps Hero visibly locked and does not offer it a visibility mutation', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    await screen.findByLabelText('Headline')
+    expect(screen.getByLabelText('Hero is always visible')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hide Hero' })).not.toBeInTheDocument()
+  })
+
+  it('blocks rail visibility while a Hero draft is dirty without calling the API', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.change(await screen.findByLabelText('Headline'), { target: { value: 'Local only' } })
+    const hide = screen.getByRole('button', { name: 'Hide About' })
+    expect(hide).toBeDisabled()
+    expect(screen.getByText('Save or discard your changes first.')).toBeInTheDocument()
+    fireEvent.click(hide)
+    expect(mocks.setSectionVisibility).not.toHaveBeenCalled()
+  })
+
+  it('adds after the selected section and selects the server-returned section id', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add section' }))
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    await waitFor(() => expect(mocks.addSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery', 'hero-id'))
+    expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?editor=page&pageId=home&sectionId=new-gallery', { scroll: false })
+  })
+
+  it('keeps the Add Section panel and draft on cancel, then discards only on confirmed add', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.change(await screen.findByLabelText('Headline'), { target: { value: 'Keep this until confirmed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Add a section' })).toBeInTheDocument()
+    expect(screen.getByTestId('shared-site-preview')).toHaveTextContent('Keep this until confirmed')
+    expect(mocks.addSection).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    await waitFor(() => expect(mocks.addSection).toHaveBeenCalledWith('tenant-1', 'home', 'gallery', 'hero-id'))
+  })
+
+  it('keeps the Add Section panel open after an add failure', async () => {
+    mocks.addSection.mockRejectedValueOnce(new Error('offline'))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add section' }))
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    expect(await screen.findByText('Unable to add this section. Please try again.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Add a section' })).toBeInTheDocument()
   })
 
   it('keeps the legacy controls available under More site settings and applies the shared dirty guard', async () => {
