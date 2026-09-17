@@ -26,7 +26,7 @@ describe('working-site preview launch', () => {
     const popup = { close: vi.fn(), location: { href: 'about:blank' }, opener: window }
     vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
     render(<BusinessWebsite autoLoad tenantId="tenant/one" />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Open preview' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Preview' }))
     await waitFor(() => expect(popup.location.href).toBe('https://sites-dev.bakerrang.com/preview/tenant%2Fone/page/home?token=token+value'))
     expect(mocks.createSitePreviewToken).toHaveBeenCalledWith('tenant/one')
     expect(popup.opener).toBeNull()
