@@ -18,6 +18,10 @@ const baseSite: SiteDefinition = {
       { id: 'testimonials-id', type: 'testimonials', hidden: false, content: { title: 'Kind words', items: [
         { id: 'testimonial-ada', customerName: 'Ada', quote: 'The cake made our day.' },
         { id: 'testimonial-grace', customerName: 'Grace', quote: 'Everything was wonderful.' }
+      ] } },
+      { id: 'faq-id', type: 'faq', hidden: false, content: { heading: 'Questions', intro: 'Start here.', items: [
+        { id: 'faq-hours', question: 'When are you open?', answer: 'Every weekday.' },
+        { id: 'faq-delivery', question: 'Do you deliver?', answer: 'Yes, within the city.' }
       ] } }
     ] },
     { id: 'about', slug: 'about', title: 'Our bakery', sections: [
@@ -41,7 +45,8 @@ vi.mock('../SitePreviewFrame', () => ({
     const hero = page.sections.find((section) => section.type === 'hero')
     const services = page.sections.find((section) => section.type === 'services')
     const testimonials = page.sections.find((section) => section.type === 'testimonials')
-    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button></>}</div>
+    const faq = page.sections.find((section) => section.type === 'faq')
+    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button></>}</div>
   }
 }))
 
@@ -361,6 +366,153 @@ describe('Website editor canvas', () => {
     expect(screen.getByLabelText('Section heading')).toHaveValue('Kind words')
     expect(screen.queryByRole('button', { name: 'Save Testimonials' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Testimonials' }).parentElement).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('keeps FAQ edits, additions, removals, and reordering in the draft until one toolbar save', async () => {
+    const canonical = structuredClone(baseSite)
+    const faq = canonical.pages[0]?.sections.find((section) => section.type === 'faq')
+    if (!faq || faq.type !== 'faq') throw new Error('FAQ fixture missing')
+    faq.content = { heading: 'Saved answers', intro: 'Saved intro.', items: [
+      { id: 'server-catering', question: 'Do you cater?', answer: 'Yes, for events.' },
+      { id: 'server-custom', question: 'Custom orders?', answer: 'With notice.' }
+    ] }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: '  Saved answers  ' } })
+    fireEvent.change(screen.getByLabelText('Intro'), { target: { value: '  Saved intro.  ' } })
+    fireEvent.change(screen.getAllByLabelText('Question')[1]!, { target: { value: '  Do you cater?  ' } })
+    fireEvent.change(screen.getAllByLabelText('Answer')[1]!, { target: { value: '  Yes, for events.  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Move Do you cater? up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove When are you open?' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add question' }))
+    fireEvent.change(screen.getAllByLabelText('Question')[1]!, { target: { value: '  Custom orders?  ' } })
+    fireEvent.change(screen.getAllByLabelText('Answer')[1]!, { target: { value: '  With notice.  ' } })
+
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    expect(screen.getByTestId('faq-preview')).toHaveTextContent('Saved answers')
+    expect(screen.getByTestId('faq-preview')).toHaveTextContent('Saved intro.')
+    expect(within(screen.getByTestId('faq-preview')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['  Do you cater?  :   Yes, for events.  ', '  Custom orders?  :   With notice.  '])
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'faq-id', {
+      heading: 'Saved answers',
+      intro: 'Saved intro.',
+      items: [
+        { id: 'faq-delivery', question: 'Do you cater?', answer: 'Yes, for events.' },
+        { question: 'Custom orders?', answer: 'With notice.' }
+      ]
+    })
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Saved answers')
+    expect(screen.getAllByLabelText('Question').map((input) => (input as HTMLInputElement).value)).toEqual(['Do you cater?', 'Custom orders?'])
+    expect(screen.getAllByLabelText('Question')[0]).toHaveAttribute('id', 'faq-question-faq-id-server-catering')
+    expect(screen.getAllByLabelText('Question')[1]).toHaveAttribute('id', 'faq-question-faq-id-server-custom')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText(/FAQ saved/i)).not.toBeInTheDocument()
+  })
+
+  it('omits a blank optional FAQ intro from the persistence payload', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+    fireEvent.change(screen.getByLabelText('Intro'), { target: { value: '   ' } })
+    expect(screen.getByTestId('faq-preview')).not.toHaveTextContent('Start here.')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    const payload = mocks.updateSectionContent.mock.calls[0]?.[3]
+    expect(payload).toEqual({
+      heading: 'Questions',
+      items: [
+        { id: 'faq-hours', question: 'When are you open?', answer: 'Every weekday.' },
+        { id: 'faq-delivery', question: 'Do you deliver?', answer: 'Yes, within the city.' }
+      ]
+    })
+    expect(payload).not.toHaveProperty('intro')
+  })
+
+  it.each([
+    ['a server validation failure', async () => { const { ApiError } = await import('../../../lib/api'); throw new ApiError(400, { error: 'Review the FAQ fields.' }) }, 'Review the FAQ fields.'],
+    ['a network failure', async () => { throw new Error('offline') }, 'Unable to save FAQ. Please try again.']
+  ])('retains the FAQ draft after %s and permits retry', async (_label, reject, message) => {
+    mocks.updateSectionContent.mockImplementationOnce(reject).mockResolvedValueOnce(structuredClone(baseSite))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Keep these answers' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Keep these answers')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+  })
+
+  it('blocks invalid FAQ drafts locally and keeps the zero-item Add action available', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: '   ' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Questions' } })
+    fireEvent.change(screen.getAllByLabelText('Question')[0]!, { target: { value: '   ' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    fireEvent.change(screen.getAllByLabelText('Question')[0]!, { target: { value: 'When are you open?' } })
+    fireEvent.change(screen.getAllByLabelText('Answer')[0]!, { target: { value: '   ' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove When are you open?' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Do you deliver?' }))
+    expect(screen.getByText('No questions yet')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Add at least one question.')
+    expect(screen.getByRole('button', { name: 'Add question' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(within(screen.getByTestId('faq-preview')).queryAllByRole('listitem')).toHaveLength(0)
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+  })
+
+  it.each(['Templates', 'Revision History'])('guards dirty FAQ transitions to %s and preserves same-section selection', async (destination) => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Local FAQ draft' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Runtime FAQ selection' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Local FAQ draft')
+    expect(screen.getByRole('button', { name: 'FAQ' }).parentElement).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: 'Hide About' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Local FAQ draft')
+    fireEvent.click(screen.getByRole('button', { name: 'Site tools' }))
+    fireEvent.click(await screen.findByRole('button', { name: destination }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+  })
+
+  it('preserves a dirty FAQ draft through Add Section and registers the unload guard', async () => {
+    const add = vi.spyOn(window, 'addEventListener')
+    const remove = vi.spyOn(window, 'removeEventListener')
+    const { unmount } = render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'FAQ' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Keep during Add Section' } })
+    expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    expect(screen.getByTestId('faq-preview')).toHaveTextContent('Keep during Add Section')
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    expect(mocks.addSection).not.toHaveBeenCalled()
+    unmount()
+    expect(remove).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+  })
+
+  it('opens a deep-linked FAQ section in the draft-native inspector', async () => {
+    navigation.search = 'editor=page&pageId=home&sectionId=faq-id'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    expect(await screen.findByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Questions')
+    expect(screen.getByLabelText('Intro')).toHaveValue('Start here.')
+    expect(screen.queryByRole('button', { name: 'Save FAQ' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'FAQ' }).parentElement).toHaveAttribute('aria-current', 'true')
   })
 
   it('keeps a dirty Hero draft when the preview selects that same Hero', async () => {
