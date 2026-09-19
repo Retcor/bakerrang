@@ -50,8 +50,8 @@ test('Business Hours component uses themed semantic markup, defaults its heading
 })
 
 test('renderer dispatches canonical hours while navigation is not derived from the section list', async () => {
-  const renderer = await source('../components/SectionRenderer.tsx')
-  const page = await source('../components/PublicPage.tsx')
+  const renderer = await source('../../../packages/site-runtime/src/SectionRenderer.tsx')
+  const page = await source('../../../packages/site-runtime/src/SitePageRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
   assert.match(renderer, /case 'businessHours':[\s\S]*<BusinessHours anchorId=\{section\.id\} content=\{section\.content\} hours=\{businessHours\}/)
   assert.match(page, /businessHours=\{site\.businessProfile\?\.businessHours\}/)

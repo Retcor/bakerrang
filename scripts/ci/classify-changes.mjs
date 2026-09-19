@@ -13,7 +13,8 @@ const PATH_RULES = [
   { prefix: 'platform/apps/site-renderer/', ci: ['renderer'], deploy: ['renderer'] },
   { prefix: 'platform/packages/site-schema/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'platform/packages/ui/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { prefix: 'platform/packages/site-components/', ci: ['renderer'], deploy: ['renderer'] },
+  { prefix: 'platform/packages/site-components/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
+  { prefix: 'platform/packages/site-runtime/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
 
   { exact: 'platform/package.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { exact: 'platform/package-lock.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
@@ -34,6 +35,8 @@ const PATH_RULES = [
   { prefix: '.codex/', ci: [], deploy: [] },
   { prefix: 'scripts/ci/', ci: [], deploy: [] },
   { exact: 'scripts/verify-live.ps1', ci: [], deploy: [] },
+  { prefix: '.impeccable/', ci: [], deploy: [] },
+  { prefix: '.agents/', ci: [], deploy: [] },
   // Historical tombstone: deleted-path and stale ranges must remain classifiable.
   { exact: 'scripts/deploy-dev.ps1', ci: [], deploy: [] },
   { exact: 'firestore.indexes.json', ci: [], deploy: [] },

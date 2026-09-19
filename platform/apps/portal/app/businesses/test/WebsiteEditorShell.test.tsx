@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { FormEvent } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { WebsiteEditorShell } from '../WebsiteEditorShell'
+import { type ActiveEditorController, WebsiteEditorShell } from '../WebsiteEditorShell'
 
 describe('WebsiteEditorShell', () => {
   it('uses shared metadata, error chrome, uniform actions, sticky layout, and width modes', () => {
@@ -34,6 +34,21 @@ describe('WebsiteEditorShell', () => {
     const submit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
     render(<WebsiteEditorShell dirtyValue={{ value: '' }} editor="hero" onCancel={() => undefined} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it('emits a rail controller that submits the existing form without rendering rail actions', () => {
+    const submit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
+    let controller: ActiveEditorController | null = null
+    const { rerender } = render(<WebsiteEditorShell chrome="rail" dirtyValue="seed" editor="theme" onCancel={() => undefined} onControllerChange={(next) => { controller = next }} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
+    expect(screen.getByRole('button', { name: 'Site tools' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+
+    rerender(<WebsiteEditorShell chrome="rail" dirtyValue="changed" editor="theme" onCancel={() => undefined} onControllerChange={(next) => { controller = next }} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
+    const emitted = () => controller
+    expect(emitted()?.dirty).toBe(true)
+    expect(emitted()?.canSave).toBe(true)
+    emitted()?.save()
     expect(submit).toHaveBeenCalledOnce()
   })
 })

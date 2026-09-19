@@ -66,6 +66,36 @@ export const sectionDefinitions: Record<SectionType, SectionDefinition> = {
 
 export const sectionTypes = Object.keys(sectionDefinitions) as SectionType[]
 
+export interface AddableSectionType {
+  definition: SectionDefinition
+  disabled: boolean
+  reason?: 'Already added' | 'Set a weekly schedule in Site setup first'
+  type: SectionType
+}
+
+/**
+ * Returns the section choices that the current page can truthfully add. This is
+ * shared by the existing dialog and the builder rail so their eligibility rules
+ * cannot drift apart.
+ */
+export function addableSectionTypes (site: SiteDefinition, pageId: string): AddableSectionType[] {
+  const sections = site.pages.find((page) => page.id === pageId)?.sections ?? []
+  return sectionTypes
+    .filter((type) => type !== 'hero')
+    .filter((type) => !(sectionDefinitions[type].homeOnly && pageId !== 'home'))
+    .map((type) => {
+      const definition = sectionDefinitions[type]
+      const alreadyAdded = definition.singleton && sections.some((section) => section.type === type)
+      const missingSchedule = type === 'businessHours' && !site.businessProfile?.businessHours
+      const reason = alreadyAdded
+        ? 'Already added'
+        : missingSchedule
+          ? 'Set a weekly schedule in Site setup first'
+          : undefined
+      return { definition, disabled: Boolean(reason), reason, type }
+    })
+}
+
 export function sectionLabel (section: SiteSection) {
   return sectionDefinitions[section.type].label
 }

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" data-state="normal" data-device="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Services Inspector</title>
+<meta name="description" content="Impeccable comp — narrow-rail Services section inspector for the BakerRang Website Builder (Phase 4.0h, draft-native).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---- Tokens (verbatim from packages/ui/src/styles/tokens-portal.css) ---- */
+:root{
+  --brand:#fec51c; --brand-hover:#f2b900; --brand-active:#dda600; --brand-ink:#1c1f29; --brand-subtle:#fff8dc;
+  --sidebar:#292b2f; --sidebar-deep:#1c1f29; --sidebar-fg:#f8fafc; --sidebar-muted:#b8bec8; --sidebar-border:#40434a;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-muted:#f8f9fb; --border:#e1e4e9; --border-strong:#c8cdd5;
+  --fg:#202329; --fg-muted:#626975; --fg-subtle:#68707c;
+  --focus:#1769aa; --success:#277a4b; --success-fg:#175033; --success-subtle:#e9f7ef;
+  --warning:#9a6500; --warning-fg:#704900; --warning-subtle:#fff5d6;
+  --danger:#b42318; --danger-fg:#8f1d14; --danger-subtle:#fff0ee;
+  --info:#1769aa; --info-fg:#135887; --info-subtle:#eaf5fc;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem;
+  --shadow-xs:0 1px 2px rgb(28 31 41 / .05); --shadow-sm:0 2px 8px rgb(28 31 41 / .07); --shadow-md:0 12px 32px rgb(28 31 41 / .14);
+  --rail-w:21rem;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--brand-subtle);color:var(--brand-ink);}
+button{font-family:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm);}
+input,textarea{font-family:inherit;}
+p{margin:0;} h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.011em;}
+
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+.scroll::-webkit-scrollbar{width:10px;height:10px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--surface);border-radius:999px;}
+.scroll::-webkit-scrollbar-thumb:hover{background:#adb4be;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------------- Review scaffold (NOT product UI) ---------------- */
+.review{position:fixed;inset:0 0 auto 0;z-index:100;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:.4rem .75rem;background:var(--sidebar-deep);color:var(--sidebar-fg);font-size:.78rem;box-shadow:var(--shadow-sm);}
+.review .tag{font-weight:700;letter-spacing:.06em;color:var(--brand);text-transform:uppercase;font-size:.75rem;}
+.review .seg{display:inline-flex;background:#33363b;border:1px solid var(--sidebar-border);border-radius:var(--radius-md);padding:2px;gap:2px;}
+.review .seg button{border:0;background:transparent;color:var(--sidebar-muted);font-size:.78rem;font-weight:600;padding:.28rem .6rem;border-radius:.3rem;}
+.review .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);}
+.review .hint{color:var(--sidebar-muted);margin-left:auto;}
+
+/* ---------------- App shell (context only — not redesigned) ---------------- */
+.app{position:fixed;inset:44px 0 0 0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+.toolbar{display:flex;align-items:center;gap:.75rem;min-height:56px;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0;}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:.9rem;flex:none;}
+.wordmark{font-weight:700;font-size:.9rem;letter-spacing:-.02em;white-space:nowrap;}
+.wordmark b{color:#8a6000;}
+.crumb-sep{color:var(--border-strong);}
+.crumb{font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;}
+.crumb.site{max-width:11rem;overflow:hidden;text-overflow:ellipsis;}
+.badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;padding:.28rem .6rem;border-radius:999px;line-height:1;}
+.badge.warning{background:var(--warning-subtle);color:var(--warning-fg);}
+.badge.success{background:var(--success-subtle);color:var(--success-fg);}
+.tools-right{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+.vp{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface-muted);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);}
+.vp button{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.3rem;}
+.vp button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.dirty-flag{display:none;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700;color:var(--warning);white-space:nowrap;}
+.dirty-flag i{width:7px;height:7px;border-radius:999px;background:var(--warning);box-shadow:0 0 0 3px var(--warning-subtle);}
+html[data-dirty="true"] .dirty-flag{display:inline-flex;}
+
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;border-radius:var(--radius-md);
+  padding:.42rem .7rem;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);transition:background .12s,border-color .12s;}
+.btn:hover{background:var(--surface-muted);}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-muted);}
+.btn.primary{border-color:var(--brand);background:var(--brand);color:var(--brand-ink);}
+.btn.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);}
+.btn.publish{border-color:var(--brand-ink);background:var(--brand-ink);color:#fff;}
+.btn.sm{padding:.34rem .58rem;font-size:.76rem;}
+/* Save reflects dirty + validity: disabled unless data-dirty and not invalid/saving */
+.btn.save[disabled]{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;box-shadow:none;}
+.btn.publish[disabled]{border-color:var(--sidebar);background:var(--sidebar);color:var(--sidebar-muted);cursor:not-allowed;}
+.btn.ghost[disabled]{color:var(--fg-subtle);cursor:not-allowed;background:transparent;}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);}
+.rail{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);background:var(--surface);}
+.canvas{min-width:0;min-height:0;overflow:auto;background:var(--bg);padding:1.5rem;}
+
+/* Preview frame (context) */
+.frame{max-width:100%;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-md);overflow:hidden;}
+.frame-bar{display:flex;align-items:center;gap:.75rem;min-height:36px;padding:0 .75rem;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:.75rem;font-weight:600;color:var(--fg-muted);}
+.frame-bar .dots{display:flex;gap:5px;}
+.frame-bar .dots i{width:8px;height:8px;border-radius:999px;background:var(--border-strong);}
+.frame-bar .live{margin:0 auto;display:inline-flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.07em;}
+.frame-bar .live i{width:7px;height:7px;border-radius:999px;background:var(--success);}
+.site-nav{display:flex;align-items:center;gap:1rem;padding:1rem 1.75rem;border-bottom:1px solid #eceef1;}
+.site-nav .b{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#1c1f29;}
+.site-nav .b span{color:#8a6000;}
+.site-nav .links{margin-left:auto;display:flex;gap:1.35rem;font-size:.82rem;font-weight:600;color:#5a616c;}
+/* Services section render, selected (yellow border + label) */
+.svc-live{margin:1.5rem;border-radius:12px;outline:2px solid var(--brand);outline-offset:3px;}
+.svc-live h2{text-align:center;font-size:1.6rem;letter-spacing:-.02em;color:#16181f;margin-bottom:1.25rem;}
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.svc-card{border:1px solid #e6e8ec;border-radius:10px;padding:1.1rem;background:#fff;}
+.svc-card h3{font-size:1rem;color:#1c1f29;}
+.svc-card p{margin-top:.5rem;font-size:.82rem;line-height:1.55;color:#5c6470;}
+html[data-state="empty"] .svc-live{display:none;}
+html[data-state="empty"] .svc-empty-note{display:block;}
+.svc-empty-note{display:none;margin:2.5rem 1.5rem;text-align:center;color:var(--fg-subtle);font-size:.85rem;}
+
+/* ============ RAIL: default view (Page + Sections + inspector) ============ */
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);}
+.page-btn{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;min-height:40px;padding:.4rem .7rem;
+  border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--fg-muted);font-size:.83rem;font-weight:600;text-align:left;}
+.page-btn[aria-current="page"]{border-color:var(--border-strong);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.page-btn .s{font-size:.75rem;font-weight:500;color:var(--fg-subtle);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-top:1.4rem;}
+.sec-head .add{width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.sec-head .add:hover{background:var(--surface-muted);color:var(--fg);}
+.sec-row{display:flex;align-items:center;gap:.4rem;width:100%;min-height:40px;padding:.35rem .3rem .35rem .7rem;margin-top:.25rem;
+  border:1px solid transparent;border-radius:var(--radius-md);color:var(--fg-muted);}
+.sec-row:hover{border-color:var(--border);background:var(--surface-muted);color:var(--fg);}
+.sec-row[aria-current="true"]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background:var(--brand-subtle);color:var(--brand-ink);
+  box-shadow:inset 0 0 0 1px rgb(254 197 28 / .24);}
+.sec-row .t{flex:1;min-width:0;font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sec-row .eye{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.35rem;}
+.sec-row .eye:hover{background:var(--surface);color:var(--fg);}
+
+/* ============ SERVICES INSPECTOR ============ */
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.icon.sm{width:15px;height:15px;}
+.svc{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1rem;}
+.svc-head{display:flex;align-items:center;gap:.7rem;}
+.svc-head .mk{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--surface-muted);color:var(--fg-muted);border:1px solid var(--border);}
+.svc-head h2{font-size:1rem;letter-spacing:-.01em;color:var(--fg);}
+.svc-head p{font-size:.78rem;color:var(--fg-subtle);margin-top:1px;}
+
+.field{display:block;margin-top:1rem;}
+.field > .lbl{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--fg);}
+.field > .lbl .opt{font-weight:400;color:var(--fg-subtle);}
+.count{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;font-weight:400;}
+.control{width:100%;margin-top:.4rem;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.5rem .6rem;min-height:40px;}
+.control:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+textarea.control{min-height:64px;resize:vertical;line-height:1.5;}
+.control:disabled{background:var(--surface-muted);color:var(--fg-subtle);cursor:not-allowed;}
+
+/* Items group header with live count */
+.items-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:1.5rem;}
+.items-head .n{font-size:.75rem;font-weight:600;color:var(--fg-subtle);font-variant-numeric:tabular-nums;}
+
+/* One bordered container, hairline dividers — NOT nested cards */
+.items{list-style:none;margin:.55rem 0 0;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);}
+.item{padding:.75rem .8rem .85rem;}
+.item + .item{border-top:1px solid var(--border);}
+.item-bar{display:flex;align-items:center;gap:.5rem;}
+.item-bar .ord{font-size:.75rem;font-weight:700;letter-spacing:.02em;color:var(--fg-subtle);text-transform:uppercase;}
+.item-bar .sp{flex:1;}
+.acts{display:flex;align-items:center;gap:2px;}
+.iconbtn{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.iconbtn:hover{background:var(--surface-muted);color:var(--fg);}
+.iconbtn:disabled{opacity:.32;cursor:not-allowed;}
+.iconbtn.danger:hover{background:var(--danger-subtle);color:var(--danger);}
+.item .field{margin-top:.6rem;}
+.item .field:first-of-type{margin-top:.65rem;}
+.item .field > .lbl{font-size:.76rem;}
+.item .control{margin-top:.3rem;}
+
+/* Add + validation */
+.add{display:inline-flex;align-items:center;gap:.4rem;margin-top:.75rem;width:100%;justify-content:center;min-height:40px;padding:.6rem .7rem;
+  border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--focus);font-size:.82rem;font-weight:600;}
+.add:hover{border-color:var(--focus);background:var(--info-subtle);}
+.add:disabled{border-style:solid;border-color:var(--border);color:var(--fg-subtle);background:var(--surface-muted);cursor:not-allowed;}
+.add-note{margin-top:.4rem;font-size:.75rem;color:var(--fg-subtle);text-align:center;}
+.validation{display:none;align-items:center;gap:.4rem;margin-top:.6rem;font-size:.78rem;font-weight:600;color:var(--warning-fg);
+  background:var(--warning-subtle);border:1px solid color-mix(in srgb,var(--warning) 22%,transparent);border-radius:var(--radius-md);padding:.6rem .7rem;}
+.empty-block{display:none;margin-top:.55rem;border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface-muted);
+  padding:1.1rem .8rem;text-align:center;}
+.empty-block .h{font-size:.82rem;font-weight:600;color:var(--fg);}
+.empty-block .d{margin-top:.25rem;font-size:.75rem;line-height:1.45;color:var(--fg-subtle);}
+
+/* ---- state wiring ---- */
+html[data-state="empty"] .items,
+html[data-state="empty"] .items-count-more{display:none;}
+html[data-state="empty"] .empty-block{display:block;}
+html[data-state="empty"] .validation{display:flex;}
+html:not([data-state="long"]) .item-extra{display:none;}   /* extra items only in the scroll/long state */
+html[data-state="saving"] .control,
+html[data-state="saving"] .iconbtn,
+html[data-state="saving"] .add{pointer-events:none;opacity:.6;}
+html[data-state="saving"] .add{border-style:solid;border-color:var(--border);color:var(--fg-subtle);background:var(--surface-muted);opacity:1;}
+html[data-state="saving"] .iconbtn{opacity:.4;}
+
+/* ---------------- Mobile builder ---------------- */
+html[data-device="mobile"] .app{inset:44px auto 0 50%;transform:translateX(-50%);width:414px;border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong);box-shadow:var(--shadow-md);}
+html[data-device="mobile"] .body{grid-template-columns:1fr;}
+html[data-device="mobile"] .canvas{display:none;}
+html[data-device="mobile"] .rail{border-right:0;}
+html[data-device="mobile"] .toolbar{gap:.5rem;padding:.5rem .65rem;}
+html[data-device="mobile"] .vp,html[data-device="mobile"] .btn.preview,html[data-device="mobile"] .crumb.mid,html[data-device="mobile"] .wordmark{display:none;}
+</style>
+</head>
+<body>
+
+<div class="review" role="group" aria-label="Comp review controls">
+  <span class="tag">Review only</span>
+  <div class="seg" id="stateSeg" role="group" aria-label="Inspector state">
+    <button data-go="normal" aria-pressed="true">3 items</button>
+    <button data-go="long">Scroll (9)</button>
+    <button data-go="empty">Empty draft</button>
+    <button data-go="saving">Saving</button>
+  </div>
+  <div class="seg" id="deviceSeg" role="group" aria-label="Device">
+    <button data-device="desktop" aria-pressed="true">Desktop</button>
+    <button data-device="mobile">Mobile</button>
+  </div>
+  <span class="hint">Rail body scrolls independently · Save lives in the toolbar</span>
+</div>
+
+<div class="app">
+  <!-- Toolbar (LOCKED — context only) -->
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo">B</span>
+      <span class="wordmark">Baker<b>Rang</b></span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb mid">Website</span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb site">Cedar &amp; Co Builders</span>
+      <span class="badge warning" id="statusBadge">Unsaved changes</span>
+    </div>
+    <div class="tools-right">
+      <div class="vp" role="group" aria-label="Preview viewport">
+        <button aria-label="Desktop" aria-pressed="true"><svg class="icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8m-4-4v4"/></svg></button>
+        <button aria-label="Tablet" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></button>
+        <button aria-label="Mobile" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="17" rx="2"/><path d="M11 18h2"/></svg></button>
+      </div>
+      <span class="dirty-flag"><i></i>Unsaved</span>
+      <button class="btn ghost preview" disabled>Preview</button>
+      <button class="btn primary save" id="saveBtn">Save</button>
+      <button class="btn publish" disabled><svg class="icon sm" viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>Publish</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- ================= RAIL ================= -->
+    <aside class="rail" aria-label="Website builder controls">
+      <div class="rail-scroll scroll">
+        <span class="kicker">Page</span>
+        <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.15rem;" role="list" aria-label="Website pages">
+          <button class="page-btn" aria-current="page"><span>Home</span><span class="s">5 sections</span></button>
+          <button class="page-btn"><span>About</span><span class="s">4 sections</span></button>
+          <button class="page-btn"><span>Contact</span><span class="s">3 sections</span></button>
+        </div>
+
+        <div class="sec-head">
+          <span class="kicker">Sections</span>
+          <button class="add" aria-label="Add section"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div style="margin-top:.25rem;" role="list" aria-label="Sections on Home">
+          <div class="sec-row"><span class="t">Hero</span><span class="eye" title="Hero is always visible"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span></div>
+          <div class="sec-row" aria-current="true"><span class="t">Services</span><button class="eye" aria-label="Hide Services"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row"><span class="t">Testimonials</span><button class="eye" aria-label="Hide Testimonials"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row"><span class="t">Contact</span><button class="eye" aria-label="Hide Contact"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+        </div>
+
+        <!-- ===================== SERVICES INSPECTOR ===================== -->
+        <section class="svc" aria-label="Services properties">
+          <div class="svc-head">
+            <span class="mk" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h11M4 12h7M4 17h11"/><circle cx="19" cy="9" r="2"/><circle cx="17" cy="16" r="2"/></svg></span>
+            <div><h2>Services</h2><p>The services this business offers.</p></div>
+          </div>
+
+          <label class="field">
+            <span class="lbl">Section heading <span class="count" id="titleCount">18 / 100</span></span>
+            <input class="control" id="titleInput" maxlength="100" value="What we build">
+          </label>
+
+          <div class="items-head">
+            <span class="kicker">Service items</span>
+            <span class="n" id="itemsCount">3 of 20</span>
+          </div>
+
+          <!-- Empty-draft block (shown only in the empty state) -->
+          <div class="empty-block">
+            <div class="h">No services yet</div>
+            <div class="d">Add a service to show this section on your site.</div>
+          </div>
+
+          <ol class="items" aria-label="Service items">
+            <li class="item">
+              <div class="item-bar">
+                <span class="ord">Service 1</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" disabled aria-label="Move Kitchen remodels up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Kitchen remodels down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Kitchen remodels"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Kitchen remodels"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">96 / 500</span></span><textarea class="control" maxlength="500">Full kitchen renovations — cabinetry, counters, lighting and finish work, managed end to end.</textarea></label>
+            </li>
+            <li class="item">
+              <div class="item-bar">
+                <span class="ord">Service 2</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Bathroom renovations up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Bathroom renovations down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Bathroom renovations"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Bathroom renovations"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">72 / 500</span></span><textarea class="control" maxlength="500">Tile, fixtures, and waterproofing done right, from a quick refresh to a full rebuild.</textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 3</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Deck &amp; patio up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Deck &amp; patio down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Deck &amp; patio"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Deck &amp; patio"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">0 / 500</span></span><textarea class="control" maxlength="500" placeholder="Describe this service (optional)"></textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 4</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Siding &amp; exteriors up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Siding &amp; exteriors down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Siding &amp; exteriors"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Siding &amp; exteriors"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">61 / 500</span></span><textarea class="control" maxlength="500">Weather-tight siding, trim and exterior repair that holds up season after season.</textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 5</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Custom carpentry up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Custom carpentry down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Custom carpentry"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Custom carpentry"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">54 / 500</span></span><textarea class="control" maxlength="500">Built-ins, shelving and trim carpentry made to fit your space.</textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 6</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Basement finishing up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Basement finishing down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Basement finishing"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Basement finishing"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">0 / 500</span></span><textarea class="control" maxlength="500" placeholder="Describe this service (optional)"></textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 7</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Window replacement up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Window replacement down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Window replacement"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Window replacement"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">47 / 500</span></span><textarea class="control" maxlength="500">Energy-efficient windows measured, supplied and fitted.</textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 8</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Flooring up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move Flooring down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Flooring"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Flooring"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">38 / 500</span></span><textarea class="control" maxlength="500">Hardwood, tile and vinyl supply and installation.</textarea></label>
+            </li>
+            <li class="item item-extra">
+              <div class="item-bar">
+                <span class="ord">Service 9</span><span class="sp"></span>
+                <div class="acts">
+                  <button class="iconbtn" aria-label="Move Painting up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" disabled aria-label="Move Painting down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove Painting"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+              <label class="field"><span class="lbl">Name</span><input class="control" maxlength="120" value="Painting"></label>
+              <label class="field"><span class="lbl">Description <span class="opt">(optional)</span><span class="count">42 / 500</span></span><textarea class="control" maxlength="500">Interior and exterior painting with clean prep and cleanup.</textarea></label>
+            </li>
+          </ol>
+
+          <div class="validation" role="alert"><svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Add at least one service.</div>
+          <button class="add" id="addBtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add service</button>
+          <p class="add-note" id="addNote" hidden>Maximum of 20 services.</p>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ================= PREVIEW (context) ================= -->
+    <div class="canvas scroll">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="live"><i></i>Live preview</span>
+          <span style="text-align:right;color:var(--fg);font-weight:700;">Editing: Services</span>
+        </div>
+        <div class="site">
+          <nav class="site-nav"><span class="b">Cedar &amp; Co <span>Builders</span></span><span class="links"><span>Services</span><span>About</span><span>Contact</span></span></nav>
+          <div class="svc-live" aria-label="Services section, selected">
+            <div style="padding:2rem 1.5rem;">
+              <h2>What we build</h2>
+              <div class="svc-grid">
+                <div class="svc-card"><h3>Kitchen remodels</h3><p>Full kitchen renovations — cabinetry, counters, lighting and finish work, managed end to end.</p></div>
+                <div class="svc-card"><h3>Bathroom renovations</h3><p>Tile, fixtures, and waterproofing done right, from a quick refresh to a full rebuild.</p></div>
+                <div class="svc-card"><h3>Deck &amp; patio</h3></div>
+              </div>
+            </div>
+          </div>
+          <p class="svc-empty-note">Services section has no items yet — it won't appear on the live page until you add one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function setState(s){
+    root.setAttribute('data-state', s);
+    document.querySelectorAll('#stateSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.go===s?'true':'false');});
+    var save=document.getElementById('saveBtn');
+    var badge=document.getElementById('statusBadge');
+    var count=document.getElementById('itemsCount');
+    var addNote=document.getElementById('addNote');
+    var addBtn=document.getElementById('addBtn');
+    // status is always "unsaved" while editing; empty is a dirty-but-invalid state
+    root.setAttribute('data-dirty','true');
+    if(s==='empty'){ save.disabled=true; badge.textContent='Unsaved changes'; count.textContent='0 of 20'; }
+    else if(s==='saving'){ save.disabled=true; save.textContent='Saving…'; badge.textContent='Saving…'; count.textContent='3 of 20'; }
+    else if(s==='long'){ save.disabled=false; save.textContent='Save'; badge.textContent='Unsaved changes'; count.textContent='9 of 20'; }
+    else { save.disabled=false; save.textContent='Save'; badge.textContent='Unsaved changes'; count.textContent='3 of 20'; }
+    if(s!=='saving'){ save.textContent = save.disabled && s==='empty' ? 'Save' : (s==='saving'?'Saving…':'Save'); }
+    addNote.hidden = true; addBtn.disabled = (s==='saving');
+    var rs=document.querySelector('.rail-scroll'); if(rs) rs.scrollTop=0;
+  }
+  function setDevice(d){
+    root.setAttribute('data-device', d);
+    document.querySelectorAll('#deviceSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.device===d?'true':'false');});
+  }
+  document.addEventListener('click',function(e){
+    var g=e.target.closest('#stateSeg [data-go]'); if(g){setState(g.dataset.go);return;}
+    var d=e.target.closest('#deviceSeg [data-device]'); if(d){setDevice(d.dataset.device);}
+  });
+  // live-ish character counters for the title (demo only)
+  var t=document.getElementById('titleInput'); var tc=document.getElementById('titleCount');
+  if(t&&tc) t.addEventListener('input',function(){tc.textContent=t.value.length+' / 100';});
+})();
+</script>
+</body>
+</html>

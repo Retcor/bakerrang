@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en" data-state="launcher" data-device="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Tools Rail</title>
+<meta name="description" content="Impeccable comp — builder-native Site Tools rail for the BakerRang Website Builder (Phase 4.0f visual refinement).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---- Tokens (verbatim from packages/ui/src/styles/tokens-portal.css) ---- */
+:root{
+  --brand:#fec51c; --brand-hover:#f2b900; --brand-active:#dda600; --brand-ink:#1c1f29; --brand-subtle:#fff8dc;
+  --sidebar:#292b2f; --sidebar-deep:#1c1f29; --sidebar-fg:#f8fafc; --sidebar-muted:#b8bec8; --sidebar-active:#423c26; --sidebar-border:#40434a;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-muted:#f8f9fb; --border:#e1e4e9; --border-strong:#c8cdd5;
+  --fg:#202329; --fg-muted:#626975; --fg-subtle:#68707c; --accent:#fec51c; --accent-fg:#1c1f29;
+  --focus:#1769aa; --success:#277a4b; --success-fg:#175033; --success-subtle:#e9f7ef;
+  --warning:#9a6500; --warning-fg:#704900; --warning-subtle:#fff5d6;
+  --danger:#b42318; --danger-fg:#8f1d14; --danger-subtle:#fff0ee;
+  --info:#1769aa; --info-fg:#135887; --info-subtle:#eaf5fc;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem; --radius-xl:1rem;
+  --shadow-xs:0 1px 2px rgb(28 31 41 / .05); --shadow-sm:0 2px 8px rgb(28 31 41 / .07); --shadow-md:0 12px 32px rgb(28 31 41 / .14);
+  --rail-w:21rem;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--brand-subtle);color:var(--brand-ink);}
+button{font-family:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm);}
+input,textarea,select{font-family:inherit;}
+p{margin:0;} h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.011em;}
+
+/* themed scrollbars — the parts we did not draw still carry the design */
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+.scroll::-webkit-scrollbar{width:10px;height:10px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--surface);border-radius:999px;}
+.scroll::-webkit-scrollbar-thumb:hover{background:#adb4be;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------------- Review scaffold (NOT part of the product UI) ---------------- */
+.review{position:fixed;inset:0 0 auto 0;z-index:100;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:.4rem .75rem;background:var(--sidebar-deep);color:var(--sidebar-fg);font-size:.75rem;box-shadow:var(--shadow-sm);}
+.review .tag{font-weight:700;letter-spacing:.06em;color:var(--brand);text-transform:uppercase;font-size:.75rem;}
+.review .seg{display:inline-flex;background:#33363b;border:1px solid var(--sidebar-border);border-radius:var(--radius-md);padding:2px;gap:2px;}
+.review .seg button{border:0;background:transparent;color:var(--sidebar-muted);font-size:.78rem;font-weight:600;padding:.28rem .55rem;border-radius:.3rem;}
+.review .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);}
+.review .hint{color:var(--sidebar-muted);margin-left:auto;}
+
+/* ---------------- App shell ---------------- */
+.app{position:fixed;inset:44px 0 0 0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+
+/* Toolbar (LOCKED — owns Save/Publish) */
+.toolbar{display:flex;align-items:center;gap:.75rem;min-height:56px;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0;}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:.9rem;flex:none;}
+.wordmark{font-weight:700;font-size:.9rem;letter-spacing:-.02em;white-space:nowrap;}
+.wordmark b{color:#8a6000;}
+.crumb-sep{color:var(--border-strong);}
+.crumb{font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;}
+.crumb.site{max-width:11rem;overflow:hidden;text-overflow:ellipsis;}
+.badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;padding:.28rem .6rem;border-radius:999px;line-height:1;}
+.badge.warning{background:var(--warning-subtle);color:var(--warning-fg);}
+.badge.success{background:var(--success-subtle);color:var(--success-fg);}
+.tools-right{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+.vp{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface-muted);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);}
+.vp button{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.3rem;}
+.vp button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.dirty-flag{display:none;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;color:var(--warning);white-space:nowrap;}
+.dirty-flag i{width:7px;height:7px;border-radius:999px;background:var(--warning);box-shadow:0 0 0 3px var(--warning-subtle);}
+html[data-dirty="true"] .dirty-flag{display:inline-flex;}
+
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;border-radius:var(--radius-md);
+  padding:.42rem .7rem;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);transition:background .12s,border-color .12s;}
+.btn:hover{background:var(--surface-muted);}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-muted);}
+.btn.ghost:hover{background:var(--surface-muted);color:var(--fg);}
+.btn.primary{border-color:var(--brand);background:var(--brand);color:var(--brand-ink);}
+.btn.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);}
+.btn.primary:disabled{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;box-shadow:none;}
+.btn.publish{border-color:var(--brand-ink);background:var(--brand-ink);color:#fff;}
+.btn.publish:hover{background:var(--sidebar);}
+.btn.publish:disabled{border-color:var(--sidebar);background:var(--sidebar);color:var(--sidebar-muted);cursor:not-allowed;}
+.btn.sm{padding:.34rem .58rem;font-size:.76rem;}
+html:not([data-dirty="true"]) .btn.save{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;}
+
+/* Body: rail + preview */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);}
+.rail{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);background:var(--surface);}
+.canvas{min-width:0;min-height:0;overflow:auto;background:var(--bg);padding:1.5rem;}
+
+/* Preview frame — dominant, live */
+.frame{max-width:100%;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-md);overflow:hidden;}
+.frame-bar{display:flex;align-items:center;gap:.75rem;min-height:36px;padding:0 .75rem;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:.75rem;font-weight:600;color:var(--fg-muted);}
+.frame-bar .dots{display:flex;gap:5px;}
+.frame-bar .dots i{width:8px;height:8px;border-radius:999px;background:var(--border-strong);}
+.frame-bar .live{margin:0 auto;display:inline-flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.07em;}
+.frame-bar .live i{width:7px;height:7px;border-radius:999px;background:var(--success);}
+.frame-bar .w{min-width:56px;text-align:right;font-variant-numeric:tabular-nums;}
+.site{background:#fff;}
+.site-nav{display:flex;align-items:center;gap:1rem;padding:1rem 1.75rem;border-bottom:1px solid #eceef1;}
+.site-nav .b{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#1c1f29;}
+.site-nav .b span{color:#8a6000;}
+.site-nav .links{margin-left:auto;display:flex;gap:1.35rem;font-size:.82rem;font-weight:600;color:#5a616c;}
+.site-nav .cta{background:#1c1f29;color:#fff;font-size:.8rem;font-weight:600;padding:.5rem .9rem;border-radius:.5rem;}
+.hero{padding:4.5rem 1.75rem 5rem;text-align:center;background:radial-gradient(120% 90% at 50% -10%, #fffaf0 0%, #ffffff 60%);}
+.hero h1{font-size:2.6rem;line-height:1.05;letter-spacing:-.03em;color:#16181f;max-width:16ch;margin:0 auto;}
+.hero p{margin:1.1rem auto 0;max-width:52ch;color:#565d68;font-size:1.02rem;line-height:1.6;}
+.hero .row{margin-top:2rem;display:flex;gap:.75rem;justify-content:center;}
+.hero .row .p{background:#fec51c;color:#1c1f29;font-weight:700;font-size:.9rem;padding:.7rem 1.3rem;border-radius:.6rem;}
+.hero .row .s{background:#fff;color:#1c1f29;font-weight:600;font-size:.9rem;padding:.7rem 1.3rem;border-radius:.6rem;border:1px solid #d6dae0;}
+.strip{display:flex;justify-content:center;gap:2.5rem;padding:2rem 1.75rem;border-top:1px solid #eceef1;color:#7a818c;font-size:.8rem;}
+
+/* ============ RAIL — shared primitives ============ */
+.kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);}
+.hairline{height:1px;background:var(--border);border:0;margin:1.25rem 0;}
+.help{font-size:.8rem;line-height:1.5;color:var(--fg-muted);}
+.count{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;text-align:right;}
+
+.field{display:block;}
+.field > .lbl{display:block;font-size:.8rem;font-weight:600;color:var(--fg);}
+.field > .lbl .opt{font-weight:400;color:var(--fg-subtle);}
+.control{width:100%;margin-top:.4rem;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.5rem .6rem;min-height:40px;}
+.control:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+textarea.control{min-height:84px;resize:vertical;line-height:1.5;}
+select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2368707c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center;padding-right:2rem;}
+
+/* Full-width segmented control (replaces sm:grid-cols-3 radios) */
+.segment{margin-top:.55rem;display:flex;background:var(--surface-muted);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;gap:4px;}
+.segment button{flex:1;min-height:34px;border:0;background:transparent;color:var(--fg-muted);font-size:.78rem;font-weight:600;border-radius:.35rem;padding:.3rem;text-transform:capitalize;white-space:nowrap;}
+.segment button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+
+/* Full-width stacked option rows (radios that need descriptions) */
+.opt-row{display:flex;align-items:center;gap:.6rem;width:100%;min-height:44px;padding:.5rem .7rem;margin-top:.4rem;
+  border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface);font-size:.83rem;font-weight:600;color:var(--fg);text-align:left;}
+.opt-row[aria-pressed="true"]{border-color:var(--focus);background:var(--info-subtle);}
+.opt-row .radio{width:16px;height:16px;border-radius:999px;border:2px solid var(--border-strong);flex:none;display:grid;place-items:center;}
+.opt-row[aria-pressed="true"] .radio{border-color:var(--focus);}
+.opt-row[aria-pressed="true"] .radio::after{content:"";width:8px;height:8px;border-radius:999px;background:var(--focus);}
+.opt-row .sub{display:block;font-weight:400;font-size:.74rem;color:var(--fg-subtle);margin-top:1px;}
+
+/* Toggle rows (checkboxes → switches) */
+.toggle{display:flex;align-items:center;gap:.7rem;width:100%;min-height:46px;padding:.55rem .7rem;margin-top:.4rem;
+  border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);font-size:.83rem;font-weight:600;color:var(--fg);text-align:left;}
+.toggle .sw{margin-left:auto;flex:none;width:38px;height:22px;border-radius:999px;background:var(--border-strong);position:relative;transition:background .15s;}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:var(--shadow-xs);transition:transform .15s;}
+.toggle[aria-pressed="true"] .sw{background:var(--success);}
+.toggle[aria-pressed="true"] .sw::after{transform:translateX(16px);}
+
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.icon.sm{width:15px;height:15px;}
+
+/* ============ Site Tool shell (tool-head + scrollable tool-body) ============ */
+.tool{display:flex;flex-direction:column;min-height:0;height:100%;}
+.tool-head{position:sticky;top:0;z-index:2;padding:.7rem 1rem .8rem;background:color-mix(in srgb,var(--surface) 92%,transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.back{display:inline-flex;align-items:center;gap:.25rem;font-size:.78rem;font-weight:600;color:var(--fg-muted);
+  background:transparent;border:0;border-radius:var(--radius-sm);padding:.25rem .4rem;margin-left:-.4rem;}
+.back:hover{background:var(--surface-muted);color:var(--fg);}
+.tool-head h2{margin-top:.5rem;font-size:1.02rem;letter-spacing:-.015em;color:var(--fg);}
+.tool-head p{margin-top:.2rem;font-size:.78rem;line-height:1.45;color:var(--fg-muted);}
+.tool-body{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.tool-body > * + *{margin-top:0;}
+.group{margin-top:1.4rem;}
+.group:first-child{margin-top:.25rem;}
+.group > .kicker{display:block;margin-bottom:.5rem;}
+
+/* Color rows (replaces sm:grid-cols-2 color grid) */
+.color-row{display:flex;align-items:center;gap:.6rem;min-height:44px;padding:.35rem .5rem;border-radius:var(--radius-md);}
+.color-row + .color-row{border-top:1px solid var(--border);border-radius:0;}
+.color-row .swatch{width:34px;height:34px;border-radius:8px;border:1px solid var(--border-strong);flex:none;}
+.color-row .cl{flex:1;min-width:0;}
+.color-row .cl .n{font-size:.82rem;font-weight:600;color:var(--fg);}
+.color-row .hex{width:6.4rem;flex:none;font-variant-numeric:tabular-nums;text-transform:uppercase;font-size:.8rem;
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:.4rem .5rem;min-height:36px;}
+
+/* Preset rows (replaces sm:grid-cols-2 xl:grid-cols-3 preset cards) */
+.preset{display:flex;align-items:center;gap:.7rem;width:100%;min-height:56px;padding:.6rem .7rem;margin-top:.5rem;
+  border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);text-align:left;transition:border-color .12s,box-shadow .12s;}
+.preset:hover{border-color:var(--border-strong);box-shadow:var(--shadow-xs);}
+.preset .chips{display:flex;flex:none;border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+.preset .chips i{width:16px;height:30px;display:block;}
+.preset .pt{min-width:0;flex:1;}
+.preset .pt .n{display:block;font-size:.84rem;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preset .pt .f{display:block;font-size:.75rem;color:var(--fg-subtle);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preset .apply{flex:none;font-size:.74rem;font-weight:600;color:var(--focus);}
+
+/* Theme sample */
+.sample{margin-top:.9rem;border:1px solid var(--brand);border-radius:var(--radius-lg);padding:1rem;background:#fff;}
+.sample h3{font-size:1rem;color:#16181f;}
+.sample p{margin-top:.35rem;font-size:.8rem;color:#565d68;}
+.sample .r{margin-top:.75rem;display:flex;gap:.5rem;}
+.sample .r .p{background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:.76rem;padding:.4rem .8rem;border-radius:.55rem;}
+.sample .r .a{background:#1c1f29;color:#fff;font-weight:600;font-size:.76rem;padding:.4rem .8rem;border-radius:.55rem;}
+
+/* ============ Navigation list — compact dense rows ============ */
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.list-head .add{display:inline-flex;align-items:center;gap:.3rem;font-size:.76rem;font-weight:600;color:var(--focus);
+  border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-md);padding:.3rem .55rem;min-height:32px;}
+.navlist{list-style:none;margin:.55rem 0 0;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:var(--surface);}
+.nav-row{display:flex;align-items:center;gap:.5rem;min-height:46px;padding:.35rem .35rem .35rem .5rem;}
+.nav-row + .nav-row{border-top:1px solid var(--border);}
+.reorder{display:flex;flex-direction:column;flex:none;}
+.reorder button{width:22px;height:18px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-subtle);border-radius:4px;padding:0;}
+.reorder button:hover{background:var(--surface-muted);color:var(--fg);}
+.reorder button:disabled{opacity:.3;cursor:not-allowed;}
+.nav-meta{min-width:0;flex:1;}
+.nav-meta .t{font-size:.82rem;font-weight:600;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-meta .s{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;}
+.nav-meta .custom{color:var(--fg-muted);font-weight:600;}
+.iconbtn{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.iconbtn:hover{background:var(--surface-muted);color:var(--fg);}
+.iconbtn.danger:hover{background:var(--danger-subtle);color:var(--danger);}
+.iconbtn[aria-pressed="true"]{background:var(--info-subtle);color:var(--focus);}
+.nav-edit{border-top:1px solid var(--border);background:var(--surface-muted);padding:.6rem .6rem .7rem;}
+.nav-edit .lbl{font-size:.75rem;font-weight:600;color:var(--fg);}
+.nav-edit .control{background:var(--surface);}
+
+/* ============ Menu rows (Site Tools menu + More settings) ============ */
+.menu-row{display:flex;align-items:center;gap:.7rem;width:100%;min-height:50px;padding:.5rem .6rem;border:0;background:transparent;
+  border-radius:var(--radius-md);text-align:left;transition:background .12s;}
+.menu-row:hover{background:var(--surface-muted);}
+.menu-row .mi{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:9px;background:var(--surface-muted);color:var(--fg-muted);border:1px solid var(--border);}
+.menu-row:hover .mi{background:var(--surface);color:var(--fg);}
+.menu-row .mt{min-width:0;flex:1;}
+.menu-row .mt .n{display:block;font-size:.86rem;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.menu-row .mt .d{display:block;font-size:.75rem;color:var(--fg-subtle);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.menu-row .chev{color:var(--fg-subtle);flex:none;}
+.menu-sep{margin:1rem 0 .3rem;}
+
+/* ============ Default rail (Pages / Sections / inspector / launcher) ============ */
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.rail-foot{border-top:1px solid var(--border);background:var(--surface-muted);padding:.6rem .75rem;}
+.page-btn{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;min-height:40px;padding:.4rem .7rem;
+  border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--fg-muted);font-size:.83rem;font-weight:600;text-align:left;}
+.page-btn:hover{background:var(--surface-muted);color:var(--fg);}
+.page-btn[aria-current="page"]{border-color:var(--border-strong);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.page-btn .s{font-size:.72rem;font-weight:500;color:var(--fg-subtle);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-top:1.4rem;}
+.sec-head .add{width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.sec-head .add:hover{background:var(--surface-muted);color:var(--fg);}
+.sec-row{display:flex;align-items:center;gap:.4rem;width:100%;min-height:40px;padding:.35rem .3rem .35rem .7rem;margin-top:.25rem;
+  border:1px solid transparent;border-radius:var(--radius-md);color:var(--fg-muted);}
+.sec-row:hover{border-color:var(--border);background:var(--surface-muted);color:var(--fg);}
+.sec-row[aria-current="true"]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background:var(--brand-subtle);color:var(--brand-ink);
+  box-shadow:inset 0 0 0 1px rgb(254 197 28 / .24);}
+.sec-row .t{flex:1;min-width:0;font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sec-row .hidden{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle);}
+.sec-row .eye{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.35rem;}
+.sec-row .eye:hover{background:var(--surface);color:var(--fg);}
+.sec-row.is-hidden{opacity:.6;}
+.inspector{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1rem;}
+.inspector .kicker{display:block;margin-bottom:.15rem;}
+.inspector h2{font-size:.95rem;letter-spacing:-.01em;}
+.tools-launcher{display:flex;align-items:center;gap:.7rem;width:100%;min-height:52px;padding:.5rem .65rem;
+  border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);text-align:left;box-shadow:var(--shadow-xs);}
+.tools-launcher:hover{border-color:var(--border-strong);}
+.tools-launcher .mi{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:9px;background:var(--brand-subtle);color:var(--brand-active);}
+.tools-launcher .mt{flex:1;min-width:0;}
+.tools-launcher .mt .n{display:block;font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tools-launcher .mt .d{display:block;font-size:.75rem;color:var(--fg-subtle);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* State visibility */
+.rail > .state{display:none;height:100%;flex-direction:column;min-height:0;}
+html[data-state="launcher"] .rail > .state[data-view="launcher"]{display:flex;}
+html[data-state="tools"] .rail > .state[data-view="tools"]{display:flex;}
+html[data-state="theme"] .rail > .state[data-view="theme"]{display:flex;}
+html[data-state="branding"] .rail > .state[data-view="branding"]{display:flex;}
+html[data-state="seo"] .rail > .state[data-view="seo"]{display:flex;}
+html[data-state="header"] .rail > .state[data-view="header"]{display:flex;}
+html[data-state="footer"] .rail > .state[data-view="footer"]{display:flex;}
+
+/* Toolbar reflects a dirty tool for Theme/Header/Footer states (live-preview tools) */
+.note{margin:0 1rem;padding:.5rem .65rem;border-radius:var(--radius-md);background:var(--info-subtle);color:var(--info-fg);font-size:.75rem;line-height:1.45;border:1px solid color-mix(in srgb,var(--info) 20%,transparent);}
+.note.warn{background:var(--warning-subtle);color:var(--warning-fg);border-color:color-mix(in srgb,var(--warning) 22%,transparent);}
+
+/* Media strip (Branding / SEO) */
+.media{margin-top:.6rem;}
+.media .cur{display:flex;align-items:center;gap:.7rem;padding:.55rem;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted);}
+.media .cur .thumb{width:56px;height:40px;border-radius:6px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--fg-subtle);flex:none;overflow:hidden;}
+.media .cur .thumb.logo{background:var(--brand-ink);color:var(--brand);font-weight:800;}
+.media .cur .m{flex:1;min-width:0;}
+.media .cur .m .n{display:block;font-size:.82rem;font-weight:600;color:var(--fg);}
+.media .cur .m .x{display:block;font-size:.75rem;color:var(--fg-subtle);}
+.upload{display:flex;align-items:center;gap:.6rem;width:100%;margin-top:.5rem;min-height:44px;padding:.5rem .7rem;
+  border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--fg-muted);font-size:.8rem;font-weight:600;}
+.upload:hover{border-color:var(--focus);color:var(--focus);}
+.recent{margin-top:.6rem;}
+.recent summary{list-style:none;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--fg-muted);display:flex;align-items:center;gap:.35rem;padding:.3rem 0;}
+.recent summary::-webkit-details-marker{display:none;}
+.recent[open] summary .chev{transform:rotate(90deg);}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem;}
+.thumbs .tm{aspect-ratio:1/1;border-radius:8px;border:1px solid var(--border);background:var(--surface-muted);display:grid;place-items:center;font-size:0;position:relative;overflow:hidden;}
+.thumbs .tm::before{content:"";width:40%;height:40%;opacity:.45;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2368707c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.5' cy='9.5' r='1.6'/%3E%3Cpath d='m21 16-5-5L5 20'/%3E%3C/svg%3E");}
+.thumbs .tm.sel{border-color:var(--focus);box-shadow:0 0 0 2px var(--info-subtle);}
+.thumbs .tm.sel::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--focus);font-weight:800;font-size:.7rem;}
+
+/* SEO context switcher */
+.context{margin-bottom:.9rem;}
+.context .lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-subtle);}
+.social-card{margin-top:.5rem;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:var(--surface);}
+.social-card .img{aspect-ratio:1200/630;background:linear-gradient(135deg,#dfe4ea,#eef1f5);display:grid;place-items:center;color:#535a66;font-size:.78rem;font-weight:500;}
+.social-card .meta{padding:.55rem .65rem;}
+.social-card .meta .d{font-size:.75rem;color:var(--fg-muted);}
+
+/* ---------------- Mobile builder layout ---------------- */
+html[data-device="mobile"] .app{inset:44px auto 0 50%;transform:translateX(-50%);width:414px;border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong);box-shadow:var(--shadow-md);}
+html[data-device="mobile"] .body{grid-template-columns:1fr;grid-template-rows:1fr;position:relative;}
+html[data-device="mobile"] .canvas{padding:.85rem;}
+html[data-device="mobile"] .rail{position:absolute;inset:0;z-index:5;border-right:0;box-shadow:var(--shadow-md);}
+html[data-device="mobile"][data-state="launcher"] .rail{position:static;box-shadow:none;}
+html[data-device="mobile"] .toolbar{gap:.5rem;padding:.5rem .65rem;}
+html[data-device="mobile"] .vp,html[data-device="mobile"] .btn.preview,html[data-device="mobile"] .crumb.mid,html[data-device="mobile"] .wordmark{display:none;}
+html[data-device="mobile"] .canvas .frame-bar .w{display:none;}
+html[data-device="mobile"] .device-note{display:block;}
+.device-note{display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;font-size:.72rem;color:var(--fg-subtle);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:.3rem .8rem;box-shadow:var(--shadow-sm);}
+
+@media (max-width:900px){
+  html[data-device="desktop"] .body{grid-template-columns:18rem minmax(0,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ REVIEW SCAFFOLD (not shipped) ============ -->
+<div class="review" role="group" aria-label="Comp review controls">
+  <span class="tag">Review only</span>
+  <div class="seg" id="stateSeg" role="group" aria-label="Rail state">
+    <button data-go="launcher" aria-pressed="true">Launcher</button>
+    <button data-go="tools">Site tools</button>
+    <button data-go="theme">Theme</button>
+    <button data-go="branding">Branding</button>
+    <button data-go="seo">SEO &amp; social</button>
+    <button data-go="header">Header &amp; nav</button>
+    <button data-go="footer">Footer</button>
+  </div>
+  <div class="seg" id="deviceSeg" role="group" aria-label="Device">
+    <button data-device="desktop" aria-pressed="true">Desktop</button>
+    <button data-device="mobile">Mobile</button>
+  </div>
+  <span class="hint">Rail body scrolls independently · toolbar Save stays fixed</span>
+</div>
+
+<div class="app">
+  <!-- ===== Toolbar (LOCKED) ===== -->
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo">B</span>
+      <span class="wordmark">Baker<b>Rang</b></span>
+      <span class="crumb-sep" aria-hidden="true">/</span>
+      <span class="crumb mid">Website</span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb site">Brightwater Dental</span>
+      <span class="badge warning" id="statusBadge">Changes not published</span>
+    </div>
+    <div class="tools-right">
+      <div class="vp" role="group" aria-label="Preview viewport">
+        <button aria-label="Desktop" aria-pressed="true"><svg class="icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8m-4-4v4"/></svg></button>
+        <button aria-label="Tablet" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></button>
+        <button aria-label="Mobile" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="17" rx="2"/><path d="M11 18h2"/></svg></button>
+      </div>
+      <span class="dirty-flag"><i></i>Unsaved</span>
+      <button class="btn ghost preview"><svg class="icon sm" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9m7 0v6H5V6h6"/></svg>Preview</button>
+      <button class="btn primary save" id="saveBtn" disabled>Save</button>
+      <button class="btn publish">Publish</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- =========================================================== -->
+    <!-- RAIL                                                        -->
+    <!-- =========================================================== -->
+    <aside class="rail" aria-label="Website builder controls">
+
+      <!-- ---------- STATE: default launcher ---------- -->
+      <div class="state" data-view="launcher">
+        <div class="rail-scroll scroll">
+          <span class="kicker">Page</span>
+          <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.15rem;" role="list" aria-label="Website pages">
+            <button class="page-btn" aria-current="page"><span>Home</span><span class="s">6 sections</span></button>
+            <button class="page-btn"><span>Services</span><span class="s">5 sections</span></button>
+            <button class="page-btn"><span>About</span><span class="s">4 sections</span></button>
+            <button class="page-btn"><span>Contact</span><span class="s">3 sections</span></button>
+          </div>
+
+          <div class="sec-head">
+            <span class="kicker">Sections</span>
+            <button class="add" aria-label="Add section"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+          <div style="margin-top:.25rem;" role="list" aria-label="Sections on Home">
+            <div class="sec-row" aria-current="true"><span class="t">Hero</span><span class="eye" title="Hero is always visible"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span></div>
+            <div class="sec-row"><span class="t">Services</span><button class="eye" aria-label="Hide Services"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+            <div class="sec-row"><span class="t">Testimonials</span><button class="eye" aria-label="Hide Testimonials"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+            <div class="sec-row is-hidden"><span class="t">Gallery</span><span class="hidden">Hidden</span><button class="eye" aria-label="Show Gallery"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 3 21 21M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 5.1A10.7 10.7 0 0 1 12 5c5.1 0 8.6 5.1 8.6 7s-1.2 3.3-3 4.7M6.2 6.2C4.3 7.7 3.4 10.2 3.4 12c0 1.9 3.5 7 8.6 7 1 0 1.9-.2 2.8-.5"/></svg></button></div>
+            <div class="sec-row"><span class="t">Contact</span><button class="eye" aria-label="Hide Contact"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          </div>
+
+          <!-- Selected-section inspector (Hero) — unchanged behavior -->
+          <div class="inspector">
+            <span class="kicker">Hero</span>
+            <h2>Hero content</h2>
+            <label class="field" style="margin-top:.8rem;"><span class="lbl">Headline</span>
+              <input class="control" value="Gentle, modern dentistry in Brightwater"></label>
+            <label class="field" style="margin-top:.8rem;"><span class="lbl">Subtitle <span class="opt">(optional)</span></span>
+              <textarea class="control">Same-day appointments, transparent pricing, and a team that remembers your name.</textarea></label>
+            <label class="field" style="margin-top:.8rem;"><span class="lbl">Button label <span class="opt">(optional)</span></span>
+              <input class="control" value="Book a visit"></label>
+          </div>
+        </div>
+
+        <!-- The reclaimed footer: ONE compact launcher (was a ~340px stacked block) -->
+        <div class="rail-foot">
+          <button class="tools-launcher" data-go="tools">
+            <span class="mi"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+            <span class="mt"><span class="n">Site tools</span><span class="d">Theme, branding, header, footer, SEO &amp; more</span></span>
+            <svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;color:var(--fg-subtle);"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: Site Tools menu ---------- -->
+      <div class="state" data-view="tools">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="launcher"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Editing</button>
+            <h2>Site tools</h2>
+            <p>Site-wide settings that apply to every page.</p>
+          </div>
+          <div class="tool-body scroll">
+            <span class="kicker">Design &amp; content</span>
+            <div style="margin-top:.4rem;">
+              <button class="menu-row" data-go="branding"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mt"><span class="n">Branding</span><span class="d">Logo, site name, favicon</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button class="menu-row" data-go="theme"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg></span><span class="mt"><span class="n">Theme</span><span class="d">Colours, fonts, shape</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button class="menu-row" data-go="header"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></span><span class="mt"><span class="n">Header &amp; navigation</span><span class="d">Menu links and call-to-action</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button class="menu-row" data-go="footer"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15h18"/></svg></span><span class="mt"><span class="n">Footer</span><span class="d">Contact, social, copyright</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button class="menu-row" data-go="seo"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span class="mt"><span class="n">SEO &amp; social</span><span class="d">Titles, description, share image</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+
+            <hr class="hairline menu-sep">
+            <span class="kicker">Full-screen tools</span>
+            <div style="margin-top:.4rem;">
+              <button class="menu-row"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="mt"><span class="n">Templates</span><span class="d">Apply a curated starting point</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button class="menu-row"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg></span><span class="mt"><span class="n">Revision history</span><span class="d">Restore a recent published revision</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+
+            <hr class="hairline menu-sep">
+            <button class="menu-row"><span class="mi"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 2.6 7"/></svg></span><span class="mt"><span class="n">More settings</span><span class="d">Business profile, hours, social, custom CSS</span></span><svg class="icon chev" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="m9 6 6 6-6 6"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: Theme ---------- -->
+      <div class="state" data-view="theme">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="tools"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Site tools</button>
+            <h2>Theme</h2>
+            <p>Set the visual style, typography, spacing, and colours.</p>
+          </div>
+          <div class="tool-body scroll">
+            <p class="help">Changes preview live. Save from the toolbar, then Publish to update the public site.</p>
+
+            <div class="group">
+              <span class="kicker">Start from a preset</span>
+              <button class="preset"><span class="chips"><i style="background:#1c1f29"></i><i style="background:#fec51c"></i><i style="background:#ffffff"></i></span><span class="pt"><span class="n">Warm Studio</span><span class="f">Fraunces + Inter</span></span><span class="apply">Apply</span></button>
+              <button class="preset"><span class="chips"><i style="background:#0f3d3e"></i><i style="background:#e8b04b"></i><i style="background:#faf7f0"></i></span><span class="pt"><span class="n">Evergreen</span><span class="f">Playfair + Work Sans</span></span><span class="apply">Apply</span></button>
+              <button class="preset"><span class="chips"><i style="background:#1b2a4a"></i><i style="background:#3b82f6"></i><i style="background:#f7f9fc"></i></span><span class="pt"><span class="n">Coastal</span><span class="f">Inter + Inter</span></span><span class="apply">Apply</span></button>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Colours</span>
+              <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:.5rem .55rem;">
+                <div class="color-row"><span class="swatch" style="background:#1c1f29"></span><span class="cl"><span class="n">Primary</span></span><input class="hex" value="#1C1F29"></div>
+                <div class="color-row"><span class="swatch" style="background:#fec51c"></span><span class="cl"><span class="n">Accent</span></span><input class="hex" value="#FEC51C"></div>
+                <div class="color-row"><span class="swatch" style="background:#ffffff"></span><span class="cl"><span class="n">Background</span></span><input class="hex" value="#FFFFFF"></div>
+                <div class="color-row"><span class="swatch" style="background:#202329"></span><span class="cl"><span class="n">Text</span></span><input class="hex" value="#202329"></div>
+              </div>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Typography</span>
+              <label class="field" style="margin-top:.4rem;"><span class="lbl">Heading font</span>
+                <select class="control"><option>Fraunces</option><option>Playfair Display</option><option>Inter</option><option>Work Sans</option></select></label>
+              <label class="field" style="margin-top:.7rem;"><span class="lbl">Body font</span>
+                <select class="control"><option>Inter</option><option>Work Sans</option><option>Fraunces</option></select></label>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Corner style</span>
+              <div class="segment" role="group"><button aria-pressed="true">Rounded</button><button>Soft</button><button>Square</button></div>
+            </div>
+            <div class="group">
+              <span class="kicker">Content width</span>
+              <div class="segment" role="group"><button>Narrow</button><button aria-pressed="true">Standard</button><button>Wide</button></div>
+            </div>
+            <div class="group">
+              <span class="kicker">Section spacing</span>
+              <div class="segment" role="group"><button>Compact</button><button aria-pressed="true">Comfortable</button><button>Spacious</button></div>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Preview</span>
+              <div class="sample">
+                <h3>Your website theme</h3>
+                <p>A quick sample of typography, colour, and corner treatment.</p>
+                <div class="r"><span class="p">Primary action</span><span class="a">Accent</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: Branding ---------- -->
+      <div class="state" data-view="branding">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="tools"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Site tools</button>
+            <h2>Branding</h2>
+            <p>Manage the site name, logo, and favicon.</p>
+          </div>
+          <div class="tool-body scroll">
+            <label class="field"><span class="lbl">Site name</span>
+              <input class="control" value="Brightwater Dental"></label>
+            <p class="count">18/80</p>
+
+            <div class="group">
+              <span class="kicker">Logo <span style="text-transform:none;letter-spacing:0;font-weight:400;">· optional</span></span>
+              <div class="media">
+                <div class="cur">
+                  <span class="thumb logo">B</span>
+                  <span class="m"><span class="n">Current logo</span><span class="x">brightwater-mark.png · 512×512</span></span>
+                  <button class="iconbtn danger" aria-label="Remove logo"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+                <button class="upload"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a new logo</button>
+                <p class="help" style="margin-top:.35rem;">JPEG, PNG, or WebP up to 10&nbsp;MB. Uploads save immediately.</p>
+                <details class="recent">
+                  <summary><svg class="icon sm chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>Recent uploads (6)</summary>
+                  <div class="thumbs">
+                    <span class="tm sel">Logo</span><span class="tm">IMG</span><span class="tm">IMG</span>
+                    <span class="tm">IMG</span><span class="tm">IMG</span><span class="tm">IMG</span>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Favicon <span style="text-transform:none;letter-spacing:0;font-weight:400;">· optional</span></span>
+              <div class="media">
+                <div class="cur">
+                  <span class="thumb">—</span>
+                  <span class="m"><span class="n">No favicon selected</span><span class="x">The site name initial is used</span></span>
+                </div>
+                <button class="upload"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a favicon</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: SEO & social ---------- -->
+      <div class="state" data-view="seo">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="tools"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Site tools</button>
+            <h2>SEO &amp; social</h2>
+            <p>Search descriptions, sharing images, and indexing.</p>
+          </div>
+          <div class="tool-body scroll">
+            <div class="context">
+              <span class="lbl">Editing</span>
+              <select class="control" style="margin-top:.35rem;" aria-label="SEO context">
+                <option>Site defaults</option>
+                <option>Home · /</option>
+                <option selected>Services · /services</option>
+                <option>About · /about</option>
+                <option>Contact · /contact</option>
+              </select>
+            </div>
+
+            <p class="help"><b style="color:var(--fg)">Services</b> · /services</p>
+
+            <label class="field" style="margin-top:.9rem;"><span class="lbl">SEO title</span>
+              <input class="control" placeholder="Leave blank to use: Services | Brightwater Dental"></label>
+            <p class="count">0/120</p>
+
+            <label class="field" style="margin-top:.7rem;"><span class="lbl">SEO description</span>
+              <textarea class="control" placeholder="Leave blank to inherit the site default. 150–160 characters works well."></textarea></label>
+            <p class="count">0/500</p>
+
+            <div class="group">
+              <span class="kicker">Social sharing image</span>
+              <div class="social-card">
+                <span class="img">Using site default · 1200 × 630</span>
+                <span class="meta"><span class="d">Inherited from Site defaults. Choose a Media Library image to override.</span></span>
+              </div>
+              <details class="recent"><summary><svg class="icon sm chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>Choose from Media Library (4)</summary>
+                <div class="thumbs" style="grid-template-columns:repeat(2,1fr);"><span class="tm">1200×630</span><span class="tm">1200×630</span><span class="tm">1200×630</span><span class="tm">1200×630</span></div>
+              </details>
+            </div>
+
+            <button class="toggle" aria-pressed="false" style="margin-top:1.2rem;"><span>Prevent search engines from indexing this page</span><span class="sw"></span></button>
+
+            <hr class="hairline">
+            <button class="btn sm" style="width:100%;justify-content:center;"><svg class="icon sm" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9m7 0v6H5V6h6"/></svg>Preview Services page</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: Header & navigation (dense, scrolls) ---------- -->
+      <div class="state" data-view="header">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="tools"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Site tools</button>
+            <h2>Header &amp; navigation</h2>
+            <p>The shared header, menu links, and optional call-to-action.</p>
+          </div>
+          <div class="tool-body scroll">
+            <div class="group" style="margin-top:.25rem;">
+              <span class="kicker">Brand display</span>
+              <div class="segment" role="group"><button aria-pressed="true">Logo</button><button>Logo + name</button><button>Name</button></div>
+            </div>
+
+            <div class="group">
+              <div class="list-head">
+                <span class="kicker">Navigation</span>
+                <button class="add"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add page</button>
+              </div>
+              <p class="help" style="margin-top:.35rem;">Reorder with the arrows. A blank label uses the page title.</p>
+              <ol class="navlist">
+                <li class="nav-row">
+                  <span class="reorder"><button disabled aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Home</span><span class="s">/</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+                <li>
+                  <div class="nav-row">
+                    <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                    <span class="nav-meta"><span class="t">Services</span><span class="s custom">“What we do” · /services</span></span>
+                    <button class="iconbtn" aria-pressed="true" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                    <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  </div>
+                  <div class="nav-edit">
+                    <label class="lbl">Display label <span style="font-weight:400;color:var(--fg-subtle)">(optional)</span>
+                      <input class="control" value="What we do"></label>
+                  </div>
+                </li>
+                <li class="nav-row">
+                  <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Our team</span><span class="s">/about</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+                <li class="nav-row">
+                  <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Pricing</span><span class="s">/pricing</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+                <li class="nav-row">
+                  <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Patient stories</span><span class="s">/testimonials</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+                <li class="nav-row">
+                  <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Blog</span><span class="s">/blog</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+                <li class="nav-row">
+                  <span class="reorder"><button aria-label="Move up"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 15 6-6 6 6"/></svg></button><button disabled aria-label="Move down"><svg class="icon sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="m6 9 6 6 6-6"/></svg></button></span>
+                  <span class="nav-meta"><span class="t">Contact</span><span class="s">/contact</span></span>
+                  <button class="iconbtn" aria-label="Edit label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </li>
+              </ol>
+            </div>
+
+            <div class="group">
+              <button class="toggle" aria-pressed="true"><span>Show a header call-to-action</span><span class="sw"></span></button>
+              <label class="field" style="margin-top:.7rem;"><span class="lbl">Button label</span><input class="control" value="Book a visit"></label>
+              <label class="field" style="margin-top:.7rem;"><span class="lbl">Destination</span>
+                <select class="control"><option>Email</option><option selected>Phone</option><option>URL</option></select></label>
+              <label class="field" style="margin-top:.7rem;"><span class="lbl">Phone number</span><input class="control" value="+1 (555) 019-2288"></label>
+            </div>
+
+            <hr class="hairline">
+            <button class="btn sm" style="width:100%;justify-content:center;"><svg class="icon sm" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9m7 0v6H5V6h6"/></svg>Preview Home</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- STATE: Footer ---------- -->
+      <div class="state" data-view="footer">
+        <div class="tool">
+          <div class="tool-head">
+            <button class="back" data-go="tools"><svg class="icon sm" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Site tools</button>
+            <h2>Footer</h2>
+            <p>The shared footer shown on every page.</p>
+          </div>
+          <div class="tool-body scroll">
+            <div class="group" style="margin-top:.25rem;">
+              <span class="kicker">Footer content</span>
+              <button class="toggle" aria-pressed="true"><span>Show branding</span><span class="sw"></span></button>
+              <button class="toggle" aria-pressed="true"><span>Show business contact</span><span class="sw"></span></button>
+              <button class="toggle" aria-pressed="true"><span>Show social links</span><span class="sw"></span></button>
+              <button class="toggle" aria-pressed="true"><span>Show copyright</span><span class="sw"></span></button>
+            </div>
+
+            <div class="group">
+              <span class="kicker">Navigation</span>
+              <button class="opt-row" aria-pressed="true"><span class="radio"></span><span>Use header navigation<span class="sub">Mirrors the current header menu</span></span></button>
+              <button class="opt-row"><span class="radio"></span><span>Custom navigation<span class="sub">Choose a separate set of links</span></span></button>
+              <button class="opt-row"><span class="radio"></span><span>No navigation<span class="sub">Hide footer links entirely</span></span></button>
+            </div>
+
+            <div class="group">
+              <label class="field"><span class="lbl">Footer text <span class="opt">(optional)</span></span>
+                <textarea class="control">Brightwater Dental · Caring for Brightwater smiles since 2004.</textarea></label>
+              <p class="count">57/200</p>
+            </div>
+
+            <hr class="hairline">
+            <button class="btn sm" style="width:100%;justify-content:center;"><svg class="icon sm" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9m7 0v6H5V6h6"/></svg>Preview Home</button>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- =========================================================== -->
+    <!-- PREVIEW CANVAS (dominant, LOCKED architecture)              -->
+    <!-- =========================================================== -->
+    <div class="canvas scroll">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="live"><i></i>Live preview</span>
+          <span class="w">Desktop</span>
+        </div>
+        <div class="site">
+          <nav class="site-nav">
+            <span class="b">Brightwater<span> Dental</span></span>
+            <span class="links"><span>What we do</span><span>Our team</span><span>Pricing</span><span>Contact</span></span>
+            <span class="cta">Book a visit</span>
+          </nav>
+          <div class="hero">
+            <h1>Gentle, modern dentistry in Brightwater</h1>
+            <p>Same-day appointments, transparent pricing, and a team that remembers your name.</p>
+            <div class="row"><span class="p">Book a visit</span><span class="s">See our services</span></div>
+          </div>
+          <div class="strip"><span>Same-day care</span><span>Transparent pricing</span><span>Family friendly</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<span class="device-note">Rail overlays the canvas on narrow builders — its body scrolls, Save stays in the toolbar.</span>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  // tools that live-preview into the iframe → toolbar shows a dirty/enabled Save
+  var dirtyStates={theme:1,header:1,footer:1};
+  function setState(s){
+    root.setAttribute('data-state',s);
+    document.querySelectorAll('#stateSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.go===s ? 'true':'false');});
+    var dirty = !!dirtyStates[s];
+    root.setAttribute('data-dirty', dirty ? 'true':'false');
+    var save=document.getElementById('saveBtn'); if(save) save.disabled=!dirty;
+    var badge=document.getElementById('statusBadge');
+    if(dirty){badge.textContent='Unsaved changes';badge.className='badge warning';}
+    else{badge.textContent='Changes not published';badge.className='badge warning';}
+    // reset scroll of the newly shown body
+    var body=document.querySelector('.rail .state[data-view="'+s+'"] .tool-body, .rail .state[data-view="'+s+'"] .rail-scroll');
+    if(body) body.scrollTop=0;
+  }
+  function setDevice(d){
+    root.setAttribute('data-device',d);
+    document.querySelectorAll('#deviceSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.device===d ? 'true':'false');});
+  }
+  document.addEventListener('click',function(e){
+    var go=e.target.closest('[data-go]'); if(go){setState(go.dataset.go);return;}
+    var dev=e.target.closest('[data-device]'); if(dev && dev.parentElement.id==='deviceSeg'){setDevice(dev.dataset.device);}
+  });
+})();
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bakerrang/site-runtime": "*",
     "@bakerrang/site-schema": "*",
     "@bakerrang/ui": "*",
     "next": "16.3.0",

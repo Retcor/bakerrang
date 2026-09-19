@@ -1,0 +1,69 @@
+{
+  "buildPath": "comp",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-14T03:16:20.210Z",
+        "reason": "DESIGN.md pins Inter as the Portal display+body typeface; committed visual world overrides the detector"
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/website-editor-comp.html"
+        ],
+        "createdAt": "2026-09-14T03:16:21.182Z",
+        "reason": "false positive: browser preview frame wraps the sample tenant site, whose own content cards are not Portal nesting; flattening would misrepresent a rendered tenant site"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "playfair display",
+        "files": [
+          ".impeccable/mocks/website-editor-comp.html"
+        ],
+        "createdAt": "2026-09-14T03:50:57.678Z",
+        "reason": "tenant preview theme: Playfair is the sample tenant site's own serif (a renderer-supported font), deliberately distinct from the Portal's Inter to show preview isolation; not Portal chrome"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "playfair display",
+        "files": [
+          ".impeccable/mocks/builder-rail-states.html"
+        ],
+        "createdAt": "2026-09-15T03:41:20.906Z",
+        "reason": "tenant preview serif (renderer-supported); not Portal chrome"
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/builder-rail-states.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.080Z",
+        "reason": "device/browser preview frame clips the rendered site to its rounded viewport by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "playfair display",
+        "files": [
+          ".impeccable/mocks/builder-overlays.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.247Z",
+        "reason": "tenant/template preview serif (renderer-supported); not Portal chrome"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "space grotesk",
+        "files": [
+          ".impeccable/mocks/builder-overlays.html"
+        ],
+        "createdAt": "2026-09-15T03:41:21.411Z",
+        "reason": "Slate template preview heading font; a template's own type, not Portal chrome"
+      }
+    ]
+  }
+}

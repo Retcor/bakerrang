@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { type SiteDefinition } from '@bakerrang/site-schema'
+import { isFaqSection, isHeroSection, isServicesSection, isTestimonialsSection, type FaqContent, type HeroContent, type SectionType, type ServicesContent, type SiteDefinition, type SiteSection, type TestimonialsContent } from '@bakerrang/site-schema'
 import { Badge, Button, Card, ConfirmDialog, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
-import { createSitePreviewToken, getSite, getSiteDomain, initializeSite, publishSite, unpublishSite, type SiteDomain } from '../../lib/site'
+import { addSection, createSitePreviewToken, getSite, getSiteDomain, initializeSite, publishSite, setSectionVisibility, unpublishSite, updateSectionContent, type SiteDomain } from '../../lib/site'
 import { sitePreviewUrl } from '../../lib/sitePreview'
 import { AboutEditor } from './AboutEditor'
 import { BrandingEditor } from './BrandingEditor'
@@ -15,7 +15,6 @@ import { BusinessProfileEditor } from './BusinessProfileEditor'
 import { ContactEditor } from './ContactEditor'
 import { CtaEditor } from './CtaEditor'
 import { CustomCssEditor } from './CustomCssEditor'
-import { FaqEditor } from './FaqEditor'
 import { GalleryEditor } from './GalleryEditor'
 import { LogosEditor } from './LogosEditor'
 import { ProcessEditor } from './ProcessEditor'
@@ -25,22 +24,30 @@ import { HeaderEditor } from './HeaderEditor'
 import { FooterEditor } from './FooterEditor'
 import { BusinessHoursSectionEditor } from './BusinessHoursSectionEditor'
 import { sectionDefinitions } from './sectionDefinitions'
+import { AddSectionPanel } from './AddSectionPanel'
 import { PageSectionManager } from './PageSectionManager'
 import { PagesManager } from './PagesManager'
-import { ServicesEditor } from './ServicesEditor'
 import { SocialProfilesEditor } from './SocialProfilesEditor'
 import { SeoEditor } from './SeoEditor'
-import { TestimonialsEditor } from './TestimonialsEditor'
 import { ThemeEditor } from './ThemeEditor'
 import { TemplatesEditor } from './TemplatesEditor'
 import { RevisionHistoryEditor } from './RevisionHistoryEditor'
-import { WebsiteEditorNavigation } from './WebsiteEditorNavigation'
+import { WebsiteEditorCanvas } from './WebsiteEditorCanvas'
+import { MoreSettingsPanel } from './MoreSettingsPanel'
+import { SiteToolsPanel } from './SiteToolsPanel'
+import { type ActiveEditorController } from './WebsiteEditorShell'
+import { HeroDraftInspector } from './HeroDraftInspector'
+import { ServicesDraftInspector, servicesContentError } from './ServicesDraftInspector'
+import { TestimonialsDraftInspector, testimonialsContentError } from './TestimonialsDraftInspector'
+import { FaqDraftInspector, faqContentError } from './FaqDraftInspector'
 import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
-import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsitePaneId } from './websiteEditors'
+import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsiteLauncherId, type WebsitePaneId } from './websiteEditors'
 
 export interface BusinessWebsiteProps { tenantId: string, autoLoad?: boolean }
 type View = 'initial' | 'missing' | 'site'
-type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish'
+type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish' | 'saveHero' | 'saveServices' | 'saveTestimonials' | 'saveFaq' | 'visibility'
+
+const cloneSite = (definition: SiteDefinition) => structuredClone(definition)
 
 function publicationStatus (site: SiteDefinition) {
   if (site.status === 'DRAFT') return { label: 'Draft', tone: 'warning' as const }
@@ -53,12 +60,14 @@ function publishedDate (timestamp: number | undefined) {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(timestamp)
 }
 
-function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, onEditSection, onPreviewPage, onRefresh, onSaved, onSelectSeoContext, pageId, sectionId, site, tenantId }: {
+function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerChange, onDirtyChange, onEditSection, onLivePreview, onPreviewPage, onRefresh, onSaved, onSelectSeoContext, pageId, sectionId, site, tenantId }: {
   editor: WebsiteEditorId
   onBackToPages: (pageId?: string) => void
   onCancel: () => void
+  onControllerChange?: (controller: ActiveEditorController | null) => void
   onDirtyChange: (dirty: boolean) => void
   onEditSection: (sectionId: string) => void
+  onLivePreview?: (patch: Partial<Pick<SiteDefinition, 'theme' | 'header' | 'footer'>>) => void
   onPreviewPage: (pageId: string) => void
   onRefresh: () => Promise<SiteDefinition>
   onSaved: (site: SiteDefinition, successMessage?: string, offerHomePreview?: boolean) => void
@@ -84,25 +93,20 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onDirtyChange, 
       case 'stats': return <StatsEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'cta': return <CtaEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'logos': return <LogosEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
-      case 'services': return <ServicesEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'gallery': return <GalleryEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
-      case 'testimonials': return <TestimonialsEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
-      case 'faq': return <FaqEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'businessHoursSection': return <BusinessHoursSectionEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'contact': return <ContactEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
     }
   }
   switch (editor) {
-    case 'branding': return <BrandingEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
-    case 'theme': return <ThemeEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'branding': return <BrandingEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'theme': return <ThemeEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onLivePreview={onLivePreview} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'businessProfile': return <BusinessProfileEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'businessHours': return <BusinessHoursEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
     case 'socialProfiles': return <SocialProfilesEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
-    case 'templates': return <TemplatesEditor onSaved={onSaved} tenantId={tenantId} />
-    case 'revisions': return <RevisionHistoryEditor onSaved={onSaved} tenantId={tenantId} />
-    case 'header': return <HeaderEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
-    case 'footer': return <FooterEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
-    case 'seo': return <SeoEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onPreviewPage={onPreviewPage} onSaved={onSaved} onSelectContext={onSelectSeoContext} pageId={pageId} site={site} tenantId={tenantId} />
+    case 'header': return <HeaderEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onLivePreview={onLivePreview} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'footer': return <FooterEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onLivePreview={onLivePreview} onPreview={() => onPreviewPage('home')} onSaved={onSaved} site={site} tenantId={tenantId} />
+    case 'seo': return <SeoEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onPreviewPage={onPreviewPage} onSaved={onSaved} onSelectContext={onSelectSeoContext} pageId={pageId} site={site} tenantId={tenantId} />
     case 'customCss': return <CustomCssEditor onCancel={onCancel} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
   }
 }
@@ -148,6 +152,10 @@ function WebsiteOverview ({ domain, onManagePages, onUnpublish, pending, site, t
   )
 }
 
+function DeferredSectionInspector ({ onOpenExistingControls, section }: { onOpenExistingControls: () => void, section: SiteSection }) {
+  return <section aria-label={`${sectionDefinitions[section.type].label} properties`} className="border-t border-border pt-5"><p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">{sectionDefinitions[section.type].label}</p><h2 className="mt-2 text-base font-semibold tracking-tight text-fg">Editing coming soon</h2><p className="mt-2 text-sm leading-6 text-fg-muted">This section is visible in the live canvas. Its existing controls remain available while its draft-native inspector is prepared.</p><Button className="mt-4" onClick={onOpenExistingControls} size="sm" variant="secondary">Open existing controls</Button></section>
+}
+
 export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsiteProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -158,22 +166,44 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const queryPageId = searchParams.get('pageId') ?? undefined
   const [view, setView] = useState<View>('initial')
   const [site, setSite] = useState<SiteDefinition | null>(null)
+  const [draft, setDraft] = useState<SiteDefinition | null>(null)
   const [domain, setDomain] = useState<SiteDomain | null>(null)
   const [pending, setPending] = useState<Operation | null>(autoLoad ? 'manage' : null)
   const [error, setError] = useState<string | null>(null)
   const [editorSelection, setEditorSelection] = useState<{ fromQueryKey: string, toQueryKey: string, editor: WebsiteEditorId | null }>({ fromQueryKey: queryKey, toQueryKey: queryKey, editor: queryEditor })
-  const [feedback, setFeedback] = useState<string | null>(null)
   const [offerHomePreview, setOfferHomePreview] = useState(false)
   const [previewFallback, setPreviewFallback] = useState<string | null>(null)
   const [editorDirty, setEditorDirty] = useState(false)
+  const [toolController, setToolController] = useState<ActiveEditorController | null>(null)
   const [editorSessionRevision, setEditorSessionRevision] = useState(0)
   const [pendingPane, setPendingPane] = useState<{ editor: WebsitePaneId, pageId?: string, sectionId?: string } | null>(null)
+  const [canvasSelection, setCanvasSelection] = useState<{ pageId?: string, sectionId?: string }>({ pageId: queryPageId, sectionId: querySectionId })
+  const [showSectionManager, setShowSectionManager] = useState(false)
+  const [showLegacySectionInspector, setShowLegacySectionInspector] = useState(false)
+  const [addingSection, setAddingSection] = useState(false)
+  const [pendingAddType, setPendingAddType] = useState<SectionType | null>(null)
+  const [addBusy, setAddBusy] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [moreSettingsOpen, setMoreSettingsOpen] = useState(false)
+  const [siteToolsMenuOpen, setSiteToolsMenuOpen] = useState(false)
+  const [openSiteToolsAfterDiscard, setOpenSiteToolsAfterDiscard] = useState(false)
   useBusinessNavigationGuard(editorDirty)
 
   const editor = queryKey === editorSelection.fromQueryKey || queryKey === editorSelection.toQueryKey
     ? editorSelection.editor
     : queryEditor
+  const activeSiteTool = editor === 'theme' || editor === 'branding' || editor === 'seo' || editor === 'header' || editor === 'footer'
+    ? editor
+    : null
   const handleDirtyChange = useCallback((dirty: boolean) => setEditorDirty(dirty), [])
+  const applyLivePreview = useCallback((patch: Partial<Pick<SiteDefinition, 'theme' | 'header' | 'footer'>>) => {
+    setDraft((current) => current ? { ...current, ...patch } : current)
+  }, [])
+  const acceptCanonicalSite = useCallback((definition: SiteDefinition) => {
+    setSite(definition)
+    setDraft(cloneSite(definition))
+    setEditorDirty(false)
+  }, [])
   useEffect(() => {
     if (!editorDirty) return
     const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -190,18 +220,18 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     let cancelled = false
     void getSite(tenantId).then((definition) => {
       if (cancelled) return
-      setSite(definition); setView('site')
+      acceptCanonicalSite(definition); setView('site')
     }).catch((caught: unknown) => {
       if (cancelled) return
       if (caught instanceof ApiError && caught.status === 404) setView('missing')
       else setError('Unable to load the website. Please try again.')
     }).finally(() => { if (!cancelled) setPending(null) })
     return () => { cancelled = true }
-  }, [autoLoad, tenantId])
+  }, [acceptCanonicalSite, autoLoad, tenantId])
 
   const navigateToEditor = (next: WebsitePaneId, pageId?: string, sectionId?: string) => {
     const nextEditor = next === 'overview' ? null : next
-    setError(null); setFeedback(null); setOfferHomePreview(false)
+    setError(null); setOfferHomePreview(false)
     const params = new URLSearchParams(searchParams.toString())
     if (nextEditor) params.set('editor', nextEditor)
     else params.delete('editor')
@@ -210,6 +240,12 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     if (nextEditor === 'page' && sectionId) params.set('sectionId', sectionId)
     else params.delete('sectionId')
     const query = params.toString()
+    setCanvasSelection({ pageId, sectionId })
+    setShowSectionManager(nextEditor === 'page' && Boolean(pageId) && !sectionId)
+    setShowLegacySectionInspector(false)
+    setMoreSettingsOpen(false)
+    setSiteToolsMenuOpen(false)
+    setToolController(null)
     setEditorSelection({ fromQueryKey: queryKey, toQueryKey: query, editor: nextEditor })
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
@@ -219,7 +255,32 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     if (editorDirty) { setPendingPane({ editor: next }); return }
     navigateToEditor(next)
   }
+  const selectSiteTool = (tool: WebsiteLauncherId) => {
+    if (tool === 'moreSettings') { setSiteToolsMenuOpen(false); setMoreSettingsOpen(true); return }
+    selectEditor(tool)
+  }
+  const openSiteTools = () => {
+    setError(null); setOfferHomePreview(false)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('editor')
+    params.delete('pageId')
+    params.delete('sectionId')
+    const query = params.toString()
+    setMoreSettingsOpen(false)
+    setToolController(null)
+    setEditorSelection({ fromQueryKey: queryKey, toQueryKey: query, editor: null })
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    setSiteToolsMenuOpen(true)
+  }
+  const backToSiteTools = () => {
+    if (editorDirty) { setOpenSiteToolsAfterDiscard(true); setPendingPane({ editor: 'overview' }); return }
+    openSiteTools()
+  }
   const selectPage = (pageId: string, sectionId?: string) => {
+    const currentDraft = draft ?? site
+    const currentPage = currentDraft?.pages.find((page) => page.id === canvasSelection.pageId) ?? currentDraft?.pages.find((page) => page.id === queryPageId) ?? currentDraft?.pages.find((page) => page.id === 'home') ?? currentDraft?.pages[0]
+    const currentSectionId = showSectionManager ? undefined : canvasSelection.sectionId ?? querySectionId ?? currentPage?.sections.find((section) => section.type === 'hero')?.id ?? currentPage?.sections[0]?.id
+    if ((!editor || editor === 'page') && currentPage?.id === pageId && currentSectionId === sectionId) return
     if (editorDirty) { setPendingPane({ editor: 'page', pageId, sectionId }); return }
     navigateToEditor('page', pageId, sectionId)
   }
@@ -229,13 +290,13 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   }
   const run = async (operation: Operation, action: () => Promise<SiteDefinition>, message: string) => {
     if (pending) return
-    setPending(operation); setError(null); setFeedback(null); setOfferHomePreview(false)
-    try { setSite(await action()); setView('site') } catch { setError(message) } finally { setPending(null) }
+    setPending(operation); setError(null); setOfferHomePreview(false)
+    try { acceptCanonicalSite(await action()); setView('site') } catch { setError(message) } finally { setPending(null) }
   }
   const handleManage = async () => {
     if (pending) return
     setPending('manage'); setError(null)
-    try { setSite(await getSite(tenantId)); setView('site') } catch (caught) {
+    try { acceptCanonicalSite(await getSite(tenantId)); setView('site') } catch (caught) {
       if (caught instanceof ApiError && caught.status === 404) setView('missing')
       else setError('Unable to load the website. Please try again.')
     } finally { setPending(null) }
@@ -243,9 +304,9 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const handleInitialize = async () => {
     if (pending) return
     setPending('initialize'); setError(null)
-    try { setSite(await initializeSite(tenantId)); setView('site') } catch (caught) {
+    try { acceptCanonicalSite(await initializeSite(tenantId)); setView('site') } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409) {
-        try { setSite(await getSite(tenantId)); setView('site'); return } catch { setError('Unable to load the existing website. Please try again.'); return }
+        try { acceptCanonicalSite(await getSite(tenantId)); setView('site'); return } catch { setError('Unable to load the existing website. Please try again.'); return }
       }
       setError('Unable to initialize the website. Please try again.')
     } finally { setPending(null) }
@@ -254,7 +315,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     if (pending || editorDirty) return
     const previewWindow = window.open('about:blank', '_blank')
     if (previewWindow) previewWindow.opener = null
-    setPending('preview'); setError(null); setFeedback(null); setOfferHomePreview(false); setPreviewFallback(null)
+    setPending('preview'); setError(null); setOfferHomePreview(false); setPreviewFallback(null)
     void createSitePreviewToken(tenantId).then(({ token }) => {
       const url = sitePreviewUrl(tenantId, token, pageId)
       if (previewWindow) previewWindow.location.href = url
@@ -271,38 +332,275 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   }
   if (!site) return <StatusMessage tone="error">Unable to load the website. Please try again.</StatusMessage>
 
-  const published = site.status === 'PUBLISHED'
-  const status = editorDirty ? { label: 'Unsaved changes', tone: 'warning' as const } : publicationStatus(site)
-  const activePane: WebsitePaneId = editor === 'page' ? 'pages' : editor ?? 'overview'
-  const handleEditorSaved = (definition: SiteDefinition, successMessage?: string, nextOfferHomePreview = false) => {
-    setSite(definition); setError(null); setEditorDirty(false); setEditorSessionRevision((revision) => revision + 1)
+  const handleEditorSaved = (definition: SiteDefinition, _successMessage?: string, nextOfferHomePreview = false) => {
+    acceptCanonicalSite(definition); setError(null); setEditorSessionRevision((revision) => revision + 1)
     setOfferHomePreview(nextOfferHomePreview)
-    setFeedback(successMessage ?? (definition.status === 'PUBLISHED' ? 'Saved. Republish to update the public site.' : 'Changes saved.'))
   }
-  const publish = () => { if (!editorDirty) void run('publish', () => publishSite(tenantId), 'Unable to publish the website. Please try again.') }
+  const publish = () => {
+    if (editorDirty) { setError('Save changes before publishing.'); return }
+    void run('publish', () => publishSite(tenantId), 'Unable to publish the website. Please try again.')
+  }
   const unpublish = () => void run('unpublish', () => unpublishSite(tenantId), 'Unable to unpublish the website. Please try again.')
   const refreshWorkingSite = async () => {
     const definition = await getSite(tenantId)
-    setSite(definition); setView('site')
+    acceptCanonicalSite(definition); setView('site')
     return definition
   }
 
+  const draftSite = draft ?? site
+  const activePage = draftSite.pages.find((page) => page.id === canvasSelection.pageId) ?? draftSite.pages.find((page) => page.id === queryPageId) ?? draftSite.pages.find((page) => page.id === 'home') ?? draftSite.pages[0]
+  if (!activePage) return <StatusMessage tone="error">This website has no pages to edit.</StatusMessage>
+  const selectedSectionId = showSectionManager ? undefined : canvasSelection.sectionId ?? querySectionId ?? activePage.sections.find((section) => section.type === 'hero')?.id ?? activePage.sections[0]?.id
+  const selectedSection = activePage.sections.find((section) => section.id === selectedSectionId)
+  const selectedHero = selectedSection && isHeroSection(selectedSection) ? selectedSection : null
+  const selectedServicesSection = selectedSection && isServicesSection(selectedSection) ? selectedSection : null
+  const selectedTestimonialsSection = selectedSection && isTestimonialsSection(selectedSection) ? selectedSection : null
+  const selectedFaqSection = selectedSection && isFaqSection(selectedSection) ? selectedSection : null
+  const fullScreenToolId = editor === 'templates' || editor === 'revisions' ? editor : null
+  const addAfterSectionId = selectedSectionId && activePage.sections.some((section) => section.id === selectedSectionId) ? selectedSectionId : undefined
+  const closeAddSection = () => {
+    setAddingSection(false); setPendingAddType(null); setAddError(null)
+  }
+  const performAddSection = async (type: SectionType) => {
+    if (addBusy || pending) return
+    setAddBusy(true); setAddError(null); setError(null)
+    try {
+      const result = await addSection(tenantId, activePage.id, type, addAfterSectionId)
+      acceptCanonicalSite(result.site)
+      setAddingSection(false); setPendingAddType(null)
+      // This follows the same editor URL/selection path as canvas selection after
+      // accepting the canonical working-site response.
+      navigateToEditor('page', activePage.id, result.sectionId)
+    } catch (caught) {
+      if (caught instanceof ApiError && (caught.status === 400 || caught.status === 409)) {
+        setAddError(caught.message || 'The page changed. Review the current sections and try again.')
+      } else setAddError('Unable to add this section. Please try again.')
+    } finally { setAddBusy(false) }
+  }
+  const chooseAddSection = (type: SectionType) => {
+    if (addBusy || pending) return
+    if (editorDirty) { setPendingAddType(type); return }
+    void performAddSection(type)
+  }
+  const toggleVisibility = (section: SiteSection) => {
+    if (section.type === 'hero' || editorDirty || pending || addBusy || pendingAddType) return
+    setPending('visibility'); setError(null)
+    void setSectionVisibility(tenantId, activePage.id, section.id, !section.hidden)
+      .then((definition) => {
+        acceptCanonicalSite(definition)
+      })
+      .catch((caught: unknown) => {
+        if (caught instanceof ApiError && (caught.status === 400 || caught.status === 409)) setError(caught.message)
+        else setError('Unable to update section visibility. Please try again.')
+      })
+      .finally(() => setPending(null))
+  }
+  const changeHero = (content: HeroContent) => {
+    if (!selectedHero) return
+    setDraft((current) => current ? {
+      ...current,
+      pages: current.pages.map((page) => page.id !== activePage.id ? page : {
+        ...page,
+        sections: page.sections.map((section) => section.id === selectedHero.id && isHeroSection(section) ? { ...section, content } : section)
+      })
+    } : current)
+    setEditorDirty(true)
+  }
+  const saveHero = async () => {
+    if (!selectedHero || pending) return
+    const title = selectedHero.content.title.trim()
+    const subtitle = selectedHero.content.subtitle?.trim() ?? ''
+    const ctaLabel = selectedHero.content.ctaLabel?.trim() ?? ''
+    if (!title) { setError('Headline is required.'); return }
+    setPending('saveHero'); setError(null)
+    try {
+      const definition = await updateSectionContent(tenantId, activePage.id, selectedHero.id, { title, subtitle, ...(ctaLabel ? { ctaLabel } : {}) })
+      acceptCanonicalSite(definition)
+      setEditorSessionRevision((revision) => revision + 1)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save the Hero. Please try again.')
+    } finally { setPending(null) }
+  }
+  const changeServices = (content: ServicesContent) => {
+    if (!selectedServicesSection) return
+    setError(null)
+    setDraft((current) => current ? {
+      ...current,
+      pages: current.pages.map((page) => page.id !== activePage.id ? page : {
+        ...page,
+        sections: page.sections.map((section) => section.id === selectedServicesSection.id && isServicesSection(section) ? { ...section, content } : section)
+      })
+    } : current)
+    setEditorDirty(true)
+  }
+  const saveServices = async () => {
+    if (!selectedServicesSection || pending) return
+    const validationError = servicesContentError(selectedServicesSection.content)
+    if (validationError) { setError(validationError); return }
+    const canonicalPage = site.pages.find((page) => page.id === activePage.id)
+    const canonicalSection = canonicalPage?.sections.find((section) => section.id === selectedServicesSection.id)
+    const canonicalIds = new Set(canonicalSection && isServicesSection(canonicalSection) ? canonicalSection.content.items.map((item) => item.id) : [])
+    const payload = {
+      title: selectedServicesSection.content.title.trim(),
+      items: selectedServicesSection.content.items.map((item) => ({
+        ...(canonicalIds.has(item.id) ? { id: item.id } : {}),
+        name: item.name.trim(),
+        description: item.description ?? ''
+      }))
+    }
+    setPending('saveServices'); setError(null)
+    try {
+      const definition = await updateSectionContent(tenantId, activePage.id, selectedServicesSection.id, payload)
+      acceptCanonicalSite(definition)
+      setEditorSessionRevision((revision) => revision + 1)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save Services. Please try again.')
+    } finally { setPending(null) }
+  }
+  const changeTestimonials = (content: TestimonialsContent) => {
+    if (!selectedTestimonialsSection) return
+    setError(null)
+    setDraft((current) => current ? {
+      ...current,
+      pages: current.pages.map((page) => page.id !== activePage.id ? page : {
+        ...page,
+        sections: page.sections.map((section) => section.id === selectedTestimonialsSection.id && isTestimonialsSection(section) ? { ...section, content } : section)
+      })
+    } : current)
+    setEditorDirty(true)
+  }
+  const saveTestimonials = async () => {
+    if (!selectedTestimonialsSection || pending) return
+    const validationError = testimonialsContentError(selectedTestimonialsSection.content)
+    if (validationError) { setError(validationError); return }
+    const canonicalPage = site.pages.find((page) => page.id === activePage.id)
+    const canonicalSection = canonicalPage?.sections.find((section) => section.id === selectedTestimonialsSection.id)
+    const canonicalIds = new Set(canonicalSection && isTestimonialsSection(canonicalSection) ? canonicalSection.content.items.map((item) => item.id) : [])
+    const payload = {
+      title: selectedTestimonialsSection.content.title.trim(),
+      items: selectedTestimonialsSection.content.items.map((item) => ({
+        ...(canonicalIds.has(item.id) ? { id: item.id } : {}),
+        customerName: item.customerName.trim(),
+        quote: item.quote.trim()
+      }))
+    }
+    setPending('saveTestimonials'); setError(null)
+    try {
+      const definition = await updateSectionContent(tenantId, activePage.id, selectedTestimonialsSection.id, payload)
+      acceptCanonicalSite(definition)
+      setEditorSessionRevision((revision) => revision + 1)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save Testimonials. Please try again.')
+    } finally { setPending(null) }
+  }
+  const changeFaq = (content: FaqContent) => {
+    if (!selectedFaqSection) return
+    setError(null)
+    setDraft((current) => current ? {
+      ...current,
+      pages: current.pages.map((page) => page.id !== activePage.id ? page : {
+        ...page,
+        sections: page.sections.map((section) => section.id === selectedFaqSection.id && isFaqSection(section) ? { ...section, content } : section)
+      })
+    } : current)
+    setEditorDirty(true)
+  }
+  const saveFaq = async () => {
+    if (!selectedFaqSection || pending) return
+    const validationError = faqContentError(selectedFaqSection.content)
+    if (validationError) { setError(validationError); return }
+    const canonicalPage = site.pages.find((page) => page.id === activePage.id)
+    const canonicalSection = canonicalPage?.sections.find((section) => section.id === selectedFaqSection.id)
+    const canonicalIds = new Set(canonicalSection && isFaqSection(canonicalSection) ? canonicalSection.content.items.map((item) => item.id) : [])
+    const intro = selectedFaqSection.content.intro?.trim() ?? ''
+    const payload = {
+      heading: selectedFaqSection.content.heading.trim(),
+      ...(intro ? { intro } : {}),
+      items: selectedFaqSection.content.items.map((item) => ({
+        ...(canonicalIds.has(item.id) ? { id: item.id } : {}),
+        question: item.question.trim(),
+        answer: item.answer.trim()
+      }))
+    }
+    setPending('saveFaq'); setError(null)
+    try {
+      const definition = await updateSectionContent(tenantId, activePage.id, selectedFaqSection.id, payload)
+      acceptCanonicalSite(definition)
+      setEditorSessionRevision((revision) => revision + 1)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save FAQ. Please try again.')
+    } finally { setPending(null) }
+  }
+  const selectCanvasPage = (pageId: string) => {
+    const nextPage = draftSite.pages.find((page) => page.id === pageId)
+    selectPage(pageId, nextPage?.sections.find((section) => section.type === 'hero')?.id ?? nextPage?.sections[0]?.id)
+  }
+  const selectCanvasSection = (sectionId: string) => {
+    const owner = draftSite.pages.find((page) => page.sections.some((section) => section.id === sectionId))
+    if (owner) selectPage(owner.id, sectionId)
+  }
+  const showHeroInspector = Boolean(selectedHero && (!editor || editor === 'page'))
+  const showServicesInspector = Boolean(selectedServicesSection && (!editor || editor === 'page'))
+  const showTestimonialsInspector = Boolean(selectedTestimonialsSection && (!editor || editor === 'page'))
+  const showFaqInspector = Boolean(selectedFaqSection && (!editor || editor === 'page'))
+  const showDeferredSectionInspector = Boolean(editor === 'page' && selectedSection && !selectedHero && !selectedServicesSection && !selectedTestimonialsSection && !selectedFaqSection && !showLegacySectionInspector)
+  const activeToolEditor = activeSiteTool ? <ActiveWebsiteEditor editor={activeSiteTool} key={`${activeSiteTool}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={backToSiteTools} onControllerChange={setToolController} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onLivePreview={applyLivePreview} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={activeSiteTool === 'seo' ? queryPageId : undefined} site={site} tenantId={tenantId} /> : null
+  // Non-migrated editors remain in their established card presentation.
+  const legacyInspector = editor && !activeSiteTool && !fullScreenToolId && !showHeroInspector && !showServicesInspector && !showTestimonialsInspector && !showFaqInspector && !showDeferredSectionInspector ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? activePage.id : undefined} sectionId={editor === 'page' ? selectedSectionId : undefined} site={site} tenantId={tenantId} /> : null
+  const inspector = showHeroInspector && selectedHero
+    ? <HeroDraftInspector hero={selectedHero} onChange={changeHero} saving={pending === 'saveHero'} />
+    : showServicesInspector && selectedServicesSection
+      ? <ServicesDraftInspector onChange={changeServices} saving={pending === 'saveServices'} section={selectedServicesSection} />
+      : showTestimonialsInspector && selectedTestimonialsSection
+        ? <TestimonialsDraftInspector onChange={changeTestimonials} saving={pending === 'saveTestimonials'} section={selectedTestimonialsSection} />
+        : showFaqInspector && selectedFaqSection
+          ? <FaqDraftInspector onChange={changeFaq} saving={pending === 'saveFaq'} section={selectedFaqSection} />
+          : showDeferredSectionInspector && selectedSection
+            ? <DeferredSectionInspector onOpenExistingControls={() => setShowLegacySectionInspector(true)} section={selectedSection} />
+            : legacyInspector ?? <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />
+  const visibilityDisabled = editorDirty || Boolean(pending) || addBusy || pendingAddType !== null
+  const visibilityDisabledReason = editorDirty
+    ? 'Save or discard your changes first.'
+    : visibilityDisabled
+      ? 'Please wait for the current update to finish.'
+      : undefined
+  const railOverride = addingSection
+    ? <AddSectionPanel busy={addBusy} error={addError} onBack={closeAddSection} onChoose={chooseAddSection} pageId={activePage.id} site={draftSite} />
+    : moreSettingsOpen
+      ? <MoreSettingsPanel onBack={openSiteTools} onSelect={(next) => { setMoreSettingsOpen(false); selectEditor(next) }} />
+      : activeToolEditor ?? undefined
+  const heroToolbarActive = showHeroInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
+  const servicesToolbarActive = showServicesInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
+  const testimonialsToolbarActive = showTestimonialsInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
+  const faqToolbarActive = showFaqInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
+  const toolbarCanSave = activeSiteTool ? Boolean(toolController?.canSave) : heroToolbarActive ? true : servicesToolbarActive && selectedServicesSection ? servicesContentError(selectedServicesSection.content) === null : testimonialsToolbarActive && selectedTestimonialsSection ? testimonialsContentError(selectedTestimonialsSection.content) === null : faqToolbarActive && selectedFaqSection ? faqContentError(selectedFaqSection.content) === null : false
+  const toolbarSaving = Boolean(pending) || addBusy || Boolean(activeSiteTool && toolController?.saving)
+  const toolbarSave = activeSiteTool ? () => toolController?.save() : () => { if (heroToolbarActive) void saveHero(); else if (servicesToolbarActive) void saveServices(); else if (testimonialsToolbarActive) void saveTestimonials(); else if (faqToolbarActive) void saveFaq() }
+  const handleFullScreenSaved = (definition: SiteDefinition) => {
+    acceptCanonicalSite(definition)
+    setError(null)
+    setEditorSessionRevision((revision) => revision + 1)
+    const home = definition.pages.find((page) => page.id === 'home') ?? definition.pages[0]
+    const hero = home?.sections.find((section) => section.type === 'hero') ?? home?.sections[0]
+    if (home) navigateToEditor('page', home.id, hero?.id)
+    else navigateToEditor('overview')
+  }
+  const fullScreenTool = fullScreenToolId === 'templates'
+    ? <TemplatesEditor onBack={backToSiteTools} onSaved={handleFullScreenSaved} site={site} tenantId={tenantId} />
+    : fullScreenToolId === 'revisions'
+      ? <RevisionHistoryEditor onBack={backToSiteTools} onSaved={handleFullScreenSaved} tenantId={tenantId} />
+      : undefined
+
   return (
-    <div className="w-full min-w-0">
-      <header className="mb-5 rounded-lg border border-border bg-surface p-4 shadow-xs sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0"><h2 className="text-xl font-semibold tracking-tight text-fg">Website</h2><Badge className="mt-2" tone={status.tone}>{status.label}</Badge></div>
-          <div className="flex flex-col items-end gap-2"><div className="flex flex-wrap gap-2"><Button aria-describedby={editorDirty ? 'dirty-preview-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={() => handlePreview()} title={editorDirty ? 'Save or discard your changes before previewing.' : undefined} variant="secondary">{pending === 'preview' ? 'Opening preview…' : 'Preview changes'}</Button><Button aria-describedby={editorDirty ? 'dirty-publish-help' : undefined} disabled={Boolean(pending) || editorDirty} onClick={publish} title={editorDirty ? 'Save or discard your changes before publishing.' : undefined}>{pending === 'publish' ? 'Publishing…' : published ? 'Republish' : 'Publish Site'}</Button></div>{editorDirty && <div className="text-right text-xs text-fg-muted"><span id="dirty-preview-help">Save or discard your changes before previewing.</span> <span id="dirty-publish-help">Save or discard your changes before publishing.</span></div>}</div>
-        </div>
-      </header>
-      {(error || previewFallback || feedback) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{feedback && <StatusMessage tone="success">{feedback}</StatusMessage>}{offerHomePreview && <Button onClick={() => handlePreview('home')} variant="secondary">Preview Home</Button>}</div>}
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
-        <WebsiteEditorNavigation active={activePane} onSelect={selectEditor} />
-        <main className="min-w-0">
-          {editor ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${queryPageId ?? 'none'}:${querySectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => { if (queryPageId) selectPage(queryPageId, sectionId) }} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? queryPageId : undefined} sectionId={editor === 'page' ? querySectionId : undefined} site={site} tenantId={tenantId} /> : <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />}
-        </main>
-      </div>
-      <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description={`Your changes in ${editor ? websiteEditorById.get(editor)?.label ?? 'this editor' : 'this editor'} haven't been saved.`} onCancel={() => setPendingPane(null)} onConfirm={() => { const destination = pendingPane; setPendingPane(null); setEditorDirty(false); if (destination) navigateToEditor(destination.editor, destination.pageId, destination.sectionId) }} open={pendingPane !== null} title="Discard unsaved changes?" />
+    <div className="h-full min-h-[calc(100svh-4rem)] w-full min-w-0 lg:min-h-0">
+      {(error || previewFallback || offerHomePreview) && <div className="mb-5 space-y-3" aria-live="polite">{error && <StatusMessage tone="error">{error}</StatusMessage>}{previewFallback && <StatusMessage>Your browser blocked the preview tab. <a className="font-semibold underline underline-offset-2" href={previewFallback} rel="noopener noreferrer" target="_blank">Open preview</a></StatusMessage>}{offerHomePreview && <Button onClick={() => handlePreview('home')} variant="secondary">Preview Home</Button>}</div>}
+      <WebsiteEditorCanvas canSave={toolbarCanSave} canonical={site} dirty={editorDirty} fullScreenContext={fullScreenToolId === 'templates' ? 'Viewing templates' : fullScreenToolId === 'revisions' ? 'Viewing history' : undefined} fullScreenTool={fullScreenTool} inspector={inspector} onAddSection={() => { setAddingSection(true); setPendingAddType(null); setAddError(null) }} onOpenPreview={() => handlePreview(activePage.id)} onOpenSiteTools={openSiteTools} onPageSelected={selectCanvasPage} onPublish={publish} onSave={toolbarSave} onSectionSelected={selectCanvasSection} onToggleVisibility={toggleVisibility} page={activePage} railOverride={siteToolsMenuOpen ? <SiteToolsPanel onBack={() => { setSiteToolsMenuOpen(false); selectEditor('overview') }} onMoreSettings={() => { setSiteToolsMenuOpen(false); setMoreSettingsOpen(true) }} onSelect={selectSiteTool} /> : railOverride} saving={toolbarSaving} selectedSectionId={selectedSectionId} site={draftSite} visibilityDisabled={visibilityDisabled} visibilityDisabledReason={visibilityDisabledReason} />
+      <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description={`Your changes in ${editor ? websiteEditorById.get(editor)?.label ?? 'this editor' : 'this editor'} haven't been saved.`} onCancel={() => { setPendingPane(null); setOpenSiteToolsAfterDiscard(false) }} onConfirm={() => { const destination = pendingPane; const openTools = openSiteToolsAfterDiscard; setPendingPane(null); setOpenSiteToolsAfterDiscard(false); setDraft(cloneSite(site)); setEditorDirty(false); if (openTools) openSiteTools(); else if (destination) navigateToEditor(destination.editor, destination.pageId, destination.sectionId) }} open={pendingPane !== null} title="Discard unsaved changes?" />
+      <ConfirmDialog cancelLabel="Keep editing" confirmLabel="Discard changes" description={pendingAddType ? `Adding ${sectionDefinitions[pendingAddType].label} discards your unsaved changes.` : ''} onCancel={() => setPendingAddType(null)} onConfirm={() => { const type = pendingAddType; setPendingAddType(null); if (!type) return; acceptCanonicalSite(site); void performAddSection(type) }} open={pendingAddType !== null} title="Discard unsaved changes?" />
     </div>
   )
 }

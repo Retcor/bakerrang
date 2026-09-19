@@ -14,7 +14,8 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "relock": "docker run --rm -v \"%cd%:/host\" node:24 bash -c \"set -e; mkdir -p /build; tar -C /host --exclude=node_modules --exclude=.git -cf - . | tar -C /build -xf -; cd /build; rm -f package-lock.json; npm install --ignore-scripts --no-audit --no-fund; cp package-lock.json /host/package-lock.json; echo RELOCK_DONE\""
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",

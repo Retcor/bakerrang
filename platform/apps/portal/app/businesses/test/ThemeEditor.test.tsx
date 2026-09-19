@@ -52,6 +52,9 @@ describe('Theme editor', () => {
 
   it('renders every curated preset and applies one only to the local Theme form', () => {
     render(<ThemeEditor onCancel={() => undefined} onSaved={() => undefined} site={site} tenantId="tenant-1" />)
+    expect(screen.getAllByTestId('theme-preset-row')).toHaveLength(THEME_PRESETS.length)
+    expect(screen.getByTestId('theme-colour-rows').children).toHaveLength(4)
+    expect(screen.getByText('Typography')).toBeInTheDocument()
     for (const preset of THEME_PRESETS) expect(screen.getByRole('button', { name: `Apply ${preset.name}` })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Apply Midnight' }))
     expect(screen.getByLabelText('Primary color hex')).toHaveValue('#60a5fa')

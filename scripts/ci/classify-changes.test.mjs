@@ -27,7 +27,8 @@ test('classifies app-only paths', () => {
 test('fans shared packages out according to the dependency graph', () => {
   assert.deepEqual(classifyChanges(['platform/packages/site-schema/src/index.ts']), expected({ portal: true, renderer: true }))
   assert.deepEqual(classifyChanges(['platform/packages/ui/src/Button.tsx']), expected({ portal: true, renderer: true }))
-  assert.deepEqual(classifyChanges(['platform/packages/site-components/src/Hero.tsx']), expected({ renderer: true }))
+  assert.deepEqual(classifyChanges(['platform/packages/site-components/src/Hero.tsx']), expected({ portal: true, renderer: true }))
+  assert.deepEqual(classifyChanges(['platform/packages/site-runtime/src/SitePageRenderer.tsx']), expected({ portal: true, renderer: true }))
 })
 
 test('classifies shared platform build inputs for CI and deployment', () => {
@@ -72,10 +73,27 @@ test('explicitly classifies docs, non-service applications, workflows, and ops a
   }
 })
 
+test('classifies nested Impeccable and agent tooling as repository-only paths', () => {
+  for (const repositoryPath of [
+    '.impeccable/mocks/builder-rail-states.html',
+    '.impeccable/config.json',
+    '.agents/skills/impeccable/reference/polish.md'
+  ]) {
+    assert.deepEqual(classifyChanges([repositoryPath]), expected({}), repositoryPath)
+  }
+})
+
 test('combines API and Portal changes', () => {
   assert.deepEqual(
     classifyChanges(['server/app.js', 'platform/apps/portal/app/page.tsx']),
     expected({ api: true, portal: true })
+  )
+})
+
+test('keeps repository-only tooling out of a mixed Portal change', () => {
+  assert.deepEqual(
+    classifyChanges(['.impeccable/mocks/x.html', 'platform/apps/portal/app/page.tsx']),
+    expected({ portal: true })
   )
 })
 

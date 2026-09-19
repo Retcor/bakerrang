@@ -1,85 +1,91 @@
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn() }))
+vi.mock('../../../lib/site', () => ({ getSiteTemplates: mocks.getSiteTemplates, applySiteTemplate: mocks.applySiteTemplate }))
+import { TemplatesEditor, siteWithTemplatePreview, templateMatchesSite } from '../TemplatesEditor'
 
-vi.mock('../../../lib/site', () => ({
-  getSiteTemplates: mocks.getSiteTemplates,
-  applySiteTemplate: mocks.applySiteTemplate
-}))
-
-import { TemplatesEditor } from '../TemplatesEditor'
-
+const theme = { colors: { primary: '#112233', accent: '#445566', background: '#ffffff', text: '#111111' }, headingFont: 'inter' as const, bodyFont: 'inter' as const, cornerStyle: 'soft' as const, contentWidth: 'standard' as const, sectionSpacing: 'comfortable' as const }
+const site: SiteDefinition = { status: 'PUBLISHED', branding: { siteName: 'Bakery' }, theme, customCss: '.hero { color: red }', scopedCustomCss: '[data-br-site] .hero { color: red }', header: { brandDisplay: 'name', navigation: { items: [{ pageId: 'home' }] } }, footer: { showBranding: true, navigationMode: 'custom', navigationItems: [{ pageId: 'home', label: 'Start' }], showBusinessContact: true, showSocialLinks: true, showCopyright: true, text: 'Keep me' }, pages: [{ id: 'home', slug: '/', title: 'Home', seo: { title: 'Keep SEO' }, sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title: 'Keep content' } }] }] }
 const templates = [
-  { id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A practical local-service website.', tags: ['Local', 'Service'] },
-  { id: 'classic-professional', version: 1, name: 'Classic Professional', description: 'A trustworthy professional website.', tags: ['Professional'] },
-  { id: 'bold-contractor', version: 1, name: 'Bold Contractor', description: 'A strong contractor website.', tags: ['Contractor'] }
+  { id: 'modern', version: 1, name: 'Modern', description: 'Clean styling.', tags: ['Modern'], preview: { theme, header: { brandDisplay: 'name' as const }, footer: { showBranding: true, showBusinessContact: true, showSocialLinks: true, showCopyright: true } } },
+  { id: 'bold', version: 1, name: 'Bold', description: 'Bold styling.', tags: ['Bold'], preview: { theme: { ...theme, colors: { ...theme.colors, primary: '#aa0000' } }, header: { brandDisplay: 'logo' as const }, footer: { showBranding: false, showBusinessContact: false, showSocialLinks: false, showCopyright: false } } }
 ]
 
-function renderEditor () {
-  const onSaved = vi.fn()
-  render(<TemplatesEditor onSaved={onSaved} tenantId="tenant/one" />)
-  return { onSaved }
-}
+function renderEditor () { const onSaved = vi.fn(); render(<TemplatesEditor onBack={vi.fn()} onSaved={onSaved} site={site} tenantId="tenant/one" />); return { onSaved } }
 
 describe('TemplatesEditor', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mocks.getSiteTemplates.mockResolvedValue(templates)
-  })
+  beforeEach(() => { vi.clearAllMocks(); mocks.getSiteTemplates.mockResolvedValue(templates) })
 
-  it('loads and renders only server metadata as generic cards', async () => {
+  it('renders real-site previews, exact preservation copy, and derives Current from owned fields', async () => {
     renderEditor()
-    expect(screen.getByText('Loading templates…')).toBeInTheDocument()
-    for (const template of templates) {
-      expect(await screen.findByText(template.name)).toBeInTheDocument()
-      expect(screen.getByText(template.description)).toBeInTheDocument()
-      for (const tag of template.tags) expect(screen.getByText(tag)).toBeInTheDocument()
-    }
-    expect(screen.getAllByRole('button', { name: 'Apply' })).toHaveLength(3)
-    expect(screen.queryByText(/Current Template/i)).not.toBeInTheDocument()
-    for (const name of ['Create Template', 'Edit Template', 'Delete Template', 'Duplicate Template', 'Save Site as Template']) {
-      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
-    }
+    expect(await screen.findByText('Each preview is your real site restyled with that template.')).toBeInTheDocument()
+    expect(screen.getByText(/Your pages, words and photos stay exactly as they are/)).toBeInTheDocument()
+    expect(screen.getByText('Current')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Current style' })).toBeDisabled()
+    expect(screen.getAllByTitle(/template preview/)).toHaveLength(2)
+    expect(screen.getAllByTitle(/template preview/)[0]?.closest('section')).toHaveAttribute('data-preview-mode', 'TEMPLATE_PREVIEW')
+    expect(screen.queryByText(/layout/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('heading', { name: 'Bold' }))
+    expect(mocks.applySiteTemplate).not.toHaveBeenCalled()
   })
 
-  it('retries a failed catalog request', async () => {
+  it('builds previews by changing only template-owned presentation fields', () => {
+    const preview = siteWithTemplatePreview(site, templates[1])
+    expect(preview.theme).toEqual(templates[1].preview.theme)
+    expect(preview.pages).toBe(site.pages)
+    expect(preview.customCss).toBe(site.customCss)
+    expect(preview.scopedCustomCss).toBe(site.scopedCustomCss)
+    expect(preview.header?.navigation).toEqual(site.header?.navigation)
+    expect(preview.footer?.navigationMode).toBe('custom')
+    expect(preview.footer?.navigationItems).toEqual(site.footer?.navigationItems)
+    expect(preview.footer?.text).toBe('Keep me')
+    expect(templateMatchesSite(preview, templates[1])).toBe(true)
+    expect(templateMatchesSite({ ...preview, theme: { ...preview.theme, cornerStyle: 'rounded' } }, templates[1])).toBe(false)
+  })
+
+  it('removes the derived Current badge after a Theme-owned field changes', async () => {
+    const props = { onBack: vi.fn(), onSaved: vi.fn(), tenantId: 'tenant/one' }
+    const { rerender } = render(<TemplatesEditor {...props} site={site} />)
+    expect(await screen.findByText('Current')).toBeInTheDocument()
+    rerender(<TemplatesEditor {...props} site={{ ...site, theme: { ...site.theme, cornerStyle: 'rounded' } }} />)
+    expect(screen.queryByText('Current')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Apply template' })).toHaveLength(2)
+  })
+
+  it('sends current content and scoped Custom CSS through TEMPLATE_PREVIEW', async () => {
+    renderEditor()
+    const frame = await screen.findByTitle('Bold template preview') as HTMLIFrameElement
+    const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
+    fireEvent(window, new MessageEvent('message', { origin: window.location.origin, source: frame.contentWindow, data: { type: 'READY' } }))
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'INIT',
+      mode: 'TEMPLATE_PREVIEW',
+      siteDefinition: expect.objectContaining({ customCss: site.customCss, scopedCustomCss: site.scopedCustomCss, pages: site.pages })
+    }), window.location.origin)
+  })
+
+  it('confirms once and installs the canonical response', async () => {
+    const canonical = siteWithTemplatePreview(site, templates[1])
+    mocks.applySiteTemplate.mockResolvedValue(canonical)
+    const { onSaved } = renderEditor()
+    fireEvent.click(await screen.findByRole('button', { name: 'Apply template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Apply “Bold”?' })
+    expect(dialog).toHaveTextContent('keeps every page, section, word, photo, page SEO setting, branding detail, Business Profile value, Custom CSS rule, navigation item, lead, and Media Library asset')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply Template' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(canonical))
+    expect(mocks.applySiteTemplate).toHaveBeenCalledOnce()
+    expect(mocks.applySiteTemplate).toHaveBeenCalledWith('tenant/one', 'bold')
+  })
+
+  it('retries catalog and reports apply failures without leaving the tool', async () => {
     mocks.getSiteTemplates.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(templates)
     renderEditor()
-    expect(await screen.findByText('Unable to load templates. Please try again.')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(await screen.findByText('Modern Local Service')).toBeInTheDocument()
-    expect(mocks.getSiteTemplates).toHaveBeenCalledTimes(2)
-  })
-
-  it('requires confirmation and cancellation makes no apply request', async () => {
-    renderEditor()
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Apply' }))[0] as HTMLButtonElement)
-    const dialog = screen.getByRole('dialog', { name: 'Apply “Modern Local Service”?' })
-    expect(dialog).toHaveTextContent("replaces the current working site's design, header and navigation, footer and navigation, pages, page content and sections, and page-specific SEO")
-    expect(dialog).toHaveTextContent('business name, logo, favicon, Business Profile contact details, hours and social links, site-wide SEO settings, Media Library, leads')
-    expect(dialog).toHaveTextContent('Existing Custom CSS is preserved and may affect the appearance of the new template.')
-    expect(dialog).toHaveTextContent('published live site remains unchanged until you choose Publish Site')
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(mocks.applySiteTemplate).not.toHaveBeenCalled()
-    expect(screen.queryByRole('dialog', { name: 'Apply “Modern Local Service”?' })).not.toBeInTheDocument()
-  })
-
-  it('prevents duplicate confirms and reports apply failures without saving', async () => {
-    let rejectRequest: ((error: Error) => void) | undefined
-    mocks.applySiteTemplate.mockImplementation(() => new Promise<SiteDefinition>((_resolve, reject) => { rejectRequest = reject }))
-    const { onSaved } = renderEditor()
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Apply' }))[0] as HTMLButtonElement)
-    const confirm = screen.getByRole('button', { name: 'Apply Template' })
-    fireEvent.click(confirm)
-    fireEvent.click(confirm)
-    expect(mocks.applySiteTemplate).toHaveBeenCalledOnce()
-    expect(mocks.applySiteTemplate).toHaveBeenCalledWith('tenant/one', 'modern-local-service')
-    rejectRequest?.(new Error('failed'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Apply template' }))
+    mocks.applySiteTemplate.mockRejectedValueOnce(new Error('failed'))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Apply Template' }))
     expect(await screen.findByText('Unable to apply this template. Please try again.')).toBeInTheDocument()
-    expect(onSaved).not.toHaveBeenCalled()
-    expect(screen.getAllByRole('button', { name: 'Apply' })[0]).toBeEnabled()
-    expect(screen.queryByText(/applied to the working site/i)).not.toBeInTheDocument()
   })
 })

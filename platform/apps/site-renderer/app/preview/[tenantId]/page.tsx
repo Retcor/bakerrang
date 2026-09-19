@@ -28,6 +28,7 @@ export default async function PreviewPage ({ params, searchParams }: PreviewPage
   return (
     <PreviewFrame tenantId={tenantId} token={token}>
       <PublicHome
+        mode="WORKING_PREVIEW"
         previewToken={token}
         navigationContext={{ kind: 'preview', tenantId, token }}
         site={site}

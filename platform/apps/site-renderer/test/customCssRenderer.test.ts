@@ -15,15 +15,17 @@ test('SiteShell emits one conditional style node from scopedCustomCss only', asy
   assert.equal((shell.match(/id="br-custom-css"/g) ?? []).length, 1)
 })
 
-test('the generic public page owns the single SiteShell injection path', async () => {
-  const [home, page] = await Promise.all([
+test('the shared runtime owns the single SiteShell composition path', async () => {
+  const [home, page, runtime] = await Promise.all([
     source('../components/PublicHome.tsx'),
-    source('../components/PublicPage.tsx')
+    source('../components/PublicPage.tsx'),
+    source('../../../packages/site-runtime/src/SitePageRenderer.tsx')
   ])
-  assert.match(home, /<PublicPage navigationContext=\{navigationContext\} page=\{home\}/)
-  assert.match(page, /<SiteShell activePage=\{page\} footerNav=\{navigation\.footerItems\}/)
-  assert.doesNotMatch(`${home}\n${page}`, /br-custom-css|site\.customCss/)
-  assert.doesNotMatch(`${home}\n${page}`, /data-preview-(?:frame|banner|site-layer)/)
+  assert.match(home, /<PublicPage mode=\{mode\} navigationContext=\{navigationContext\} page=\{home\}/)
+  assert.match(page, /<SitePageRenderer/)
+  assert.match(runtime, /<SiteShell[\s\S]*activePage=\{page\}/)
+  assert.doesNotMatch(`${home}\n${page}\n${runtime}`, /br-custom-css|site\.customCss/)
+  assert.doesNotMatch(`${home}\n${page}\n${runtime}`, /data-preview-(?:frame|banner|site-layer)/)
 })
 
 test('breakout-safe scoped CSS remains inert text in normal JSX rendering', () => {

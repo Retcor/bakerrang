@@ -67,13 +67,17 @@ const sites = {
     calls.push({ operation: 'listSiteRevisions', tenantId })
     return { revisions: [] }
   },
+  getRevisionDefinition: async (tenantId, revisionId) => {
+    calls.push({ operation: 'getRevisionDefinition', tenantId, revisionId })
+    return { ...siteDefinition, status: 'PUBLISHED' }
+  },
   restoreSiteRevision: async (tenantId, revisionId) => {
     calls.push({ operation: 'restoreSiteRevision', tenantId, revisionId })
     return siteDefinition
   },
   listSiteTemplates: async () => {
     calls.push({ operation: 'listSiteTemplates' })
-    return [{ id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A template', tags: ['modern'] }]
+    return [{ id: 'modern-local-service', version: 1, name: 'Modern Local Service', description: 'A template', tags: ['modern'], preview: { theme: {}, header: { brandDisplay: 'name' }, footer: { showBranding: true, showBusinessContact: true, showSocialLinks: true, showCopyright: true } } }]
   },
   applySiteTemplate: async (tenantId, templateId) => {
     calls.push({ operation: 'applySiteTemplate', tenantId, templateId })
@@ -564,8 +568,9 @@ test('only PLATFORM_ADMIN can publish and unpublish a site', async () => {
 
 test('published revision routes are PLATFORM_ADMIN-only, no-store, and restore by route identity', async () => {
   const listPath = '/tenants/tenant-1/site/revisions'
+  const definitionPath = `${listPath}/revision-1`
   const restorePath = `${listPath}/revision-1/restore`
-  for (const [path, method] of [[listPath, 'GET'], [restorePath, 'POST']]) {
+  for (const [path, method] of [[listPath, 'GET'], [definitionPath, 'GET'], [restorePath, 'POST']]) {
     assert.equal((await request(path, { method })).status, 401)
     assert.equal((await request(path, { userId: 'staff', method, ...(method === 'POST' ? { body: { ignored: true } } : {}) })).status, 403)
   }
@@ -573,6 +578,10 @@ test('published revision routes are PLATFORM_ADMIN-only, no-store, and restore b
   assert.equal(listed.status, 200)
   assert.equal(listed.headers.get('cache-control'), 'no-store')
   assert.deepEqual(calls.at(-1), { operation: 'listSiteRevisions', tenantId: 'tenant-1' })
+  const definition = await request(definitionPath, { userId: 'platform' })
+  assert.equal(definition.status, 200)
+  assert.equal(definition.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(calls.at(-1), { operation: 'getRevisionDefinition', tenantId: 'tenant-1', revisionId: 'revision-1' })
   const restored = await request(restorePath, { userId: 'platform', method: 'POST', body: { siteDefinition: { ignored: true } } })
   assert.equal(restored.status, 200)
   assert.deepEqual(calls.at(-1), { operation: 'restoreSiteRevision', tenantId: 'tenant-1', revisionId: 'revision-1' })

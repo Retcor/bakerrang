@@ -164,6 +164,11 @@ export interface SiteTemplateSummary {
   name: string
   description: string
   tags: string[]
+  preview: {
+    theme: SiteTheme
+    header: Pick<SiteHeader, 'brandDisplay'>
+    footer: Pick<SiteFooter, 'showBranding' | 'showBusinessContact' | 'showSocialLinks' | 'showCopyright'>
+  }
 }
 
 export interface SiteRevision {
@@ -246,6 +251,9 @@ export const unpublishSite = (tenantId: string) =>
 
 export const getSiteRevisions = (tenantId: string) =>
   apiGet<SiteRevisionList>(`/tenants/${encodeURIComponent(tenantId)}/site/revisions`)
+
+export const getSiteRevision = (tenantId: string, revisionId: string) =>
+  apiGet<SiteDefinition>(`/tenants/${encodeURIComponent(tenantId)}/site/revisions/${encodeURIComponent(revisionId)}`)
 
 export const restoreSiteRevision = (tenantId: string, revisionId: string) =>
   apiSend<SiteDefinition>('POST', `/tenants/${encodeURIComponent(tenantId)}/site/revisions/${encodeURIComponent(revisionId)}/restore`)

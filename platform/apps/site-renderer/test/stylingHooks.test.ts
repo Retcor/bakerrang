@@ -11,7 +11,7 @@ test('the public shell exposes the documented stable root and landmark hooks', a
     source('../../../packages/site-components/src/SiteShell.tsx'),
     source('../../../packages/site-components/src/SiteHeader.tsx'),
     source('../../../packages/site-components/src/SiteFooter.tsx'),
-    source('../components/PublicPage.tsx')
+    source('../../../packages/site-runtime/src/SitePageRenderer.tsx')
   ])
 
   assert.match(shell, /data-br-\* attributes are stable public Custom CSS hooks\. Do not rename\/remove casually\./)
@@ -50,7 +50,7 @@ test('public headings, cards, CTAs, and lead fields expose semantic hooks', asyn
     source('../../../packages/site-components/src/Testimonials.tsx'),
     source('../../../packages/site-components/src/Faq.tsx'),
     source('../../../packages/site-components/src/Contact.tsx'),
-    source('../components/LeadForm.tsx')
+    source('../../../packages/site-runtime/src/LeadForm.tsx')
   ])
 
   assert.match(primitives, /data-br-role="section-heading"/)
@@ -65,7 +65,7 @@ test('public headings, cards, CTAs, and lead fields expose semantic hooks', asyn
 test('public lead fields inherit the Theme-derived surface, border, and foreground tokens', async () => {
   const [themeCss, leadForm] = await Promise.all([
     source('../../../packages/site-components/src/site-theme.css'),
-    source('../components/LeadForm.tsx')
+    source('../../../packages/site-runtime/src/LeadForm.tsx')
   ])
 
   assert.match(themeCss, /--color-surface: var\(--site-surface\);/)

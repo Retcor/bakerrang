@@ -28,7 +28,7 @@ export function Faq ({ anchorId, content }: FaqProps) {
                   <span>{item.question.trim()}</span>
                   <svg aria-hidden className="size-5 shrink-0 text-site-accent transition-transform group-open:rotate-180" fill="none" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
                 </summary>
-                <p className="whitespace-pre-line border-t border-site-border px-5 py-4 leading-7 text-site-muted">{item.answer.trim()}</p>
+                <p className="whitespace-pre-line border-t border-site-border px-5 py-4 leading-7 text-site-fg">{item.answer.trim()}</p>
               </details>
             ))}
           </div>

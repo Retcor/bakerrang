@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['custom-dev.bakerrang.com'],
   transpilePackages: [
     '@bakerrang/site-components',
+    '@bakerrang/site-runtime',
     '@bakerrang/ui',
     '@bakerrang/site-schema'
   ],
