@@ -3,17 +3,18 @@
 import { useEffect, useState } from 'react'
 import { LeadForm, SitePageRenderer, type RenderContext } from '@bakerrang/site-runtime'
 import type { SiteDefinition } from '@bakerrang/site-schema'
-import { isSitePreviewParentMessage, type SitePreviewChildMessage } from '../../lib/sitePreviewFrameProtocol'
+import { isSitePreviewParentMessage, type SitePreviewChildMessage, type SitePreviewMode } from '../../lib/sitePreviewFrameProtocol'
 
 const parentOrigin = () => window.location.origin
 
 export function SitePreviewFrameHost () {
-  const [preview, setPreview] = useState<{ site: SiteDefinition, pageId: string, selectedSectionId?: string } | null>(null)
+  const [preview, setPreview] = useState<{ site: SiteDefinition, pageId: string, selectedSectionId?: string, mode: SitePreviewMode } | null>(null)
 
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
       if (event.origin !== parentOrigin() || !isSitePreviewParentMessage(event.data)) return
-      setPreview({ site: event.data.siteDefinition, pageId: event.data.pageId, selectedSectionId: event.data.selectedSectionId })
+      const mode = event.data.mode ?? 'EDITOR'
+      setPreview({ site: event.data.siteDefinition, pageId: event.data.pageId, mode, ...(mode === 'EDITOR' ? { selectedSectionId: event.data.selectedSectionId } : {}) })
     }
     window.addEventListener('message', receive)
     // The parent waits for this signal, so it cannot race this listener.
@@ -34,13 +35,14 @@ export function SitePreviewFrameHost () {
   const page = preview.site.pages.find((candidate) => candidate.id === preview.pageId)
   if (!page) return <main aria-label="Website preview" data-site-preview-frame-host="" />
   const notify = (message: SitePreviewChildMessage) => window.parent.postMessage(message, parentOrigin())
+  const editor = preview.mode === 'EDITOR'
   const context: RenderContext = {
-    mode: 'EDITOR',
+    mode: preview.mode,
     navigation: { kind: 'customDomain' },
-    selectedSectionId: preview.selectedSectionId,
-    onSelectPage: (pageId) => notify({ type: 'PAGE_SELECTED', pageId }),
+    ...(editor ? { selectedSectionId: preview.selectedSectionId } : {}),
+    ...(editor ? { onSelectPage: (pageId: string) => notify({ type: 'PAGE_SELECTED', pageId }) } : {}),
     onNavigate: () => undefined,
-    onSelectSection: (sectionId) => notify({ type: 'SECTION_SELECTED', sectionId })
+    ...(editor ? { onSelectSection: (sectionId: string) => notify({ type: 'SECTION_SELECTED', sectionId }) } : {})
   }
   return <main aria-label="Website preview" data-site-preview-frame-host=""><SitePageRenderer context={context} leadForm={<LeadForm context={context} onSubmit={async () => {}} />} page={page} site={preview.site} /></main>
 }

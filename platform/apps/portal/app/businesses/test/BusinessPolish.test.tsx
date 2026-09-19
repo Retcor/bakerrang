@@ -13,7 +13,6 @@ vi.mock('../../../lib/media', () => ({ getMedia: vi.fn().mockResolvedValue({ med
 
 import { BusinessOverview } from '../BusinessWorkspace'
 import { GalleryEditor } from '../GalleryEditor'
-import { ServicesEditor } from '../ServicesEditor'
 import { TestimonialsEditor } from '../TestimonialsEditor'
 
 describe('business workspace polish', () => {
@@ -25,7 +24,7 @@ describe('business workspace polish', () => {
     expect(screen.getByRole('link', { name: /Manage domain/ })).toHaveAttribute('href', '/businesses/bakery-1/domain')
   })
 
-  it('standardizes list-editor controls without adding Services reordering', () => {
+  it('standardizes the remaining legacy list-editor controls', () => {
     const site: SiteDefinition = {
       status: 'DRAFT',
       branding: { siteName: 'Bakery' },
@@ -41,11 +40,6 @@ describe('business workspace polish', () => {
       ] }]
     }
     const common = { onCancel: () => undefined, onSaved: () => undefined, pageId: 'home', site, tenantId: 'bakery-1' }
-
-    const services = render(<ServicesEditor {...common} sectionId="services-id" />)
-    expect(screen.getByRole('button', { name: 'Remove service' })).toHaveClass('min-h-11', 'min-w-11')
-    expect(screen.queryByRole('button', { name: /Move service/ })).not.toBeInTheDocument()
-    services.unmount()
 
     const testimonials = render(<TestimonialsEditor {...common} sectionId="testimonials-id" />)
     expect(screen.getAllByRole('button', { name: 'Move testimonial up' })[0]).toBeDisabled()

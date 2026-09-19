@@ -58,14 +58,14 @@ describe('Branding editor favicon picker', () => {
 
   it('selecting favicon from the grid does not change logoMediaId, and selecting logo does not change faviconMediaId', async () => {
     render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={site} tenantId="tenant-1" />)
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Use as Favicon' }).length).toBeGreaterThan(0))
-    fireEvent.click(screen.getAllByRole('button', { name: 'Use as Favicon' })[1])
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /as favicon/i }).length).toBeGreaterThan(0))
+    fireEvent.click(screen.getAllByRole('button', { name: /as favicon/i })[1])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenCalledWith('tenant-1', {
       siteName: 'Bakery', logoMediaId: 'logo', faviconMediaId: 'icon'
     }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use as Logo' }))
+    fireEvent.click(screen.getByRole('button', { name: /icon\.png as logo/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenLastCalledWith('tenant-1', {
       siteName: 'Bakery', logoMediaId: 'icon', faviconMediaId: 'icon'
@@ -90,9 +90,9 @@ describe('Branding editor favicon picker', () => {
     await waitFor(() => expect(mocks.uploadMedia).toHaveBeenCalledTimes(2))
     expect(screen.getByRole('img', { name: /logo preview/i })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /favicon preview/i })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Use as Logo' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Use as Favicon' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Selected' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /as logo/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: /as favicon/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenCalledWith('tenant-1', {
@@ -110,8 +110,8 @@ describe('Branding editor favicon picker', () => {
       }
     }
     render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={seeded} tenantId="tenant-1" />)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Favicon' })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Favicon' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Remove favicon/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Remove favicon/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenCalledWith('tenant-1', {
       siteName: 'Bakery', logoMediaId: 'logo'
@@ -128,8 +128,8 @@ describe('Branding editor favicon picker', () => {
       }
     }
     render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={seeded} tenantId="tenant-1" />)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Logo' })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Logo' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Remove logo/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Remove logo/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenCalledWith('tenant-1', {
       siteName: 'Bakery', faviconMediaId: 'icon'
@@ -141,9 +141,9 @@ describe('Branding editor favicon picker', () => {
       ...site,
       branding: { siteName: 'Bakery' }
     }} tenantId="tenant-1" />)
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Use as Logo' }).length).toBeGreaterThan(0))
-    fireEvent.click(screen.getAllByRole('button', { name: 'Use as Logo' })[0])
-    fireEvent.click(screen.getAllByRole('button', { name: 'Use as Favicon' })[0])
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /as logo/i }).length).toBeGreaterThan(0))
+    fireEvent.click(screen.getAllByRole('button', { name: /as logo/i })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /as favicon/i })[0])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocks.updateSiteBranding).toHaveBeenCalledWith('tenant-1', {
       siteName: 'Bakery', logoMediaId: 'logo', faviconMediaId: 'logo'
@@ -153,9 +153,23 @@ describe('Branding editor favicon picker', () => {
   it('includes faviconMediaId in the dirty value', async () => {
     const onDirtyChange = vi.fn()
     render(<BrandingEditor onCancel={() => undefined} onDirtyChange={onDirtyChange} onSaved={() => undefined} site={site} tenantId="tenant-1" />)
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Use as Favicon' }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /as favicon/i }).length).toBeGreaterThan(0))
     expect(onDirtyChange).toHaveBeenCalledWith(false)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Use as Favicon' })[1])
+    fireEvent.click(screen.getAllByRole('button', { name: /as favicon/i })[1])
     await waitFor(() => expect(onDirtyChange).toHaveBeenCalledWith(true))
+  })
+
+  it('renders the compact identity states, count, upload affordances, and recent media', async () => {
+    render(<BrandingEditor onCancel={() => undefined} onSaved={() => undefined} site={site} tenantId="tenant-1" />)
+    await waitFor(() => expect(mocks.getMedia).toHaveBeenCalled())
+    expect(screen.getByText('6/80')).toBeInTheDocument()
+    expect(screen.getByText('Logo · optional')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /logo preview/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('Upload a new logo')).toBeInTheDocument()
+    expect(screen.getByText('Favicon · optional')).toBeInTheDocument()
+    expect(screen.getByText('No favicon selected')).toBeInTheDocument()
+    expect(screen.getByText('The site name initial is used')).toBeInTheDocument()
+    expect(screen.getByLabelText('Upload a new favicon')).toBeInTheDocument()
+    expect(screen.getAllByText('Recent uploads (2)')).toHaveLength(2)
   })
 })

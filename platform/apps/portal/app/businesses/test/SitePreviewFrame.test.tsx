@@ -25,29 +25,26 @@ describe('Portal SitePreviewFrame', () => {
     expect(postMessage).not.toHaveBeenCalled()
     ready(frame)
     expect(postMessage).toHaveBeenCalledTimes(1)
-    expect(postMessage).toHaveBeenCalledWith({ type: 'INIT', siteDefinition: latest, pageId: 'home' }, window.location.origin)
+    expect(postMessage).toHaveBeenCalledWith({ type: 'INIT', siteDefinition: latest, pageId: 'home', mode: 'EDITOR' }, window.location.origin)
 
     ready(frame)
     expect(postMessage).toHaveBeenCalledTimes(1)
   })
 
-  it('resends INIT after an iframe reload and UPDATE_SITE after later changes', () => {
-    const { rerender } = render(<SitePreviewFrame pageId="home" site={site()} />)
+  it('keeps the READY source when load follows the handshake and sends later selection updates', () => {
+    const currentSite = site()
+    const { rerender } = render(<SitePreviewFrame pageId="home" selectedSectionId="hero" site={currentSite} />)
     const frame = screen.getByTitle('Website preview') as HTMLIFrameElement
     const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
     ready(frame)
     expect(postMessage).toHaveBeenCalledTimes(1)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'INIT', siteDefinition: currentSite, pageId: 'home', mode: 'EDITOR', selectedSectionId: 'hero' }, window.location.origin)
 
     fireEvent.load(frame)
     expect(postMessage).toHaveBeenCalledTimes(1)
-    ready(frame)
+    rerender(<SitePreviewFrame pageId="home" selectedSectionId="about" site={currentSite} />)
     expect(postMessage).toHaveBeenCalledTimes(2)
-    expect(postMessage).toHaveBeenLastCalledWith({ type: 'INIT', siteDefinition: site(), pageId: 'home' }, window.location.origin)
-
-    const updated = site('Changed')
-    rerender(<SitePreviewFrame pageId="home" site={updated} />)
-    expect(postMessage).toHaveBeenCalledTimes(3)
-    expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: updated, pageId: 'home' }, window.location.origin)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: currentSite, pageId: 'home', mode: 'EDITOR', selectedSectionId: 'about' }, window.location.origin)
   })
 
   it('sends the active editor section through the established preview update channel', () => {
@@ -55,10 +52,10 @@ describe('Portal SitePreviewFrame', () => {
     const frame = screen.getByTitle('Website preview') as HTMLIFrameElement
     const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
     ready(frame)
-    expect(postMessage).toHaveBeenLastCalledWith({ type: 'INIT', siteDefinition: site(), pageId: 'home', selectedSectionId: 'hero' }, window.location.origin)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'INIT', siteDefinition: site(), pageId: 'home', mode: 'EDITOR', selectedSectionId: 'hero' }, window.location.origin)
 
     rerender(<SitePreviewFrame pageId="home" selectedSectionId={undefined} site={site()} />)
-    expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: site(), pageId: 'home' }, window.location.origin)
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'UPDATE_SITE', siteDefinition: site(), pageId: 'home', mode: 'EDITOR' }, window.location.origin)
   })
 
   it('ignores READY from another origin or a same-origin window other than the iframe', () => {
@@ -95,5 +92,18 @@ describe('Portal SitePreviewFrame', () => {
   it('keeps scoped custom CSS out of the Portal parent document', () => {
     render(<SitePreviewFrame pageId="home" site={{ ...site(), scopedCustomCss: '[data-br-site]{color:rebeccapurple}' }} />)
     expect(document.querySelector('#br-custom-css')).toBeNull()
+  })
+
+  it('sends non-editor modes and ignores selection messages in read-only previews', () => {
+    const pageSelected = vi.fn()
+    const sectionSelected = vi.fn()
+    render(<SitePreviewFrame mode="TEMPLATE_PREVIEW" onPageSelected={pageSelected} onSectionSelected={sectionSelected} pageId="home" selectedSectionId="hero" site={site()} title="Template preview" />)
+    const frame = screen.getByTitle('Template preview') as HTMLIFrameElement
+    const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
+    ready(frame)
+    expect(postMessage).toHaveBeenCalledWith({ type: 'INIT', siteDefinition: site(), pageId: 'home', mode: 'TEMPLATE_PREVIEW' }, window.location.origin)
+    fireEvent(window, new MessageEvent('message', { origin: window.location.origin, source: frame.contentWindow, data: { type: 'SECTION_SELECTED', sectionId: 'hero' } }))
+    expect(pageSelected).not.toHaveBeenCalled()
+    expect(sectionSelected).not.toHaveBeenCalled()
   })
 })
