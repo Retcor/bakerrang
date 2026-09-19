@@ -13,7 +13,6 @@ vi.mock('../../../lib/media', () => ({ getMedia: vi.fn().mockResolvedValue({ med
 
 import { BusinessOverview } from '../BusinessWorkspace'
 import { GalleryEditor } from '../GalleryEditor'
-import { TestimonialsEditor } from '../TestimonialsEditor'
 
 describe('business workspace polish', () => {
   it('uses action-specific business overview links', () => {
@@ -35,17 +34,10 @@ describe('business workspace polish', () => {
       pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
         { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome' } },
         { id: 'services-id', type: 'services', hidden: false, content: { title: 'Services', items: [{ id: 'service-1', name: 'Cakes' }] } },
-        { id: 'testimonials-id', type: 'testimonials', hidden: false, content: { title: 'Testimonials', items: [{ id: 'quote-1', customerName: 'A', quote: 'Great' }, { id: 'quote-2', customerName: 'B', quote: 'Lovely' }] } },
         { id: 'gallery-id', type: 'gallery', hidden: false, content: { title: 'Gallery', items: [{ id: 'image-1', mediaId: 'media-1', altText: 'Cake' }, { id: 'image-2', mediaId: 'media-2', altText: 'Bread' }] } }
       ] }]
     }
     const common = { onCancel: () => undefined, onSaved: () => undefined, pageId: 'home', site, tenantId: 'bakery-1' }
-
-    const testimonials = render(<TestimonialsEditor {...common} sectionId="testimonials-id" />)
-    expect(screen.getAllByRole('button', { name: 'Move testimonial up' })[0]).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Move testimonial down' })[1]).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Remove testimonial' })[0].querySelector('svg')).toHaveClass('size-5')
-    testimonials.unmount()
 
     render(<GalleryEditor {...common} sectionId="gallery-id" />)
     expect(screen.getAllByRole('button', { name: 'Move gallery image up' })[0]).toBeDisabled()
