@@ -12,6 +12,14 @@ const baseSite: SiteDefinition = {
     { id: 'home', slug: '/', title: 'Home', sections: [
       { id: 'hero-id', type: 'hero', hidden: false, content: { title: 'Welcome', subtitle: 'Fresh every morning', ctaLabel: 'Get in touch' } },
       { id: 'about-id', type: 'about', hidden: false, content: { heading: 'About', body: 'Our story' } },
+      { id: 'process-id', type: 'process', hidden: false, content: { heading: 'How it works', intro: 'Three simple steps.', items: [
+        { id: 'step-choose', title: 'Choose', description: 'Pick a favorite.' },
+        { id: 'step-order', title: 'Order', description: 'Tell us what you need.' }
+      ] } },
+      { id: 'stats-id', type: 'stats', hidden: false, content: { heading: 'Highlights', intro: 'At a glance.', items: [
+        { id: 'stat-support', value: '24/7', label: 'Support' },
+        { id: 'stat-orders', value: '1,200+', label: 'Orders' }
+      ] } },
       { id: 'services-id', type: 'services', hidden: false, content: { title: 'Our services', items: [
         { id: 'service-cakes', name: 'Cakes', description: 'Made to celebrate' },
         { id: 'service-catering', name: 'Catering', description: 'For every gathering' }
@@ -58,6 +66,8 @@ vi.mock('../SitePreviewFrame', () => ({
     const page = site.pages.find((candidate) => candidate.id === pageId) ?? site.pages[0]
     const hero = page.sections.find((section) => section.type === 'hero')
     const about = page.sections.find((section) => section.type === 'about')
+    const process = page.sections.find((section) => section.type === 'process')
+    const stats = page.sections.find((section) => section.type === 'stats')
     const services = page.sections.find((section) => section.type === 'services')
     const gallery = page.sections.find((section) => section.type === 'gallery')
     const logos = page.sections.find((section) => section.type === 'logos')
@@ -65,7 +75,7 @@ vi.mock('../SitePreviewFrame', () => ({
     const faq = page.sections.find((section) => section.type === 'faq')
     const cta = page.sections.find((section) => section.type === 'cta')
     const contact = page.sections.find((section) => section.type === 'contact')
-    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{about?.type === 'about' && <div data-action-type={about.content.action?.type ?? ''} data-action-value={about.content.action?.value ?? ''} data-position={about.content.imagePosition ?? 'left'} data-testid="about-preview"><h2>{about.content.heading}</h2><p>{about.content.body}</p>{about.content.imageSrc && about.content.imageAlt?.trim() && Number.isSafeInteger(about.content.imageWidth) && Number(about.content.imageWidth) > 0 && Number.isSafeInteger(about.content.imageHeight) && Number(about.content.imageHeight) > 0 && <img alt={about.content.imageAlt} data-testid="about-preview-image" src={about.content.imageSrc} />}{about.content.buttonLabel && about.content.action?.value && <span>{about.content.buttonLabel}</span>}</div>}{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{gallery?.type === 'gallery' && <div data-testid="gallery-preview"><h2>{gallery.content.title}</h2><ol>{gallery.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{logos?.type === 'logos' && <div data-testid="logos-preview">{logos.content.heading && <h2>{logos.content.heading}</h2>}<ol>{logos.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('gallery-id')} type="button">Runtime Gallery selection</button><button onClick={() => onSectionSelected('logos-id')} type="button">Runtime Logos selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button></>}</div>
+    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{about?.type === 'about' && <div data-action-type={about.content.action?.type ?? ''} data-action-value={about.content.action?.value ?? ''} data-position={about.content.imagePosition ?? 'left'} data-testid="about-preview"><h2>{about.content.heading}</h2><p>{about.content.body}</p>{about.content.imageSrc && about.content.imageAlt?.trim() && Number.isSafeInteger(about.content.imageWidth) && Number(about.content.imageWidth) > 0 && Number.isSafeInteger(about.content.imageHeight) && Number(about.content.imageHeight) > 0 && <img alt={about.content.imageAlt} data-testid="about-preview-image" src={about.content.imageSrc} />}{about.content.buttonLabel && about.content.action?.value && <span>{about.content.buttonLabel}</span>}</div>}{process?.type === 'process' && <div data-testid="process-preview">{process.content.heading && <h2>{process.content.heading}</h2>}{process.content.intro && <p>{process.content.intro}</p>}<ol>{process.content.items.map((item, index) => <li key={item.id}>Step {index + 1}: {item.title}: {item.description}</li>)}</ol></div>}{stats?.type === 'stats' && <div data-testid="stats-preview">{stats.content.heading && <h2>{stats.content.heading}</h2>}{stats.content.intro && <p>{stats.content.intro}</p>}<ol>{stats.content.items.map((item) => <li key={item.id}>{item.value}: {item.label}</li>)}</ol></div>}{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{gallery?.type === 'gallery' && <div data-testid="gallery-preview"><h2>{gallery.content.title}</h2><ol>{gallery.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{logos?.type === 'logos' && <div data-testid="logos-preview">{logos.content.heading && <h2>{logos.content.heading}</h2>}<ol>{logos.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('process-id')} type="button">Runtime Steps selection</button><button onClick={() => onSectionSelected('stats-id')} type="button">Runtime Highlights selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('gallery-id')} type="button">Runtime Gallery selection</button><button onClick={() => onSectionSelected('logos-id')} type="button">Runtime Logos selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button></>}</div>
   }
 }))
 
@@ -139,6 +149,158 @@ describe('Website editor canvas', () => {
     expect(screen.getByLabelText('Headline')).toHaveValue('Do not lose this')
     expect(screen.getByTestId('shared-site-preview')).toHaveTextContent('Do not lose this')
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+  })
+
+  it('keeps Steps edits, additions, removals, and order local, then saves one exact normalized payload', async () => {
+    const canonical = structuredClone(baseSite)
+    const process = canonical.pages[0]?.sections.find((section) => section.type === 'process')
+    if (!process || process.type !== 'process') throw new Error('Process fixture missing')
+    process.content = { heading: 'Saved steps', items: [
+      { id: 'server-confirm', title: 'Confirm' },
+      { id: 'server-enjoy', title: 'Enjoy', description: 'Fresh' }
+    ] }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Steps' }))
+
+    fireEvent.change(screen.getByLabelText(/Heading/), { target: { value: '  Better steps  ' } })
+    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: '   ' } })
+    fireEvent.change(screen.getAllByLabelText('Title')[1]!, { target: { value: '  Confirm  ' } })
+    fireEvent.change(screen.getAllByLabelText(/Description/)[1]!, { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Move Confirm up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Choose' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add step' }))
+    fireEvent.change(screen.getAllByLabelText('Title')[1]!, { target: { value: '  Enjoy  ' } })
+    fireEvent.change(screen.getAllByLabelText(/Description/)[1]!, { target: { value: '  Fresh  ' } })
+
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(within(screen.getByTestId('process-preview')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['Step 1:   Confirm  :    ', 'Step 2:   Enjoy  :   Fresh  '])
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'process-id', {
+      heading: 'Better steps',
+      items: [
+        { id: 'step-order', title: 'Confirm' },
+        { title: 'Enjoy', description: 'Fresh' }
+      ]
+    })
+    expect(screen.getByLabelText(/Heading/)).toHaveValue('Saved steps')
+    expect(screen.getAllByLabelText('Title').map((input) => (input as HTMLInputElement).value)).toEqual(['Confirm', 'Enjoy'])
+    expect(screen.getAllByLabelText('Title')[0]).toHaveAttribute('id', 'process-title-process-id-server-confirm')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText(/Steps saved/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps free-form Highlights values local, then saves their exact normalized strings and order', async () => {
+    const canonical = structuredClone(baseSite)
+    const stats = canonical.pages[0]?.sections.find((section) => section.type === 'stats')
+    if (!stats || stats.type !== 'stats') throw new Error('Stats fixture missing')
+    stats.content = { intro: 'Trusted daily', items: [
+      { id: 'server-delivery', value: 'Same Day', label: 'Delivery' },
+      { id: 'server-support', value: '24/7', label: 'Support' },
+      { id: 'server-orders', value: '1,200+', label: 'Orders' }
+    ] }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
+
+    fireEvent.change(screen.getByLabelText(/Heading/), { target: { value: '   ' } })
+    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: '  Trusted daily  ' } })
+    fireEvent.change(screen.getAllByLabelText('Value')[1]!, { target: { value: '  Same Day  ' } })
+    fireEvent.change(screen.getAllByLabelText('Label')[1]!, { target: { value: '  Delivery  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Move Delivery up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add highlight' }))
+    fireEvent.change(screen.getAllByLabelText('Value')[2]!, { target: { value: '  1,200+  ' } })
+    fireEvent.change(screen.getAllByLabelText('Label')[2]!, { target: { value: '  Orders  ' } })
+
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(within(screen.getByTestId('stats-preview')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['  Same Day  :   Delivery  ', '24/7: Support', '  1,200+  :   Orders  '])
+    expect(screen.getAllByLabelText('Value')[0]).toHaveAttribute('type', 'text')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'stats-id', {
+      intro: 'Trusted daily',
+      items: [
+        { id: 'stat-orders', value: 'Same Day', label: 'Delivery' },
+        { id: 'stat-support', value: '24/7', label: 'Support' },
+        { value: '1,200+', label: 'Orders' }
+      ]
+    })
+    expect(screen.getByLabelText(/Heading/)).toHaveValue('')
+    expect(screen.getAllByLabelText('Value').map((input) => (input as HTMLInputElement).value)).toEqual(['Same Day', '24/7', '1,200+'])
+    expect(screen.getAllByLabelText('Value')[0]).toHaveAttribute('id', 'stats-value-stats-id-server-delivery')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+  })
+
+  it.each([
+    { sectionName: 'Steps', removeNames: ['Choose', 'Order'], empty: 'No steps yet', alert: 'Add at least one step.', add: 'Add step' },
+    { sectionName: 'Highlights', removeNames: ['Support', 'Orders'], empty: 'No highlights yet', alert: 'Add at least one highlight.', add: 'Add highlight' }
+  ])('blocks an empty $sectionName draft locally while leaving its Add action available', async ({ sectionName, removeNames, empty, alert, add }) => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: sectionName }))
+    for (const name of removeNames) fireEvent.click(screen.getByRole('button', { name: `Remove ${name}` }))
+    expect(screen.getByText(empty)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(alert)
+    expect(screen.getByRole('button', { name: add })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { sectionName: 'Steps', value: 'Keep this Steps draft', server: true, message: 'Review the Steps fields.' },
+    { sectionName: 'Highlights', value: 'Keep this Highlights draft', server: false, message: 'Unable to save Highlights. Please try again.' }
+  ])('retains a rejected $sectionName draft and permits retry', async ({ sectionName, value, server, message }) => {
+    const { ApiError } = await import('../../../lib/api')
+    mocks.updateSectionContent.mockRejectedValueOnce(server ? new ApiError(400, { error: message }) : new Error('offline')).mockResolvedValueOnce(structuredClone(baseSite))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: sectionName }))
+    fireEvent.change(screen.getByLabelText(/Heading/), { target: { value } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Heading/)).toHaveValue(value)
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+  })
+
+  it.each([
+    { sectionName: 'Steps', previewId: 'process-preview' },
+    { sectionName: 'Highlights', previewId: 'stats-preview' }
+  ])('preserves ordinary dirty-state protections for $sectionName', async ({ sectionName, previewId }) => {
+    const add = vi.spyOn(window, 'addEventListener')
+    const remove = vi.spyOn(window, 'removeEventListener')
+    const { unmount } = render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: sectionName }))
+    fireEvent.change(screen.getByLabelText(/Heading/), { target: { value: `Local ${sectionName} draft` } })
+    expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+    expect(screen.getByRole('button', { name: 'Hide About' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    expect(screen.getByTestId(previewId)).toHaveTextContent(`Local ${sectionName} draft`)
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    expect(mocks.addSection).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    unmount()
+    expect(remove).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+    add.mockRestore(); remove.mockRestore()
+  })
+
+  it.each([
+    { sectionId: 'process-id', heading: 'Steps' },
+    { sectionId: 'stats-id', heading: 'Highlights' }
+  ])('opens deep-linked $heading directly in its draft-native inspector', async ({ sectionId, heading }) => {
+    navigation.search = `?editor=page&pageId=home&sectionId=${sectionId}`
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    const inspector = await screen.findByRole('region', { name: `${heading} properties` })
+    expect(within(inspector).getByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
+    expect(screen.queryByText('Editing coming soon')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('website-editor-actions')).not.toBeInTheDocument()
   })
 
   it('keeps Services edits, additions, removals, and reordering in the draft until one toolbar save', async () => {
