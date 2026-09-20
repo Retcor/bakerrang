@@ -63,6 +63,24 @@
         ],
         "createdAt": "2026-09-15T03:41:21.411Z",
         "reason": "Slate template preview heading font; a template's own type, not Portal chrome"
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/cta-inspector.html"
+        ],
+        "createdAt": "2026-09-19T16:52:43.199Z",
+        "reason": "Claude: comp fixture — flagged nesting is the locked preview pane reproducing the real published CTA section (bordered panel) inside the browser-chrome preview frame, not the inspector; pattern carried verbatim from approved services-inspector.html"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/cta-inspector.html"
+        ],
+        "createdAt": "2026-09-19T16:52:57.130Z",
+        "reason": "Claude: comp fixture — flagged padding is on the review-only scaffold bar and toolbar/preview context chrome (badge, frame bar) carried verbatim from approved services-inspector.html; the designed CTA inspector controls meet the >=8px floor"
       }
     ]
   }

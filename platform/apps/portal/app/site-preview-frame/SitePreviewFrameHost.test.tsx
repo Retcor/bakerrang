@@ -10,7 +10,7 @@ const site = (title = 'Welcome'): SiteDefinition => ({
   theme: { colors: { primary: '#112233', accent: '#445566', background: '#ffffff', text: '#111111' }, headingFont: 'inter', bodyFont: 'inter', cornerStyle: 'soft', contentWidth: 'standard', sectionSpacing: 'comfortable' },
   header: { brandDisplay: 'name', navigation: { items: [{ pageId: 'services' }] }, cta: { buttonLabel: 'Visit', action: { type: 'url', value: 'https://example.com' } } },
   pages: [
-    { id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title } }, { id: 'contact', type: 'contact', hidden: false, content: { title: 'Contact', buttonLabel: 'Contact', action: { type: 'leadForm' } } }] },
+    { id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title } }, { id: 'cta', type: 'cta', hidden: false, content: { heading: 'Ready?', buttonLabel: 'Email bakery', action: { type: 'email', value: 'hello@example.com' } } }, { id: 'contact', type: 'contact', hidden: false, content: { title: 'Contact', buttonLabel: 'Contact', action: { type: 'leadForm' } } }] },
     { id: 'services', slug: 'services', title: 'Services', sections: [] }
   ],
   scopedCustomCss: '[data-br-site]{color:rebeccapurple}'
@@ -63,6 +63,11 @@ describe('site-preview-frame host', () => {
     const click = new MouseEvent('click', { bubbles: true, cancelable: true })
     external.dispatchEvent(click)
     expect(click.defaultPrevented).toBe(true)
+
+    const cta = screen.getByRole('link', { name: 'Email bakery' })
+    const ctaClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+    cta.dispatchEvent(ctaClick)
+    expect(ctaClick.defaultPrevented).toBe(true)
   })
 
   it('renders and updates editor-only selection chrome from the existing preview message', async () => {

@@ -11,7 +11,6 @@ vi.mock('../../../lib/site', () => ({
 }))
 
 import { AboutEditor } from '../AboutEditor'
-import { CtaEditor } from '../CtaEditor'
 import { LogosEditor } from '../LogosEditor'
 import { ProcessEditor } from '../ProcessEditor'
 import { StatsEditor } from '../StatsEditor'
@@ -89,39 +88,6 @@ describe('expanded section editors', () => {
     fireEvent.change(screen.getByLabelText('Highlight 1 label'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Every highlight needs a value and label')
-  })
-
-  it('seeds and saves CTA actions by exact id, allows no button, and keeps Lead Form unavailable', async () => {
-    renderEditor(CtaEditor, { sectionId: 'cta-b' })
-    expect(screen.getByLabelText('Heading')).toHaveValue('Second CTA')
-    expect(screen.getByLabelText('Body Optional')).toHaveValue('Call us')
-    expect(screen.getByLabelText('Button Label Optional — add both fields to show a button')).toHaveValue('Visit')
-    expect(screen.getByLabelText('Action Value')).toHaveValue('https://example.com')
-    expect(screen.queryByRole('option', { name: 'Lead Form' })).not.toBeInTheDocument()
-    for (const option of ['Email', 'Phone', 'Website URL']) expect(screen.getByRole('option', { name: option })).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'email' } })
-    fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: 'hello@example.com' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'cta-b', { heading: 'Second CTA', body: 'Call us', buttonLabel: 'Visit', action: { type: 'email', value: 'hello@example.com' } }))
-    cleanup()
-    renderEditor(CtaEditor, { sectionId: 'cta-a' })
-    expect(screen.getByLabelText('Action Value')).toHaveValue('')
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenLastCalledWith('tenant-1', 'home', 'cta-a', { heading: 'First CTA' }))
-  })
-
-  it('blocks unpaired CTA buttons and supports phone and URL action selections without inventing a value', () => {
-    renderEditor(CtaEditor, { sectionId: 'cta-a' })
-    fireEvent.change(screen.getByLabelText('Button Label Optional — add both fields to show a button'), { target: { value: 'Call us' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Button label and action must be provided together')
-    fireEvent.change(screen.getByLabelText('Button Label Optional — add both fields to show a button'), { target: { value: '' } })
-    fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'phone' } })
-    fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: '(801) 555-1234' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Button label and action must be provided together')
-    fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'url' } })
-    expect(screen.getByLabelText('Action Value')).toHaveValue('')
   })
 
   it('uses the existing Media Library and uploader for the exact Logos instance, validates alt text, and manages rows', async () => {

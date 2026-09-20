@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { isFaqSection, isHeroSection, isServicesSection, isTestimonialsSection, type FaqContent, type HeroContent, type SectionType, type ServicesContent, type SiteDefinition, type SiteSection, type TestimonialsContent } from '@bakerrang/site-schema'
+import { isCtaSection, isFaqSection, isHeroSection, isServicesSection, isTestimonialsSection, type CtaContent, type FaqContent, type HeroContent, type SectionType, type ServicesContent, type SiteDefinition, type SiteSection, type TestimonialsContent } from '@bakerrang/site-schema'
 import { Badge, Button, Card, ConfirmDialog, StatusMessage } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { addSection, createSitePreviewToken, getSite, getSiteDomain, initializeSite, publishSite, setSectionVisibility, unpublishSite, updateSectionContent, type SiteDomain } from '../../lib/site'
@@ -13,7 +13,6 @@ import { BrandingEditor } from './BrandingEditor'
 import { BusinessHoursEditor } from './BusinessHoursEditor'
 import { BusinessProfileEditor } from './BusinessProfileEditor'
 import { ContactEditor } from './ContactEditor'
-import { CtaEditor } from './CtaEditor'
 import { CustomCssEditor } from './CustomCssEditor'
 import { GalleryEditor } from './GalleryEditor'
 import { LogosEditor } from './LogosEditor'
@@ -40,12 +39,13 @@ import { HeroDraftInspector } from './HeroDraftInspector'
 import { ServicesDraftInspector, servicesContentError } from './ServicesDraftInspector'
 import { TestimonialsDraftInspector, testimonialsContentError } from './TestimonialsDraftInspector'
 import { FaqDraftInspector, faqContentError } from './FaqDraftInspector'
+import { CtaDraftInspector, ctaContentError } from './CtaDraftInspector'
 import { useBusinessNavigationGuard } from './BusinessNavigationGuard'
 import { parseWebsiteEditor, websiteEditorById, type WebsiteEditorId, type WebsiteLauncherId, type WebsitePaneId } from './websiteEditors'
 
 export interface BusinessWebsiteProps { tenantId: string, autoLoad?: boolean }
 type View = 'initial' | 'missing' | 'site'
-type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish' | 'saveHero' | 'saveServices' | 'saveTestimonials' | 'saveFaq' | 'visibility'
+type Operation = 'manage' | 'initialize' | 'preview' | 'publish' | 'unpublish' | 'saveHero' | 'saveServices' | 'saveTestimonials' | 'saveFaq' | 'saveCta' | 'visibility'
 
 const cloneSite = (definition: SiteDefinition) => structuredClone(definition)
 
@@ -91,7 +91,6 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerCha
       case 'about': return <AboutEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'process': return <ProcessEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'stats': return <StatsEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
-      case 'cta': return <CtaEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'logos': return <LogosEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'gallery': return <GalleryEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
       case 'businessHoursSection': return <BusinessHoursSectionEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
@@ -356,6 +355,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const selectedServicesSection = selectedSection && isServicesSection(selectedSection) ? selectedSection : null
   const selectedTestimonialsSection = selectedSection && isTestimonialsSection(selectedSection) ? selectedSection : null
   const selectedFaqSection = selectedSection && isFaqSection(selectedSection) ? selectedSection : null
+  const selectedCtaSection = selectedSection && isCtaSection(selectedSection) ? selectedSection : null
   const fullScreenToolId = editor === 'templates' || editor === 'revisions' ? editor : null
   const addAfterSectionId = selectedSectionId && activePage.sections.some((section) => section.id === selectedSectionId) ? selectedSectionId : undefined
   const closeAddSection = () => {
@@ -535,6 +535,46 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
       else setError('Unable to save FAQ. Please try again.')
     } finally { setPending(null) }
   }
+  const changeCta = (content: CtaContent) => {
+    if (!selectedCtaSection) return
+    setError(null)
+    setDraft((current) => current ? {
+      ...current,
+      pages: current.pages.map((page) => page.id !== activePage.id ? page : {
+        ...page,
+        sections: page.sections.map((section) => section.id === selectedCtaSection.id && isCtaSection(section) ? { ...section, content } : section)
+      })
+    } : current)
+    setEditorDirty(true)
+  }
+  const saveCta = async () => {
+    if (!selectedCtaSection || pending) return
+    const validationError = ctaContentError(selectedCtaSection.content)
+    if (validationError) { setError(validationError); return }
+    const heading = selectedCtaSection.content.heading.trim()
+    const body = selectedCtaSection.content.body?.trim() ?? ''
+    const configured = selectedCtaSection.content.buttonLabel !== undefined || selectedCtaSection.content.action !== undefined
+    const payload = configured
+      ? {
+          heading,
+          ...(body ? { body } : {}),
+          buttonLabel: selectedCtaSection.content.buttonLabel!.trim(),
+          action: {
+            type: selectedCtaSection.content.action!.type,
+            value: selectedCtaSection.content.action!.value.trim()
+          }
+        }
+      : { heading, ...(body ? { body } : {}) }
+    setPending('saveCta'); setError(null)
+    try {
+      const definition = await updateSectionContent(tenantId, activePage.id, selectedCtaSection.id, payload)
+      acceptCanonicalSite(definition)
+      setEditorSessionRevision((revision) => revision + 1)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) setError(caught.message)
+      else setError('Unable to save the Call to Action. Please try again.')
+    } finally { setPending(null) }
+  }
   const selectCanvasPage = (pageId: string) => {
     const nextPage = draftSite.pages.find((page) => page.id === pageId)
     selectPage(pageId, nextPage?.sections.find((section) => section.type === 'hero')?.id ?? nextPage?.sections[0]?.id)
@@ -547,10 +587,11 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const showServicesInspector = Boolean(selectedServicesSection && (!editor || editor === 'page'))
   const showTestimonialsInspector = Boolean(selectedTestimonialsSection && (!editor || editor === 'page'))
   const showFaqInspector = Boolean(selectedFaqSection && (!editor || editor === 'page'))
-  const showDeferredSectionInspector = Boolean(editor === 'page' && selectedSection && !selectedHero && !selectedServicesSection && !selectedTestimonialsSection && !selectedFaqSection && !showLegacySectionInspector)
+  const showCtaInspector = Boolean(selectedCtaSection && (!editor || editor === 'page'))
+  const showDeferredSectionInspector = Boolean(editor === 'page' && selectedSection && !selectedHero && !selectedServicesSection && !selectedTestimonialsSection && !selectedFaqSection && !selectedCtaSection && !showLegacySectionInspector)
   const activeToolEditor = activeSiteTool ? <ActiveWebsiteEditor editor={activeSiteTool} key={`${activeSiteTool}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={backToSiteTools} onControllerChange={setToolController} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onLivePreview={applyLivePreview} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={activeSiteTool === 'seo' ? queryPageId : undefined} site={site} tenantId={tenantId} /> : null
   // Non-migrated editors remain in their established card presentation.
-  const legacyInspector = editor && !activeSiteTool && !fullScreenToolId && !showHeroInspector && !showServicesInspector && !showTestimonialsInspector && !showFaqInspector && !showDeferredSectionInspector ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? activePage.id : undefined} sectionId={editor === 'page' ? selectedSectionId : undefined} site={site} tenantId={tenantId} /> : null
+  const legacyInspector = editor && !activeSiteTool && !fullScreenToolId && !showHeroInspector && !showServicesInspector && !showTestimonialsInspector && !showFaqInspector && !showCtaInspector && !showDeferredSectionInspector ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? activePage.id : undefined} sectionId={editor === 'page' ? selectedSectionId : undefined} site={site} tenantId={tenantId} /> : null
   const inspector = showHeroInspector && selectedHero
     ? <HeroDraftInspector hero={selectedHero} onChange={changeHero} saving={pending === 'saveHero'} />
     : showServicesInspector && selectedServicesSection
@@ -559,9 +600,11 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
         ? <TestimonialsDraftInspector onChange={changeTestimonials} saving={pending === 'saveTestimonials'} section={selectedTestimonialsSection} />
         : showFaqInspector && selectedFaqSection
           ? <FaqDraftInspector onChange={changeFaq} saving={pending === 'saveFaq'} section={selectedFaqSection} />
-          : showDeferredSectionInspector && selectedSection
-            ? <DeferredSectionInspector onOpenExistingControls={() => setShowLegacySectionInspector(true)} section={selectedSection} />
-            : legacyInspector ?? <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />
+          : showCtaInspector && selectedCtaSection
+            ? <CtaDraftInspector onChange={changeCta} saving={pending === 'saveCta'} section={selectedCtaSection} />
+            : showDeferredSectionInspector && selectedSection
+              ? <DeferredSectionInspector onOpenExistingControls={() => setShowLegacySectionInspector(true)} section={selectedSection} />
+              : legacyInspector ?? <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />
   const visibilityDisabled = editorDirty || Boolean(pending) || addBusy || pendingAddType !== null
   const visibilityDisabledReason = editorDirty
     ? 'Save or discard your changes first.'
@@ -577,9 +620,10 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const servicesToolbarActive = showServicesInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
   const testimonialsToolbarActive = showTestimonialsInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
   const faqToolbarActive = showFaqInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
-  const toolbarCanSave = activeSiteTool ? Boolean(toolController?.canSave) : heroToolbarActive ? true : servicesToolbarActive && selectedServicesSection ? servicesContentError(selectedServicesSection.content) === null : testimonialsToolbarActive && selectedTestimonialsSection ? testimonialsContentError(selectedTestimonialsSection.content) === null : faqToolbarActive && selectedFaqSection ? faqContentError(selectedFaqSection.content) === null : false
+  const ctaToolbarActive = showCtaInspector && !addingSection && !moreSettingsOpen && !siteToolsMenuOpen
+  const toolbarCanSave = activeSiteTool ? Boolean(toolController?.canSave) : heroToolbarActive ? true : servicesToolbarActive && selectedServicesSection ? servicesContentError(selectedServicesSection.content) === null : testimonialsToolbarActive && selectedTestimonialsSection ? testimonialsContentError(selectedTestimonialsSection.content) === null : faqToolbarActive && selectedFaqSection ? faqContentError(selectedFaqSection.content) === null : ctaToolbarActive && selectedCtaSection ? ctaContentError(selectedCtaSection.content) === null : false
   const toolbarSaving = Boolean(pending) || addBusy || Boolean(activeSiteTool && toolController?.saving)
-  const toolbarSave = activeSiteTool ? () => toolController?.save() : () => { if (heroToolbarActive) void saveHero(); else if (servicesToolbarActive) void saveServices(); else if (testimonialsToolbarActive) void saveTestimonials(); else if (faqToolbarActive) void saveFaq() }
+  const toolbarSave = activeSiteTool ? () => toolController?.save() : () => { if (heroToolbarActive) void saveHero(); else if (servicesToolbarActive) void saveServices(); else if (testimonialsToolbarActive) void saveTestimonials(); else if (faqToolbarActive) void saveFaq(); else if (ctaToolbarActive) void saveCta() }
   const handleFullScreenSaved = (definition: SiteDefinition) => {
     acceptCanonicalSite(definition)
     setError(null)

@@ -22,7 +22,8 @@ const baseSite: SiteDefinition = {
       { id: 'faq-id', type: 'faq', hidden: false, content: { heading: 'Questions', intro: 'Start here.', items: [
         { id: 'faq-hours', question: 'When are you open?', answer: 'Every weekday.' },
         { id: 'faq-delivery', question: 'Do you deliver?', answer: 'Yes, within the city.' }
-      ] } }
+      ] } },
+      { id: 'cta-id', type: 'cta', hidden: false, content: { heading: 'Ready to order?', body: 'Let us make something special.', buttonLabel: 'Visit us', action: { type: 'url', value: 'https://example.com/order' } } }
     ] },
     { id: 'about', slug: 'about', title: 'Our bakery', sections: [
       { id: 'about-hero', type: 'hero', hidden: false, content: { title: 'About us', subtitle: 'Our craft', ctaLabel: 'Contact us' } }
@@ -46,7 +47,8 @@ vi.mock('../SitePreviewFrame', () => ({
     const services = page.sections.find((section) => section.type === 'services')
     const testimonials = page.sections.find((section) => section.type === 'testimonials')
     const faq = page.sections.find((section) => section.type === 'faq')
-    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button></>}</div>
+    const cta = page.sections.find((section) => section.type === 'cta')
+    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button></>}</div>
   }
 }))
 
@@ -513,6 +515,144 @@ describe('Website editor canvas', () => {
     expect(screen.getByLabelText('Intro')).toHaveValue('Start here.')
     expect(screen.queryByRole('button', { name: 'Save FAQ' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'FAQ' }).parentElement).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('keeps every Call to Action edit local while updating the shared preview immediately', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+
+    fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'A local invitation' } })
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'A local explanation.' } })
+    expect(screen.getByTestId('cta-preview')).toHaveTextContent('A local invitation')
+    expect(screen.getByTestId('cta-preview')).toHaveTextContent('A local explanation.')
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(screen.getByTestId('cta-preview')).not.toHaveTextContent('Visit us')
+    fireEvent.click(screen.getByRole('button', { name: 'Add a button' }))
+    fireEvent.change(screen.getByLabelText('Button label'), { target: { value: 'Email us' } })
+    fireEvent.change(screen.getByLabelText('Where it goes'), { target: { value: 'email' } })
+    expect(screen.getByTestId('cta-preview')).toHaveAttribute('data-action-type', 'email')
+    expect(screen.getByTestId('cta-preview')).toHaveAttribute('data-action-value', '')
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'hello@example.com' } })
+    expect(screen.getByTestId('cta-preview')).toHaveTextContent('Email us')
+    expect(screen.getByTestId('cta-preview')).toHaveAttribute('data-action-value', 'hello@example.com')
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(screen.getByTestId('cta-preview')).not.toHaveTextContent('Email us')
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+  })
+
+  it('saves a complete Call to Action pair once, trims it, and installs the canonical normalized URL', async () => {
+    const canonical = structuredClone(baseSite)
+    const cta = canonical.pages[0]?.sections.find((section) => section.type === 'cta')
+    if (!cta || cta.type !== 'cta') throw new Error('CTA fixture missing')
+    cta.content = { heading: 'A saved invitation', body: 'A saved explanation.', buttonLabel: 'Start now', action: { type: 'url', value: 'https://example.com/' } }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+
+    fireEvent.change(screen.getByLabelText('Heading'), { target: { value: '  A saved invitation  ' } })
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: '  A saved explanation.  ' } })
+    fireEvent.change(screen.getByLabelText('Button label'), { target: { value: '  Start now  ' } })
+    fireEvent.change(screen.getByLabelText('Website URL'), { target: { value: '  https://EXAMPLE.com  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'cta-id', {
+      heading: 'A saved invitation',
+      body: 'A saved explanation.',
+      buttonLabel: 'Start now',
+      action: { type: 'url', value: 'https://EXAMPLE.com' }
+    })
+    expect(screen.getByLabelText('Website URL')).toHaveValue('https://example.com/')
+    expect(screen.getByTestId('cta-preview')).toHaveAttribute('data-action-value', 'https://example.com/')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText(/Call to Action saved/i)).not.toBeInTheDocument()
+  })
+
+  it('omits the optional Call to Action button pair and blank body after removal', async () => {
+    const canonical = structuredClone(baseSite)
+    const cta = canonical.pages[0]?.sections.find((section) => section.type === 'cta')
+    if (!cta || cta.type !== 'cta') throw new Error('CTA fixture missing')
+    cta.content = { heading: 'Ready to order?' }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    const payload = mocks.updateSectionContent.mock.calls[0]?.[3]
+    expect(payload).toEqual({ heading: 'Ready to order?' })
+    expect(payload).not.toHaveProperty('body')
+    expect(payload).not.toHaveProperty('buttonLabel')
+    expect(payload).not.toHaveProperty('action')
+  })
+
+  it('blocks an incomplete Call to Action locally, then retains a malformed server-rejected draft for retry', async () => {
+    const { ApiError } = await import('../../../lib/api')
+    mocks.updateSectionContent.mockRejectedValueOnce(new ApiError(400, { error: 'Enter a valid email address.' })).mockResolvedValueOnce(structuredClone(baseSite))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+    fireEvent.change(screen.getByLabelText('Where it goes'), { target: { value: 'email' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('Add an email address, or remove the button.')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'not-an-email' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Enter a valid email address.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email address')).toHaveValue('not-an-email')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'hello@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+  })
+
+  it.each(['Templates', 'Revision History'])('guards dirty Call to Action transitions to %s and preserves same-section reselection', async (destination) => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+    fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'Keep this CTA draft' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Runtime Call to Action selection' }))
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Heading')).toHaveValue('Keep this CTA draft')
+    expect(screen.getByRole('button', { name: 'Hide About' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Site tools' }))
+    fireEvent.click(await screen.findByRole('button', { name: destination }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+  })
+
+  it('preserves a dirty Call to Action through Add Section and registers the unload guard', async () => {
+    const add = vi.spyOn(window, 'addEventListener')
+    const remove = vi.spyOn(window, 'removeEventListener')
+    const { unmount } = render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Call to Action' }))
+    fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'Keep during Add Section' } })
+    expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    expect(screen.getByTestId('cta-preview')).toHaveTextContent('Keep during Add Section')
+    fireEvent.click(screen.getByRole('button', { name: /Gallery.*Choose and arrange/i }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    expect(mocks.addSection).not.toHaveBeenCalled()
+    unmount()
+    expect(remove).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+  })
+
+  it('opens a deep-linked Call to Action section in the draft-native inspector', async () => {
+    navigation.search = 'editor=page&pageId=home&sectionId=cta-id'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    expect(await screen.findByRole('heading', { name: 'Call to Action' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Heading')).toHaveValue('Ready to order?')
+    expect(screen.getByLabelText('Website URL')).toHaveValue('https://example.com/order')
+    expect(screen.queryByRole('button', { name: 'Save Call to Action' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Call to Action' }).parentElement).toHaveAttribute('aria-current', 'true')
   })
 
   it('keeps a dirty Hero draft when the preview selects that same Hero', async () => {
