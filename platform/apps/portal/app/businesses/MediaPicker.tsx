@@ -13,6 +13,8 @@ export interface MediaPickerProps {
   selectedMediaIds: readonly string[]
   disabled?: boolean
   selectionDisabled?: boolean
+  sectionLabel?: string
+  capacity?: number
   onSelect: (media: MediaItem) => void
   onClose: () => void
 }
@@ -31,7 +33,7 @@ function CheckIcon () {
   return <svg aria-hidden className="size-3.5 fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]" viewBox="0 0 24 24"><path d="m5 12 5 5 9-11" /></svg>
 }
 
-export function MediaPicker ({ disabled = false, onClose, onSelect, selectedMediaIds, selectionDisabled = false, tenantId }: MediaPickerProps) {
+export function MediaPicker ({ capacity = 20, disabled = false, onClose, onSelect, sectionLabel = 'Gallery', selectedMediaIds, selectionDisabled = false, tenantId }: MediaPickerProps) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [libraryState, setLibraryState] = useState<LibraryState>('loading')
   const [media, setMedia] = useState<MediaItem[]>([])
@@ -81,7 +83,7 @@ export function MediaPicker ({ disabled = false, onClose, onSelect, selectedMedi
       setSelectedFile(null)
       if (fileInput.current) fileInput.current.value = ''
       setUploadState('success')
-      setUploadMessage('Uploaded. Choose it below to add it to the Gallery.')
+      setUploadMessage(`Uploaded. Choose it below to add it to the ${sectionLabel}.`)
     } catch (caught) {
       setUploadState('error')
       setUploadMessage(caught instanceof ApiError && (caught.status === 400 || caught.status === 413) && caught.message
@@ -93,7 +95,7 @@ export function MediaPicker ({ disabled = false, onClose, onSelect, selectedMedi
   return (
     <section aria-label="Add images" className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-border px-4 py-4">
-        <button className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" disabled={disabled} onClick={onClose} type="button"><BackIcon />Back to Gallery</button>
+        <button className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" disabled={disabled} onClick={onClose} type="button"><BackIcon />Back to {sectionLabel}</button>
         <h2 className="mt-3 text-base font-semibold tracking-tight text-fg">Add images</h2>
         <p className="mt-1 text-xs leading-5 text-fg-subtle">Upload a new image or choose from your library.</p>
       </div>
@@ -130,11 +132,11 @@ export function MediaPicker ({ disabled = false, onClose, onSelect, selectedMedi
           </ul>
         )}
         {hasMore && <p className="mt-2 text-xs text-fg-subtle">Showing the 50 most recent images.</p>}
-        <p className="mt-4 text-xs leading-5 text-fg-subtle">To permanently delete an image from storage, use <span className="font-semibold text-fg-muted">Website → Media</span>. Removing an image here only takes it out of this Gallery.</p>
+        <p className="mt-4 text-xs leading-5 text-fg-subtle">To permanently delete an image from storage, use <span className="font-semibold text-fg-muted">Website → Media</span>. Removing an image here only takes it out of this {sectionLabel}.</p>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3">
-        <div><p className="text-xs tabular-nums text-fg-subtle">{selectedMediaIds.length} of 20 in Gallery</p>{selectionDisabled && <p className="mt-0.5 text-xs font-semibold text-warning-fg">Maximum reached</p>}</div>
+        <div><p className="text-xs tabular-nums text-fg-subtle">{selectedMediaIds.length} of {capacity} in {sectionLabel}</p>{selectionDisabled && <p className="mt-0.5 text-xs font-semibold text-warning-fg">Maximum reached</p>}</div>
         <Button disabled={disabled} onClick={onClose} size="sm" type="button">Done</Button>
       </div>
     </section>

@@ -41,6 +41,9 @@ describe('MediaPicker', () => {
     expect(await screen.findByText('kitchen.jpg')).toBeInTheDocument()
     expect(mocks.getMedia).toHaveBeenCalledWith('tenant-1')
     expect(screen.getByRole('button', { name: 'kitchen.jpg added' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Back to Gallery' })).toBeEnabled()
+    expect(screen.getByText('1 of 20 in Gallery')).toBeInTheDocument()
+    expect(screen.getByText(/only takes it out of this Gallery/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Add deck.jpg' }))
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'media-2' }))
     expect(screen.getByRole('heading', { name: 'Add images' })).toBeInTheDocument()
@@ -99,5 +102,20 @@ describe('MediaPicker', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Force parent selection' }))
     expect(screen.getByTestId('selected-count')).toHaveTextContent('20')
+  })
+
+  it('uses a custom Logos label and capacity without changing selection behavior', async () => {
+    const selected = ['media-1', ...Array.from({ length: 23 }, (_, index) => `selected-${index}`)]
+    const onSelect = vi.fn()
+    render(<MediaPicker capacity={24} onClose={() => {}} onSelect={onSelect} sectionLabel="Logos section" selectedMediaIds={selected} selectionDisabled tenantId="tenant-1" />)
+
+    expect(await screen.findByRole('button', { name: 'Back to Logos section' })).toBeEnabled()
+    expect(screen.getByText('24 of 24 in Logos section')).toBeInTheDocument()
+    expect(screen.getByText(/only takes it out of this Logos section/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'kitchen.jpg added' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add deck.jpg' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled()
+    expect(screen.getByText('Maximum reached')).toBeInTheDocument()
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })

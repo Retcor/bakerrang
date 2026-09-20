@@ -11,7 +11,6 @@ vi.mock('../../../lib/site', () => ({
 }))
 
 import { AboutEditor } from '../AboutEditor'
-import { LogosEditor } from '../LogosEditor'
 import { ProcessEditor } from '../ProcessEditor'
 import { StatsEditor } from '../StatsEditor'
 
@@ -88,28 +87,6 @@ describe('expanded section editors', () => {
     fireEvent.change(screen.getByLabelText('Highlight 1 label'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Every highlight needs a value and label')
-  })
-
-  it('uses the existing Media Library and uploader for the exact Logos instance, validates alt text, and manages rows', async () => {
-    const dirty = renderEditor(LogosEditor, { sectionId: 'logos-b' })
-    await waitFor(() => expect(mocks.getMedia).toHaveBeenCalledWith('tenant-1'))
-    expect(screen.getByLabelText('Heading Optional')).toHaveValue('Second logos')
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add logo' })[0])
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Every logo needs alt text')
-    fireEvent.change(screen.getByLabelText('Logo 2 alt text'), { target: { value: 'Added logo' } })
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move logo up' })[1])
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move logo down' })[0])
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove logo' })[0])
-    const file = new File(['image'], 'uploaded.png', { type: 'image/png' })
-    fireEvent.change(screen.getByLabelText('Choose image'), { target: { files: [file] } })
-    await waitFor(() => expect(mocks.uploadMedia).toHaveBeenCalledWith('tenant-1', file))
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Add logo' })).toHaveLength(3))
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add logo' })[0])
-    fireEvent.change(screen.getByLabelText('Logo 2 alt text'), { target: { value: 'Uploaded logo' } })
-    await waitFor(() => expect(dirty).toHaveBeenCalledWith(true))
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'logos-b', expect.any(Object)))
   })
 
   it('preserves a legacy About round trip and saves enhanced About actions only to the selected id', async () => {
