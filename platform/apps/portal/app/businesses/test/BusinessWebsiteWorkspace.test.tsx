@@ -15,6 +15,10 @@ const baseSite: SiteDefinition = {
         { id: 'service-cakes', name: 'Cakes', description: 'Made to celebrate' },
         { id: 'service-catering', name: 'Catering', description: 'For every gathering' }
       ] } },
+      { id: 'gallery-id', type: 'gallery', hidden: false, content: { title: 'Our work', items: [
+        { id: 'gallery-kitchen', mediaId: 'media-1', altText: 'A bright bakery kitchen', src: 'https://media.test/kitchen.jpg', width: 1200, height: 900 },
+        { id: 'gallery-deck', mediaId: 'media-2', altText: 'A celebration cake', src: 'https://media.test/cake.jpg', width: 1200, height: 900 }
+      ] } },
       { id: 'testimonials-id', type: 'testimonials', hidden: false, content: { title: 'Kind words', items: [
         { id: 'testimonial-ada', customerName: 'Ada', quote: 'The cake made our day.' },
         { id: 'testimonial-grace', customerName: 'Grace', quote: 'Everything was wonderful.' }
@@ -37,20 +41,24 @@ const mocks = vi.hoisted(() => ({
   updateBusinessProfile: vi.fn(), updateHomeHero: vi.fn(), upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(), updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(), updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(), updateCustomCss: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(), updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn(), getSiteRevisions: vi.fn(), getSiteRevision: vi.fn(), restoreSiteRevision: vi.fn()
 }))
 
+const mediaMocks = vi.hoisted(() => ({ getMedia: vi.fn(), uploadMedia: vi.fn() }))
+
 const navigation = vi.hoisted(() => ({ pathname: '/businesses/tenant-1/website', search: '', replace: vi.fn() }))
 
 vi.mock('next/navigation', () => ({ usePathname: () => navigation.pathname, useRouter: () => ({ replace: navigation.replace }), useSearchParams: () => new URLSearchParams(navigation.search) }))
 vi.mock('../../../lib/site', () => mocks)
+vi.mock('../../../lib/media', () => mediaMocks)
 vi.mock('../SitePreviewFrame', () => ({
   SitePreviewFrame: ({ mode = 'EDITOR', onPageSelected, onSectionSelected, pageId, site, viewport }: { mode?: string, onPageSelected?: (id: string) => void, onSectionSelected?: (id: string) => void, pageId: string, site: SiteDefinition, viewport?: string }) => {
     const page = site.pages.find((candidate) => candidate.id === pageId) ?? site.pages[0]
     const hero = page.sections.find((section) => section.type === 'hero')
     const services = page.sections.find((section) => section.type === 'services')
+    const gallery = page.sections.find((section) => section.type === 'gallery')
     const testimonials = page.sections.find((section) => section.type === 'testimonials')
     const faq = page.sections.find((section) => section.type === 'faq')
     const cta = page.sections.find((section) => section.type === 'cta')
     const contact = page.sections.find((section) => section.type === 'contact')
-    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button></>}</div>
+    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{gallery?.type === 'gallery' && <div data-testid="gallery-preview"><h2>{gallery.content.title}</h2><ol>{gallery.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('gallery-id')} type="button">Runtime Gallery selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button></>}</div>
   }
 }))
 
@@ -68,6 +76,12 @@ describe('Website editor canvas', () => {
     mocks.publishSite.mockResolvedValue({ ...structuredClone(baseSite), status: 'PUBLISHED', hasUnpublishedChanges: false })
     mocks.getSiteTemplates.mockResolvedValue([])
     mocks.getSiteRevisions.mockResolvedValue({ revisions: [] })
+    mediaMocks.getMedia.mockResolvedValue({ media: [
+      { id: 'media-1', originalFilename: 'kitchen.jpg', contentType: 'image/jpeg', sizeBytes: 1200, width: 1200, height: 900, createdAt: 3, src: 'https://media.test/kitchen.jpg' },
+      { id: 'media-2', originalFilename: 'cake.jpg', contentType: 'image/jpeg', sizeBytes: 1200, width: 1200, height: 900, createdAt: 2, src: 'https://media.test/cake.jpg' },
+      { id: 'media-3', originalFilename: 'bread.jpg', contentType: 'image/jpeg', sizeBytes: 1200, width: 1200, height: 900, createdAt: 1, src: 'https://media.test/bread.jpg' }
+    ], hasMore: false })
+    mediaMocks.uploadMedia.mockResolvedValue({ id: 'media-uploaded', originalFilename: 'uploaded.jpg', contentType: 'image/jpeg', sizeBytes: 1200, width: 1200, height: 900, createdAt: 4, src: 'https://media.test/uploaded.jpg' })
   })
 
   it('renders the product canvas with a clean, hydrated Hero draft and no CTA destination control', async () => {
@@ -245,6 +259,152 @@ describe('Website editor canvas', () => {
     expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function))
     unmount()
     expect(remove).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+  })
+
+  it('keeps Gallery edits, ordering, removal, and media selection local while updating the hydrated preview', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Recent work' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Move image 2 up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image 2 from Gallery' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add image' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add bread.jpg' }))
+
+    expect(screen.getByRole('button', { name: 'bread.jpg added' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.change(screen.getAllByLabelText(/Alt text/)[1]!, { target: { value: 'Fresh bread on a cooling rack' } })
+
+    const preview = within(screen.getByTestId('gallery-preview'))
+    expect(preview.getByRole('heading')).toHaveTextContent('Recent work')
+    expect(preview.getAllByRole('listitem').map((row) => row.textContent)).toEqual([
+      'media-2: A celebration cake',
+      'media-3: Fresh bread on a cooling rack'
+    ])
+    expect(preview.getAllByRole('listitem')[1]).toHaveAttribute('data-src', 'https://media.test/bread.jpg')
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+  })
+
+  it('saves one exact Gallery payload without hydration fields or temporary ids, then installs canonical data', async () => {
+    const canonical = structuredClone(baseSite)
+    const gallery = canonical.pages[0]?.sections.find((section) => section.type === 'gallery')
+    if (!gallery || gallery.type !== 'gallery') throw new Error('Gallery fixture missing')
+    gallery.content = { title: 'Portfolio', items: [
+      { id: 'server-kitchen', mediaId: 'media-1', altText: 'Working kitchen', src: 'https://cdn.test/kitchen-normalized.jpg', width: 1600, height: 1200 },
+      { id: 'server-bread', mediaId: 'media-3', altText: 'Fresh bread', src: 'https://cdn.test/bread-normalized.jpg', width: 1600, height: 1200 }
+    ] }
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: '  Portfolio  ' } })
+    fireEvent.change(screen.getAllByLabelText(/Alt text/)[0]!, { target: { value: '  Working kitchen  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image 2 from Gallery' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add image' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add bread.jpg' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.change(screen.getAllByLabelText(/Alt text/)[1]!, { target: { value: '  Fresh bread  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-id', {
+      title: 'Portfolio',
+      items: [
+        { id: 'gallery-kitchen', mediaId: 'media-1', altText: 'Working kitchen' },
+        { mediaId: 'media-3', altText: 'Fresh bread' }
+      ]
+    })
+    expect(screen.getAllByLabelText(/Alt text/)[0]).toHaveAttribute('id', 'gallery-alt-gallery-id-server-kitchen')
+    expect(screen.getAllByLabelText(/Alt text/)[1]).toHaveAttribute('id', 'gallery-alt-gallery-id-server-bread')
+    expect(within(screen.getByTestId('gallery-preview')).getAllByRole('listitem')[1]).toHaveAttribute('data-src', 'https://cdn.test/bread-normalized.jpg')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText(/Gallery changes saved/i)).not.toBeInTheDocument()
+  })
+
+  it('allows an empty local Gallery draft but blocks saving it', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image 1 from Gallery' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image 1 from Gallery' }))
+
+    expect(screen.getByText('No images yet')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Add at least one image.')
+    expect(screen.getByRole('button', { name: 'Add image' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+  })
+
+  it('keeps upload independent from Gallery dirty state and discards only the selected membership', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add image' }))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+
+    const file = new File(['image'], 'uploaded.jpg', { type: 'image/jpeg' })
+    fireEvent.change(screen.getByLabelText('Choose file'), { target: { files: [file] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }))
+    await waitFor(() => expect(mediaMocks.uploadMedia).toHaveBeenCalledWith('tenant-1', file))
+    expect(await screen.findByRole('button', { name: 'Add uploaded.jpg' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add uploaded.jpg' }))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.change(screen.getAllByLabelText(/Alt text/)[2]!, { target: { value: 'A newly uploaded project' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.getByTestId('gallery-preview')).toHaveTextContent('media-uploaded: A newly uploaded project')
+
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+    expect(screen.getByTestId('gallery-preview')).not.toHaveTextContent('media-uploaded')
+    expect(mediaMocks.uploadMedia).toHaveBeenCalledOnce()
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+  })
+
+  it('retains a rejected Gallery draft and permits retry', async () => {
+    mocks.updateSectionContent.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(structuredClone(baseSite))
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Keep this gallery' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Unable to save Gallery. Please try again.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Keep this gallery')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+  })
+
+  it('keeps the media picker open when a dirty Gallery transition is cancelled and closes it on discard', async () => {
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Gallery' }))
+    fireEvent.change(screen.getByLabelText('Section heading'), { target: { value: 'Unsaved Gallery' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add image' }))
+    expect(await screen.findByRole('heading', { name: 'Add images' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Runtime section selection' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('heading', { name: 'Add images' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Runtime section selection' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(screen.queryByRole('heading', { name: 'Add images' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'About' }).parentElement).toHaveAttribute('aria-current', 'true'))
+  })
+
+  it('opens a deep-linked Gallery section in the draft-native inspector', async () => {
+    navigation.search = '?editor=page&pageId=home&sectionId=gallery-id'
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    expect(await screen.findByRole('heading', { name: 'Gallery' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Section heading')).toHaveValue('Our work')
+    expect(screen.queryByText(/Save Gallery/i)).not.toBeInTheDocument()
   })
 
   it('keeps Testimonials edits, additions, removals, and reordering in the draft until one toolbar save', async () => {

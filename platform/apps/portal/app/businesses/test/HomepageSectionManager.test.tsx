@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../lib/site', () => mocks)
 
 import { BusinessHoursSectionEditor } from '../BusinessHoursSectionEditor'
-import { GalleryEditor } from '../GalleryEditor'
 import { PageSectionManager } from '../PageSectionManager'
 import { AddSectionDialog } from '../AddSectionDialog'
 
@@ -339,13 +338,6 @@ describe('section editor identity and Business Hours presentation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.updateSectionContent.mockResolvedValue(updated)
-  })
-
-  it('edits the selected repeated gallery and writes its exact id', async () => {
-    render(<GalleryEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site()} tenantId="tenant-1" sectionId="gallery-b" />)
-    fireEvent.change(screen.getByLabelText('Section Heading'), { target: { value: 'Second gallery updated' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-b', expect.objectContaining({ title: 'Second gallery updated' })))
   })
 
   it('updates only Business Hours presentation content and leaves Site setup ownership intact', async () => {
