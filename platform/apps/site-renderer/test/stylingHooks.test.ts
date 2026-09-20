@@ -62,7 +62,7 @@ test('public headings, cards, CTAs, and lead fields expose semantic hooks', asyn
   assert.match(leadForm, /data-br-role="button"/)
 })
 
-test('public lead fields inherit the Theme-derived surface, border, and foreground tokens', async () => {
+test('public lead controls use only the base tenant token contract', async () => {
   const [themeCss, leadForm] = await Promise.all([
     source('../../../packages/site-components/src/site-theme.css'),
     source('../../../packages/site-runtime/src/LeadForm.tsx')
@@ -71,8 +71,51 @@ test('public lead fields inherit the Theme-derived surface, border, and foregrou
   assert.match(themeCss, /--color-surface: var\(--site-surface\);/)
   assert.match(themeCss, /--color-border: var\(--site-border\);/)
   assert.match(themeCss, /--color-fg: var\(--site-fg\);/)
-  assert.match(leadForm, /border border-border bg-surface/)
-  assert.match(leadForm, /text-fg/)
+  assert.match(themeCss, /--color-fg-muted: var\(--site-muted\);/)
+  assert.match(themeCss, /--color-accent: var\(--site-primary\);/)
+  assert.match(themeCss, /--color-accent-fg: var\(--site-primary-fg\);/)
+
+  const classNameFor = (tag: 'input' | 'textarea', id: string) => {
+    const className = leadForm.match(new RegExp(`<${tag}[^>]*className="([^"]+)"[^>]*id="${id}"`))?.[1]
+    assert.ok(className, `${id} should expose a className`)
+    return className
+  }
+  const fieldClassNames = [
+    classNameFor('input', 'lead-name'),
+    classNameFor('input', 'lead-email'),
+    classNameFor('input', 'lead-phone'),
+    classNameFor('textarea', 'lead-message')
+  ]
+
+  for (const className of fieldClassNames) {
+    assert.match(className, /(?:^|\s)border-border(?:\s|$)/)
+    assert.doesNotMatch(className, /border-border-strong/)
+    assert.match(className, /(?:^|\s)bg-surface(?:\s|$)/)
+    assert.match(className, /(?:^|\s)text-fg(?:\s|$)/)
+    assert.match(className, /placeholder:text-fg-muted/)
+    assert.match(className, /focus:border-accent/)
+  }
+
+  const buttonClassName = leadForm.match(/<button className="([^"]+)"[^>]*type="submit"/)?.[1]
+  assert.ok(buttonClassName, 'Send Message should use a raw public button')
+  assert.match(buttonClassName, /(?:^|\s)bg-accent(?:\s|$)/)
+  assert.match(buttonClassName, /(?:^|\s)text-accent-fg(?:\s|$)/)
+  assert.match(buttonClassName, /focus-visible:outline-accent/)
+  assert.doesNotMatch(buttonClassName, /border-border-strong|outline-focus|bg-brand-(?:hover|active)|surface-muted|text-fg-subtle/)
+
+  assert.doesNotMatch(leadForm, /border-border-strong|focus:border-focus|text-fg-subtle/)
+  assert.doesNotMatch(leadForm, /from ['"]@bakerrang\/ui['"]/)
+})
+
+test('public lead honeypot remains present, hidden off-screen, and out of the tab order', async () => {
+  const [globals, leadForm] = await Promise.all([
+    source('../app/globals.css'),
+    source('../../../packages/site-runtime/src/LeadForm.tsx')
+  ])
+
+  assert.match(globals, /@source "\.\.\/\.\.\/\.\.\/packages\/site-runtime\/src";/)
+  assert.match(leadForm, /<div aria-hidden="true" className="absolute -left-\[10000px\] h-px w-px overflow-hidden">/)
+  assert.match(leadForm, /<input autoComplete="off" id="lead-website".*tabIndex=\{-1\}/)
 })
 
 test('Contact retains safe email, phone, and URL actions while leadForm renders inline', async () => {

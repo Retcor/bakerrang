@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" data-state="leadform" data-device="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Inspector</title>
+<meta name="description" content="Impeccable comp — narrow-rail Contact section inspector for the BakerRang Website Builder (Phase 4.0l, draft-native). Scoped to the leadForm action-field state.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---- Tokens (verbatim from packages/ui/src/styles/tokens-portal.css) ---- */
+:root{
+  --brand:#fec51c; --brand-hover:#f2b900; --brand-active:#dda600; --brand-ink:#1c1f29; --brand-subtle:#fff8dc;
+  --sidebar:#292b2f; --sidebar-deep:#1c1f29; --sidebar-fg:#f8fafc; --sidebar-muted:#b8bec8; --sidebar-border:#40434a;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-muted:#f8f9fb; --border:#e1e4e9; --border-strong:#c8cdd5;
+  --fg:#202329; --fg-muted:#626975; --fg-subtle:#68707c;
+  --focus:#1769aa; --success:#277a4b; --success-fg:#175033; --success-subtle:#e9f7ef;
+  --warning:#9a6500; --warning-fg:#704900; --warning-subtle:#fff5d6;
+  --danger:#b42318; --danger-fg:#8f1d14; --danger-subtle:#fff0ee;
+  --info:#1769aa; --info-fg:#135887; --info-subtle:#eaf5fc;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem;
+  --shadow-xs:0 1px 2px rgb(28 31 41 / .05); --shadow-sm:0 2px 8px rgb(28 31 41 / .07); --shadow-md:0 12px 32px rgb(28 31 41 / .14);
+  --rail-w:21rem;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--brand-subtle);color:var(--brand-ink);}
+button{font-family:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm);}
+input,textarea,select{font-family:inherit;}
+p{margin:0;} h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.011em;}
+
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+.scroll::-webkit-scrollbar{width:10px;height:10px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--surface);border-radius:999px;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------------- Review scaffold (NOT product UI) ---------------- */
+.review{position:fixed;inset:0 0 auto 0;z-index:100;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:.5rem .75rem;background:var(--sidebar-deep);color:var(--sidebar-fg);font-size:.78rem;box-shadow:var(--shadow-sm);}
+.review .tag{font-weight:700;letter-spacing:.06em;color:var(--brand);text-transform:uppercase;font-size:.75rem;}
+.review .seg{display:inline-flex;background:#33363b;border:1px solid var(--sidebar-border);border-radius:var(--radius-md);padding:2px;gap:2px;flex-wrap:wrap;}
+.review .seg button{border:0;background:transparent;color:var(--sidebar-muted);font-size:.78rem;font-weight:600;padding:.3rem .6rem;border-radius:.3rem;}
+.review .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);}
+.review .hint{color:var(--sidebar-muted);margin-left:auto;}
+
+/* ---------------- App shell (context only — LOCKED) ---------------- */
+.app{position:fixed;inset:44px 0 0 0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+.toolbar{display:flex;align-items:center;gap:.75rem;min-height:56px;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0;}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:.9rem;flex:none;}
+.wordmark{font-weight:700;font-size:.9rem;letter-spacing:-.02em;white-space:nowrap;}
+.wordmark b{color:#8a6000;}
+.crumb-sep{color:var(--border-strong);}
+.crumb{font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;}
+.crumb.site{max-width:11rem;overflow:hidden;text-overflow:ellipsis;}
+.badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;padding:.32rem .6rem;border-radius:999px;line-height:1;}
+.badge.warning{background:var(--warning-subtle);color:var(--warning-fg);}
+.tools-right{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+.vp{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface-muted);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);}
+.vp button{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.3rem;}
+.vp button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;border-radius:var(--radius-md);
+  padding:.42rem .7rem;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);transition:background .12s,border-color .12s;}
+.btn:hover{background:var(--surface-muted);}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-muted);}
+.btn.primary{border-color:var(--brand);background:var(--brand);color:var(--brand-ink);}
+.btn.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);}
+.btn.publish{border-color:var(--brand-ink);background:var(--brand-ink);color:#fff;}
+.btn.save[disabled]{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;box-shadow:none;}
+.btn.publish[disabled]{border-color:var(--sidebar);background:var(--sidebar);color:var(--sidebar-muted);cursor:not-allowed;}
+.btn.ghost[disabled]{color:var(--fg-subtle);cursor:not-allowed;background:transparent;}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);}
+.rail{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);background:var(--surface);}
+.canvas{min-width:0;min-height:0;overflow:auto;background:var(--bg);padding:1.5rem;}
+
+/* Preview frame (context) */
+.frame{max-width:100%;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-md);overflow:hidden;}
+.frame-bar{display:flex;align-items:center;gap:.75rem;min-height:36px;padding:0 .75rem;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:.75rem;font-weight:600;color:var(--fg-muted);}
+.frame-bar .dots{display:flex;gap:5px;}
+.frame-bar .dots i{width:8px;height:8px;border-radius:999px;background:var(--border-strong);}
+.frame-bar .live{margin:0 auto;display:inline-flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.07em;}
+.frame-bar .live i{width:7px;height:7px;border-radius:999px;background:var(--success);}
+.site-nav{display:flex;align-items:center;gap:1rem;padding:1rem 1.75rem;border-bottom:1px solid #eceef1;}
+.site-nav .b{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#1c1f29;}
+.site-nav .b span{color:#8a6000;}
+.site-nav .links{margin-left:auto;display:flex;gap:1.35rem;font-size:.82rem;font-weight:600;color:#5a616c;}
+
+/* Contact section render (selected) — left accent border mirrors the real renderer */
+.ct-live{margin:1.5rem;border-radius:12px;outline:2px solid var(--brand);outline-offset:3px;}
+.ct-panel{border:1px solid #e6e8ec;border-left:4px solid #0f766e;border-radius:14px;background:#fff;padding:2.25rem 2rem;box-shadow:0 2px 8px rgb(28 31 41 / .06);}
+.ct-panel h2{font-size:1.7rem;letter-spacing:-.02em;color:#16181f;}
+.ct-panel p{margin-top:.8rem;max-width:32rem;font-size:1rem;line-height:1.6;color:#5c6470;}
+.ct-btn{display:none;align-items:center;min-height:44px;margin-top:1.3rem;padding:.7rem 1.35rem;border-radius:8px;background:#334155;color:#fff;font-weight:600;font-size:.95rem;}
+html[data-state="email"] .ct-btn,html[data-state="url"] .ct-btn,html[data-state="phone"] .ct-btn{display:inline-flex;}
+/* Inline lead form preview (only in leadForm state) — inert */
+.ct-leadform{display:none;margin-top:1.5rem;border:1px solid #e6e8ec;border-radius:12px;background:#fff;padding:1.25rem;}
+html[data-state="leadform"] .ct-leadform{display:block;}
+.ct-leadform .lf-note{display:inline-flex;align-items:center;gap:.4rem;margin-bottom:1rem;font-size:.75rem;font-weight:600;color:#8a6000;background:#fff7dc;border:1px solid #f0d98a;border-radius:999px;padding:.3rem .7rem;}
+.ct-leadform .lf-lab{display:block;font-size:.8rem;font-weight:600;color:#3a4150;margin-top:.85rem;}
+.ct-leadform .lf-lab:first-of-type{margin-top:0;}
+.ct-leadform .lf-in{margin-top:.35rem;width:100%;min-height:38px;border:1px solid #d7dbe2;border-radius:8px;background:#fff;padding:.45rem .6rem;font-size:.85rem;color:#3a4150;}
+.ct-leadform .lf-in.area{min-height:74px;}
+.ct-leadform .lf-send{margin-top:1.1rem;display:inline-flex;min-height:40px;align-items:center;padding:.55rem 1.1rem;border-radius:8px;background:#334155;color:#fff;font-weight:600;font-size:.85rem;opacity:.75;}
+.cta-caption{text-align:right;color:var(--fg);font-weight:700;}
+
+/* ============ RAIL chrome (context) ============ */
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);}
+.page-btn{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;min-height:40px;padding:.4rem .7rem;
+  border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--fg-muted);font-size:.83rem;font-weight:600;text-align:left;}
+.page-btn[aria-current="page"]{border-color:var(--border-strong);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.page-btn .s{font-size:.75rem;font-weight:500;color:var(--fg-subtle);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-top:1.4rem;}
+.sec-head .add-mini{width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.sec-head .add-mini:hover{background:var(--surface-muted);color:var(--fg);}
+.sec-row{display:flex;align-items:center;gap:.4rem;width:100%;min-height:40px;padding:.35rem .3rem .35rem .7rem;margin-top:.25rem;
+  border:1px solid transparent;border-radius:var(--radius-md);color:var(--fg-muted);}
+.sec-row:hover{border-color:var(--border);background:var(--surface-muted);color:var(--fg);}
+.sec-row[aria-current="true"]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background:var(--brand-subtle);color:var(--brand-ink);
+  box-shadow:inset 0 0 0 1px rgb(254 197 28 / .24);}
+.sec-row .t{flex:1;min-width:0;font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sec-row .eye{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.35rem;}
+.sec-row .eye:hover{background:var(--surface);color:var(--fg);}
+
+/* ============ INSPECTOR (shared rail language) ============ */
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.icon.sm{width:15px;height:15px;}
+.insp{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1rem;}
+.insp-head{display:flex;align-items:center;gap:.7rem;}
+.insp-head .mk{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--surface-muted);color:var(--fg-muted);border:1px solid var(--border);}
+.insp-head h2{font-size:1rem;letter-spacing:-.01em;color:var(--fg);}
+.insp-head p{font-size:.78rem;color:var(--fg-subtle);margin-top:1px;}
+
+.field{display:block;margin-top:1rem;}
+.field > .lbl{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--fg);}
+.field > .lbl .opt{font-weight:400;color:var(--fg-subtle);}
+.count{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;font-weight:400;}
+.control{width:100%;margin-top:.4rem;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.5rem .6rem;min-height:40px;}
+.control:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+textarea.control{min-height:64px;resize:vertical;line-height:1.5;}
+select.control{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23626975' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right .6rem center;padding-right:2rem;cursor:pointer;}
+.control:disabled{background:var(--surface-muted);color:var(--fg-subtle);cursor:not-allowed;}
+
+/* Button (action) sub-block: hairline group — always present for Contact (no add/remove) */
+.grp{margin-top:1.5rem;padding-top:1.1rem;border-top:1px solid var(--border);}
+.grp .kicker{display:block;}
+.stack{margin-top:.85rem;display:flex;flex-direction:column;gap:1rem;}
+
+/* leadForm explainer line inside the action block (concise, single line wraps) */
+.lf-hint{margin-top:.9rem;display:flex;gap:.5rem;align-items:flex-start;font-size:.78rem;line-height:1.45;color:var(--fg-muted);
+  background:var(--surface-muted);border:1px solid var(--border);border-radius:var(--radius-md);padding:.6rem .7rem;}
+.lf-hint .icon{color:var(--info);margin-top:1px;}
+
+/* value field shows only for link action types; leadForm shows the hint instead */
+.value-field{display:none;}
+html[data-state="url"] .value-url,
+html[data-state="email"] .value-email,
+html[data-state="phone"] .value-phone,
+html[data-state="invalid"] .value-phone,
+html[data-state="saving"] .value-url{display:block;}
+.lf-hint{display:none;}
+html[data-state="leadform"] .lf-hint{display:flex;}
+
+.validation{display:none;align-items:center;gap:.4rem;margin-top:.7rem;font-size:.78rem;font-weight:600;color:var(--warning-fg);
+  background:var(--warning-subtle);border:1px solid color-mix(in srgb,var(--warning) 22%,transparent);border-radius:var(--radius-md);padding:.6rem .7rem;}
+.validation .icon{color:var(--warning);}
+html[data-state="invalid"] .validation{display:flex;}
+
+html[data-state="saving"] .control{pointer-events:none;opacity:.6;}
+
+/* ---------------- Mobile builder ---------------- */
+html[data-device="mobile"] .app{inset:44px auto 0 50%;transform:translateX(-50%);width:414px;border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong);box-shadow:var(--shadow-md);}
+html[data-device="mobile"] .body{grid-template-columns:1fr;}
+html[data-device="mobile"] .canvas{display:none;}
+html[data-device="mobile"] .rail{border-right:0;}
+html[data-device="mobile"] .toolbar{gap:.5rem;padding:.5rem .65rem;}
+html[data-device="mobile"] .vp,html[data-device="mobile"] .btn.preview,html[data-device="mobile"] .crumb.mid,html[data-device="mobile"] .wordmark{display:none;}
+</style>
+</head>
+<body>
+
+<div class="review" role="group" aria-label="Comp review controls">
+  <span class="tag">Review only</span>
+  <div class="seg" id="stateSeg" role="group" aria-label="Inspector state">
+    <button data-go="leadform" aria-pressed="true">Lead form</button>
+    <button data-go="email">Email</button>
+    <button data-go="url">URL</button>
+    <button data-go="phone">Phone</button>
+    <button data-go="invalid">Incomplete</button>
+    <button data-go="saving">Saving</button>
+  </div>
+  <div class="seg" id="deviceSeg" role="group" aria-label="Device">
+    <button data-device="desktop" aria-pressed="true">Desktop</button>
+    <button data-device="mobile">Mobile</button>
+  </div>
+  <span class="hint">Contact's button is required — no add/remove · leadForm hides the destination field</span>
+</div>
+
+<div class="app">
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo">B</span>
+      <span class="wordmark">Baker<b>Rang</b></span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb mid">Website</span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb site">Cedar &amp; Co Builders</span>
+      <span class="badge warning" id="statusBadge">Unsaved changes</span>
+    </div>
+    <div class="tools-right">
+      <div class="vp" role="group" aria-label="Preview viewport">
+        <button aria-label="Desktop" aria-pressed="true"><svg class="icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8m-4-4v4"/></svg></button>
+        <button aria-label="Tablet" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></button>
+        <button aria-label="Mobile" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="17" rx="2"/><path d="M11 18h2"/></svg></button>
+      </div>
+      <button class="btn ghost preview" disabled>Preview</button>
+      <button class="btn primary save" id="saveBtn">Save</button>
+      <button class="btn publish" disabled><svg class="icon sm" viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>Publish</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="rail" aria-label="Website builder controls">
+      <div class="rail-scroll scroll">
+        <span class="kicker">Page</span>
+        <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.15rem;" role="list" aria-label="Website pages">
+          <button class="page-btn" aria-current="page"><span>Home</span><span class="s">6 sections</span></button>
+          <button class="page-btn"><span>About</span><span class="s">4 sections</span></button>
+          <button class="page-btn"><span>Contact</span><span class="s">3 sections</span></button>
+        </div>
+
+        <div class="sec-head">
+          <span class="kicker">Sections</span>
+          <button class="add-mini" aria-label="Add section"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div style="margin-top:.25rem;" role="list" aria-label="Sections on Home">
+          <div class="sec-row"><span class="t">Hero</span><span class="eye" title="Hero is always visible"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span></div>
+          <div class="sec-row"><span class="t">Services</span><button class="eye" aria-label="Hide Services"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row"><span class="t">Call to Action</span><button class="eye" aria-label="Hide Call to Action"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row" aria-current="true"><span class="t">Contact</span><button class="eye" aria-label="Hide Contact"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+        </div>
+
+        <!-- ===================== CONTACT INSPECTOR ===================== -->
+        <section class="insp" aria-label="Contact properties">
+          <div class="insp-head">
+            <span class="mk" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m5 8 7 5 7-5"/></svg></span>
+            <div><h2>Contact</h2><p>One clear way for visitors to get in touch.</p></div>
+          </div>
+
+          <label class="field">
+            <span class="lbl">Section heading <span class="count" id="titleCount">14 / 150</span></span>
+            <input class="control" id="titleInput" maxlength="150" value="Let's build it">
+          </label>
+
+          <label class="field">
+            <span class="lbl">Supporting text <span class="opt">(optional)</span><span class="count" id="textCount">64 / 500</span></span>
+            <textarea class="control" id="textInput" maxlength="500">Tell us about your project and we'll get back to you within a day.</textarea>
+          </label>
+
+          <!-- Button (action) sub-block — always present (Contact requires a button + action) -->
+          <div class="grp">
+            <span class="kicker">Button</span>
+            <div class="stack">
+              <div>
+                <div class="lbl" style="display:flex;justify-content:space-between;"><label for="labelInput">Button label</label><span class="count">11 / 80</span></div>
+                <input class="control" id="labelInput" maxlength="80" value="Get in touch">
+              </div>
+              <div>
+                <label class="lbl" for="typeSelect" style="display:block;">Where it goes</label>
+                <select class="control" id="typeSelect" aria-label="Where the button goes">
+                  <option value="url">Website URL</option>
+                  <option value="email">Email address</option>
+                  <option value="phone">Phone number</option>
+                  <option value="leadform">Lead form</option>
+                </select>
+              </div>
+
+              <div class="value-field value-url"><label class="lbl" style="display:block;">Website URL</label><input class="control" inputmode="url" maxlength="2048" placeholder="https://example.com" value="https://cedarcobuilders.com/contact"></div>
+              <div class="value-field value-email"><label class="lbl" style="display:block;">Email address</label><input class="control" inputmode="email" maxlength="254" placeholder="hello@example.com" value="hello@cedarcobuilders.com"></div>
+              <div class="value-field value-phone"><label class="lbl" style="display:block;">Phone number</label><input class="control" inputmode="tel" maxlength="50" placeholder="(801) 555-1234" value=""></div>
+
+              <!-- leadForm: no destination field — one concise line explains what it does -->
+              <p class="lf-hint">
+                <svg class="icon sm" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                Visitors fill in an on-page form. Replies land in your Leads inbox — no destination needed.
+              </p>
+
+              <div class="validation" role="alert">
+                <svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+                Add a phone number.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ================= PREVIEW (context) ================= -->
+    <div class="canvas scroll">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="live"><i></i>Live preview</span>
+          <span class="cta-caption">Editing: Contact</span>
+        </div>
+        <div class="site">
+          <nav class="site-nav"><span class="b">Cedar &amp; Co <span>Builders</span></span><span class="links"><span>Services</span><span>About</span><span>Contact</span></span></nav>
+          <div class="ct-live" aria-label="Contact section, selected">
+            <div style="padding:2rem 1.5rem;">
+              <div class="ct-panel">
+                <h2 id="pvTitle">Let's build it</h2>
+                <p id="pvText">Tell us about your project and we'll get back to you within a day.</p>
+                <span class="ct-btn" id="pvBtn">Get in touch</span>
+                <!-- leadForm inline preview (inert) -->
+                <div class="ct-leadform" aria-label="Lead form preview (inactive)">
+                  <span class="lf-note"><svg class="icon sm" viewBox="0 0 24 24" style="stroke:currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>This is a preview — the form isn't active.</span>
+                  <span class="lf-lab">Name</span><div class="lf-in">Jordan Rivera</div>
+                  <span class="lf-lab">Email</span><div class="lf-in">jordan@example.com</div>
+                  <span class="lf-lab">Message</span><div class="lf-in area">We'd like a quote for a kitchen remodel…</div>
+                  <span class="lf-send">Send Message</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function setState(s){
+    root.setAttribute('data-state', s);
+    document.querySelectorAll('#stateSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.go===s?'true':'false');});
+    var save=document.getElementById('saveBtn'), badge=document.getElementById('statusBadge'), typeSel=document.getElementById('typeSelect');
+    root.setAttribute('data-dirty','true');
+    if(s==='saving'){ save.disabled=true; save.textContent='Saving…'; badge.textContent='Saving…'; }
+    else if(s==='invalid'){ save.disabled=true; save.textContent='Save'; badge.textContent='Unsaved changes'; }
+    else { save.disabled=false; save.textContent='Save'; badge.textContent='Unsaved changes'; }
+    if(typeSel){ typeSel.value = (s==='saving') ? 'url' : (s==='invalid' ? 'phone' : s); }
+    var rs=document.querySelector('.rail-scroll'); if(rs) rs.scrollTop=0;
+  }
+  function setDevice(d){
+    root.setAttribute('data-device', d);
+    document.querySelectorAll('#deviceSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.device===d?'true':'false');});
+  }
+  document.addEventListener('click',function(e){
+    var g=e.target.closest('#stateSeg [data-go]'); if(g){setState(g.dataset.go);return;}
+    var d=e.target.closest('#deviceSeg [data-device]'); if(d){setDevice(d.dataset.device);}
+  });
+  var t=document.getElementById('titleInput'), tc=document.getElementById('titleCount'), pvt=document.getElementById('pvTitle');
+  if(t) t.addEventListener('input',function(){tc.textContent=t.value.length+' / 150'; pvt.textContent=t.value||'Add a heading';});
+  var x=document.getElementById('textInput'), xc=document.getElementById('textCount'), pvx=document.getElementById('pvText');
+  if(x) x.addEventListener('input',function(){xc.textContent=x.value.length+' / 500'; pvx.textContent=x.value;});
+  var l=document.getElementById('labelInput'), pvb=document.getElementById('pvBtn');
+  if(l) l.addEventListener('input',function(){pvb.textContent=l.value||'Button';});
+  var typeSel=document.getElementById('typeSelect');
+  if(typeSel) typeSel.addEventListener('change',function(){ setState(typeSel.value); });
+  setState(root.getAttribute('data-state') || 'leadform');
+})();
+</script>
+</body>
+</html>

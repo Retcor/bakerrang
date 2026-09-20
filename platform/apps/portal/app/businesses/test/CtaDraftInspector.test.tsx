@@ -51,6 +51,7 @@ describe('CtaDraftInspector', () => {
     expect(screen.getByRole('option', { name: 'Website URL' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Email address' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Phone number' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Lead form' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Website URL')).toHaveAttribute('maxlength', '2048')
     expect(screen.getByLabelText('Website URL')).toHaveAttribute('inputmode', 'url')
 

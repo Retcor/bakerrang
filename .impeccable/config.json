@@ -81,6 +81,33 @@
         ],
         "createdAt": "2026-09-19T16:52:57.130Z",
         "reason": "Claude: comp fixture — flagged padding is on the review-only scaffold bar and toolbar/preview context chrome (badge, frame bar) carried verbatim from approved services-inspector.html; the designed CTA inspector controls meet the >=8px floor"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/contact-inspector.html"
+        ],
+        "createdAt": "2026-09-20T03:03:23.471Z",
+        "reason": "Claude: comp fixture — the left accent border is the preview faithfully reproducing the shipped Contact renderer (Contact.tsx border-l-4 border-l-site-accent); renderer redesign is out of 4.0l scope"
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/contact-inspector.html"
+        ],
+        "createdAt": "2026-09-20T03:03:23.631Z",
+        "reason": "Claude: comp fixture — locked preview pane reproduces the real Contact section (panel + inline lead form) inside the browser-chrome preview frame, not the inspector"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/contact-inspector.html"
+        ],
+        "createdAt": "2026-09-20T03:03:23.803Z",
+        "reason": "Claude: comp fixture — flagged padding is on the review-only scaffold bar and toolbar/preview context chrome (badge, frame bar, preview pill) carried verbatim from the approved cta/services comps; the designed Contact inspector controls meet the >=8px floor"
       }
     ]
   }

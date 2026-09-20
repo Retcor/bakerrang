@@ -1,15 +1,10 @@
 'use client'
 
 import type { CtaContent, CtaSection, LinkAction } from '@bakerrang/site-schema'
-import { Input, Select, Textarea } from '@bakerrang/ui'
+import { Input, Textarea } from '@bakerrang/ui'
+import { SectionActionFieldsDraft } from './SectionActionFieldsDraft'
 
 const iconClass = 'size-4 fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]'
-
-const destinationFields: Record<LinkAction['type'], { label: string, maxLength: number, inputMode: 'email' | 'tel' | 'url', placeholder: string }> = {
-  url: { label: 'Website URL', maxLength: 2048, inputMode: 'url', placeholder: 'https://example.com' },
-  email: { label: 'Email address', maxLength: 254, inputMode: 'email', placeholder: 'hello@example.com' },
-  phone: { label: 'Phone number', maxLength: 50, inputMode: 'tel', placeholder: '(801) 555-1234' }
-}
 
 function CtaIcon () {
   return <svg aria-hidden className="size-[1.125rem] fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]" viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4V5Z" /><path d="M8.5 9.5h7" /></svg>
@@ -52,7 +47,6 @@ export function CtaDraftInspector ({ section, onChange, saving }: {
   const { content } = section
   const configured = content.buttonLabel !== undefined || content.action !== undefined
   const action: LinkAction = content.action ?? { type: 'url', value: '' }
-  const destination = destinationFields[action.type]
   const validationError = ctaContentError(content)
 
   const addButton = () => {
@@ -98,27 +92,7 @@ export function CtaDraftInspector ({ section, onChange, saving }: {
           <p className="mt-2 text-xs leading-5 text-fg-subtle">Optional — add a button to give visitors one clear action.</p>
           <button className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface px-3 py-2 text-[0.8125rem] font-semibold text-info-fg transition-colors hover:border-focus hover:bg-info-subtle disabled:cursor-not-allowed disabled:border-solid disabled:border-border disabled:bg-surface-muted disabled:text-fg-subtle" disabled={saving} onClick={addButton} type="button"><AddIcon />Add a button</button>
         </>
-        : <div className="mt-3 space-y-4">
-          <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <label className="text-[0.8125rem] font-semibold text-fg" htmlFor={`cta-button-label-${section.id}`}>Button label</label>
-              <span aria-hidden className="text-xs tabular-nums text-fg-subtle">{(content.buttonLabel ?? '').length} / 60</span>
-            </div>
-            <Input className="mt-1.5" disabled={saving} id={`cta-button-label-${section.id}`} maxLength={60} onChange={(event) => onChange({ ...content, buttonLabel: event.target.value, action })} value={content.buttonLabel ?? ''} />
-          </div>
-          <div>
-            <label className="text-[0.8125rem] font-semibold text-fg" htmlFor={`cta-action-type-${section.id}`}>Where it goes</label>
-            <Select className="mt-1.5" disabled={saving} id={`cta-action-type-${section.id}`} onChange={(event) => onChange({ ...content, buttonLabel: content.buttonLabel ?? '', action: { type: event.target.value as LinkAction['type'], value: '' } })} value={action.type}>
-              <option value="url">Website URL</option>
-              <option value="email">Email address</option>
-              <option value="phone">Phone number</option>
-            </Select>
-          </div>
-          <div>
-            <label className="text-[0.8125rem] font-semibold text-fg" htmlFor={`cta-action-value-${section.id}`}>{destination.label}</label>
-            <Input className="mt-1.5" disabled={saving} id={`cta-action-value-${section.id}`} inputMode={destination.inputMode} maxLength={destination.maxLength} onChange={(event) => onChange({ ...content, buttonLabel: content.buttonLabel ?? '', action: { ...action, value: event.target.value } })} placeholder={destination.placeholder} value={action.value} />
-          </div>
-        </div>}
+        : <div className="mt-3"><SectionActionFieldsDraft action={action} buttonLabel={content.buttonLabel ?? ''} buttonLabelMax={60} disabled={saving} idBase={`cta-${section.id}`} onChange={({ buttonLabel, action: nextAction }) => onChange({ ...content, buttonLabel, action: nextAction })} /></div>}
 
       {validationError && <div className="mt-3 flex items-center gap-2 rounded-md border border-warning/20 bg-warning-subtle px-3 py-2 text-xs font-semibold text-warning-fg" role="alert"><WarningIcon />{validationError}</div>}
     </section>
