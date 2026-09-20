@@ -118,4 +118,22 @@ describe('MediaPicker', () => {
     expect(screen.getByText('Maximum reached')).toBeInTheDocument()
     expect(onSelect).not.toHaveBeenCalled()
   })
+
+  it('hides only capacity copy for About while keeping the current image Added and replacements selectable', async () => {
+    const onSelect = vi.fn()
+    const onClose = vi.fn()
+    render(<MediaPicker capacity={1} onClose={onClose} onSelect={onSelect} sectionLabel="About image" selectedMediaIds={['media-1']} selectionDisabled={false} showCapacity={false} tenantId="tenant-1" />)
+
+    expect(await screen.findByRole('button', { name: 'Back to About image' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'kitchen.jpg added' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add deck.jpg' })).toBeEnabled()
+    expect(screen.queryByText('1 of 1 in About image')).not.toBeInTheDocument()
+    expect(screen.queryByText('Maximum reached')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add deck.jpg' }))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'media-2' }))
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
 })

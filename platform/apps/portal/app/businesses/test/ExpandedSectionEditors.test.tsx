@@ -3,34 +3,22 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  getMedia: vi.fn(), uploadMedia: vi.fn(), updateSectionContent: vi.fn()
+  updateSectionContent: vi.fn()
 }))
-vi.mock('../../../lib/media', () => ({ getMedia: mocks.getMedia, uploadMedia: mocks.uploadMedia }))
 vi.mock('../../../lib/site', () => ({
   updateSectionContent: mocks.updateSectionContent
 }))
 
-import { AboutEditor } from '../AboutEditor'
 import { ProcessEditor } from '../ProcessEditor'
 import { StatsEditor } from '../StatsEditor'
 
 const theme = { colors: { primary: '#334155', accent: '#0f766e', background: '#f8fafc', text: '#172033' }, headingFont: 'inter' as const, bodyFont: 'inter' as const, cornerStyle: 'soft' as const, contentWidth: 'standard' as const, sectionSpacing: 'comfortable' as const }
-const media = [
-  { id: 'media-a', originalFilename: 'a.png', contentType: 'image/png' as const, sizeBytes: 1, width: 100, height: 50, createdAt: 1, src: 'https://media.test/a.png' },
-  { id: 'media-b', originalFilename: 'b.png', contentType: 'image/png' as const, sizeBytes: 1, width: 100, height: 50, createdAt: 2, src: 'https://media.test/b.png' }
-]
 const definition = (): SiteDefinition => ({ status: 'DRAFT', branding: { siteName: 'Bakery' }, theme, pages: [{ id: 'home', slug: '/', title: 'Home', sections: [
   { id: 'hero', type: 'hero', hidden: false, content: { title: 'Welcome' } },
   { id: 'process-a', type: 'process', hidden: false, content: { heading: 'First steps', intro: 'A intro', items: [{ id: 'process-a-1', title: 'A one', description: 'A description' }] } },
   { id: 'process-b', type: 'process', hidden: false, content: { heading: 'Second steps', intro: 'B intro', items: [{ id: 'process-b-1', title: 'B one', description: 'B description' }, { id: 'process-b-2', title: 'B two' }] } },
   { id: 'stats-a', type: 'stats', hidden: false, content: { heading: 'First highlights', items: [{ id: 'stats-a-1', value: '25+', label: 'Years' }] } },
-  { id: 'stats-b', type: 'stats', hidden: false, content: { heading: 'Second highlights', intro: 'Always ready', items: [{ id: 'stats-b-1', value: '24/7', label: 'Support' }, { id: 'stats-b-2', value: '1,200+', label: 'Orders' }, { id: 'stats-b-3', value: 'Same Day', label: 'Service' }] } },
-  { id: 'cta-a', type: 'cta', hidden: false, content: { heading: 'First CTA' } },
-  { id: 'cta-b', type: 'cta', hidden: false, content: { heading: 'Second CTA', body: 'Call us', buttonLabel: 'Visit', action: { type: 'url', value: 'https://example.com' } } },
-  { id: 'logos-a', type: 'logos', hidden: false, content: { heading: 'First logos', items: [{ id: 'logos-a-1', mediaId: 'media-a', altText: 'First logo' }] } },
-  { id: 'logos-b', type: 'logos', hidden: false, content: { heading: 'Second logos', items: [{ id: 'logos-b-1', mediaId: 'media-b', altText: 'Second logo' }] } },
-  { id: 'about-legacy', type: 'about', hidden: false, content: { heading: 'Our legacy story', body: 'Still here.', imageMediaId: 'media-a', imageAlt: 'Legacy image' } },
-  { id: 'about-rich', type: 'about', hidden: false, content: { heading: 'Our new story', body: 'New here.', imageMediaId: 'media-b', imageAlt: 'New image', imagePosition: 'right', buttonLabel: 'Email us', action: { type: 'email', value: 'hello@example.com' } } }
+  { id: 'stats-b', type: 'stats', hidden: false, content: { heading: 'Second highlights', intro: 'Always ready', items: [{ id: 'stats-b-1', value: '24/7', label: 'Support' }, { id: 'stats-b-2', value: '1,200+', label: 'Orders' }, { id: 'stats-b-3', value: 'Same Day', label: 'Service' }] } }
 ] }] })
 
 const renderEditor = <T extends object>(Editor: React.ComponentType<T>, props: Omit<T, 'pageId' | 'site' | 'tenantId' | 'onCancel' | 'onSaved'> & { sectionId: string }, dirty = vi.fn()) => {
@@ -41,8 +29,6 @@ const renderEditor = <T extends object>(Editor: React.ComponentType<T>, props: O
 describe('expanded section editors', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getMedia.mockResolvedValue({ media, hasMore: false })
-    mocks.uploadMedia.mockResolvedValue({ ...media[1], id: 'media-uploaded' })
     mocks.updateSectionContent.mockResolvedValue(definition())
   })
 
@@ -89,27 +75,4 @@ describe('expanded section editors', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Every highlight needs a value and label')
   })
 
-  it('preserves a legacy About round trip and saves enhanced About actions only to the selected id', async () => {
-    const dirty = renderEditor(AboutEditor, { sectionId: 'about-legacy' })
-    await waitFor(() => expect(dirty).toHaveBeenCalledWith(false))
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-legacy', expect.any(Object)))
-    cleanup()
-    renderEditor(AboutEditor, { sectionId: 'about-rich' })
-    expect(screen.getByLabelText('Image position')).toHaveValue('right')
-    expect(screen.getByLabelText('Action Value')).toHaveValue('hello@example.com')
-    expect(screen.queryByRole('option', { name: 'Lead Form' })).not.toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Button Label'), { target: { value: '' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Button label and action must be provided together')
-    fireEvent.change(screen.getByLabelText('Button Label'), { target: { value: 'Email us' } })
-    fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'phone' } })
-    fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: '(801) 555-1234' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'about-rich', expect.any(Object)))
-    fireEvent.change(screen.getByLabelText('Action Type'), { target: { value: 'url' } })
-    fireEvent.change(screen.getByLabelText('Action Value'), { target: { value: 'https://example.com/contact' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenLastCalledWith('tenant-1', 'home', 'about-rich', expect.objectContaining({ action: { type: 'url', value: 'https://example.com/contact' } })))
-  })
 })

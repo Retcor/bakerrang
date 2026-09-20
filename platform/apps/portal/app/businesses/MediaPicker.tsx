@@ -15,6 +15,7 @@ export interface MediaPickerProps {
   selectionDisabled?: boolean
   sectionLabel?: string
   capacity?: number
+  showCapacity?: boolean
   onSelect: (media: MediaItem) => void
   onClose: () => void
 }
@@ -33,7 +34,7 @@ function CheckIcon () {
   return <svg aria-hidden className="size-3.5 fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]" viewBox="0 0 24 24"><path d="m5 12 5 5 9-11" /></svg>
 }
 
-export function MediaPicker ({ capacity = 20, disabled = false, onClose, onSelect, sectionLabel = 'Gallery', selectedMediaIds, selectionDisabled = false, tenantId }: MediaPickerProps) {
+export function MediaPicker ({ capacity = 20, disabled = false, onClose, onSelect, sectionLabel = 'Gallery', selectedMediaIds, selectionDisabled = false, showCapacity = true, tenantId }: MediaPickerProps) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [libraryState, setLibraryState] = useState<LibraryState>('loading')
   const [media, setMedia] = useState<MediaItem[]>([])
@@ -136,7 +137,7 @@ export function MediaPicker ({ capacity = 20, disabled = false, onClose, onSelec
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3">
-        <div><p className="text-xs tabular-nums text-fg-subtle">{selectedMediaIds.length} of {capacity} in {sectionLabel}</p>{selectionDisabled && <p className="mt-0.5 text-xs font-semibold text-warning-fg">Maximum reached</p>}</div>
+        <div>{showCapacity && <><p className="text-xs tabular-nums text-fg-subtle">{selectedMediaIds.length} of {capacity} in {sectionLabel}</p>{selectionDisabled && <p className="mt-0.5 text-xs font-semibold text-warning-fg">Maximum reached</p>}</>}</div>
         <Button disabled={disabled} onClick={onClose} size="sm" type="button">Done</Button>
       </div>
     </section>
