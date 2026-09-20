@@ -108,6 +108,15 @@
         ],
         "createdAt": "2026-09-20T03:03:23.803Z",
         "reason": "Claude: comp fixture — flagged padding is on the review-only scaffold bar and toolbar/preview context chrome (badge, frame bar, preview pill) carried verbatim from the approved cta/services comps; the designed Contact inspector controls meet the >=8px floor"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/business-hours-inspector.html"
+        ],
+        "createdAt": "2026-09-20T18:07:44.894Z",
+        "reason": "locked builder-rail context chrome (.sec-row/.page-btn) copied verbatim from the approved cta/contact inspector mocks, which carry the same sanctioned cramped-padding ignore; the new schedule rows I own were fixed to >=8px"
       }
     ]
   }

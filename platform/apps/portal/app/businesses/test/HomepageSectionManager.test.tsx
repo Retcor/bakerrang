@@ -8,14 +8,11 @@ const mocks = vi.hoisted(() => ({
   moveSection: vi.fn(),
   removeSection: vi.fn(),
   setSectionVisibility: vi.fn(),
-  updateSectionContent: vi.fn(),
-  upsertHomeGallery: vi.fn(),
-  updateBusinessHours: vi.fn()
+  upsertHomeGallery: vi.fn()
 }))
 
 vi.mock('../../../lib/site', () => mocks)
 
-import { BusinessHoursSectionEditor } from '../BusinessHoursSectionEditor'
 import { PageSectionManager } from '../PageSectionManager'
 import { AddSectionDialog } from '../AddSectionDialog'
 
@@ -66,7 +63,6 @@ describe('Page section manager', () => {
     mocks.moveSection.mockResolvedValue(updated)
     mocks.removeSection.mockResolvedValue(updated)
     mocks.setSectionVisibility.mockResolvedValue(updated)
-    mocks.updateSectionContent.mockResolvedValue(updated)
   })
 
   it('renders exact ordered instances, repeated ordinals, summaries, and visibility', () => {
@@ -331,29 +327,5 @@ describe('Page section manager', () => {
     resolve({ site: updated, sectionId: 'server-gallery-id' })
     await waitFor(() => expect(props.onEditSection).toHaveBeenCalledWith('server-gallery-id'))
     expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section added.')
-  })
-})
-
-describe('section editor identity and Business Hours presentation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mocks.updateSectionContent.mockResolvedValue(updated)
-  })
-
-  it('updates only Business Hours presentation content and leaves Site setup ownership intact', async () => {
-    const onSaved = vi.fn()
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site({ hours: true, businessHoursSection: true })} tenantId="tenant-1" sectionId="hours-id" />)
-    fireEvent.change(screen.getByLabelText('Section heading Optional'), { target: { value: 'Opening times' } })
-    fireEvent.change(screen.getByLabelText('Intro Optional'), { target: { value: 'Drop in.' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'hours-id', { heading: 'Opening times', intro: 'Drop in.' }))
-    expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
-    expect(onSaved).toHaveBeenCalledWith(updated)
-    expect(screen.getByText(/Weekly hours are managed in Site setup/i)).toBeInTheDocument()
-  })
-
-  it('fails closed for a stale or wrong-type section id', () => {
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site({ hours: true })} tenantId="tenant-1" sectionId="gallery-a" />)
-    expect(screen.getByRole('alert')).toHaveTextContent('selected Business Hours section is unavailable')
   })
 })

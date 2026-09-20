@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-state="filled" data-device="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Hours Inspector</title>
+<meta name="description" content="Impeccable comp — narrow-rail Business Hours inspector for the BakerRang Website Builder (Phase 4.0q, draft-native). Presentation fields are editable; the weekly schedule is read-only and edited in More Settings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---- Tokens (verbatim from packages/ui/src/styles/tokens-portal.css) ---- */
+:root{
+  --brand:#fec51c; --brand-hover:#f2b900; --brand-active:#dda600; --brand-ink:#1c1f29; --brand-subtle:#fff8dc;
+  --sidebar:#292b2f; --sidebar-deep:#1c1f29; --sidebar-fg:#f8fafc; --sidebar-muted:#b8bec8; --sidebar-border:#40434a;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-muted:#f8f9fb; --border:#e1e4e9; --border-strong:#c8cdd5;
+  --fg:#202329; --fg-muted:#626975; --fg-subtle:#68707c;
+  --focus:#1769aa; --success:#277a4b; --success-fg:#175033; --success-subtle:#e9f7ef;
+  --warning:#9a6500; --warning-fg:#704900; --warning-subtle:#fff5d6;
+  --danger:#b42318; --danger-fg:#8f1d14; --danger-subtle:#fff0ee;
+  --info:#1769aa; --info-fg:#135887; --info-subtle:#eaf5fc;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem;
+  --shadow-xs:0 1px 2px rgb(28 31 41 / .05); --shadow-sm:0 2px 8px rgb(28 31 41 / .07); --shadow-md:0 12px 32px rgb(28 31 41 / .14);
+  --rail-w:21rem;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--brand-subtle);color:var(--brand-ink);}
+button{font-family:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm);}
+input,textarea,select{font-family:inherit;}
+p{margin:0;} h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.011em;}
+dl,dd{margin:0;}
+
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+.scroll::-webkit-scrollbar{width:10px;height:10px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--surface);border-radius:999px;}
+.scroll::-webkit-scrollbar-thumb:hover{background:#adb4be;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------------- Review scaffold (NOT product UI) ---------------- */
+.review{position:fixed;inset:0 0 auto 0;z-index:100;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:.4rem .75rem;background:var(--sidebar-deep);color:var(--sidebar-fg);font-size:.78rem;box-shadow:var(--shadow-sm);}
+.review .tag{font-weight:700;letter-spacing:.06em;color:var(--brand);text-transform:uppercase;font-size:.75rem;}
+.review .seg{display:inline-flex;background:#33363b;border:1px solid var(--sidebar-border);border-radius:var(--radius-md);padding:2px;gap:2px;flex-wrap:wrap;}
+.review .seg button{border:0;background:transparent;color:var(--sidebar-muted);font-size:.78rem;font-weight:600;padding:.28rem .6rem;border-radius:.3rem;}
+.review .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);}
+.review .hint{color:var(--sidebar-muted);margin-left:auto;max-width:34rem;text-align:right;}
+
+/* ---------------- App shell (context only — LOCKED, not redesigned) ---------------- */
+.app{position:fixed;inset:44px 0 0 0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+.toolbar{display:flex;align-items:center;gap:.75rem;min-height:56px;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0;}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:.9rem;flex:none;}
+.wordmark{font-weight:700;font-size:.9rem;letter-spacing:-.02em;white-space:nowrap;}
+.wordmark b{color:#8a6000;}
+.crumb-sep{color:var(--border-strong);}
+.crumb{font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;}
+.crumb.site{max-width:11rem;overflow:hidden;text-overflow:ellipsis;}
+.badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;padding:.28rem .6rem;border-radius:999px;line-height:1;}
+.badge.warning{background:var(--warning-subtle);color:var(--warning-fg);}
+.tools-right{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+.vp{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface-muted);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);}
+.vp button{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.3rem;}
+.vp button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;border-radius:var(--radius-md);
+  padding:.42rem .7rem;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);transition:background .12s,border-color .12s;}
+.btn:hover{background:var(--surface-muted);}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-muted);}
+.btn.primary{border-color:var(--brand);background:var(--brand);color:var(--brand-ink);}
+.btn.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);}
+.btn.publish{border-color:var(--brand-ink);background:var(--brand-ink);color:#fff;}
+.btn.save[disabled]{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;box-shadow:none;}
+.btn.publish[disabled]{border-color:var(--sidebar);background:var(--sidebar);color:var(--sidebar-muted);cursor:not-allowed;}
+.btn.ghost[disabled]{color:var(--fg-subtle);cursor:not-allowed;background:transparent;}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);}
+.rail{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);background:var(--surface);}
+.canvas{min-width:0;min-height:0;overflow:auto;background:var(--bg);padding:1.5rem;}
+
+/* Preview frame (context) */
+.frame{max-width:100%;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-md);overflow:hidden;}
+.frame-bar{display:flex;align-items:center;gap:.75rem;min-height:36px;padding:0 .75rem;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:.75rem;font-weight:600;color:var(--fg-muted);}
+.frame-bar .dots{display:flex;gap:5px;}
+.frame-bar .dots i{width:8px;height:8px;border-radius:999px;background:var(--border-strong);}
+.frame-bar .live{margin:0 auto;display:inline-flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.07em;}
+.frame-bar .live i{width:7px;height:7px;border-radius:999px;background:var(--success);}
+.frame-cap{color:var(--fg);font-weight:700;}
+.site-nav{display:flex;align-items:center;gap:1rem;padding:1rem 1.75rem;border-bottom:1px solid #eceef1;}
+.site-nav .b{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#1c1f29;}
+.site-nav .b span{color:#8a6000;}
+.site-nav .links{margin-left:auto;display:flex;gap:1.35rem;font-size:.82rem;font-weight:600;color:#5a616c;}
+
+/* Business Hours section render, selected (yellow outline) */
+.hours-live{margin:1.5rem;border-radius:12px;outline:2px solid var(--brand);outline-offset:3px;}
+.hours-panel{padding:2.25rem 2rem;}
+.hours-panel h2{font-size:1.7rem;letter-spacing:-.02em;color:#16181f;}
+.hours-panel .lead{margin-top:.7rem;max-width:34rem;font-size:1rem;line-height:1.6;color:#5c6470;}
+.hours-table{margin-top:1.6rem;max-width:32rem;border:1px solid #e6e8ec;border-radius:14px;overflow:hidden;background:#fff;}
+.hours-table .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;padding:.85rem 1.25rem;border-bottom:1px solid #eef0f3;}
+.hours-table .r:last-child{border-bottom:0;}
+.hours-table .r dt{font-weight:600;color:#20232a;}
+.hours-table .r dd{text-align:right;color:#5c6470;}
+.hours-table .r.closed dd{color:#6b7280;}
+/* preview empty note when no schedule */
+.hours-empty{display:none;margin:1.5rem;padding:1.75rem;border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface-muted);
+  color:var(--fg-muted);font-size:.92rem;line-height:1.55;}
+html[data-state="noschedule"] .hours-live{display:none;}
+html[data-state="noschedule"] .hours-empty{display:block;}
+
+/* ============ RAIL chrome (context) ============ */
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);}
+.page-btn{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;min-height:40px;padding:.4rem .7rem;
+  border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--fg-muted);font-size:.83rem;font-weight:600;text-align:left;}
+.page-btn[aria-current="page"]{border-color:var(--border-strong);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.page-btn .s{font-size:.75rem;font-weight:500;color:var(--fg-subtle);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-top:1.4rem;}
+.sec-head .add-mini{width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.sec-head .add-mini:hover{background:var(--surface-muted);color:var(--fg);}
+.sec-row{display:flex;align-items:center;gap:.4rem;width:100%;min-height:40px;padding:.35rem .3rem .35rem .7rem;margin-top:.25rem;
+  border:1px solid transparent;border-radius:var(--radius-md);color:var(--fg-muted);}
+.sec-row:hover{border-color:var(--border);background:var(--surface-muted);color:var(--fg);}
+.sec-row[aria-current="true"]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background:var(--brand-subtle);color:var(--brand-ink);
+  box-shadow:inset 0 0 0 1px rgb(254 197 28 / .24);}
+.sec-row .t{flex:1;min-width:0;font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sec-row .eye{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.35rem;}
+.sec-row .eye:hover{background:var(--surface);color:var(--fg);}
+
+/* ============ INSPECTOR (shared rail language) ============ */
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.icon.sm{width:15px;height:15px;}
+.insp{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1rem;}
+.insp-head{display:flex;align-items:center;gap:.7rem;}
+.insp-head .mk{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--surface-muted);color:var(--fg-muted);border:1px solid var(--border);}
+.insp-head h2{font-size:1rem;letter-spacing:-.01em;color:var(--fg);}
+.insp-head p{font-size:.78rem;color:var(--fg-subtle);margin-top:1px;}
+
+.field{display:block;margin-top:1rem;}
+.field > .lbl{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--fg);}
+.field > .lbl .opt{font-weight:400;color:var(--fg-subtle);}
+.count{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;font-weight:400;}
+.control{width:100%;margin-top:.4rem;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.5rem .6rem;min-height:40px;}
+.control:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+textarea.control{min-height:60px;resize:vertical;line-height:1.5;}
+
+/* ---- Weekly schedule (read-only, business-profile-owned) ---- */
+/* A hairline sub-group, NOT a nested card; visually distinct from editable inputs:
+   quiet muted surface + dt/dd rows, never an input affordance. */
+.sched{margin-top:1.5rem;padding-top:1.1rem;border-top:1px solid var(--border);}
+.sched-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.sched-head .kicker{margin:0;}
+.shared-pill{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:600;color:var(--fg-muted);
+  border:1px solid var(--border);border-radius:999px;padding:.14rem .5rem;line-height:1;background:var(--surface-muted);}
+.sched-note{margin-top:.45rem;font-size:.78rem;line-height:1.45;color:var(--fg-subtle);}
+.sched-list{margin-top:.7rem;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted);overflow:hidden;}
+.sched-list .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem;align-items:baseline;
+  padding:.55rem .8rem;border-bottom:1px solid var(--border);}
+.sched-list .row:last-child{border-bottom:0;}
+.sched-list .day{font-size:.8rem;font-weight:600;color:var(--fg);}
+.sched-list .time{font-size:.8rem;color:var(--fg-muted);font-variant-numeric:tabular-nums;text-align:right;}
+.sched-list .row.off .time{color:var(--fg-subtle);}
+.edit-hours{display:inline-flex;align-items:center;gap:.4rem;margin-top:.7rem;min-height:36px;padding:.42rem .7rem;
+  border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--fg);font-size:.8rem;font-weight:600;}
+.edit-hours:hover{background:var(--surface-muted);}
+.edit-hours .icon{color:var(--fg-muted);}
+
+/* ---- No-schedule dependency notice (info, not alarm) ---- */
+.dep{display:none;margin-top:.7rem;gap:.6rem;font-size:.8rem;line-height:1.5;color:var(--info-fg);
+  background:var(--info-subtle);border:1px solid color-mix(in srgb,var(--info) 20%,transparent);border-radius:var(--radius-md);padding:.7rem .75rem;}
+.dep .icon{color:var(--info);margin-top:1px;}
+.dep b{color:var(--fg);font-weight:600;}
+
+/* ---- state wiring ---- */
+/* filled / blank : schedule present. noschedule : dependency notice replaces the list. */
+html[data-state="noschedule"] .sched-list,
+html[data-state="noschedule"] .sched-note{display:none;}
+html[data-state="noschedule"] .dep{display:flex;}
+
+/* saving: dim + inert every editable control (Save is toolbar-owned) */
+html[data-state="saving"] .control{pointer-events:none;opacity:.6;}
+html[data-state="saving"] .insp{opacity:.98;}
+
+/* ---------------- Mobile builder ---------------- */
+html[data-device="mobile"] .app{inset:44px auto 0 50%;transform:translateX(-50%);width:414px;border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong);box-shadow:var(--shadow-md);}
+html[data-device="mobile"] .body{grid-template-columns:1fr;}
+html[data-device="mobile"] .canvas{display:none;}
+html[data-device="mobile"] .rail{border-right:0;}
+html[data-device="mobile"] .toolbar{gap:.5rem;padding:.5rem .65rem;}
+html[data-device="mobile"] .vp,html[data-device="mobile"] .btn.preview,html[data-device="mobile"] .crumb.mid,html[data-device="mobile"] .wordmark{display:none;}
+</style>
+</head>
+<body>
+
+<div class="review" role="group" aria-label="Comp review controls">
+  <span class="tag">Review only</span>
+  <div class="seg" id="stateSeg" role="group" aria-label="Inspector state">
+    <button data-go="filled" aria-pressed="true">A · Schedule + copy</button>
+    <button data-go="blank">B · Blank copy</button>
+    <button data-go="noschedule">C · No schedule</button>
+    <button data-go="saving">Saving</button>
+  </div>
+  <div class="seg" id="deviceSeg" role="group" aria-label="Device">
+    <button data-device="desktop" aria-pressed="true">Desktop</button>
+    <button data-device="mobile">Mobile</button>
+  </div>
+  <span class="hint">Schedule is read-only here (owned by More Settings). Edit-hours has the same PLATFORM_ADMIN gate as the section Save, so no unauthorized variant exists — the Portal has no client-side role signal.</span>
+</div>
+
+<div class="app">
+  <!-- Toolbar (LOCKED — context only) -->
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo">B</span>
+      <span class="wordmark">Baker<b>Rang</b></span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb mid">Website</span>
+      <span class="crumb-sep mid" aria-hidden="true">/</span>
+      <span class="crumb site">Cedar &amp; Co Builders</span>
+      <span class="badge warning" id="statusBadge">Unsaved changes</span>
+    </div>
+    <div class="tools-right">
+      <div class="vp" role="group" aria-label="Preview viewport">
+        <button aria-label="Desktop" aria-pressed="true"><svg class="icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8m-4-4v4"/></svg></button>
+        <button aria-label="Tablet" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></button>
+        <button aria-label="Mobile" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="17" rx="2"/><path d="M11 18h2"/></svg></button>
+      </div>
+      <button class="btn ghost preview" disabled>Preview</button>
+      <button class="btn primary save" id="saveBtn">Save</button>
+      <button class="btn publish" disabled><svg class="icon sm" viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>Publish</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- ================= RAIL ================= -->
+    <aside class="rail" aria-label="Website builder controls">
+      <div class="rail-scroll scroll">
+        <span class="kicker">Page</span>
+        <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.15rem;" role="list" aria-label="Website pages">
+          <button class="page-btn" aria-current="page"><span>Home</span><span class="s">6 sections</span></button>
+          <button class="page-btn"><span>About</span><span class="s">4 sections</span></button>
+          <button class="page-btn"><span>Contact</span><span class="s">3 sections</span></button>
+        </div>
+
+        <div class="sec-head">
+          <span class="kicker">Sections</span>
+          <button class="add-mini" aria-label="Add section"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div style="margin-top:.25rem;" role="list" aria-label="Sections on Home">
+          <div class="sec-row"><span class="t">Hero</span><span class="eye" title="Hero is always visible"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span></div>
+          <div class="sec-row"><span class="t">Services</span><button class="eye" aria-label="Hide Services"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row"><span class="t">Testimonials</span><button class="eye" aria-label="Hide Testimonials"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row" aria-current="true"><span class="t">Business Hours</span><button class="eye" aria-label="Hide Business Hours"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+          <div class="sec-row"><span class="t">Contact</span><button class="eye" aria-label="Hide Contact"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></button></div>
+        </div>
+
+        <!-- ===================== BUSINESS HOURS INSPECTOR ===================== -->
+        <section class="insp" aria-label="Business Hours properties">
+          <div class="insp-head">
+            <span class="mk" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div><h2>Business Hours</h2><p>Show your weekly schedule on this page.</p></div>
+          </div>
+
+          <label class="field">
+            <span class="lbl"><span>Section heading <span class="opt">(optional)</span></span><span class="count" id="headingCount">0 / 120</span></span>
+            <input class="control" id="headingInput" maxlength="120" placeholder="Business Hours" value="Visit the workshop">
+          </label>
+
+          <label class="field">
+            <span class="lbl"><span>Intro <span class="opt">(optional)</span></span><span class="count" id="introCount">0 / 300</span></span>
+            <textarea class="control" id="introInput" maxlength="300" placeholder="Add a short line above the schedule.">Drop by any weekday — weekends by appointment.</textarea>
+          </label>
+
+          <!-- ---- Weekly schedule: read-only, owned by More Settings ---- -->
+          <div class="sched">
+            <div class="sched-head">
+              <span class="kicker">Weekly schedule</span>
+              <span class="shared-pill"><svg class="icon sm" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 12h6M12 9v6"/><circle cx="12" cy="12" r="9"/></svg>Shared</span>
+            </div>
+            <p class="sched-note">Used across your whole site. Edited in More&nbsp;Settings, not here.</p>
+
+            <dl class="sched-list" aria-label="Current weekly schedule (read-only)">
+              <div class="row"><dt class="day">Monday</dt><dd class="time">9:00 AM – 5:00 PM</dd></div>
+              <div class="row"><dt class="day">Tuesday</dt><dd class="time">9:00 AM – 5:00 PM</dd></div>
+              <div class="row"><dt class="day">Wednesday</dt><dd class="time">9:00 AM – 5:00 PM</dd></div>
+              <div class="row"><dt class="day">Thursday</dt><dd class="time">9:00 AM – 5:00 PM</dd></div>
+              <div class="row"><dt class="day">Friday</dt><dd class="time">9:00 AM – 5:00 PM</dd></div>
+              <div class="row off"><dt class="day">Saturday</dt><dd class="time">10:00 AM – 2:00 PM</dd></div>
+              <div class="row off"><dt class="day">Sunday</dt><dd class="time">Closed</dd></div>
+            </dl>
+
+            <div class="dep" role="note">
+              <svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v5M12 7h.01"/></svg>
+              <span>No weekly schedule is set yet, so <b>this section stays hidden on the public site</b>. Set the hours in More&nbsp;Settings to make it appear.</span>
+            </div>
+
+            <button type="button" class="edit-hours" id="editHours">
+              <svg class="icon sm" viewBox="0 0 24 24"><path d="M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"/><circle cx="12" cy="12" r="3.2"/></svg>
+              Edit business hours
+            </button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ================= PREVIEW (context) ================= -->
+    <div class="canvas scroll">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="live"><i></i>Live preview</span>
+          <span class="frame-cap">Editing: Business Hours</span>
+        </div>
+        <div class="site">
+          <nav class="site-nav"><span class="b">Cedar &amp; Co <span>Builders</span></span><span class="links"><span>Services</span><span>About</span><span>Contact</span></span></nav>
+          <div class="hours-live" aria-label="Business Hours section, selected">
+            <div class="hours-panel">
+              <h2 id="pvHeading">Visit the workshop</h2>
+              <p class="lead" id="pvIntro">Drop by any weekday — weekends by appointment.</p>
+              <dl class="hours-table">
+                <div class="r"><dt>Monday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                <div class="r"><dt>Tuesday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                <div class="r"><dt>Wednesday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                <div class="r"><dt>Thursday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                <div class="r"><dt>Friday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                <div class="r closed"><dt>Saturday</dt><dd>10:00 AM – 2:00 PM</dd></div>
+                <div class="r closed"><dt>Sunday</dt><dd>Closed</dd></div>
+              </dl>
+            </div>
+          </div>
+          <div class="hours-empty">This section renders nothing on the public page until a weekly schedule is set in More&nbsp;Settings — the presentation you edit here is saved and waiting.</div>
+          <p style="margin:0 1.5rem 1.5rem;font-size:.8rem;color:var(--fg-subtle);">Heading and intro update live as you type. The schedule shown is the current shared More&nbsp;Settings value and is not editable in this inspector.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function setState(s){
+    root.setAttribute('data-state', s);
+    document.querySelectorAll('#stateSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.go===s?'true':'false');});
+    var save=document.getElementById('saveBtn');
+    var badge=document.getElementById('statusBadge');
+    var h=document.getElementById('headingInput');
+    var intro=document.getElementById('introInput');
+    var pvh=document.getElementById('pvHeading');
+    var pvi=document.getElementById('pvIntro');
+    root.setAttribute('data-dirty','true');
+    // Presentation is optional/optional, so Save is enabled except while saving.
+    if(s==='saving'){ save.disabled=true; save.textContent='Saving…'; badge.textContent='Saving…'; }
+    else { save.disabled=false; save.textContent='Save'; badge.textContent='Unsaved changes'; }
+    // Blank state: empty presentation → renderer falls back to the "Business Hours" heading.
+    if(s==='blank'){
+      h.value=''; intro.value='';
+      pvh.textContent='Business Hours';
+      if(pvi){ pvi.style.display='none'; }
+    } else {
+      if(h.value==='' && s!=='saving'){ h.value='Visit the workshop'; }
+      if(intro.value==='' && s!=='saving'){ intro.value='Drop by any weekday — weekends by appointment.'; }
+      pvh.textContent=h.value||'Business Hours';
+      if(pvi){ pvi.style.display=intro.value?'block':'none'; pvi.textContent=intro.value; }
+    }
+    syncCounts();
+    var rs=document.querySelector('.rail-scroll'); if(rs) rs.scrollTop=0;
+  }
+  function setDevice(d){
+    root.setAttribute('data-device', d);
+    document.querySelectorAll('#deviceSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.device===d?'true':'false');});
+  }
+  function syncCounts(){
+    var h=document.getElementById('headingInput'), hc=document.getElementById('headingCount');
+    var i=document.getElementById('introInput'), ic=document.getElementById('introCount');
+    if(h&&hc) hc.textContent=h.value.length+' / 120';
+    if(i&&ic) ic.textContent=i.value.length+' / 300';
+  }
+  document.addEventListener('click',function(e){
+    var g=e.target.closest('#stateSeg [data-go]'); if(g){setState(g.dataset.go);return;}
+    var d=e.target.closest('#deviceSeg [data-device]'); if(d){setDevice(d.dataset.device);}
+  });
+  var h=document.getElementById('headingInput'), pvh=document.getElementById('pvHeading');
+  if(h) h.addEventListener('input',function(){document.getElementById('headingCount').textContent=h.value.length+' / 120'; pvh.textContent=h.value||'Business Hours';});
+  var i=document.getElementById('introInput'), pvi=document.getElementById('pvIntro');
+  if(i) i.addEventListener('input',function(){document.getElementById('introCount').textContent=i.value.length+' / 300'; if(pvi){pvi.style.display=i.value?'block':'none'; pvi.textContent=i.value;}});
+  syncCounts();
+})();
+</script>
+</body>
+</html>

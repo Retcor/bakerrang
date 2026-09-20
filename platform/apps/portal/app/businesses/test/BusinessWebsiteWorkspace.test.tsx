@@ -49,6 +49,19 @@ const baseSite: SiteDefinition = {
   ]
 }
 
+const weeklyHours = {
+  monday: { open: '09:00', close: '17:00' }, tuesday: { open: '09:00', close: '17:00' },
+  wednesday: { open: '09:00', close: '17:00' }, thursday: { open: '09:00', close: '17:00' },
+  friday: { open: '09:00', close: '17:00' }, saturday: { closed: true as const }, sunday: { closed: true as const }
+}
+
+const siteWithBusinessHours = (withSchedule = true): SiteDefinition => {
+  const definition = structuredClone(baseSite)
+  if (withSchedule) definition.businessProfile = { businessHours: weeklyHours }
+  definition.pages[0]!.sections.push({ id: 'business-hours-id', type: 'businessHours', hidden: false, content: { heading: 'Visit the bakery', intro: 'Drop in for something fresh.' } })
+  return definition
+}
+
 const mocks = vi.hoisted(() => ({
   addSection: vi.fn(), getSite: vi.fn(), getSiteDomain: vi.fn(), createSitePreviewToken: vi.fn(), initializeSite: vi.fn(), publishSite: vi.fn(), setSectionVisibility: vi.fn(), unpublishSite: vi.fn(), updateSectionContent: vi.fn(),
   updateBusinessProfile: vi.fn(), updateHomeHero: vi.fn(), upsertHomeAbout: vi.fn(), upsertHomeFaq: vi.fn(), updateHomeServices: vi.fn(), updateHomeContact: vi.fn(), updateHomeGallery: vi.fn(), updateHomeTestimonials: vi.fn(), updateHomeComposition: vi.fn(), updateSiteBranding: vi.fn(), updateSiteTheme: vi.fn(), updateBusinessHours: vi.fn(), updateSocialLinks: vi.fn(), updateCustomCss: vi.fn(), updatePage: vi.fn(), updateSiteHeader: vi.fn(), updateSiteFooter: vi.fn(), updateSiteSeo: vi.fn(), updatePageSeo: vi.fn(), getSiteTemplates: vi.fn(), applySiteTemplate: vi.fn(), getSiteRevisions: vi.fn(), getSiteRevision: vi.fn(), restoreSiteRevision: vi.fn()
@@ -75,7 +88,8 @@ vi.mock('../SitePreviewFrame', () => ({
     const faq = page.sections.find((section) => section.type === 'faq')
     const cta = page.sections.find((section) => section.type === 'cta')
     const contact = page.sections.find((section) => section.type === 'contact')
-    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{about?.type === 'about' && <div data-action-type={about.content.action?.type ?? ''} data-action-value={about.content.action?.value ?? ''} data-position={about.content.imagePosition ?? 'left'} data-testid="about-preview"><h2>{about.content.heading}</h2><p>{about.content.body}</p>{about.content.imageSrc && about.content.imageAlt?.trim() && Number.isSafeInteger(about.content.imageWidth) && Number(about.content.imageWidth) > 0 && Number.isSafeInteger(about.content.imageHeight) && Number(about.content.imageHeight) > 0 && <img alt={about.content.imageAlt} data-testid="about-preview-image" src={about.content.imageSrc} />}{about.content.buttonLabel && about.content.action?.value && <span>{about.content.buttonLabel}</span>}</div>}{process?.type === 'process' && <div data-testid="process-preview">{process.content.heading && <h2>{process.content.heading}</h2>}{process.content.intro && <p>{process.content.intro}</p>}<ol>{process.content.items.map((item, index) => <li key={item.id}>Step {index + 1}: {item.title}: {item.description}</li>)}</ol></div>}{stats?.type === 'stats' && <div data-testid="stats-preview">{stats.content.heading && <h2>{stats.content.heading}</h2>}{stats.content.intro && <p>{stats.content.intro}</p>}<ol>{stats.content.items.map((item) => <li key={item.id}>{item.value}: {item.label}</li>)}</ol></div>}{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{gallery?.type === 'gallery' && <div data-testid="gallery-preview"><h2>{gallery.content.title}</h2><ol>{gallery.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{logos?.type === 'logos' && <div data-testid="logos-preview">{logos.content.heading && <h2>{logos.content.heading}</h2>}<ol>{logos.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('process-id')} type="button">Runtime Steps selection</button><button onClick={() => onSectionSelected('stats-id')} type="button">Runtime Highlights selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('gallery-id')} type="button">Runtime Gallery selection</button><button onClick={() => onSectionSelected('logos-id')} type="button">Runtime Logos selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button></>}</div>
+    const businessHours = page.sections.find((section) => section.type === 'businessHours')
+    return <div data-footer-branding={String(site.footer?.showBranding ?? '')} data-header-brand={site.header?.brandDisplay ?? ''} data-preview-mode={mode} data-testid="shared-site-preview" data-theme-primary={site.theme.colors.primary} data-viewport={viewport}><p>{hero?.type === 'hero' ? hero.content.title : ''}</p>{about?.type === 'about' && <div data-action-type={about.content.action?.type ?? ''} data-action-value={about.content.action?.value ?? ''} data-position={about.content.imagePosition ?? 'left'} data-testid="about-preview"><h2>{about.content.heading}</h2><p>{about.content.body}</p>{about.content.imageSrc && about.content.imageAlt?.trim() && Number.isSafeInteger(about.content.imageWidth) && Number(about.content.imageWidth) > 0 && Number.isSafeInteger(about.content.imageHeight) && Number(about.content.imageHeight) > 0 && <img alt={about.content.imageAlt} data-testid="about-preview-image" src={about.content.imageSrc} />}{about.content.buttonLabel && about.content.action?.value && <span>{about.content.buttonLabel}</span>}</div>}{process?.type === 'process' && <div data-testid="process-preview">{process.content.heading && <h2>{process.content.heading}</h2>}{process.content.intro && <p>{process.content.intro}</p>}<ol>{process.content.items.map((item, index) => <li key={item.id}>Step {index + 1}: {item.title}: {item.description}</li>)}</ol></div>}{stats?.type === 'stats' && <div data-testid="stats-preview">{stats.content.heading && <h2>{stats.content.heading}</h2>}{stats.content.intro && <p>{stats.content.intro}</p>}<ol>{stats.content.items.map((item) => <li key={item.id}>{item.value}: {item.label}</li>)}</ol></div>}{services?.type === 'services' && <div data-testid="services-preview"><h2>{services.content.title}</h2><ol>{services.content.items.map((item) => <li key={item.id}>{item.name}: {item.description}</li>)}</ol></div>}{gallery?.type === 'gallery' && <div data-testid="gallery-preview"><h2>{gallery.content.title}</h2><ol>{gallery.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{logos?.type === 'logos' && <div data-testid="logos-preview">{logos.content.heading && <h2>{logos.content.heading}</h2>}<ol>{logos.content.items.map((item) => <li data-src={item.src ?? ''} key={item.id}>{item.mediaId}: {item.altText}</li>)}</ol></div>}{testimonials?.type === 'testimonials' && <div data-testid="testimonials-preview"><h2>{testimonials.content.title}</h2><ol>{testimonials.content.items.map((item) => <li key={item.id}>{item.customerName}: {item.quote}</li>)}</ol></div>}{faq?.type === 'faq' && <div data-testid="faq-preview"><h2>{faq.content.heading}</h2>{faq.content.intro && <p>{faq.content.intro}</p>}<ol>{faq.content.items.map((item) => <li key={item.id}>{item.question}: {item.answer}</li>)}</ol></div>}{cta?.type === 'cta' && <div data-action-type={cta.content.action?.type ?? ''} data-action-value={cta.content.action?.value ?? ''} data-testid="cta-preview"><h2>{cta.content.heading}</h2>{cta.content.body && <p>{cta.content.body}</p>}{cta.content.buttonLabel && cta.content.action?.value && <span>{cta.content.buttonLabel}</span>}</div>}{businessHours?.type === 'businessHours' && <div data-testid="business-hours-preview">{businessHours.content.heading && <h2>{businessHours.content.heading}</h2>}{businessHours.content.intro && <p>{businessHours.content.intro}</p>}</div>}{contact?.type === 'contact' && <div data-action-type={contact.content.action.type} data-action-value={contact.content.action.type === 'leadForm' ? '' : contact.content.action.value} data-testid="contact-preview"><h2>{contact.content.title}</h2>{contact.content.text && <p>{contact.content.text}</p>}{contact.content.action.type === 'leadForm' ? <span>Lead form preview</span> : <span>{contact.content.buttonLabel}</span>}</div>}{onPageSelected && <button onClick={() => onPageSelected('about')} type="button">Runtime page selection</button>}{onSectionSelected && <><button onClick={() => onSectionSelected('hero-id')} type="button">Runtime Hero selection</button><button onClick={() => onSectionSelected('about-id')} type="button">Runtime section selection</button><button onClick={() => onSectionSelected('process-id')} type="button">Runtime Steps selection</button><button onClick={() => onSectionSelected('stats-id')} type="button">Runtime Highlights selection</button><button onClick={() => onSectionSelected('services-id')} type="button">Runtime Services selection</button><button onClick={() => onSectionSelected('gallery-id')} type="button">Runtime Gallery selection</button><button onClick={() => onSectionSelected('logos-id')} type="button">Runtime Logos selection</button><button onClick={() => onSectionSelected('testimonials-id')} type="button">Runtime Testimonials selection</button><button onClick={() => onSectionSelected('faq-id')} type="button">Runtime FAQ selection</button><button onClick={() => onSectionSelected('cta-id')} type="button">Runtime Call to Action selection</button><button onClick={() => onSectionSelected('contact-id')} type="button">Runtime Contact selection</button><button onClick={() => onSectionSelected('business-hours-id')} type="button">Runtime Business Hours selection</button></>}</div>
   }
 }))
 
@@ -1496,6 +1510,124 @@ describe('Website editor canvas', () => {
     expect(screen.getByLabelText('Where it goes')).toHaveValue('leadForm')
     expect(screen.queryByRole('button', { name: 'Save Contact' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Contact' }).parentElement).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('opens Business Hours from the canvas, previews local presentation edits, and saves one exact section-only payload', async () => {
+    const initial = siteWithBusinessHours()
+    const canonical = siteWithBusinessHours()
+    const savedSection = canonical.pages[0]!.sections.find((section) => section.type === 'businessHours')
+    if (!savedSection || savedSection.type !== 'businessHours') throw new Error('Business Hours fixture missing')
+    savedSection.content = { heading: 'Opening times', intro: 'Come by.' }
+    mocks.getSite.mockResolvedValue(initial)
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Runtime Business Hours selection' }))
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Business Hours' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Visit the bakery')
+    expect(screen.getByText('Shared')).toBeInTheDocument()
+    expect(screen.getByText('Monday')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: '  Opening times  ' } })
+    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: '  Come by.  ' } })
+    expect(screen.getByTestId('business-hours-preview')).toHaveTextContent('Opening times')
+    expect(screen.getByTestId('business-hours-preview')).toHaveTextContent('Come by.')
+    expect(mocks.updateSectionContent).not.toHaveBeenCalled()
+    expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'business-hours-id', { heading: 'Opening times', intro: 'Come by.' })
+    expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Opening times')
+    expect(screen.getByLabelText(/Intro/)).toHaveValue('Come by.')
+    expect(screen.getByText('Monday')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.queryByText(/Business Hours saved/i)).not.toBeInTheDocument()
+  })
+
+  it('opens a deep-linked Business Hours section directly in the draft-native inspector', async () => {
+    navigation.search = '?editor=page&pageId=home&sectionId=business-hours-id'
+    mocks.getSite.mockResolvedValue(siteWithBusinessHours())
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Business Hours' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Visit the bakery')
+    expect(screen.getByRole('button', { name: 'Business Hours' }).parentElement).toHaveAttribute('aria-current', 'true')
+    expect(screen.queryByText('Editing coming soon')).not.toBeInTheDocument()
+  })
+
+  it('keeps presentation editable without a schedule and omits blank fields from Save', async () => {
+    const initial = siteWithBusinessHours(false)
+    const canonical = siteWithBusinessHours(false)
+    const canonicalSection = canonical.pages[0]!.sections.find((section) => section.type === 'businessHours')
+    if (!canonicalSection || canonicalSection.type !== 'businessHours') throw new Error('Business Hours fixture missing')
+    canonicalSection.content = {}
+    mocks.getSite.mockResolvedValue(initial)
+    mocks.updateSectionContent.mockResolvedValue(canonical)
+
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Runtime Business Hours selection' }))
+    expect(screen.getByRole('note')).toHaveTextContent('No weekly schedule is set yet')
+    expect(screen.getByRole('button', { name: 'Edit business hours' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: '   ' } })
+    fireEvent.change(screen.getByLabelText(/Intro/), { target: { value: '   ' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledOnce())
+    expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'business-hours-id', {})
+    expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
+  })
+
+  it('opens global Business Hours immediately from a clean section inspector', async () => {
+    mocks.getSite.mockResolvedValue(siteWithBusinessHours())
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Runtime Business Hours selection' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit business hours' }))
+
+    expect(await screen.findByText('Set the weekly schedule used across your site and in search results. Page presentation is managed from each Business Hours section.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Monday opening time')).toHaveValue('09:00')
+    expect(screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument()
+  })
+
+  it('guards global Business Hours navigation, preserving on cancel and discarding on confirm', async () => {
+    mocks.getSite.mockResolvedValue(siteWithBusinessHours())
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Runtime Business Hours selection' }))
+    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: 'Unsaved opening times' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit business hours' }))
+
+    expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Unsaved opening times')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit business hours' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+
+    expect(await screen.findByText('Set the weekly schedule used across your site and in search results. Page presentation is managed from each Business Hours section.')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Unsaved opening times')).not.toBeInTheDocument()
+  })
+
+  it('retains a rejected Business Hours draft and dirty state for retry', async () => {
+    const { ApiError } = await import('../../../lib/api')
+    const initial = siteWithBusinessHours()
+    const canonical = siteWithBusinessHours()
+    const canonicalSection = canonical.pages[0]!.sections.find((section) => section.type === 'businessHours')
+    if (!canonicalSection || canonicalSection.type !== 'businessHours') throw new Error('Business Hours fixture missing')
+    canonicalSection.content = { heading: 'Saved hours', intro: 'Drop in for something fresh.' }
+    mocks.getSite.mockResolvedValue(initial)
+    mocks.updateSectionContent.mockRejectedValueOnce(new ApiError(400, { error: 'Review the Business Hours copy.' })).mockResolvedValueOnce(canonical)
+    render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Runtime Business Hours selection' }))
+    fireEvent.change(screen.getByLabelText(/Section heading/), { target: { value: 'Saved hours' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Review the Business Hours copy.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue('Saved hours')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('keeps a dirty Hero draft when the preview selects that same Hero', async () => {
