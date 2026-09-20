@@ -313,7 +313,6 @@ describe('Website editor canvas', () => {
     render(<BusinessWebsite autoLoad tenantId="tenant-1" />)
     const inspector = await screen.findByRole('region', { name: `${heading} properties` })
     expect(within(inspector).getByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
-    expect(screen.queryByText('Editing coming soon')).not.toBeInTheDocument()
     expect(screen.queryByTestId('website-editor-actions')).not.toBeInTheDocument()
   })
 
@@ -648,7 +647,6 @@ describe('Website editor canvas', () => {
     expect(within(inspector).getByRole('heading', { level: 2, name: 'About' })).toBeInTheDocument()
     expect(screen.getByLabelText('Heading')).toHaveValue('About')
     expect(screen.getByLabelText('Body')).toHaveValue('Our story')
-    expect(screen.queryByText('Editing coming soon')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'About' }).parentElement).toHaveAttribute('aria-current', 'true')
   })
 
@@ -1554,7 +1552,6 @@ describe('Website editor canvas', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Business Hours' })).toBeInTheDocument()
     expect(screen.getByLabelText(/Section heading/)).toHaveValue('Visit the bakery')
     expect(screen.getByRole('button', { name: 'Business Hours' }).parentElement).toHaveAttribute('aria-current', 'true')
-    expect(screen.queryByText('Editing coming soon')).not.toBeInTheDocument()
   })
 
   it('keeps presentation editable without a schedule and omits blank fields from Save', async () => {
@@ -1661,7 +1658,6 @@ describe('Website editor canvas', () => {
     await waitFor(() => expect(navigation.replace).toHaveBeenLastCalledWith('/businesses/tenant-1/website?editor=page&pageId=home&sectionId=about-id', { scroll: false }))
     const inspector = screen.getByRole('region', { name: 'About properties' })
     expect(within(inspector).getByRole('heading', { name: 'About' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Open existing controls' })).not.toBeInTheDocument()
   })
 
   it('uses real iframe viewport dimensions instead of transform scaling', async () => {

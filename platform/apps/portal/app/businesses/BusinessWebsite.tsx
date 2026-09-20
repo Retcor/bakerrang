@@ -13,7 +13,6 @@ import { BrandingEditor } from './BrandingEditor'
 import { BusinessHoursEditor } from './BusinessHoursEditor'
 import { BusinessProfileEditor } from './BusinessProfileEditor'
 import { CustomCssEditor } from './CustomCssEditor'
-import { HeroEditor } from './HeroEditor'
 import { HeaderEditor } from './HeaderEditor'
 import { FooterEditor } from './FooterEditor'
 import { sectionDefinitions } from './sectionDefinitions'
@@ -62,7 +61,7 @@ function publishedDate (timestamp: number | undefined) {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(timestamp)
 }
 
-function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerChange, onDirtyChange, onEditSection, onLivePreview, onPreviewPage, onRefresh, onSaved, onSelectSeoContext, pageId, sectionId, site, tenantId }: {
+function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerChange, onDirtyChange, onEditSection, onLivePreview, onPreviewPage, onRefresh, onSaved, onSelectSeoContext, pageId, site, tenantId }: {
   editor: WebsiteEditorId
   onBackToPages: (pageId?: string) => void
   onCancel: () => void
@@ -75,7 +74,6 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerCha
   onSaved: (site: SiteDefinition, successMessage?: string, offerHomePreview?: boolean) => void
   onSelectSeoContext: (pageId?: string) => void
   pageId?: string
-  sectionId?: string
   site: SiteDefinition
   tenantId: string
 }) {
@@ -84,13 +82,7 @@ function ActiveWebsiteEditor ({ editor, onBackToPages, onCancel, onControllerCha
     if (!pageId) return <StatusMessage tone="error">Choose a page from Pages.</StatusMessage>
     const page = site.pages.find((candidate) => candidate.id === pageId)
     if (!page) return <StatusMessage tone="error">This page is no longer available. Return to Pages and choose another page.</StatusMessage>
-    if (!sectionId) return <PageSectionManager onBack={onCancel} onEditSection={onEditSection} onPreview={() => onPreviewPage(pageId)} onRefresh={onRefresh} onSaved={(next) => onSaved(next)} pageId={pageId} site={site} tenantId={tenantId} />
-    const section = page.sections.find((candidate) => candidate.id === sectionId)
-    if (!section) return <PageSectionManager onBack={onCancel} onEditSection={onEditSection} onPreview={() => onPreviewPage(pageId)} onRefresh={onRefresh} onSaved={(next) => onSaved(next)} pageId={pageId} site={site} tenantId={tenantId} />
-    const sectionEditor = sectionDefinitions[section.type].editor
-    switch (sectionEditor) {
-      case 'hero': return <HeroEditor onCancel={onBackToPages} onDirtyChange={onDirtyChange} onSaved={onSaved} pageId={pageId} sectionId={sectionId} site={site} tenantId={tenantId} />
-    }
+    return <PageSectionManager onBack={onCancel} onEditSection={onEditSection} onPreview={() => onPreviewPage(pageId)} onRefresh={onRefresh} onSaved={(next) => onSaved(next)} pageId={pageId} site={site} tenantId={tenantId} />
   }
   switch (editor) {
     case 'branding': return <BrandingEditor chrome="rail" onBack={onCancel} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onSaved={onSaved} site={site} tenantId={tenantId} />
@@ -146,10 +138,6 @@ function WebsiteOverview ({ domain, onManagePages, onUnpublish, pending, site, t
   )
 }
 
-function DeferredSectionInspector ({ onOpenExistingControls, section }: { onOpenExistingControls: () => void, section: SiteSection }) {
-  return <section aria-label={`${sectionDefinitions[section.type].label} properties`} className="border-t border-border pt-5"><p className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">{sectionDefinitions[section.type].label}</p><h2 className="mt-2 text-base font-semibold tracking-tight text-fg">Editing coming soon</h2><p className="mt-2 text-sm leading-6 text-fg-muted">This section is visible in the live canvas. Its existing controls remain available while its draft-native inspector is prepared.</p><Button className="mt-4" onClick={onOpenExistingControls} size="sm" variant="secondary">Open existing controls</Button></section>
-}
-
 export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsiteProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -173,7 +161,6 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const [pendingPane, setPendingPane] = useState<{ editor: WebsitePaneId, pageId?: string, sectionId?: string } | null>(null)
   const [canvasSelection, setCanvasSelection] = useState<{ pageId?: string, sectionId?: string }>({ pageId: queryPageId, sectionId: querySectionId })
   const [showSectionManager, setShowSectionManager] = useState(false)
-  const [showLegacySectionInspector, setShowLegacySectionInspector] = useState(false)
   const [addingSection, setAddingSection] = useState(false)
   const [pendingAddType, setPendingAddType] = useState<SectionType | null>(null)
   const [addBusy, setAddBusy] = useState(false)
@@ -237,7 +224,6 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
     const query = params.toString()
     setCanvasSelection({ pageId, sectionId })
     setShowSectionManager(nextEditor === 'page' && Boolean(pageId) && !sectionId)
-    setShowLegacySectionInspector(false)
     setMediaPickerSectionId(null)
     setMoreSettingsOpen(false)
     setSiteToolsMenuOpen(false)
@@ -910,10 +896,9 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
   const showCtaInspector = Boolean(selectedCtaSection && (!editor || editor === 'page'))
   const showContactInspector = Boolean(selectedContactSection && (!editor || editor === 'page'))
   const showBusinessHoursInspector = Boolean(selectedBusinessHoursSection && (!editor || editor === 'page'))
-  const showDeferredSectionInspector = Boolean(editor === 'page' && selectedSection && !selectedHero && !selectedAboutSection && !selectedProcessSection && !selectedStatsSection && !selectedServicesSection && !selectedGallerySection && !selectedLogosSection && !selectedTestimonialsSection && !selectedFaqSection && !selectedCtaSection && !selectedContactSection && !selectedBusinessHoursSection && !showLegacySectionInspector)
   const activeToolEditor = activeSiteTool ? <ActiveWebsiteEditor editor={activeSiteTool} key={`${activeSiteTool}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={backToSiteTools} onControllerChange={setToolController} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onLivePreview={applyLivePreview} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={activeSiteTool === 'seo' ? queryPageId : undefined} site={site} tenantId={tenantId} /> : null
   // Non-migrated editors remain in their established card presentation.
-  const legacyInspector = editor && !activeSiteTool && !fullScreenToolId && !showHeroInspector && !showAboutInspector && !showProcessInspector && !showStatsInspector && !showServicesInspector && !showGalleryInspector && !showLogosInspector && !showTestimonialsInspector && !showFaqInspector && !showCtaInspector && !showContactInspector && !showBusinessHoursInspector && !showDeferredSectionInspector ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? activePage.id : undefined} sectionId={editor === 'page' ? selectedSectionId : undefined} site={site} tenantId={tenantId} /> : null
+  const legacyInspector = editor && !activeSiteTool && !fullScreenToolId && !showHeroInspector && !showAboutInspector && !showProcessInspector && !showStatsInspector && !showServicesInspector && !showGalleryInspector && !showLogosInspector && !showTestimonialsInspector && !showFaqInspector && !showCtaInspector && !showContactInspector && !showBusinessHoursInspector ? <ActiveWebsiteEditor editor={editor} key={`${editor}:${activePage.id}:${selectedSectionId ?? 'manager'}:${editorSessionRevision}`} onBackToPages={(pageId) => typeof pageId === 'string' ? selectPage(pageId) : selectEditor('pages')} onCancel={() => selectEditor('overview')} onDirtyChange={handleDirtyChange} onEditSection={(sectionId) => selectCanvasSection(sectionId)} onPreviewPage={handlePreview} onRefresh={refreshWorkingSite} onSaved={handleEditorSaved} onSelectSeoContext={selectSeoContext} pageId={editor === 'page' || editor === 'seo' ? activePage.id : undefined} site={site} tenantId={tenantId} /> : null
   const inspector = showHeroInspector && selectedHero
     ? <HeroDraftInspector hero={selectedHero} onChange={changeHero} saving={pending === 'saveHero'} />
     : showAboutInspector && selectedAboutSection
@@ -938,9 +923,7 @@ export function BusinessWebsite ({ autoLoad = false, tenantId }: BusinessWebsite
                   ? <ContactDraftInspector onChange={changeContact} saving={pending === 'saveContact'} section={selectedContactSection} />
                   : showBusinessHoursInspector && selectedBusinessHoursSection
                     ? <BusinessHoursDraftInspector hours={draftSite.businessProfile?.businessHours} onChange={changeBusinessHours} onEditSchedule={() => selectEditor('businessHours')} saving={pending === 'saveBusinessHours'} section={selectedBusinessHoursSection} />
-                    : showDeferredSectionInspector && selectedSection
-                      ? <DeferredSectionInspector onOpenExistingControls={() => setShowLegacySectionInspector(true)} section={selectedSection} />
-                      : legacyInspector ?? <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />
+                    : legacyInspector ?? <WebsiteOverview domain={domain} onManagePages={() => selectEditor('pages')} onUnpublish={unpublish} pending={pending} site={site} tenantId={tenantId} />
   const visibilityDisabled = editorDirty || Boolean(pending) || addBusy || pendingAddType !== null
   const visibilityDisabledReason = editorDirty
     ? 'Save or discard your changes first.'
