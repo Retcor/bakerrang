@@ -58,12 +58,17 @@ describe('TemplatesEditor', () => {
     renderEditor()
     const frame = await screen.findByTitle('Bold template preview') as HTMLIFrameElement
     const postMessage = vi.spyOn(frame.contentWindow as Window, 'postMessage')
-    fireEvent(window, new MessageEvent('message', { origin: window.location.origin, source: frame.contentWindow, data: { type: 'READY' } }))
-    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'INIT',
-      mode: 'TEMPLATE_PREVIEW',
-      siteDefinition: expect.objectContaining({ customCss: site.customCss, scopedCustomCss: site.scopedCustomCss, pages: site.pages })
-    }), window.location.origin)
+    // Re-dispatch inside waitFor: under load the frame's window `message` listener may not be
+    // attached the instant we fire, and a one-shot READY would be lost (the READY→INIT handshake
+    // is guarded by readySourceRef, so extra dispatches are harmless once it lands).
+    await waitFor(() => {
+      fireEvent(window, new MessageEvent('message', { origin: window.location.origin, source: frame.contentWindow, data: { type: 'READY' } }))
+      expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'INIT',
+        mode: 'TEMPLATE_PREVIEW',
+        siteDefinition: expect.objectContaining({ customCss: site.customCss, scopedCustomCss: site.scopedCustomCss, pages: site.pages })
+      }), window.location.origin)
+    })
   })
 
   it('confirms once and installs the canonical response', async () => {
