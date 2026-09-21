@@ -126,6 +126,10 @@ export const createTenantRouter = (deps = {}) => {
     (req) => sites.listSiteRevisions(req.params.tenantId)
   ))
 
+  router.get('/:tenantId/site/revisions/:revisionId', platformAdmin, noStore, handle(
+    (req) => sites.getRevisionDefinition(req.params.tenantId, req.params.revisionId)
+  ))
+
   router.post('/:tenantId/site/revisions/:revisionId/restore', platformAdmin, handle(
     (req) => sites.restoreSiteRevision(req.params.tenantId, req.params.revisionId, actor(req))
   ))

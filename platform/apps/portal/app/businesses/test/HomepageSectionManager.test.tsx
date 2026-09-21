@@ -8,15 +8,11 @@ const mocks = vi.hoisted(() => ({
   moveSection: vi.fn(),
   removeSection: vi.fn(),
   setSectionVisibility: vi.fn(),
-  updateSectionContent: vi.fn(),
-  upsertHomeGallery: vi.fn(),
-  updateBusinessHours: vi.fn()
+  upsertHomeGallery: vi.fn()
 }))
 
 vi.mock('../../../lib/site', () => mocks)
 
-import { BusinessHoursSectionEditor } from '../BusinessHoursSectionEditor'
-import { GalleryEditor } from '../GalleryEditor'
 import { PageSectionManager } from '../PageSectionManager'
 import { AddSectionDialog } from '../AddSectionDialog'
 
@@ -67,7 +63,6 @@ describe('Page section manager', () => {
     mocks.moveSection.mockResolvedValue(updated)
     mocks.removeSection.mockResolvedValue(updated)
     mocks.setSectionVisibility.mockResolvedValue(updated)
-    mocks.updateSectionContent.mockResolvedValue(updated)
   })
 
   it('renders exact ordered instances, repeated ordinals, summaries, and visibility', () => {
@@ -265,10 +260,11 @@ describe('Page section manager', () => {
     renderManager(site({ hours: true, contact: true, businessHoursSection: true }))
     fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
     const dialog = screen.getByRole('dialog', { name: 'Add section' })
-    expect(within(dialog).getAllByRole('button', { name: 'Add' })).toHaveLength(12)
+    expect(within(dialog).getAllByRole('button', { name: 'Add' })).toHaveLength(11)
     for (const group of ['Core', 'Content', 'Media', 'Trust', 'Conversion', 'Business']) expect(within(dialog).getByText(group)).toBeInTheDocument()
     expect(within(dialog).getAllByText('Already added').length).toBeGreaterThan(1)
-    expect(within(dialog).getAllByRole('button', { name: 'Add' })[0]).toBeDisabled()
+    expect(within(dialog).queryByText('Hero')).not.toBeInTheDocument()
+    expect(within(dialog).getAllByRole('button', { name: 'Add' })[0]).toBeEnabled()
     expect(within(dialog).getAllByRole('button', { name: 'Add' })[1]).toBeEnabled()
     expect(within(dialog).getByText(/Business Hours/).closest('div')!).toBeInTheDocument()
     fireEvent.keyDown(dialog, { key: 'Escape' })
@@ -280,16 +276,16 @@ describe('Page section manager', () => {
     const { rerender } = render(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ oneAbout: true })} tenantId="tenant-1" />)
     const dialog = screen.getByRole('dialog', { name: 'Add section' })
     let buttons = within(dialog).getAllByRole('button', { name: 'Add' })
-    expect(buttons[0]).toBeDisabled()
-    expect(buttons.slice(1, 11).every((button) => !button.hasAttribute('disabled'))).toBe(true)
-    expect(buttons[11]).toBeDisabled()
+    expect(buttons).toHaveLength(11)
+    expect(buttons.slice(0, 10).every((button) => !button.hasAttribute('disabled'))).toBe(true)
+    expect(buttons[10]).toBeDisabled()
     rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ hours: true })} tenantId="tenant-1" />)
     buttons = within(screen.getByRole('dialog', { name: 'Add section' })).getAllByRole('button', { name: 'Add' })
-    expect(buttons[11]).toBeEnabled()
+    expect(buttons[10]).toBeEnabled()
     rerender(<AddSectionDialog onAdded={onAdded} onClose={onClose} onRefresh={onRefresh} open pageId="home" site={site({ hours: true, contact: true, businessHoursSection: true })} tenantId="tenant-1" />)
     buttons = within(screen.getByRole('dialog', { name: 'Add section' })).getAllByRole('button', { name: 'Add' })
-    expect(buttons[9]).toBeDisabled()
-    expect(buttons[11]).toBeDisabled()
+    expect(buttons[8]).toBeDisabled()
+    expect(buttons[10]).toBeDisabled()
   })
 
   it('keeps every new type addable after an instance already exists', () => {
@@ -331,36 +327,5 @@ describe('Page section manager', () => {
     resolve({ site: updated, sectionId: 'server-gallery-id' })
     await waitFor(() => expect(props.onEditSection).toHaveBeenCalledWith('server-gallery-id'))
     expect(props.onSaved).toHaveBeenCalledWith(updated, 'Section added.')
-  })
-})
-
-describe('section editor identity and Business Hours presentation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mocks.updateSectionContent.mockResolvedValue(updated)
-  })
-
-  it('edits the selected repeated gallery and writes its exact id', async () => {
-    render(<GalleryEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site()} tenantId="tenant-1" sectionId="gallery-b" />)
-    fireEvent.change(screen.getByLabelText('Section Heading'), { target: { value: 'Second gallery updated' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'gallery-b', expect.objectContaining({ title: 'Second gallery updated' })))
-  })
-
-  it('updates only Business Hours presentation content and leaves Site setup ownership intact', async () => {
-    const onSaved = vi.fn()
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={onSaved} pageId="home" site={site({ hours: true, businessHoursSection: true })} tenantId="tenant-1" sectionId="hours-id" />)
-    fireEvent.change(screen.getByLabelText('Section heading Optional'), { target: { value: 'Opening times' } })
-    fireEvent.change(screen.getByLabelText('Intro Optional'), { target: { value: 'Drop in.' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(mocks.updateSectionContent).toHaveBeenCalledWith('tenant-1', 'home', 'hours-id', { heading: 'Opening times', intro: 'Drop in.' }))
-    expect(mocks.updateBusinessHours).not.toHaveBeenCalled()
-    expect(onSaved).toHaveBeenCalledWith(updated)
-    expect(screen.getByText(/Weekly hours are managed in Site setup/i)).toBeInTheDocument()
-  })
-
-  it('fails closed for a stale or wrong-type section id', () => {
-    render(<BusinessHoursSectionEditor onCancel={() => undefined} onSaved={() => undefined} pageId="home" site={site({ hours: true })} tenantId="tenant-1" sectionId="gallery-a" />)
-    expect(screen.getByRole('alert')).toHaveTextContent('selected Business Hours section is unavailable')
   })
 })

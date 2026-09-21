@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en" data-view="inspector" data-state="normal" data-device="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery Inspector</title>
+<meta name="description" content="Impeccable comp — draft-native Gallery inspector + rail media picker for the BakerRang Website Builder (Phase 4.0m). Left rail only; toolbar/shell/iframe are locked context.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#fec51c; --brand-hover:#f2b900; --brand-ink:#1c1f29; --brand-subtle:#fff8dc;
+  --sidebar-deep:#1c1f29; --sidebar-fg:#f8fafc; --sidebar-muted:#b8bec8; --sidebar-border:#40434a;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-muted:#f8f9fb; --border:#e1e4e9; --border-strong:#c8cdd5;
+  --fg:#202329; --fg-muted:#626975; --fg-subtle:#68707c;
+  --focus:#1769aa; --success:#277a4b; --success-fg:#175033; --success-subtle:#e9f7ef;
+  --warning:#9a6500; --warning-fg:#704900; --warning-subtle:#fff5d6;
+  --danger:#b42318; --danger-fg:#8f1d14; --danger-subtle:#fff0ee;
+  --info:#1769aa; --info-fg:#135887; --info-subtle:#eaf5fc;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem;
+  --shadow-xs:0 1px 2px rgb(28 31 41 / .05); --shadow-sm:0 2px 8px rgb(28 31 41 / .07); --shadow-md:0 12px 32px rgb(28 31 41 / .14);
+  --rail-w:21rem;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--brand-subtle);color:var(--brand-ink);}
+button{font-family:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--radius-sm);}
+input{font-family:inherit;}
+p{margin:0;} h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.011em;}
+img{display:block;}
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+.scroll::-webkit-scrollbar{width:10px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--surface);border-radius:999px;}
+
+/* Review scaffold (NOT product UI) */
+.review{position:fixed;inset:0 0 auto 0;z-index:100;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:.5rem .75rem;background:var(--sidebar-deep);color:var(--sidebar-fg);font-size:.78rem;box-shadow:var(--shadow-sm);}
+.review .tag{font-weight:700;letter-spacing:.06em;color:var(--brand);text-transform:uppercase;font-size:.75rem;}
+.review .seg{display:inline-flex;background:#33363b;border:1px solid var(--sidebar-border);border-radius:var(--radius-md);padding:2px;gap:2px;flex-wrap:wrap;}
+.review .seg button{border:0;background:transparent;color:var(--sidebar-muted);font-size:.78rem;font-weight:600;padding:.3rem .6rem;border-radius:.3rem;}
+.review .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);}
+.review .hint{color:var(--sidebar-muted);margin-left:auto;}
+
+/* App shell (context only — LOCKED) */
+.app{position:fixed;inset:44px 0 0 0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+.toolbar{display:flex;align-items:center;gap:.75rem;min-height:56px;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0;}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:.9rem;flex:none;}
+.wordmark{font-weight:700;font-size:.9rem;letter-spacing:-.02em;white-space:nowrap;}
+.wordmark b{color:#8a6000;}
+.crumb-sep{color:var(--border-strong);}
+.crumb{font-size:.85rem;font-weight:600;color:var(--fg);white-space:nowrap;}
+.crumb.site{max-width:11rem;overflow:hidden;text-overflow:ellipsis;}
+.badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;padding:.32rem .6rem;border-radius:999px;line-height:1;}
+.badge.warning{background:var(--warning-subtle);color:var(--warning-fg);}
+.tools-right{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+.vp{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface-muted);border-radius:var(--radius-md);}
+.vp button{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.3rem;}
+.vp button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-xs);}
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;border-radius:var(--radius-md);padding:.42rem .7rem;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);}
+.btn:hover{background:var(--surface-muted);}
+.btn.primary{border-color:var(--brand);background:var(--brand);color:var(--brand-ink);}
+.btn.publish{border-color:var(--brand-ink);background:var(--brand-ink);color:#fff;}
+.btn.save[disabled]{background:var(--surface-muted);border-color:var(--border);color:var(--fg-subtle);cursor:not-allowed;}
+.btn.publish[disabled]{border-color:#292b2f;background:#292b2f;color:var(--sidebar-muted);cursor:not-allowed;}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--fg-muted);}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);}
+.rail{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);background:var(--surface);}
+.canvas{min-width:0;min-height:0;overflow:auto;background:var(--bg);padding:1.5rem;}
+.frame{max-width:100%;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-md);overflow:hidden;}
+.frame-bar{display:flex;align-items:center;gap:.75rem;min-height:36px;padding:0 .75rem;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:.75rem;font-weight:600;color:var(--fg-muted);}
+.frame-bar .dots{display:flex;gap:5px;}.frame-bar .dots i{width:8px;height:8px;border-radius:999px;background:var(--border-strong);}
+.frame-bar .live{margin:0 auto;display:inline-flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.07em;}
+.frame-bar .live i{width:7px;height:7px;border-radius:999px;background:var(--success);}
+.cap{text-align:right;color:var(--fg);font-weight:700;}
+.site-nav{display:flex;align-items:center;gap:1rem;padding:1rem 1.75rem;border-bottom:1px solid #eceef1;}
+.site-nav .b{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#1c1f29;}.site-nav .b span{color:#8a6000;}
+.site-nav .links{margin-left:auto;display:flex;gap:1.35rem;font-size:.82rem;font-weight:600;color:#5a616c;}
+.gl-live{margin:1.5rem;border-radius:12px;outline:2px solid var(--brand);outline-offset:3px;padding:1.75rem 1.5rem;}
+.gl-live h2{font-size:1.5rem;letter-spacing:-.02em;color:#16181f;}
+.gl-grid{margin-top:1.1rem;display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;}
+.gl-grid .cell{aspect-ratio:4/3;border-radius:10px;background:#dfe3ea center/cover no-repeat;}
+html[data-state="empty"] .gl-live{display:none;}
+html[data-state="empty"] .gl-empty{display:block;}
+.gl-empty{display:none;margin:2.5rem 1.5rem;text-align:center;color:var(--fg-subtle);font-size:.85rem;}
+
+/* Rail chrome (context) */
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-top:1.4rem;}
+.sec-row{display:flex;align-items:center;gap:.4rem;width:100%;min-height:40px;padding:.35rem .3rem .35rem .7rem;margin-top:.25rem;border:1px solid transparent;border-radius:var(--radius-md);color:var(--fg-muted);}
+.sec-row[aria-current="true"]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background:var(--brand-subtle);color:var(--brand-ink);box-shadow:inset 0 0 0 1px rgb(254 197 28 / .24);}
+.sec-row .t{flex:1;min-width:0;font-size:.83rem;font-weight:600;}
+.sec-row .eye{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:.35rem;}
+
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.icon.sm{width:15px;height:15px;}
+
+/* Inspector */
+.insp{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1rem;}
+.insp-head{display:flex;align-items:center;gap:.7rem;}
+.insp-head .mk{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--surface-muted);color:var(--fg-muted);border:1px solid var(--border);}
+.insp-head h2{font-size:1rem;color:var(--fg);}
+.insp-head p{font-size:.78rem;color:var(--fg-subtle);margin-top:1px;}
+.field{display:block;margin-top:1rem;}
+.field > .lbl{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--fg);}
+.count{font-size:.75rem;color:var(--fg-subtle);font-variant-numeric:tabular-nums;font-weight:400;}
+.control{width:100%;margin-top:.4rem;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.5rem .6rem;min-height:40px;}
+.control:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+.items-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:1.5rem;}
+.items-head .n{font-size:.75rem;font-weight:600;color:var(--fg-subtle);font-variant-numeric:tabular-nums;}
+
+/* Selected image list — one bordered container, hairline dividers (NOT nested cards) */
+.items{list-style:none;margin:.55rem 0 0;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);}
+.item{display:grid;grid-template-columns:4.25rem 1fr;gap:.7rem;padding:.7rem;}
+.item + .item{border-top:1px solid var(--border);}
+.thumb{aspect-ratio:4/3;border-radius:6px;background:#dfe3ea center/cover no-repeat;border:1px solid var(--border);}
+.item .r-lbl{display:flex;align-items:baseline;justify-content:space-between;font-size:.76rem;font-weight:600;color:var(--fg);}
+.item .r-lbl .req{color:var(--danger-fg);font-weight:700;}
+.item .control{min-height:36px;margin-top:.3rem;}
+.acts{display:flex;align-items:center;gap:2px;margin-top:.45rem;}
+.acts .sp{flex:1;}
+.iconbtn{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--fg-muted);border-radius:var(--radius-sm);}
+.iconbtn:hover{background:var(--surface-muted);color:var(--fg);}
+.iconbtn:disabled{opacity:.32;cursor:not-allowed;}
+.iconbtn.danger:hover{background:var(--danger-subtle);color:var(--danger);}
+.rowmiss{margin-top:.35rem;font-size:.75rem;color:var(--warning-fg);}   /* alt-text missing hint on a row */
+
+.add{display:inline-flex;align-items:center;gap:.4rem;margin-top:.75rem;width:100%;justify-content:center;min-height:42px;padding:.6rem .7rem;border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--focus);font-size:.82rem;font-weight:600;}
+.add:hover{border-color:var(--focus);background:var(--info-subtle);}
+.add:disabled{border-style:solid;border-color:var(--border);color:var(--fg-subtle);background:var(--surface-muted);cursor:not-allowed;}
+.add-note{margin-top:.4rem;font-size:.75rem;color:var(--fg-subtle);text-align:center;}
+.validation{display:none;align-items:center;gap:.4rem;margin-top:.7rem;font-size:.78rem;font-weight:600;color:var(--warning-fg);background:var(--warning-subtle);border:1px solid color-mix(in srgb,var(--warning) 22%,transparent);border-radius:var(--radius-md);padding:.6rem .7rem;}
+.validation .icon{color:var(--warning);}
+.empty-block{display:none;margin-top:.55rem;border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface-muted);padding:1.4rem .8rem;text-align:center;}
+.empty-block .h{font-size:.82rem;font-weight:600;color:var(--fg);}
+.empty-block .d{margin-top:.25rem;font-size:.75rem;line-height:1.45;color:var(--fg-subtle);}
+
+/* Media library rail panel (railOverride) */
+.lib{display:none;flex-direction:column;min-height:0;flex:1;}
+html[data-view="library"] .lib{display:flex;}
+html[data-view="library"] .insp,html[data-view="library"] .rail-context{display:none;}
+.lib-head{padding:1rem;border-bottom:1px solid var(--border);}
+.lib-back{display:inline-flex;align-items:center;gap:.4rem;border:0;background:transparent;color:var(--fg-muted);font-size:.8rem;font-weight:600;padding:.2rem;}
+.lib-back:hover{color:var(--fg);}
+.lib-head h2{margin-top:.5rem;font-size:1rem;color:var(--fg);}
+.lib-head p{margin-top:.15rem;font-size:.78rem;color:var(--fg-subtle);}
+.lib-scroll{flex:1;min-height:0;overflow-y:auto;padding:1rem;}
+.upload{border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface-muted);padding:.85rem;}
+.upload .u-row{display:flex;gap:.5rem;align-items:center;}
+.filebtn{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-md);padding:.45rem .7rem;font-size:.8rem;font-weight:600;color:var(--fg);}
+.filename{font-size:.78rem;color:var(--fg-muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.upmsg{margin-top:.55rem;font-size:.76rem;line-height:1.4;}
+.upmsg.ok{color:var(--success-fg);}
+.uploading-row{display:none;align-items:center;gap:.5rem;margin-top:.55rem;font-size:.78rem;font-weight:600;color:var(--fg-muted);}
+.spin{width:15px;height:15px;border-radius:999px;border:2px solid var(--border-strong);border-top-color:var(--focus);animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+html[data-state="uploading"] .uploading-row{display:flex;}
+html[data-state="uploading"] .filebtn,html[data-state="uploading"] .upload .btn{opacity:.55;pointer-events:none;}
+
+.lib-kicker{margin-top:1.25rem;display:flex;align-items:center;justify-content:space-between;}
+.grid{margin-top:.6rem;display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+.gcell{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);display:flex;flex-direction:column;padding:.5rem;}
+.gcell .gimg{aspect-ratio:4/3;border-radius:6px;background:#dfe3ea center/cover no-repeat;}
+.gcell .gname{padding:.5rem .1rem 0;font-size:.75rem;color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gcell .gbtn{margin:.5rem 0 0;min-height:32px;display:inline-flex;align-items:center;justify-content:center;gap:.3rem;border-radius:var(--radius-sm);border:1px solid var(--brand);background:var(--brand);color:var(--brand-ink);font-size:.76rem;font-weight:600;}
+.gcell .gbtn.added{border-color:var(--success);background:var(--success-subtle);color:var(--success-fg);}
+.gcell .gbtn:disabled{border-color:var(--border);background:var(--surface-muted);color:var(--fg-subtle);cursor:not-allowed;}
+.lib-foot{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.lib-foot .c{font-size:.76rem;color:var(--fg-subtle);}
+.deletenote{margin-top:1rem;font-size:.75rem;line-height:1.5;color:var(--fg-subtle);}
+
+/* state wiring (inspector) */
+html[data-state="empty"] .items,html[data-state="empty"] .items-wrap-note{display:none;}
+html[data-state="empty"] .empty-block{display:block;}
+html[data-state="empty"] .validation{display:flex;}
+html:not([data-state="max"]) .max-note{display:none;}
+html[data-state="max"] .add{border-style:solid;border-color:var(--border);color:var(--fg-subtle);background:var(--surface-muted);cursor:not-allowed;}
+
+/* Mobile */
+html[data-device="mobile"] .app{inset:44px auto 0 50%;transform:translateX(-50%);width:414px;border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong);box-shadow:var(--shadow-md);}
+html[data-device="mobile"] .body{grid-template-columns:1fr;}
+html[data-device="mobile"] .canvas{display:none;}
+html[data-device="mobile"] .rail{border-right:0;}
+html[data-device="mobile"] .vp,html[data-device="mobile"] .crumb.mid,html[data-device="mobile"] .wordmark{display:none;}
+</style>
+</head>
+<body>
+
+<div class="review" role="group" aria-label="Comp review controls">
+  <span class="tag">Review only</span>
+  <div class="seg" id="viewSeg" role="group" aria-label="Rail view">
+    <button data-view="inspector" aria-pressed="true">Inspector</button>
+    <button data-view="library">Media library</button>
+  </div>
+  <div class="seg" id="stateSeg" role="group" aria-label="State">
+    <button data-go="normal" aria-pressed="true">3 images</button>
+    <button data-go="max">Max (20)</button>
+    <button data-go="empty">Empty</button>
+    <button data-go="uploading">Uploading</button>
+  </div>
+  <div class="seg" id="deviceSeg" role="group" aria-label="Device">
+    <button data-device="desktop" aria-pressed="true">Desktop</button>
+    <button data-device="mobile">Mobile</button>
+  </div>
+  <span class="hint">Add image → rail becomes the media library · Remove ≠ Delete asset</span>
+</div>
+
+<div class="app">
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo">B</span><span class="wordmark">Baker<b>Rang</b></span>
+      <span class="crumb-sep mid">/</span><span class="crumb mid">Website</span>
+      <span class="crumb-sep mid">/</span><span class="crumb site">Cedar &amp; Co Builders</span>
+      <span class="badge warning" id="statusBadge">Unsaved changes</span>
+    </div>
+    <div class="tools-right">
+      <div class="vp" role="group" aria-label="Preview viewport">
+        <button aria-label="Desktop" aria-pressed="true"><svg class="icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8m-4-4v4"/></svg></button>
+        <button aria-label="Mobile" aria-pressed="false"><svg class="icon sm" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="17" rx="2"/><path d="M11 18h2"/></svg></button>
+      </div>
+      <button class="btn ghost" disabled>Preview</button>
+      <button class="btn primary save" id="saveBtn">Save</button>
+      <button class="btn publish" disabled><svg class="icon sm" viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>Publish</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="rail" aria-label="Website builder controls">
+      <!-- ===== INSPECTOR VIEW ===== -->
+      <div class="rail-scroll scroll" id="inspScroll">
+        <div class="rail-context">
+          <span class="kicker">Sections</span>
+          <div style="margin-top:.25rem;">
+            <div class="sec-row"><span class="t">Hero</span><span class="eye"><svg class="icon sm" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span></div>
+            <div class="sec-row"><span class="t">Services</span><span class="eye"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></span></div>
+            <div class="sec-row" aria-current="true"><span class="t">Gallery</span><span class="eye"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3.5 12S7 5 12 5s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg></span></div>
+          </div>
+        </div>
+
+        <section class="insp" aria-label="Gallery properties">
+          <div class="insp-head">
+            <span class="mk" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="1.5"/><path d="m5 16 4-4 3 3 3-4 4 5M8 8h.01"/></svg></span>
+            <div><h2>Gallery</h2><p>Show photos of the business or its work.</p></div>
+          </div>
+
+          <label class="field">
+            <span class="lbl">Section heading <span class="count" id="titleCount">4 / 100</span></span>
+            <input class="control" id="titleInput" maxlength="100" value="Our work">
+          </label>
+
+          <div class="items-head">
+            <span class="kicker">Images</span>
+            <span class="n" id="imgCount">3 of 20</span>
+          </div>
+
+          <div class="empty-block">
+            <div class="h">No images yet</div>
+            <div class="d">Add an image to show this section on your site.</div>
+          </div>
+
+          <ol class="items" aria-label="Gallery images">
+            <li class="item">
+              <span class="thumb" style="background-image:linear-gradient(135deg,#c7d4e6,#9fb4d0)"></span>
+              <div>
+                <div class="r-lbl"><span>Alt text <span class="req">*</span></span></div>
+                <input class="control" maxlength="250" value="Finished kitchen remodel with island">
+                <div class="acts">
+                  <span class="kicker" style="font-size:.75rem;letter-spacing:.02em;">Image 1</span><span class="sp"></span>
+                  <button class="iconbtn" disabled aria-label="Move image 1 up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move image 1 down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove image 1 from gallery"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+            </li>
+            <li class="item">
+              <span class="thumb" style="background-image:linear-gradient(135deg,#e6d3c7,#d0b49f)"></span>
+              <div>
+                <div class="r-lbl"><span>Alt text <span class="req">*</span></span></div>
+                <input class="control" maxlength="250" value="Custom deck and patio build">
+                <div class="acts">
+                  <span class="kicker" style="font-size:.75rem;letter-spacing:.02em;">Image 2</span><span class="sp"></span>
+                  <button class="iconbtn" aria-label="Move image 2 up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" aria-label="Move image 2 down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove image 2 from gallery"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+            </li>
+            <li class="item">
+              <span class="thumb" style="background-image:linear-gradient(135deg,#cfe6c7,#a6d09f)"></span>
+              <div>
+                <div class="r-lbl"><span>Alt text <span class="req">*</span></span></div>
+                <input class="control" maxlength="250" value="" placeholder="Describe this image">
+                <p class="rowmiss">Add alt text so this image can be saved.</p>
+                <div class="acts">
+                  <span class="kicker" style="font-size:.75rem;letter-spacing:.02em;">Image 3</span><span class="sp"></span>
+                  <button class="iconbtn" aria-label="Move image 3 up"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+                  <button class="iconbtn" disabled aria-label="Move image 3 down"><svg class="icon sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                  <button class="iconbtn danger" aria-label="Remove image 3 from gallery"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/></svg></button>
+                </div>
+              </div>
+            </li>
+          </ol>
+
+          <p class="validation" role="alert" style="display:none"><svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Add at least one image.</p>
+          <button class="add" id="addImg"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add image</button>
+          <p class="add-note max-note">Maximum of 20 images.</p>
+        </section>
+      </div>
+
+      <!-- ===== MEDIA LIBRARY PANEL (railOverride) ===== -->
+      <div class="lib">
+        <div class="lib-head">
+          <button class="lib-back" id="libBack"><svg class="icon sm" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></svg>Back to Gallery</button>
+          <h2>Add images</h2>
+          <p>Upload a new image or choose from your library.</p>
+        </div>
+        <div class="lib-scroll scroll">
+          <div class="upload">
+            <div class="u-row">
+              <span class="filebtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 20h14"/></svg>Choose file</span>
+              <span class="filename">deck-2024.jpg</span>
+            </div>
+            <button class="btn primary" style="margin-top:.6rem;">Upload</button>
+            <div class="uploading-row"><span class="spin"></span>Uploading deck-2024.jpg…</div>
+            <p class="upmsg ok" role="status" style="display:none">Uploaded. Choose it below to add it to the Gallery.</p>
+            <p class="add-note" style="text-align:left;margin-top:.55rem;">JPEG, PNG, or WebP · up to 10 MB.</p>
+          </div>
+
+          <div class="lib-kicker"><span class="kicker">Your library</span><span class="count">12 images</span></div>
+          <div class="grid">
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#c7d4e6,#9fb4d0)"></span><span class="gname">kitchen-island.jpg</span><button class="gbtn added" disabled><svg class="icon sm" viewBox="0 0 24 24"><path d="m5 12 5 5 9-11"/></svg>Added</button></div>
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#e6d3c7,#d0b49f)"></span><span class="gname">deck-patio.jpg</span><button class="gbtn added" disabled><svg class="icon sm" viewBox="0 0 24 24"><path d="m5 12 5 5 9-11"/></svg>Added</button></div>
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#e7e0c7,#cbbf87)"></span><span class="gname">siding-front.jpg</span><button class="gbtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button></div>
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#d7c7e6,#b39fd0)"></span><span class="gname">bathroom-tile.jpg</span><button class="gbtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button></div>
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#c7e6e0,#9fd0c6)"></span><span class="gname">carpentry.jpg</span><button class="gbtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button></div>
+            <div class="gcell"><span class="gimg" style="background-image:linear-gradient(135deg,#e6c7d0,#d09fb0)"></span><span class="gname">windows.jpg</span><button class="gbtn"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button></div>
+          </div>
+          <p class="deletenote">To permanently delete an image from storage, use <b>Website → Media</b>. Removing an image here only takes it out of this Gallery.</p>
+        </div>
+        <div class="lib-foot">
+          <span class="c">3 of 20 in Gallery</span>
+          <button class="btn primary" id="libDone">Done</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== PREVIEW (context) ===== -->
+    <div class="canvas scroll">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="live"><i></i>Live preview</span><span class="cap">Editing: Gallery</span></div>
+        <div class="site">
+          <nav class="site-nav"><span class="b">Cedar &amp; Co <span>Builders</span></span><span class="links"><span>Services</span><span>Gallery</span><span>Contact</span></span></nav>
+          <div class="gl-live" aria-label="Gallery section, selected">
+            <h2>Our work</h2>
+            <div class="gl-grid">
+              <span class="cell" style="background-image:linear-gradient(135deg,#c7d4e6,#9fb4d0)"></span>
+              <span class="cell" style="background-image:linear-gradient(135deg,#e6d3c7,#d0b49f)"></span>
+              <span class="cell" style="background-image:linear-gradient(135deg,#cfe6c7,#a6d09f)"></span>
+            </div>
+          </div>
+          <p class="gl-empty">Gallery has no images yet — it won't appear on the live page until you add one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function setView(v){ root.setAttribute('data-view',v); document.querySelectorAll('#viewSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.view===v?'true':'false');}); }
+  function setState(s){
+    root.setAttribute('data-state',s);
+    document.querySelectorAll('#stateSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.go===s?'true':'false');});
+    var save=document.getElementById('saveBtn'), badge=document.getElementById('statusBadge'), count=document.getElementById('imgCount'), add=document.getElementById('addImg');
+    root.setAttribute('data-dirty','true');
+    if(s==='uploading'){ setView('library'); }
+    if(s==='empty'){ save.disabled=true; count.textContent='0 of 20'; badge.textContent='Unsaved changes'; }
+    else if(s==='max'){ save.disabled=false; count.textContent='20 of 20'; add.disabled=true; badge.textContent='Unsaved changes'; }
+    else { save.disabled=false; count.textContent='3 of 20'; add.disabled=false; badge.textContent='Unsaved changes'; }
+    // one row lacks alt text in the normal demo → Save is actually blocked there too
+    if(s==='normal'){ save.disabled=true; }
+  }
+  function setDevice(d){ root.setAttribute('data-device',d); document.querySelectorAll('#deviceSeg button').forEach(function(b){b.setAttribute('aria-pressed', b.dataset.device===d?'true':'false');}); }
+  document.addEventListener('click',function(e){
+    var v=e.target.closest('#viewSeg [data-view]'); if(v){setView(v.dataset.view);return;}
+    var g=e.target.closest('#stateSeg [data-go]'); if(g){setState(g.dataset.go);return;}
+    var d=e.target.closest('#deviceSeg [data-device]'); if(d){setDevice(d.dataset.device);return;}
+    if(e.target.closest('#addImg')){ setView('library'); return; }
+    if(e.target.closest('#libBack')||e.target.closest('#libDone')){ setView('inspector'); return; }
+  });
+  var t=document.getElementById('titleInput'), tc=document.getElementById('titleCount');
+  if(t) t.addEventListener('input',function(){tc.textContent=t.value.length+' / 100';});
+  setState('normal');
+})();
+</script>
+</body>
+</html>

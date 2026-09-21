@@ -21,7 +21,7 @@ test('FAQ uses collapsed native disclosure markup and renders safe ordered plain
 
 test('FAQ is Theme-native and dispatched canonically without implicit navigation', async () => {
   const faq = await source('../../../packages/site-components/src/Faq.tsx')
-  const renderer = await source('../components/SectionRenderer.tsx')
+  const renderer = await source('../../../packages/site-runtime/src/SectionRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
   assert.match(faq, /site-radius-panel/)
   assert.match(faq, /text-site-(?:fg|muted)/)

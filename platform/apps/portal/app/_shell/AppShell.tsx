@@ -50,7 +50,7 @@ function NavContent ({ contextNav, onNavigate, onNavigateRequest, pathname }: { 
   )
 }
 
-export function AppShell ({ children, contextNav, onNavigateRequest }: { children: ReactNode, contextNav?: ContextNav[], onNavigateRequest?: (href: string) => boolean }) {
+export function AppShell ({ children, contentClassName, contextNav, onNavigateRequest }: { children: ReactNode, contentClassName?: string, contextNav?: ContextNav[], onNavigateRequest?: (href: string) => boolean }) {
   const { signOut, status, user } = useAuth()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -135,7 +135,7 @@ export function AppShell ({ children, contextNav, onNavigateRequest }: { childre
           <Link aria-label="BakerRang businesses" className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" href="/" onClick={(event) => { if (onNavigateRequest && !onNavigateRequest('/')) event.preventDefault() }}><Brand compact /></Link>
           <span aria-hidden className="size-11" />
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-7 sm:py-9 lg:px-10">{children}</main>
+        <main className={contentClassName ?? 'mx-auto w-full max-w-7xl px-4 py-6 sm:px-7 sm:py-9 lg:px-10'}>{children}</main>
       </div>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">

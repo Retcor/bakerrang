@@ -1,12 +1,11 @@
 import type { SiteDefinition, SitePage } from '@bakerrang/site-schema'
-import { isContactSection } from '@bakerrang/site-schema'
-import { SiteShell } from '@bakerrang/site-components'
+import { SitePageRenderer, type RenderContext, type RenderMode } from '@bakerrang/site-runtime'
 import { BusinessJsonLd } from './BusinessJsonLd'
 import { LeadForm } from './LeadForm'
-import { SectionRenderer } from './SectionRenderer'
-import { resolveSiteNavigation, type SiteNavigationContext } from '../lib/navigation'
+import type { SiteNavigationContext } from '../lib/navigation'
 
-export function PublicPage ({ navigationContext = { kind: 'customDomain' }, page, preview = false, site, siteBaseUrl, tenantId }: {
+export function PublicPage ({ mode, navigationContext = { kind: 'customDomain' }, page, preview = false, site, siteBaseUrl, tenantId }: {
+  mode?: RenderMode
   navigationContext?: SiteNavigationContext
   page: SitePage
   preview?: boolean
@@ -16,22 +15,6 @@ export function PublicPage ({ navigationContext = { kind: 'customDomain' }, page
   sitePath?: string
   tenantId: string
 }) {
-  const contact = page.sections.find((section) => !section.hidden && isContactSection(section))
-  const navigation = resolveSiteNavigation(site, page, navigationContext)
-  return (
-    <SiteShell activePage={page} footerNav={navigation.footerItems} homeHref={navigation.homeHref} primaryNav={navigation.headerItems} site={site}>
-      {page.id === 'home' && <BusinessJsonLd site={site} siteBaseUrl={siteBaseUrl} />}
-      <main data-br-role="main">
-        {page.sections.filter((section) => !section.hidden).map((section) => (
-          <SectionRenderer
-            businessHours={site.businessProfile?.businessHours}
-            heroContactHref={contact ? `#section-${contact.id}` : undefined}
-            key={section.id}
-            leadForm={section.type === 'contact' && section.content.action.type === 'leadForm' ? <LeadForm preview={preview} tenantId={tenantId} /> : undefined}
-            section={section}
-          />
-        ))}
-      </main>
-    </SiteShell>
-  )
+  const context: RenderContext = { mode: mode ?? (preview ? 'WORKING_PREVIEW' : 'PUBLIC'), navigation: navigationContext }
+  return <SitePageRenderer beforeMain={page.id === 'home' ? <BusinessJsonLd site={site} siteBaseUrl={siteBaseUrl} /> : undefined} context={context} leadForm={<LeadForm context={context} tenantId={tenantId} />} page={page} site={site} />
 }

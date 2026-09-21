@@ -5,6 +5,7 @@ import {
   _setDb,
   applySiteTemplate,
   createPage,
+  getRevisionDefinition,
   getPublicSite,
   getPublishedSiteDefinition,
   getSite,
@@ -266,6 +267,48 @@ test('published revisions are immutable, retained newest-first, and restore only
   assert.equal((await getPublishedSiteDefinition('tenant-1')).branding.siteName, second.branding.siteName)
 })
 
+test('revision definition GET returns a hydrated, scoped snapshot without mutating stored state', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision preview' })
+  fakeDb.seed('tenants/tenant-1/media/logo-1', {
+    originalFilename: 'logo.png',
+    objectName: 'tenants/tenant-1/media/logo-1.png',
+    contentType: 'image/png',
+    sizeBytes: 128,
+    width: 256,
+    height: 128,
+    createdAt: 1,
+    createdByUserId: 'admin'
+  })
+  await initializeSite('tenant-1', 'admin')
+  await updateSiteBranding('tenant-1', { siteName: 'Revision preview', logoMediaId: 'logo-1' })
+  await updateCustomCss('tenant-1', { customCss: '.hero-title { color: red; }' })
+  await publishSite('tenant-1', 'publisher')
+  const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const workingBefore = fakeDb.data('tenants/tenant-1/site/config')
+  const publishedBefore = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const indexBefore = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+
+  const definition = await getRevisionDefinition('tenant-1', current.revisionId)
+  assert.equal(definition.status, 'PUBLISHED')
+  assert.equal(definition.branding.logoMediaId, 'logo-1')
+  assert.match(definition.branding.logoSrc, /logo-1\.png$/)
+  assert.equal(definition.customCss, '.hero-title { color: red; }')
+  assert.match(definition.scopedCustomCss, /\[data-br-site\] \.hero-title/)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config'), workingBefore)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), publishedBefore)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current'), indexBefore)
+})
+
+test('revision definition GET returns 404 for unknown or pruned revisions', async () => {
+  fakeDb.seed('tenants/tenant-1', { name: 'Revision preview' })
+  await initializeSite('tenant-1', 'admin')
+  await publishSite('tenant-1', 'publisher')
+  const current = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  await assert.rejects(getRevisionDefinition('tenant-1', 'missing'), { status: 404 })
+  fakeDb.remove(`tenants/tenant-1/site/config/revisions/${current.revisionId}`)
+  await assert.rejects(getRevisionDefinition('tenant-1', current.revisionId), { status: 404 })
+})
+
 test('published revision retention keeps current and prunes the oldest revision', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Retention' })
   await initializeSite('tenant-1', 'admin')
@@ -304,8 +347,11 @@ test('restore replaces the full working site with historical globals, pages, SEO
   const { pageId: displacedPageId } = await createPage('tenant-1', { title: 'Displaced', slug: 'displaced' })
   await publishSite('tenant-1', 'publisher-b')
   const currentBeforeRestore = fakeDb.data('tenants/tenant-1/site/config/published/current')
+  const indexBeforeRestore = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
 
   const restored = await restoreSiteRevision('tenant-1', historicalCurrent.revisionId)
+  assert.equal(restored.status, 'PUBLISHED')
+  assert.equal(restored.hasUnpublishedChanges, true)
   assert.equal(restored.branding.siteName, 'Historical brand')
   assert.equal(restored.businessProfile.description, 'Historical profile')
   assert.equal(restored.seo.defaultDescription, 'Historical SEO')
@@ -317,6 +363,7 @@ test('restore replaces the full working site with historical globals, pages, SEO
   assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/pages/${historicalPageId}`).sections, historicalPage.sections)
   assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${displacedPageId}`), undefined)
   assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), currentBeforeRestore)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current'), indexBeforeRestore)
 })
 
 test('first post-history publish captures a legacy current snapshot with its original metadata', async () => {
@@ -1269,52 +1316,61 @@ test('curated site template catalog exposes metadata only and validates each sou
     'modern-local-service', 'classic-professional', 'bold-contractor'
   ])
   for (const [index, template] of templates.entries()) {
-    assert.deepEqual(Object.keys(template).sort(), ['description', 'id', 'name', 'tags', 'version'])
+    assert.deepEqual(Object.keys(template).sort(), ['description', 'id', 'name', 'preview', 'tags', 'version'])
+    assert.deepEqual(template.preview, {
+      theme: SITE_TEMPLATES[index].theme,
+      header: { brandDisplay: SITE_TEMPLATES[index].header.brandDisplay },
+      footer: SITE_TEMPLATES[index].footer
+    })
+    assert.equal(Object.hasOwn(template.preview, 'pages'), false)
+    assert.equal(Object.hasOwn(template.preview.header, 'navigation'), false)
+    assert.equal(Object.hasOwn(template.preview.footer, 'navigationMode'), false)
     assert.equal(validateSiteTemplate(SITE_TEMPLATES[index]), true)
-    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('mediaId'), false)
-    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('testimonials'), false)
-    assert.equal(JSON.stringify(SITE_TEMPLATES[index]).includes('stats'), false)
   }
 })
 
-test('materialized templates reject invalid runtime Page composition instead of repairing it', () => {
-  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
+test('materialized templates reject invalid presentation fields against the current navigation', () => {
+  const config = {
+    status: 'DRAFT',
+    branding: { siteName: 'Website' },
+    pageOrder: ['home'],
+    header: { brandDisplay: 'name', navigation: { items: [{ pageId: 'home' }] } },
+    footer: { showBranding: true, navigationMode: 'custom', navigationItems: [{ pageId: 'home' }], showBusinessContact: false, showSocialLinks: true, showCopyright: true }
+  }
+  const pages = [{ id: 'home', slug: '/', title: 'Home', sections: [{ id: 'hero', type: 'hero', hidden: false, content: { title: 'Website' } }], createdAt: 1, updatedAt: 1 }]
   const invalidTemplate = (mutate) => {
     const template = structuredClone(SITE_TEMPLATES[0])
     mutate(template)
-    assert.throws(() => materializeSiteTemplate(template, config, 10), { status: 500 })
+    assert.throws(() => materializeSiteTemplate(template, config, pages, 10))
   }
 
-  invalidTemplate((template) => { template.pages[1].slug = 'Invalid slug' })
-  invalidTemplate((template) => { template.pages[1].slug = template.pages[2].slug })
-  invalidTemplate((template) => { template.pages[1].sections.unshift({ type: 'hero', hidden: false, content: { title: 'Not Home' } }) })
-  invalidTemplate((template) => { template.pages[0].sections.push(structuredClone(template.pages[0].sections.at(-1))) })
-  invalidTemplate((template) => { template.pages[0].sections[0].hidden = true })
-  invalidTemplate((template) => { template.header.navigation.items[0].pageKey = 'unknown-page' })
+  invalidTemplate((template) => { template.theme.headingFont = 'unsupported' })
+  invalidTemplate((template) => { template.header.brandDisplay = 'unsupported' })
+  invalidTemplate((template) => { template.footer.showBranding = 'yes' })
 })
 
-test('applying a site template replaces working pages and preserves tenant-owned configuration', async () => {
+test('applying a site template changes only owned presentation fields and updatedAt', async () => {
   const originalNow = Date.now
   let now = 50
   Date.now = () => now
   try {
     fakeDb.seed('tenants/tenant-1', { name: 'Template customer' })
     await initializeSite('tenant-1', 'admin')
+    const { pageId } = await createPage('tenant-1', { title: 'Kept page', slug: 'kept-page' })
+    await updateHomeHero('tenant-1', { title: 'Kept words' })
+    await updateSiteBranding('tenant-1', { siteName: 'Kept name' })
+    await updateBusinessProfile('tenant-1', { phone: '+15555550100' })
+    await updateSiteSeo('tenant-1', { defaultDescription: 'Keep global SEO', indexable: false })
+    await updatePageSeo('tenant-1', pageId, { title: 'Keep page SEO', noIndex: true })
+    await updateCustomCss('tenant-1', { customCss: '[data-br-site] .kept { color: red; }' })
+    await updateSiteHeader('tenant-1', { brandDisplay: 'name', navigation: { items: [{ pageId, label: 'Kept nav' }] } })
+    await updateSiteFooter('tenant-1', { showBranding: false, navigationMode: 'custom', navigationItems: [{ pageId, label: 'Kept footer nav' }], showBusinessContact: false, showSocialLinks: false, showCopyright: false, text: 'Kept footer text' })
     now = 100
     await publishSite('tenant-1', 'publisher')
     const publishedBeforeApply = fakeDb.data('tenants/tenant-1/site/config/published/current')
-    const original = fakeDb.data('tenants/tenant-1/site/config')
-    fakeDb.seed('tenants/tenant-1/site/config', {
-      ...original,
-      branding: { siteName: 'Kept name' },
-      businessProfile: { phone: '+15555550100' },
-      seo: { defaultDescription: 'Keep global SEO', indexable: false },
-      customCss: '.kept { color: red; }',
-      pageOrder: ['home', 'old-page']
-    })
-    fakeDb.seed('tenants/tenant-1/site/config/pages/old-page', {
-      id: 'old-page', slug: 'old-page', title: 'Old page', sections: [], createdAt: 50, updatedAt: 50, seo: { title: 'Old SEO' }
-    })
+    const revisionIndexBeforeApply = fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current')
+    const configBeforeApply = fakeDb.data('tenants/tenant-1/site/config')
+    const pagesBeforeApply = Object.fromEntries(configBeforeApply.pageOrder.map((id) => [id, fakeDb.data(`tenants/tenant-1/site/config/pages/${id}`)]))
 
     now = 200
     const applied = await applySiteTemplate('tenant-1', 'modern-local-service')
@@ -1322,88 +1378,63 @@ test('applying a site template replaces working pages and preserves tenant-owned
     assert.equal(applied.status, 'PUBLISHED')
     assert.equal(applied.hasUnpublishedChanges, true)
     assert.equal(applied.lastPublishedAt, 100)
-    assert.deepEqual(config.branding, { siteName: 'Kept name' })
-    assert.deepEqual(config.businessProfile, { phone: '+15555550100' })
-    assert.deepEqual(config.seo, { defaultDescription: 'Keep global SEO', indexable: false })
-    assert.equal(config.customCss, '.kept { color: red; }')
-    assert.equal(config.lastPublishedAt, 100)
-    assert.equal(config.lastPublishedByUserId, 'publisher')
+    const expectedConfig = structuredClone(configBeforeApply)
+    expectedConfig.theme = SITE_TEMPLATES[0].theme
+    expectedConfig.header.brandDisplay = SITE_TEMPLATES[0].header.brandDisplay
+    Object.assign(expectedConfig.footer, SITE_TEMPLATES[0].footer)
+    expectedConfig.updatedAt = 200
+    assert.deepEqual(config, expectedConfig)
     assert.equal(config.updatedAt, 200)
+    assert.deepEqual(applied.pages.map((page) => page.id), configBeforeApply.pageOrder)
+    assert.equal(applied.pages[0].sections[0].content.title, 'Kept words')
+    assert.deepEqual(applied.pages.find((page) => page.id === pageId).seo, { title: 'Keep page SEO', noIndex: true })
+    assert.equal(applied.customCss, '[data-br-site] .kept { color: red; }')
+    assert.equal(applied.branding.siteName, 'Kept name')
+    assert.equal(applied.businessProfile.phone, '+15555550100')
+    assert.equal(applied.seo.defaultDescription, 'Keep global SEO')
+    assert.deepEqual(applied.header.navigation, { items: [{ pageId, label: 'Kept nav' }] })
+    assert.equal(applied.footer.navigationMode, 'custom')
+    assert.deepEqual(applied.footer.navigationItems, [{ pageId, label: 'Kept footer nav' }])
+    assert.equal(applied.footer.text, 'Kept footer text')
+    for (const [id, page] of Object.entries(pagesBeforeApply)) assert.deepEqual(fakeDb.data(`tenants/tenant-1/site/config/pages/${id}`), page)
     assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/published/current'), publishedBeforeApply)
-    assert.equal(fakeDb.data('tenants/tenant-1/site/config/published/current').publishedAt, publishedBeforeApply.publishedAt)
-    assert.equal(applied.pages.some((page) => page.id !== 'home' && publishedBeforeApply.siteDefinition.pages.some((publishedPage) => publishedPage.id === page.id)), false)
-    assert.equal(fakeDb.data('tenants/tenant-1/site/config/pages/old-page'), undefined)
-    assert.equal(applied.pages[0].id, 'home')
-    assert.ok(applied.pages.slice(1).every((page) => page.id !== 'home'))
-    assert.ok(applied.pages.every((page) => !Object.hasOwn(page, 'seo')))
-    assert.ok(config.pageOrder.every((pageId) => !Object.hasOwn(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), 'seo')))
-
-    const pageIds = new Set(applied.pages.map((page) => page.id))
-    for (const item of [...applied.header.navigation.items, ...applied.footer.navigationItems]) {
-      assert.ok(pageIds.has(item.pageId))
-      assert.equal(Object.hasOwn(item, 'pageKey'), false)
-    }
-    const sections = applied.pages.flatMap((page) => page.sections)
-    assert.equal(new Set(sections.map((section) => section.id)).size, sections.length)
-    const itemIds = sections.flatMap((section) => section.content.items || []).map((item) => item.id)
-    assert.equal(new Set(itemIds).size, itemIds.length)
+    assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/revisionIndex/current'), revisionIndexBeforeApply)
   } finally {
     Date.now = originalNow
   }
 })
 
-test('template materialization regenerates every persisted identifier, including nested item ids', () => {
-  const template = {
-    ...SITE_TEMPLATES[0],
-    header: { brandDisplay: 'logo', navigation: { items: [{ pageKey: 'home' }] } },
-    footer: {
-      showBranding: true,
-      navigationMode: 'custom',
-      navigationItems: [{ pageKey: 'home' }],
-      showBusinessContact: false,
-      showSocialLinks: true,
-      showCopyright: true
-    },
-    pages: [{
-      key: 'home',
-      slug: '/',
-      title: 'Home',
-      sections: [
-        { type: 'hero', hidden: false, content: { title: 'Start' } },
-        { type: 'services', hidden: false, content: { title: 'Services', items: [{ name: 'One' }] } },
-        { type: 'gallery', hidden: false, content: { title: 'Gallery', items: [{ mediaId: 'test-media', altText: 'Test image' }] } },
-        { type: 'testimonials', hidden: false, content: { title: 'Testimonials', items: [{ customerName: 'Name', quote: 'Quote' }] } },
-        { type: 'faq', hidden: false, content: { heading: 'FAQ', items: [{ question: 'Question', answer: 'Answer' }] } },
-        { type: 'process', hidden: false, content: { items: [{ title: 'Step' }] } },
-        { type: 'stats', hidden: false, content: { items: [{ value: '1', label: 'One' }] } },
-        { type: 'logos', hidden: false, content: { items: [{ mediaId: 'test-logo', altText: 'Test logo' }] } }
-      ]
-    }]
-  }
-  const config = { status: 'DRAFT', branding: { siteName: 'Website' } }
-  const first = materializeSiteTemplate(template, config, 10)
-  const second = materializeSiteTemplate(template, config, 10)
-  const ids = (result) => result.pages.flatMap((page) => page.sections).flatMap((section) => [section.id, ...(section.content.items || []).map((item) => item.id)])
-  assert.equal(new Set(ids(first)).size, ids(first).length)
-  assert.equal(ids(first).some((id) => ids(second).includes(id)), false)
-  const preserved = materializeSiteTemplate(SITE_TEMPLATES[0], {
+test('template materialization preserves page and navigation identities', () => {
+  const pages = [{ id: 'home', slug: '/', title: 'Home', sections: [{ id: 'future-section', type: 'futureCustom', hidden: false, content: { copy: 'Keep me' } }], createdAt: 1, updatedAt: 2 }]
+  const config = {
     status: 'PUBLISHED',
     branding: { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' },
     businessProfile: { socialImageMediaId: 'social-1' },
     seo: { defaultDescription: 'Kept' },
     customCss: '.kept {}',
+    pageOrder: ['home'],
+    header: { brandDisplay: 'name', navigation: { items: [{ pageId: 'home', label: 'Start' }] } },
+    footer: { showBranding: false, navigationMode: 'custom', navigationItems: [{ pageId: 'home', label: 'End' }], showBusinessContact: false, showSocialLinks: false, showCopyright: false, text: 'Kept' },
     lastPublishedAt: 1,
     lastPublishedByUserId: 'publisher'
-  }, 10)
+  }
+  const preserved = materializeSiteTemplate(SITE_TEMPLATES[0], config, pages, 10)
+  assert.deepEqual(preserved.pages, pages)
+  assert.deepEqual(preserved.definition.pages[0].sections, pages[0].sections)
+  assert.deepEqual(preserved.config.pageOrder, ['home'])
+  assert.deepEqual(preserved.config.header.navigation, config.header.navigation)
+  assert.deepEqual(preserved.config.footer.navigationItems, config.footer.navigationItems)
+  assert.equal(preserved.config.footer.navigationMode, 'custom')
   assert.deepEqual(preserved.config.branding, { siteName: 'Kept', logoMediaId: 'logo-1', faviconMediaId: 'favicon-1' })
   assert.deepEqual(preserved.config.businessProfile, { socialImageMediaId: 'social-1' })
   assert.equal(preserved.config.customCss, '.kept {}')
   assert.equal(preserved.config.lastPublishedAt, 1)
 })
 
-test('template application regenerates ids within Firestore retry callbacks without duplicate persisted pages', async () => {
+test('template application retries without writing any page document', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Retry customer' })
   await initializeSite('tenant-1', 'admin')
+  const pageBefore = fakeDb.data('tenants/tenant-1/site/config/pages/home')
   fakeDb.beforeCommit = ({ attempt }) => {
     if (attempt === 1) {
       const config = fakeDb.data('tenants/tenant-1/site/config')
@@ -1412,12 +1443,11 @@ test('template application regenerates ids within Firestore retry callbacks with
   }
   const applied = await applySiteTemplate('tenant-1', 'bold-contractor')
   assert.equal(fakeDb.transactionAttempts, 3) // initialization plus one retry and a successful apply.
-  const storedPageIds = fakeDb.data('tenants/tenant-1/site/config').pageOrder
-  assert.deepEqual(storedPageIds, applied.pages.map((page) => page.id))
-  assert.equal(new Set(storedPageIds).size, storedPageIds.length)
+  assert.deepEqual(fakeDb.data('tenants/tenant-1/site/config/pages/home'), pageBefore)
+  assert.deepEqual(applied.pages[0].sections, pageBefore.sections)
 })
 
-test('Publish retries after Apply commits and snapshots one coherent template generation', async () => {
+test('Publish retries after Apply and snapshots preserved content with the applied design', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Publication race' })
   await initializeSite('tenant-1', 'admin')
   let interleaved = false
@@ -1435,18 +1465,13 @@ test('Publish retries after Apply commits and snapshots one coherent template ge
   await publishSite('tenant-1', 'publisher')
   const config = fakeDb.data('tenants/tenant-1/site/config')
   const snapshot = fakeDb.data('tenants/tenant-1/site/config/published/current').siteDefinition
-  const publishedPageIds = snapshot.pages.map((page) => page.id)
   assert.equal(publishAttempts, 2)
-  assert.deepEqual(publishedPageIds, config.pageOrder)
-  assert.equal(snapshot.pages[0].id, 'home')
-  assert.ok(config.pageOrder.slice(1).every((pageId) => snapshot.pages.some((page) => page.id === pageId)))
-  for (const item of snapshot.header.navigation.items) assert.ok(publishedPageIds.includes(item.pageId))
-  for (const item of snapshot.footer.navigationItems) assert.ok(publishedPageIds.includes(item.pageId))
   assert.deepEqual(snapshot.pages, applied.pages)
   assert.deepEqual(snapshot.header, applied.header)
   assert.deepEqual(snapshot.footer, applied.footer)
-  assert.equal(JSON.stringify(snapshot).includes('pageKey'), false)
-  assert.equal(snapshot.pages.some((page) => page.sections.some((section) => section.content?.title === 'Publication race')), false)
+  assert.deepEqual(snapshot.theme, applied.theme)
+  assert.deepEqual(config.pageOrder, ['home'])
+  assert.equal(snapshot.pages[0].sections[0].content.title, 'Publication race')
 })
 
 test('Apply retries around a preserved Business Profile update without overwriting it', async () => {
@@ -1455,7 +1480,7 @@ test('Apply retries around a preserved Business Profile update without overwriti
   let interleaved = false
   let applyAttempts = 0
   fakeDb.beforeCommit = async ({ writes }) => {
-    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    const applying = writes.length === 1 && writes[0].ref.path.endsWith('/site/config') && JSON.stringify(writes[0].value.theme) === JSON.stringify(SITE_TEMPLATES[2].theme)
     if (applying) applyAttempts++
     if (applying && !interleaved) {
       interleaved = true
@@ -1469,17 +1494,17 @@ test('Apply retries around a preserved Business Profile update without overwriti
   assert.equal(config.businessProfile.phone, '+17205550100')
   assert.deepEqual(config.theme, SITE_TEMPLATES[2].theme)
   assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
-  assert.deepEqual(applied.header.navigation.items.map((item) => item.pageId), config.header.navigation.items.map((item) => item.pageId))
+  assert.deepEqual(applied.header.navigation.items, config.header.navigation.items)
 })
 
-test('Apply retries around a Page edit and intentionally supersedes the old Page generation', async () => {
+test('Apply retries around a Page edit and preserves the concurrent Page generation', async () => {
   fakeDb.seed('tenants/tenant-1', { name: 'Page race' })
   await initializeSite('tenant-1', 'admin')
   const { pageId } = await createPage('tenant-1', { title: 'Legacy page', slug: 'legacy-page' })
   let interleaved = false
   let applyAttempts = 0
   fakeDb.beforeCommit = async ({ writes }) => {
-    const applying = writes.some((write) => write.ref.path.endsWith('/pages/home'))
+    const applying = writes.length === 1 && writes[0].ref.path.endsWith('/site/config')
     if (applying) applyAttempts++
     if (applying && !interleaved) {
       interleaved = true
@@ -1491,7 +1516,7 @@ test('Apply retries around a Page edit and intentionally supersedes the old Page
   const config = fakeDb.data('tenants/tenant-1/site/config')
   assert.equal(applyAttempts, 2)
   assert.deepEqual(config.pageOrder, applied.pages.map((page) => page.id))
-  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`), undefined)
-  assert.equal(applied.pages.some((page) => page.title === 'Concurrent legacy edit'), false)
-  assert.equal(applied.pages.some((page) => page.slug === 'legacy-page'), false)
+  assert.equal(fakeDb.data(`tenants/tenant-1/site/config/pages/${pageId}`).title, 'Concurrent legacy edit')
+  assert.equal(applied.pages.some((page) => page.title === 'Concurrent legacy edit'), true)
+  assert.equal(applied.pages.some((page) => page.slug === 'legacy-page'), true)
 })

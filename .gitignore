@@ -6,6 +6,13 @@ server/.env
 client/dist/
 client/.env.local
 client/.env.*.local
+.pnpm-store/
+
+# Machine-local AI tooling permissions, runtime paths, and session state
+/.claude/settings.local.json
+/.codex/config.toml
+/.impeccable/config.local.json
+/.impeccable/hook.cache.json
 
 # Generated temporary credentials from google-github-actions/auth
 gha-creds-*.json

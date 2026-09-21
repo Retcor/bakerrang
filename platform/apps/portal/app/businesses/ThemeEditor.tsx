@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import type {
   ContentWidth,
   CornerStyle,
@@ -9,7 +9,7 @@ import type {
   SiteFont,
   SiteTheme
 } from '@bakerrang/site-schema'
-import { Button, ConfirmDialog, Field, Input, Select } from '@bakerrang/ui'
+import { Button, ConfirmDialog, Field, Select } from '@bakerrang/ui'
 import { ApiError } from '../../lib/api'
 import { updateSiteTheme } from '../../lib/site'
 import {
@@ -19,7 +19,8 @@ import {
   themeColorContrast
 } from '../../lib/theme'
 import { cloneTheme, THEME_PRESETS, type ThemePreset } from '../../lib/themePresets'
-import { WebsiteEditorShell } from './WebsiteEditorShell'
+import { type ActiveEditorController, WebsiteEditorShell } from './WebsiteEditorShell'
+import { SegmentedControl } from './WebsiteToolPrimitives'
 
 const HEX = /^#[0-9a-f]{6}$/i
 const colorFields = [
@@ -27,9 +28,13 @@ const colorFields = [
 ] as const
 const fontFamily = (font: SiteFont) => SITE_FONT_OPTIONS.find((option) => option.value === font)?.family
 
-export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site, tenantId }: {
+export function ThemeEditor ({ chrome, onBack, onCancel, onControllerChange, onDirtyChange = () => {}, onLivePreview, onSaved, site, tenantId }: {
+  chrome?: 'card' | 'rail'
+  onBack?: () => void
   onCancel: () => void
+  onControllerChange?: (controller: ActiveEditorController | null) => void
   onDirtyChange?: (dirty: boolean) => void
+  onLivePreview?: (patch: Pick<SiteDefinition, 'theme'>) => void
   onSaved: (site: SiteDefinition) => void
   site: SiteDefinition
   tenantId: string
@@ -46,6 +51,10 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   const lowContrast = contrast !== null && contrast < 4.5
   const radius = theme.cornerStyle === 'rounded' ? '1rem' : theme.cornerStyle === 'soft' ? '0.75rem' : '0'
   const dirty = JSON.stringify(theme) !== JSON.stringify(site.theme)
+
+  useEffect(() => {
+    onLivePreview?.({ theme })
+  }, [onLivePreview, theme])
 
   const applyTheme = (next: SiteTheme) => {
     setTheme(cloneTheme(next))
@@ -83,46 +92,42 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
 
   return (
     <>
-    <WebsiteEditorShell dirtyValue={theme} editor="theme" error={error} onCancel={onCancel} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} secondaryActions={<Button disabled={saving} onClick={() => requestTheme('reset')} type="button" variant="ghost">Reset to defaults</Button>}>
-      <p className="text-sm leading-6 text-fg-muted">Save, then use Preview to review the actual website before republishing.</p>
-
-      <section aria-labelledby={`theme-presets-${tenantId}`} className="mt-6 rounded-md border border-border bg-surface-muted p-4">
-        <h3 className="text-sm font-semibold text-fg" id={`theme-presets-${tenantId}`}>Start from a preset</h3>
+    <WebsiteEditorShell chrome={chrome} dirtyValue={theme} editor="theme" error={error} onBack={onBack} onCancel={onCancel} onControllerChange={onControllerChange} onDirtyChange={onDirtyChange} onSubmit={(event) => void submit(event)} saving={saving} secondaryActions={<Button disabled={saving} onClick={() => requestTheme('reset')} type="button" variant="ghost">Reset to defaults</Button>}>
+      <section aria-labelledby={`theme-presets-${tenantId}`}>
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-fg-subtle" id={`theme-presets-${tenantId}`}>Start from a preset</h3>
         <p className="mt-1 text-sm leading-6 text-fg-muted">Presets fill this local form. Customize anything, then save when you are ready.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-3 overflow-hidden rounded-md border border-border bg-surface">
           {THEME_PRESETS.map((preset) => (
-            <article className="rounded-md border border-border bg-surface p-3" key={preset.name}>
-              <div className="flex items-start justify-between gap-3"><div><h4 className="font-semibold text-fg">{preset.name}</h4><p className="mt-1 text-sm leading-5 text-fg-muted">{preset.description}</p></div><div aria-label={`${preset.name} colors`} className="flex shrink-0 overflow-hidden rounded border border-border" title={[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].join(', ')}>
-                {[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].map((color) => <span className="h-5 w-5" key={color} style={{ backgroundColor: color }} />)}
-              </div></div>
-              <p className="mt-3 text-xs text-fg-subtle">{SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.headingFont)?.label} + {SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.bodyFont)?.label}</p>
-              <Button className="mt-3" disabled={saving} onClick={() => requestTheme(preset)} size="sm" type="button" variant="secondary">Apply {preset.name}</Button>
-            </article>
+            <button aria-label={`Apply ${preset.name}`} className="flex min-h-[3.625rem] w-full items-center gap-3 border-b border-border px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" data-testid="theme-preset-row" disabled={saving} key={preset.name} onClick={() => requestTheme(preset)} type="button">
+              <span aria-label={`${preset.name} colors`} className="flex shrink-0 overflow-hidden rounded border border-border" title={[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].join(', ')}>{[preset.theme.colors.primary, preset.theme.colors.accent, preset.theme.colors.background].map((color) => <span className="h-7 w-3" key={color} style={{ backgroundColor: color }} />)}</span>
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-fg">{preset.name}</span><span className="mt-0.5 block truncate text-xs text-fg-subtle">{SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.headingFont)?.label} + {SITE_FONT_OPTIONS.find((option) => option.value === preset.theme.bodyFont)?.label}</span></span>
+              <span className="shrink-0 text-xs font-semibold text-fg-muted">Apply</span>
+            </button>
           ))}
         </div>
       </section>
 
-      <fieldset className="mt-6">
-        <legend className="text-sm font-semibold text-fg">Colors</legend>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+      <section className="mt-6" aria-labelledby={`theme-colours-${tenantId}`}>
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-fg-subtle" id={`theme-colours-${tenantId}`}>Colours</h3>
+        <div className="mt-3 overflow-hidden rounded-md border border-border bg-surface" data-testid="theme-colour-rows">
           {colorFields.map(([key, label]) => {
             const value = theme.colors[key]
             const valid = HEX.test(value) ? value : DEFAULT_SITE_THEME.colors[key]
-            const id = `theme-${key}-${tenantId}`
             return (
-              <Field id={id} key={key} label={`${label} color`}>
-                <div className="mt-2 flex gap-2">
-                  <input aria-label={`${label} color picker`} className="h-11 w-14 shrink-0 rounded-md border border-border-strong bg-surface p-1" disabled={saving} onChange={(event) => setColor(key, event.target.value)} type="color" value={valid} />
-                  <Input aria-label={`${label} color hex`} disabled={saving} maxLength={7} onChange={(event) => setColor(key, event.target.value)} value={value} />
-                </div>
-              </Field>
+              <div className="flex min-h-[3.25rem] items-center gap-3 border-b border-border px-3 py-2 last:border-b-0" key={key}>
+                <label className="relative size-8 shrink-0 cursor-pointer overflow-hidden rounded-md border border-border-strong shadow-xs" style={{ backgroundColor: valid }}><span className="sr-only">{label} color picker</span><input aria-label={`${label} color picker`} className="absolute inset-0 size-full cursor-pointer opacity-0" disabled={saving} onChange={(event) => setColor(key, event.target.value)} type="color" value={valid} /></label>
+                <label className="min-w-0 flex-1 text-sm font-medium text-fg" htmlFor={`theme-${key}-${tenantId}`}>{label}</label>
+                <input aria-label={`${label} color hex`} className="h-9 w-24 rounded-md border border-border-strong bg-surface px-2 text-right text-sm font-medium tabular-nums text-fg outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:cursor-not-allowed disabled:opacity-60" disabled={saving} id={`theme-${key}-${tenantId}`} maxLength={7} onChange={(event) => setColor(key, event.target.value)} value={value} />
+              </div>
             )
           })}
         </div>
         {lowContrast && <p className="mt-3 text-sm text-warning-fg" role="status">This text may be difficult to read on the selected background.</p>}
-      </fieldset>
+      </section>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <section className="mt-6" aria-labelledby={`theme-typography-${tenantId}`}>
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-fg-subtle" id={`theme-typography-${tenantId}`}>Typography</h3>
+        <div className="mt-3 grid gap-4">
         <Field id={`heading-font-${tenantId}`} label="Heading font">
           <Select className="mt-2" disabled={saving} onChange={(event) => setTheme((current) => ({ ...current, headingFont: event.target.value as SiteFont }))} value={theme.headingFont}>
             {SITE_FONT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -133,14 +138,17 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
             {SITE_FONT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
         </Field>
-      </div>
+        </div>
+      </section>
 
-      <ThemeChoices<CornerStyle> disabled={saving} label="Corner style" name="cornerStyle" onChange={(cornerStyle) => setTheme((current) => ({ ...current, cornerStyle }))} options={['rounded', 'soft', 'square']} value={theme.cornerStyle} />
+      <ThemeChoices<CornerStyle> disabled={saving} label="Corner style" onChange={(cornerStyle) => setTheme((current) => ({ ...current, cornerStyle }))} options={['rounded', 'soft', 'square']} value={theme.cornerStyle} />
       <p className="mt-2 text-sm text-fg-muted">Controls the corner treatment across site buttons, inputs, cards, and panels.</p>
-      <ThemeChoices<ContentWidth> disabled={saving} label="Content width" name="contentWidth" onChange={(contentWidth) => setTheme((current) => ({ ...current, contentWidth }))} options={['narrow', 'standard', 'wide']} value={theme.contentWidth} />
-      <ThemeChoices<SectionSpacing> disabled={saving} label="Section spacing" name="sectionSpacing" onChange={(sectionSpacing) => setTheme((current) => ({ ...current, sectionSpacing }))} options={['compact', 'comfortable', 'spacious']} value={theme.sectionSpacing} />
+      <ThemeChoices<ContentWidth> disabled={saving} label="Content width" onChange={(contentWidth) => setTheme((current) => ({ ...current, contentWidth }))} options={['narrow', 'standard', 'wide']} value={theme.contentWidth} />
+      <ThemeChoices<SectionSpacing> disabled={saving} label="Section spacing" onChange={(sectionSpacing) => setTheme((current) => ({ ...current, sectionSpacing }))} options={['compact', 'comfortable', 'spacious']} value={theme.sectionSpacing} />
 
-      <section aria-label="Theme sample" className="mt-6 border p-5" style={{
+      <section aria-label="Theme sample" className="mt-6">
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-fg-subtle">Preview</h3>
+        <div className="mt-3 border p-4" style={{
         backgroundColor: HEX.test(theme.colors.background) ? theme.colors.background : DEFAULT_SITE_THEME.colors.background,
         borderColor: HEX.test(theme.colors.accent) ? theme.colors.accent : DEFAULT_SITE_THEME.colors.accent,
         borderRadius: radius,
@@ -159,6 +167,7 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
           borderRadius: theme.cornerStyle === 'rounded' ? '0.75rem' : theme.cornerStyle === 'soft' ? '0.375rem' : '0',
           color: previewForeground(HEX.test(theme.colors.accent) ? theme.colors.accent : DEFAULT_SITE_THEME.colors.accent)
         }}>Accent</span>
+        </div>
       </section>
 
     </WebsiteEditorShell>
@@ -167,25 +176,17 @@ export function ThemeEditor ({ onCancel, onDirtyChange = () => {}, onSaved, site
   )
 }
 
-function ThemeChoices<T extends string> ({ disabled, label, name, onChange, options, value }: {
+function ThemeChoices<T extends string> ({ disabled, label, onChange, options, value }: {
   disabled: boolean
   label: string
-  name: string
   onChange: (value: T) => void
   options: readonly T[]
   value: T
 }) {
   return (
     <fieldset className="mt-6">
-      <legend className="text-sm font-semibold text-fg">{label}</legend>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {options.map((option) => (
-          <label className={`flex min-h-11 items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium capitalize ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${value === option ? 'border-focus bg-surface-muted text-fg' : 'border-border-strong bg-surface text-fg-muted'}`} key={option}>
-            <input checked={value === option} className="sr-only" disabled={disabled} name={name} onChange={() => onChange(option)} type="radio" value={option} />
-            {option === 'workSans' ? 'Work Sans' : option}
-          </label>
-        ))}
-      </div>
+      <legend className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-fg-subtle">{label}</legend>
+      <div className="mt-3"><SegmentedControl ariaLabel={label} disabled={disabled} onChange={onChange} options={options.map((option) => ({ value: option, label: option === 'workSans' ? 'Work Sans' : option }))} value={value} /></div>
     </fieldset>
   )
 }

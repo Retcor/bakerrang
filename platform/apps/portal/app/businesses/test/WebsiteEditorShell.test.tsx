@@ -1,19 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { FormEvent } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { WebsiteEditorShell } from '../WebsiteEditorShell'
+import { type ActiveEditorController, WebsiteEditorShell } from '../WebsiteEditorShell'
 
 describe('WebsiteEditorShell', () => {
   it('uses shared metadata, error chrome, uniform actions, sticky layout, and width modes', () => {
     const dirty = vi.fn()
     const { container, rerender } = render(
-      <WebsiteEditorShell dirtyValue="seed" editor="faq" error="Request failed" onCancel={() => undefined} onDirtyChange={dirty} onSubmit={(event) => event.preventDefault()} saving={false} secondaryActions={<button type="button">Remove item</button>}>
+      <WebsiteEditorShell dirtyValue="seed" editor="branding" error="Request failed" onCancel={() => undefined} onDirtyChange={dirty} onSubmit={(event) => event.preventDefault()} saving={false} secondaryActions={<button type="button">Remove item</button>}>
         <input aria-label="Question" />
       </WebsiteEditorShell>
     )
-    expect(screen.getByText('Page section')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'FAQ' })).toBeInTheDocument()
-    expect(screen.getByText('Answer common questions on this page.')).toBeInTheDocument()
+    expect(screen.getByText('Site setup')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Branding' })).toBeInTheDocument()
+    expect(screen.getByText('Manage the site name, logo, and favicon.')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Request failed')
     expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
@@ -24,7 +24,7 @@ describe('WebsiteEditorShell', () => {
     expect(screen.getByTestId('website-editor-primary-actions')).toHaveClass('w-full', 'justify-end', 'sm:w-auto')
     expect(container.querySelector('form')).toHaveClass('max-w-3xl')
 
-    rerender(<WebsiteEditorShell dirtyValue="changed" editor="faq" onCancel={() => undefined} onDirtyChange={dirty} onSubmit={(event) => event.preventDefault()} saving width="wide"><input /></WebsiteEditorShell>)
+    rerender(<WebsiteEditorShell dirtyValue="changed" editor="branding" onCancel={() => undefined} onDirtyChange={dirty} onSubmit={(event) => event.preventDefault()} saving width="wide"><input /></WebsiteEditorShell>)
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     expect(container.querySelector('form')).toHaveClass('max-w-5xl')
     expect(dirty).toHaveBeenCalledWith(true)
@@ -32,8 +32,23 @@ describe('WebsiteEditorShell', () => {
 
   it('submits through the shared Save action', () => {
     const submit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
-    render(<WebsiteEditorShell dirtyValue={{ value: '' }} editor="hero" onCancel={() => undefined} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
+    render(<WebsiteEditorShell dirtyValue={{ value: '' }} editor="branding" onCancel={() => undefined} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it('emits a rail controller that submits the existing form without rendering rail actions', () => {
+    const submit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
+    let controller: ActiveEditorController | null = null
+    const { rerender } = render(<WebsiteEditorShell chrome="rail" dirtyValue="seed" editor="theme" onCancel={() => undefined} onControllerChange={(next) => { controller = next }} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
+    expect(screen.getByRole('button', { name: 'Site tools' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+
+    rerender(<WebsiteEditorShell chrome="rail" dirtyValue="changed" editor="theme" onCancel={() => undefined} onControllerChange={(next) => { controller = next }} onDirtyChange={() => undefined} onSubmit={submit} saving={false}><input /></WebsiteEditorShell>)
+    const emitted = () => controller
+    expect(emitted()?.dirty).toBe(true)
+    expect(emitted()?.canSave).toBe(true)
+    emitted()?.save()
     expect(submit).toHaveBeenCalledOnce()
   })
 })

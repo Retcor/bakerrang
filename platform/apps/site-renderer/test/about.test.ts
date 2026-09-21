@@ -28,7 +28,7 @@ test('About renders escaped React text, optional Theme-native image layout, and 
 })
 
 test('SectionRenderer uses the canonical About section while navigation is no longer section-derived', async () => {
-  const renderer = await source('../components/SectionRenderer.tsx')
+  const renderer = await source('../../../packages/site-runtime/src/SectionRenderer.tsx')
   const shell = await source('../../../packages/site-components/src/SiteShell.tsx')
   assert.match(renderer, /case 'about':[\s\S]*<About anchorId=\{section\.id\} content=\{section\.content\}/)
   assert.doesNotMatch(shell, /about: 'About'|activePage\.sections|#section-\$\{section\.id\}/)

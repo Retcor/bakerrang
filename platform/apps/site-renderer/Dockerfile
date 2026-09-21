@@ -9,6 +9,7 @@ COPY package.json package-lock.json ./
 COPY apps/portal/package.json apps/portal/package.json
 COPY apps/site-renderer/package.json apps/site-renderer/package.json
 COPY packages/site-components/package.json packages/site-components/package.json
+COPY packages/site-runtime/package.json packages/site-runtime/package.json
 COPY packages/site-schema/package.json packages/site-schema/package.json
 COPY packages/ui/package.json packages/ui/package.json
 RUN npm ci

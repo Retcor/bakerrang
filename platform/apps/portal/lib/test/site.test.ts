@@ -10,7 +10,7 @@ vi.mock('../api', () => ({
   apiSend: mocks.apiSend
 }))
 
-import { applySiteTemplate, getSiteTemplates, updateCustomCss, updatePageSeo, updateSiteSeo } from '../site'
+import { applySiteTemplate, getSiteRevision, getSiteTemplates, updateCustomCss, updatePageSeo, updateSiteSeo } from '../site'
 
 describe('site API helpers', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -48,5 +48,11 @@ describe('site API helpers', () => {
 
     expect(mocks.apiGet).toHaveBeenCalledWith('/tenants/tenant%2Fone/site/templates')
     expect(mocks.apiSend).toHaveBeenCalledWith('POST', '/tenants/tenant%2Fone/site/templates/modern%2Flocal/apply')
+  })
+
+  it('loads one published revision by encoded identity', async () => {
+    mocks.apiGet.mockResolvedValue({ status: 'PUBLISHED' })
+    await getSiteRevision('tenant/one', 'revision/one')
+    expect(mocks.apiGet).toHaveBeenCalledWith('/tenants/tenant%2Fone/site/revisions/revision%2Fone')
   })
 })
