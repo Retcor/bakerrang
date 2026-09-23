@@ -21,7 +21,7 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 
 ## Architecture
 
-- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. Cloud Run services are `bakerrang-api`, `bakerrang-client`, `bakerrang-portal`, and `bakerrang-site-renderer`.
+- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api`, `bakerrang-client`, `bakerrang-portal`, `bakerrang-site-renderer`, and the Launcher bootstrap target `bakerrang-web-launcher`.
 - Local data backing: `bakerrang-dev` retains only Firestore `(default)`, `bakerrang-dev-media-marketing`, and the developer IAM needed for ADC. Its former Cloud Run/LB/WIF deployment stack is historical inventory below.
 - Live images use the `bakerrang` Artifact Registry repository. The global external Application Load Balancer uses static IPv4 `34.8.236.85` (`bakerrang-web-ip`).
 
@@ -275,7 +275,7 @@ gcloud artifacts repositories add-iam-policy-binding $Repository `
   --project $ProjectId --location $Region `
   --member="serviceAccount:$DeployerSa" --role="roles/artifactregistry.writer"
 
-@("bakerrang-api", "bakerrang-client", "bakerrang-portal", "bakerrang-site-renderer") | ForEach-Object {
+@("bakerrang-api", "bakerrang-client", "bakerrang-portal", "bakerrang-site-renderer", "bakerrang-web-launcher") | ForEach-Object {
   gcloud run services add-iam-policy-binding $_ --project $ProjectId --region $Region `
     --member="serviceAccount:$DeployerSa" --role="roles/run.developer"
 }
@@ -290,7 +290,7 @@ gcloud iam service-accounts add-iam-policy-binding $DeployerSa --project $Projec
   --member=$RepoPrincipalSet --role="roles/iam.workloadIdentityUser"
 ```
 
-There are **no project-level deployer roles**. Grants are `artifactregistry.writer` on AR repository `bakerrang`; `run.developer` on exactly the four services; `serviceAccountUser` on `bakerrang-api@` and `bakerrang-frontend@`; and `workloadIdentityUser` for the repository-ID principal set. Provider trust additionally fixes owner ID `2282360`, repository ID `715929041`, and `refs/heads/main`.
+There are **no project-level deployer roles**. Grants are `artifactregistry.writer` on AR repository `bakerrang`; `run.developer` on exactly the five services; `serviceAccountUser` on `bakerrang-api@` and `bakerrang-frontend@`; and `workloadIdentityUser` for the repository-ID principal set. Provider trust additionally fixes owner ID `2282360`, repository ID `715929041`, and `refs/heads/main`.
 
 ## GitHub Environment
 
@@ -308,14 +308,27 @@ The Environment is `production`; there is no `production` branch. It contains on
 | `PORTAL_SERVICE` | `bakerrang-portal` |
 | `RENDERER_SERVICE` | `bakerrang-site-renderer` |
 | `CLIENT_SERVICE` | `bakerrang-client` |
+| `WEB_LAUNCHER_SERVICE` | `bakerrang-web-launcher` |
 | `NEXT_PUBLIC_API_BASE_URL` | `https://api.bakerrang.com` |
 | `NEXT_PUBLIC_SITE_PREVIEW_ORIGIN` | `https://sites.bakerrang.com` |
 | `NEXT_PUBLIC_SITE_API_BASE_URL` | `https://api.bakerrang.com` |
 | `CUSTOM_DOMAIN_IPV4_ADDRESS` | `34.8.236.85` |
 | `PORTAL_BASE_URL` | `https://portal.bakerrang.com` |
 | `CLIENT_BASE_URL` | `https://bakerrang.com` |
+| `LAUNCHER_BASE_URL` | `https://launch.bakerrang.com` |
+| `VITE_API_BASE_URL` | `https://api.bakerrang.com` |
+
+The logical CI/deployment key is `web-launcher`; the canonical physical Cloud Run
+service is `bakerrang-web-launcher`. `WEB_LAUNCHER_SERVICE` carries that physical
+name into the reusable deployment workflow, while classifier outputs, manual
+deployment, concurrency, and rollback selectors retain the logical key.
 
 `CUSTOM_DOMAIN_CNAME_TARGET` is intentionally unset. There are no GitHub GCP credential secrets; authentication is short-lived OIDC/WIF.
+
+The Launcher staging service, direct domain mapping, API `LAUNCHER_DOMAIN`, and
+resource-scoped deployer grant are operator-controlled prerequisites documented
+in the [Launcher Milestone 1 runbook](../apps/Launcher-Milestone1-Runbook.md).
+They must not change the existing `bakerrang.com` apex mapping.
 
 ## Existing live API audit
 

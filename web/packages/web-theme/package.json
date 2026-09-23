@@ -1,0 +1,13 @@
+{
+  "name": "@bakerrang/web-theme",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "exports": {
+    ".": "./src/index.jsx",
+    "./boot": "./src/boot.js"
+  }
+}

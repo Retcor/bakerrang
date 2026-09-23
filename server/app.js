@@ -12,6 +12,7 @@ import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 import { validateServerRuntimeConfig } from './config/runtimeConfig.js'
 
 import authRouter, { isAuthenticated } from './routes/auth.js'
+import accountRouter from './routes/account.js'
 import chatgptRouter from './routes/chatgpt.js'
 import textToSpeechRouter from './routes/textToSpeech.js'
 import superMarketRouter from './routes/superMarket.js'
@@ -110,6 +111,7 @@ app.use('/public', publicSiteRouter)
 // Cloud Scheduler calls this with Authorization: Bearer $INTERNAL_DRAIN_TOKEN.
 app.use('/internal', internalLeadNotificationRouter)
 app.use('/auth', authLimiter, authRouter)
+app.use('/account', isAuthenticated, accountRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)

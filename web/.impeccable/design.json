@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-20T00:00:00Z",
+  "title": "Design System: BakerRang Consumer Ecosystem",
+  "extensions": {
+    "colorMeta": {
+      "gold": { "role": "primary", "displayName": "Signal Gold", "canonical": "#FFD500", "note": "Fill only: brand mark + single primary action + ::selection. Paired with dark ink.", "tonalRamp": ["#2e2600","#5c4c00","#8a7300","#b89900","#e0be00","#FFD500","#ffe04d","#fff2b3"] },
+      "gold-text": { "role": "primary", "displayName": "Gold Text", "canonical": "#FFD500", "note": "Accent text/icon strokes/focus. #FFD500 on dark, #8a6300 deep-gold on light.", "lightValue": "#8a6300", "tonalRamp": ["#2e2600","#5c4c00","#8a6300","#b88700","#e0a800","#FFD500","#ffe04d","#fff2b3"] },
+      "ink-on-gold": { "role": "neutral", "displayName": "Ink on Gold", "canonical": "#1a1a1a", "note": "Dark text/glyph placed on gold fills. Never white.", "tonalRamp": ["#000000","#141414","#1a1a1a","#333333","#595959","#808080","#b3b3b3","#e6e6e6"] },
+      "bg": { "role": "neutral", "displayName": "Charcoal Ground", "canonical": "#161514", "lightValue": "#efece6", "tonalRamp": ["#0d0c0b","#161514","#201f1d","#2b2a27","#403e3a","#726d64","#a8a29a","#efece6"] },
+      "bg-2": { "role": "neutral", "displayName": "Ground 2", "canonical": "#1c1b1a", "lightValue": "#e7e3db", "tonalRamp": ["#0d0c0b","#141312","#1c1b1a","#2b2a27","#403e3a","#726d64","#b0aaa1","#e7e3db"] },
+      "plane": { "role": "neutral", "displayName": "Plane", "canonical": "#201f1d", "lightValue": "#ffffff", "tonalRamp": ["#141312","#1a1918","#201f1d","#2b2a27","#3a3833","#6b665e","#c3bfb6","#ffffff"] },
+      "plane-2": { "role": "neutral", "displayName": "Plane 2", "canonical": "#262523", "lightValue": "#f6f4ef", "tonalRamp": ["#141312","#1c1b1a","#262523","#33322f","#454340","#726d64","#c8c3ba","#f6f4ef"] },
+      "line": { "role": "neutral", "displayName": "Hairline Rule", "canonical": "rgba(255,255,255,0.10)", "lightValue": "rgba(20,18,16,0.12)", "tonalRamp": ["rgba(255,255,255,0.04)","rgba(255,255,255,0.06)","rgba(255,255,255,0.08)","rgba(255,255,255,0.10)","rgba(255,255,255,0.14)","rgba(255,255,255,0.18)","rgba(255,255,255,0.24)","rgba(255,255,255,0.32)"] },
+      "line-strong": { "role": "neutral", "displayName": "Strong Rule", "canonical": "rgba(255,255,255,0.18)", "lightValue": "rgba(20,18,16,0.22)", "tonalRamp": ["rgba(255,255,255,0.08)","rgba(255,255,255,0.12)","rgba(255,255,255,0.14)","rgba(255,255,255,0.18)","rgba(255,255,255,0.24)","rgba(255,255,255,0.32)","rgba(255,255,255,0.44)","rgba(255,255,255,0.6)"] },
+      "ink": { "role": "neutral", "displayName": "Primary Ink", "canonical": "#f2efe9", "lightValue": "#1b1a18", "tonalRamp": ["#1b1a18","#3a3833","#4f4b44","#726d64","#928d83","#c3bfb6","#e2ded6","#f2efe9"] },
+      "ink-2": { "role": "neutral", "displayName": "Secondary Ink", "canonical": "#c3bfb6", "lightValue": "#4f4b44", "tonalRamp": ["#1b1a18","#3a3833","#4f4b44","#726d64","#928d83","#c3bfb6","#e2ded6","#f2efe9"] },
+      "ink-3": { "role": "neutral", "displayName": "Muted Ink", "canonical": "#928d83", "lightValue": "#726d64", "tonalRamp": ["#1b1a18","#3a3833","#4f4b44","#726d64","#928d83","#b0aaa1","#d0ccc3","#f2efe9"] },
+      "danger": { "role": "tertiary", "displayName": "Danger", "canonical": "#E88A8A", "lightValue": "#C0362B", "note": "Destructive actions only (e.g. Sign out); never decorative." },
+      "accent-story": { "role": "secondary", "displayName": "Story Ember", "canonical": "#F08A5D", "lightValue": "#C25A34", "note": "Story Book emblem + hover only." },
+      "accent-poly": { "role": "secondary", "displayName": "Polyglot Teal", "canonical": "#58C0C9", "lightValue": "#1f7d86", "note": "Polyglot emblem + hover only." },
+      "accent-sign": { "role": "secondary", "displayName": "Sign Violet", "canonical": "#B79CE0", "lightValue": "#6E4FB4", "note": "Sign Language emblem + hover only." },
+      "accent-budget": { "role": "secondary", "displayName": "Budget Blue", "canonical": "#7FB0E8", "lightValue": "#235f9e", "note": "Budget emblem + hover only." },
+      "accent-wow": { "role": "secondary", "displayName": "WoW Bronze", "canonical": "#D69A4C", "lightValue": "#8a5c15", "note": "WoW Advisor emblem + hover only." },
+      "accent-pass": { "role": "secondary", "displayName": "Vault Steel", "canonical": "#AEB8C2", "lightValue": "#4d5867", "note": "Passwords vault accent + secure tag." },
+      "accent-account": { "role": "secondary", "displayName": "Account Stone", "canonical": "#A5A59C", "lightValue": "#63625a", "note": "Account emblem + hover only." }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Masthead statement of what BakerRang is. Archivo Expanded 800, tight tracking." },
+      "headline": { "displayName": "Headline", "purpose": "Section mastheads (e.g. 'What's on the bench'). Archivo Expanded." },
+      "title": { "displayName": "Title", "purpose": "Tool names in directory rows and the vault. Archivo Expanded 700." },
+      "body": { "displayName": "Body", "purpose": "Leads, descriptions, UI copy. Archivo, slightly tight tracking." },
+      "label": { "displayName": "Label", "purpose": "Group titles and eyebrow labels, uppercase, wide tracking, Ink-3." }
+    },
+    "shadows": [
+      { "name": "resting", "value": "0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35)", "lightValue": "0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10)", "purpose": "Structural elevation on genuinely raised objects: bench, vault, popovers, menus." },
+      { "name": "contact", "value": "0 1px 2px rgba(0,0,0,.4)", "lightValue": "0 1px 2px rgba(30,26,20,.10)", "purpose": "Small contact shadow: segmented-control active pill, hovered directory row." }
+    ],
+    "motion": [
+      { "name": "state", "value": "0.16s ease", "purpose": "Default transition for background/border/color state changes." },
+      { "name": "press", "value": "0.06s ease", "purpose": "Fast translateY press on buttons." },
+      { "name": "settle", "value": "0.6s cubic-bezier(.2,.8,.2,1)", "purpose": "Staggered bench-cell entrance; gated behind prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "900px", "note": "Masthead + ecosystem collapse to one column; bench moves below copy." },
+      { "name": "md", "value": "640px", "note": "Compact top-bar sign-in; theme labels hide; rows tighten; vault drops arrow." },
+      { "name": "sm", "value": "430px", "note": "Wordmark hides; BakerRang logo mark carries the brand." }
+    ],
+    "radii": [
+      { "name": "control-inner", "value": "3px", "purpose": "Nested inner elements: segmented-control pills, chips, secure tag, focus radius." },
+      { "name": "control", "value": "4px", "purpose": "Buttons, icon buttons, avatar, segmented control, emblem tiles." },
+      { "name": "panel", "value": "8px", "purpose": "Bench, directory rows, vault, popovers/menus." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (Gold)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single primary action. The only gold fill on a surface; dark ink on gold.",
+      "html": "<button class=\"ds-btn-gold\">Open your tools</button>",
+      "css": ".ds-btn-gold { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:10px 16px; border:1px solid transparent; border-radius:4px; background:#FFD500; color:#1a1a1a; font:600 14px 'Archivo',sans-serif; letter-spacing:-0.01em; cursor:pointer; transition:background .16s ease, transform .06s ease; } .ds-btn-gold:hover { background:#F0C400; } .ds-btn-gold:active { background:#DDBA00; transform:translateY(1px); } .ds-btn-gold:focus-visible { outline:2px solid #FFD500; outline-offset:3px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action: transparent with a strong hairline border, fills to Plane on hover.",
+      "html": "<button class=\"ds-btn-ghost\">See what's on the bench</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:10px 16px; border:1px solid rgba(255,255,255,0.18); border-radius:4px; background:transparent; color:#f2efe9; font:600 14px 'Archivo',sans-serif; letter-spacing:-0.01em; cursor:pointer; transition:background .16s ease, border-color .16s; } .ds-btn-ghost:hover { background:#201f1d; } .ds-btn-ghost:focus-visible { outline:2px solid #FFD500; outline-offset:3px; }"
+    },
+    {
+      "name": "Metadata Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Small metadata or action chip. Pair variant (tabular) is static; go variant takes the accent on hover.",
+      "html": "<span class=\"ds-chip\">EN &#8646; ES</span> <button class=\"ds-chip ds-chip--go\" style=\"--accent:#58C0C9\">Instant mode</button>",
+      "css": ".ds-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:3px; border:1px solid rgba(255,255,255,0.18); background:#1c1b1a; color:#c3bfb6; font:600 11px 'Archivo',sans-serif; font-variant-numeric:tabular-nums; } .ds-chip--go { cursor:pointer; } .ds-chip--go:hover { border-color:var(--accent); color:var(--accent); }"
+    },
+    {
+      "name": "Directory Row",
+      "kind": "card",
+      "refersTo": "directory-row",
+      "description": "The signature tool entry: an index row, not a card. Flat at rest, lifts and takes the tool accent on hover.",
+      "html": "<div class=\"ds-row\" style=\"--accent:#F08A5D\"><div class=\"ds-row__em\"><svg viewBox=\"0 0 32 32\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16\"/></svg></div><div><div class=\"ds-row__name\">Story Book</div><div class=\"ds-row__desc\">Write and illustrate a story with a few words, then have it read aloud.</div></div><div class=\"ds-row__go\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></div></div>",
+      "css": ".ds-row { display:grid; grid-template-columns:60px 1fr auto; align-items:center; gap:1.1rem; padding:1.05rem 1rem; border-radius:8px; border:1px solid transparent; border-bottom-color:rgba(255,255,255,0.10); cursor:pointer; transition:background .16s, border-color .16s, transform .1s; } .ds-row:hover { background:#201f1d; border-color:rgba(255,255,255,0.10); transform:translateX(2px); box-shadow:0 1px 2px rgba(0,0,0,.4); } .ds-row__em { width:52px; height:52px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, #201f1d); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); } .ds-row__em svg { width:30px; height:30px; } .ds-row__name { font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:1.18rem; letter-spacing:-0.02em; color:#f2efe9; } .ds-row__desc { color:#c3bfb6; font:400 .95rem 'Archivo',sans-serif; margin-top:1px; } .ds-row__go { color:#928d83; transition:color .16s, transform .16s; } .ds-row__go svg { width:22px; height:22px; display:block; } .ds-row:hover .ds-row__go { color:var(--accent); transform:translateX(3px); }"
+    },
+    {
+      "name": "Vault (high-trust module)",
+      "kind": "custom",
+      "refersTo": "vault",
+      "description": "The distinct, sturdier zero-knowledge Passwords module. Always elevated, with a secure tag and masked dots.",
+      "html": "<div class=\"ds-vault\"><div class=\"ds-vault__em\"><svg viewBox=\"0 0 32 32\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"14\" width=\"18\" height=\"12\" rx=\"2.5\"/><path d=\"M11 14v-3a5 5 0 0 1 10 0v3\"/><circle cx=\"16\" cy=\"20\" r=\"1.6\"/></svg></div><div><div class=\"ds-vault__name\">Passwords <span class=\"ds-tag-secure\">Zero-knowledge</span></div><div class=\"ds-vault__desc\">A private vault that encrypts on your device. <span class=\"ds-vault__dots\">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span></div></div></div>",
+      "css": ".ds-vault { --accent:#AEB8C2; display:grid; grid-template-columns:64px 1fr; align-items:center; gap:1.2rem; padding:1.5rem 1.4rem; border-radius:8px; background:#201f1d; border:1px solid rgba(255,255,255,0.18); box-shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35); cursor:pointer; } .ds-vault:hover { border-color:color-mix(in srgb, var(--accent) 45%, rgba(255,255,255,0.18)); } .ds-vault__em { width:58px; height:58px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, #201f1d); border:1px solid color-mix(in srgb, var(--accent) 34%, transparent); } .ds-vault__em svg { width:32px; height:32px; } .ds-vault__name { font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:1.3rem; letter-spacing:-.02em; color:#f2efe9; display:flex; align-items:center; gap:.6rem; } .ds-vault__desc { color:#c3bfb6; font:400 .95rem 'Archivo',sans-serif; margin-top:2px; } .ds-vault__dots { letter-spacing:.18em; color:var(--accent); } .ds-tag-secure { font:700 11px 'Archivo',sans-serif; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding:2px 7px; border-radius:3px; }"
+    },
+    {
+      "name": "Segmented Theme Control",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "Light/dark/system control. Track is Plane; the pressed segment gets a Plane-2 pill and contact shadow.",
+      "html": "<div class=\"ds-seg\" role=\"group\"><button aria-pressed=\"false\">Light</button><button aria-pressed=\"true\">Dark</button><button aria-pressed=\"false\">System</button></div>",
+      "css": ".ds-seg { display:inline-flex; padding:3px; gap:2px; background:#201f1d; border:1px solid rgba(255,255,255,0.10); border-radius:4px; } .ds-seg button { appearance:none; border:0; background:transparent; color:#928d83; font:600 12px 'Archivo',sans-serif; padding:5px 9px; border-radius:3px; cursor:pointer; } .ds-seg button:hover { color:#f2efe9; } .ds-seg button[aria-pressed=\"true\"] { background:#262523; color:#f2efe9; box-shadow:0 1px 2px rgba(0,0,0,.4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Maker's Workbench Index",
+    "overview": "BakerRang's consumer front door is a matched tool kit laid out as a printed directory: a workshop of small, sharp tools from one maker, indexed with editorial and signage discipline. It is warm and distinctive but modern and restrained — not literal skeuomorphism. The workbench character comes entirely from precision: exact alignment, hairline rules, tactile-but-quiet controls, small machined radii, and one shared drawing hand across every tool emblem so the set reads as a matched kit. This is the shared consumer world, reused across the launcher and every future per-product app; family resemblance lives in charcoal ground, reserved gold, Archivo/Archivo Expanded, flat planes and 1px rules, while each product keeps its own muted accent and drawn emblem. It is deliberately distinct from the platform's Business Workshop world. Dark is the signature default; a fully designed warm light mode is a first-class peer. The world refuses the category default (a hero over a uniform grid of cards) and rejects glassmorphism, ambient gradients, interchangeable cards, card-in-card, pills-everywhere, oversized vague heroes, icon+heading+subtitle repetition, and stat-grid dashboards. Depth is real but quiet — offset+blur shadows, never blur/glass.",
+    "keyCharacteristics": [
+      "Charcoal ground with gold reserved to the brand mark and the single primary action.",
+      "Directory/index rows with distinct drawn SVG emblems, never a uniform card grid.",
+      "Archivo Expanded signage headings over Archivo body, tight and confident.",
+      "Flat planes separated by 1px rules and restrained real shadows; no glass, no gradients.",
+      "Per-tool muted accent, one shared emblem stroke weight; a matched tool kit.",
+      "Small machined radii (4px controls, 8px panels); light/dark/system all first-class."
+    ],
+    "rules": [
+      { "name": "The Reserved Gold Rule", "body": "Gold is the brand and exactly one action. If a screen shows more than one gold fill, or uses gold on anything other than the mark, the primary button, ::selection, or focus, it is wrong. Even the masthead headline's accentword is set in --ink, not gold.", "section": "colors" },
+      { "name": "The Dark-Ink-on-Gold Rule", "body": "Any element sitting on a gold fill uses #1a1a1a ink, never white.", "section": "colors" },
+      { "name": "The One-Accent-Per-Tool Rule", "body": "A product's accent appears only on its own emblem and hover state. Accents never mix on one surface and never tint text, backgrounds, or borders wider than 1px.", "section": "colors" },
+      { "name": "The Expanded-for-Naming Rule", "body": "Archivo Expanded is reserved for the wordmark, mastheads, and tool names. Body, descriptions, chips, and controls are always plain Archivo; never set a paragraph in the expanded face.", "section": "typography" },
+      { "name": "The No-Glass Rule", "body": "Depth is tonal planes + 1px rules + offset/blur shadow. Never backdrop-filter, translucency-as-material, or gradient fills to fake elevation.", "section": "elevation" },
+      { "name": "The Flat-At-Rest Rule", "body": "Directory rows are borderless (with only a bottom hairline) until hovered, when they gain a Plane background, a full 1px border, a 2px translateX nudge, and the contact shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep gold to the brand mark and the single primary action (plus ::selection and focus). One gold fill per surface, maximum.",
+      "Do use dark ink (#1a1a1a) on every gold fill, never white.",
+      "Do give each product one muted accent, expressed only on its drawn emblem and hover.",
+      "Do build tool lists as full-width directory rows grouped by job, with drawn emblems.",
+      "Do convey depth with tonal planes + 1px rules + restrained offset/blur shadow.",
+      "Do treat dark as the signature default and light as a fully designed peer; support system too.",
+      "Do hide the wordmark below 430px and let the BakerRang logo mark carry the brand.",
+      "Do draw every icon as an SVG on the shared 1.75 stroke weight."
+    ],
+    "donts": [
+      "Don't use glassmorphism, backdrop-filter, ambient/arbitrary gradients, or translucency-as-material.",
+      "Don't render tools as a uniform grid of icon+title+subtitle cards, or nest card-in-card.",
+      "Don't spread pills everywhere, build stat-grid dashboards, or ship oversized vague heroes.",
+      "Don't color a card border wider than 1px, or tint text/backgrounds with a tool accent.",
+      "Don't use emoji as icons or a system display face; use drawn SVG and Archivo Expanded.",
+      "Don't let the launcher become a dashboard/widget console — it is a front door and index.",
+      "Don't introduce literal skeuomorphism (wood, pegboard, screws, taped labels)."
+    ]
+  },
+  "notCanonized": [
+    "Fonts (Archivo, Archivo Expanded) currently load from the Google Fonts CDN in the shipped comp; self-hosting is a tracked pre-ship task, not a design-system rule.",
+    "The comp carries a fixed review-controls widget (auth/theme toggles) for finish review; it is scaffolding, not a product component, and is not documented as a system pattern."
+  ]
+}

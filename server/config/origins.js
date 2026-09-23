@@ -1,5 +1,6 @@
 export const buildAllowedOrigins = (env = process.env) => [
   env.CLIENT_DOMAIN,
+  env.LAUNCHER_DOMAIN,
   env.PORTAL_DOMAIN,
   env.SITE_RENDERER_DOMAIN,
   env.CHATBOT_ORIGIN

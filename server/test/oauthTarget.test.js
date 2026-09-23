@@ -15,7 +15,8 @@ import { buildGoogleStrategyOptions } from '../config/googleOAuth.js'
 
 const env = {
   CLIENT_DOMAIN: 'http://localhost:3000',
-  PORTAL_DOMAIN: 'http://localhost:3001'
+  PORTAL_DOMAIN: 'http://localhost:3001',
+  LAUNCHER_DOMAIN: 'http://localhost:3010'
 }
 
 const response = () => ({
@@ -40,10 +41,13 @@ test('OAuth targets are a closed symbolic set and never arbitrary URLs', () => {
   assert.equal(oauthTargetFromQuery(undefined), 'client')
   assert.equal(oauthTargetFromQuery('client'), 'client')
   assert.equal(oauthTargetFromQuery('portal'), 'portal')
+  assert.equal(oauthTargetFromQuery('launcher'), 'launcher')
   assert.equal(resolveOAuthTarget('client', env), env.CLIENT_DOMAIN)
   assert.equal(resolveOAuthTarget('portal', env), env.PORTAL_DOMAIN)
+  assert.equal(resolveOAuthTarget('launcher', env), env.LAUNCHER_DOMAIN)
   assert.equal(isValidOAuthTarget('client'), true)
   assert.equal(isValidOAuthTarget('portal'), true)
+  assert.equal(isValidOAuthTarget('launcher'), true)
   assert.equal(isValidOAuthTarget('https://evil.example'), false)
   assert.throws(() => oauthTargetFromQuery('https://evil.example'), { status: 400 })
   assert.throws(() => resolveOAuthTarget('https://evil.example', env), { status: 500 })

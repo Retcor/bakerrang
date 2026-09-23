@@ -48,6 +48,14 @@ test('supports Client deployments and skips for newer Client changes', t => {
   assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'client', triggerSha, currentRef: 'main' }).shouldDeploy, false)
 })
 
+test('supports Web Launcher deployments and skips for newer shared-web changes', t => {
+  const repository = fixture()
+  t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))
+  const triggerSha = repository.commit('web/apps/launcher/src/main.jsx', 'a')
+  repository.commit('web/packages/web-theme/src/index.jsx', 'newer shared web')
+  assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'web-launcher', triggerSha, currentRef: 'main' }).shouldDeploy, false)
+})
+
 test('deploys when newer commits affect a different service or only docs', t => {
   const repository = fixture()
   t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const BOTH_PLATFORM_SERVICES = ['portal', 'renderer']
+const ALL_WEB_SERVICES = ['web-launcher']
 
 // This is the single repository-path policy used by CI and future deployment
 // workflows. Keep CI-only inputs distinct from deploy/build inputs.
@@ -15,6 +16,8 @@ const PATH_RULES = [
   { prefix: 'platform/packages/ui/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'platform/packages/site-components/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'platform/packages/site-runtime/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
+  { prefix: 'web/apps/launcher/', ci: ['web-launcher'], deploy: ['web-launcher'] },
+  { prefix: 'web/packages/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
 
   { exact: 'platform/package.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { exact: 'platform/package-lock.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
@@ -25,6 +28,21 @@ const PATH_RULES = [
   { exact: 'platform/eslint.config.mjs', ci: BOTH_PLATFORM_SERVICES, deploy: [] },
   { exact: 'platform/.gitignore', ci: [], deploy: [] },
   { exact: 'platform/.nvmrc', ci: [], deploy: [] },
+  { exact: 'web/package.json', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/package-lock.json', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/Dockerfile', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/.dockerignore', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/eslint.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/vitest.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { prefix: 'web/nginx/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { prefix: 'web/.impeccable/', ci: [], deploy: [] },
+  { exact: 'web/PRODUCT.md', ci: [], deploy: [] },
+  { exact: 'web/DESIGN.md', ci: [], deploy: [] },
+  { exact: 'web/README.md', ci: [], deploy: [] },
+  { exact: 'web/AGENTS.md', ci: [], deploy: [] },
+  { exact: 'web/CLAUDE.md', ci: [], deploy: [] },
+  { exact: 'web/.gitignore', ci: [], deploy: [] },
+  { exact: 'web/.nvmrc', ci: [], deploy: [] },
 
   // Known repository areas outside service CI and deployment.
   { prefix: 'docs/', ci: [], deploy: [] },
@@ -79,13 +97,15 @@ export function classifyChanges (repositoryPaths) {
       api: ci.has('api'),
       portal: ci.has('portal'),
       renderer: ci.has('renderer'),
-      client: ci.has('client')
+      client: ci.has('client'),
+      'web-launcher': ci.has('web-launcher')
     },
     deploy: {
       api: deploy.has('api'),
       portal: deploy.has('portal'),
       renderer: deploy.has('renderer'),
-      client: deploy.has('client')
+      client: deploy.has('client'),
+      'web-launcher': deploy.has('web-launcher')
     },
     unknown: unknown.sort()
   }
@@ -103,10 +123,12 @@ function writeGitHubOutputs (outputPath, result) {
     portal: result.ci.portal,
     renderer: result.ci.renderer,
     client: result.ci.client,
+    web_launcher: result.ci['web-launcher'],
     deploy_api: result.deploy.api,
     deploy_portal: result.deploy.portal,
     deploy_renderer: result.deploy.renderer,
-    deploy_client: result.deploy.client
+    deploy_client: result.deploy.client,
+    deploy_web_launcher: result.deploy['web-launcher']
   }
   fs.appendFileSync(outputPath, Object.entries(outputs).map(([name, value]) => `${name}=${value}\n`).join(''))
 }

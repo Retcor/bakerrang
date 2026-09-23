@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.env*
+**/npm-debug.log*
+**/.DS_Store
+.impeccable
+.git
+.gitignore
+Dockerfile
+.dockerignore

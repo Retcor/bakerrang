@@ -15,6 +15,7 @@ on:
           - portal
           - renderer
           - client
+          - web-launcher
 
 permissions:
   contents: read
@@ -31,6 +32,7 @@ jobs:
       deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
       deploy_client: ${{ steps.classify.outputs.deploy_client }}
+      deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
     steps:
       - name: Check out pushed commit
         uses: actions/checkout@v7
@@ -133,6 +135,28 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+  validate-web:
+    name: Validate Shared Web
+    needs: changes
+    if: needs.changes.outputs.deploy_web_launcher == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build -w @bakerrang/web-launcher
+
   deploy-api:
     name: Deploy API
     needs: [changes, validate-api]
@@ -189,6 +213,20 @@ jobs:
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
 
+  deploy-web-launcher:
+    name: Deploy Web Launcher
+    needs: [changes, validate-web]
+    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_web_launcher == 'true' && needs.validate-web.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: web-launcher
+      environment: production
+      image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
+
   guard-main:
     name: Require main branch
     if: github.event_name == 'workflow_dispatch'
@@ -229,10 +267,12 @@ jobs:
       - validate-api
       - validate-platform
       - validate-client
+      - validate-web
       - deploy-api
       - deploy-portal
       - deploy-renderer
       - deploy-client
+      - deploy-web-launcher
       - guard-main
       - deploy-selected-service
     runs-on: ubuntu-latest
@@ -248,13 +288,16 @@ jobs:
           DEPLOY_PORTAL: ${{ needs.changes.outputs.deploy_portal }}
           DEPLOY_RENDERER: ${{ needs.changes.outputs.deploy_renderer }}
           DEPLOY_CLIENT: ${{ needs.changes.outputs.deploy_client }}
+          DEPLOY_WEB_LAUNCHER: ${{ needs.changes.outputs.deploy_web_launcher }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
           VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
           VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
+          VALIDATE_WEB_RESULT: ${{ needs.validate-web.result }}
           API_RESULT: ${{ needs.deploy-api.result }}
           PORTAL_RESULT: ${{ needs.deploy-portal.result }}
           RENDERER_RESULT: ${{ needs.deploy-renderer.result }}
           CLIENT_RESULT: ${{ needs.deploy-client.result }}
+          WEB_LAUNCHER_RESULT: ${{ needs.deploy-web-launcher.result }}
           GUARD_RESULT: ${{ needs.guard-main.result }}
           SELECTED_RESULT: ${{ needs.deploy-selected-service.result }}
         run: |
@@ -298,6 +341,10 @@ jobs:
           fi
           if [[ "$DEPLOY_CLIENT" == "true" && ( "$VALIDATE_CLIENT_RESULT" != "success" || "$CLIENT_RESULT" != "success" ) ]]; then
             echo "Affected Client validation/deployment did not succeed: validation=$VALIDATE_CLIENT_RESULT deployment=$CLIENT_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_WEB_LAUNCHER" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_LAUNCHER_RESULT" != "success" ) ]]; then
+            echo "Affected Web Launcher validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_LAUNCHER_RESULT" >&2
             exit 1
           fi
           echo "All affected MAIN/live validations and deployments passed."

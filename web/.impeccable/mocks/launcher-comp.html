@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-auth="out">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BakerRang — the workshop</title>
+<meta name="description" content="BakerRang builds a handful of small, sharp tools — each its own app, all under one account." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Expanded:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   BakerRang consumer design world — Maker's Workbench + signage
+   Comp for review. Charcoal ground, gold reserved for brand +
+   the single primary action. Per-tool muted accents on drawn
+   emblems only. No glass, no ambient gradients, no card grid.
+   ============================================================ */
+
+:root {
+  --gold: #FFD500;          /* fills only (buttons, mark) — always paired with dark ink */
+  --gold-hover: #F0C400;
+  --gold-press: #DDBA00;
+  --gold-text: #FFD500;     /* accent TEXT / icon strokes / focus — legible per theme */
+  --ink-on-gold: #1a1a1a;
+
+  /* charcoal world (dark = signature front-door look) */
+  --bg: #161514;
+  --bg-2: #1c1b1a;
+  --plane: #201f1d;
+  --plane-2: #262523;
+  --line: rgba(255,255,255,0.10);
+  --line-strong: rgba(255,255,255,0.18);
+  --ink: #f2efe9;
+  --ink-2: #c3bfb6;
+  --ink-3: #928d83;
+  --danger: #E88A8A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --focus: var(--gold-text);
+
+  /* per-tool accents (dark) */
+  --a-story: #F08A5D;
+  --a-poly: #58C0C9;
+  --a-sign: #B79CE0;
+  --a-budget: #7FB0E8;
+  --a-wow: #D69A4C;
+  --a-pass: #AEB8C2;
+  --a-account: #A5A59C;
+
+  --maxw: 1200px;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --r: 4px;      /* small, machined radius */
+  --r-lg: 8px;
+}
+
+:root[data-theme="light"] {
+  --bg: #efece6;
+  --bg-2: #e7e3db;
+  --plane: #ffffff;
+  --plane-2: #f6f4ef;
+  --line: rgba(20,18,16,0.12);
+  --line-strong: rgba(20,18,16,0.22);
+  --ink: #1b1a18;
+  --ink-2: #4f4b44;
+  --ink-3: #726d64;
+  --danger: #C0362B;
+  --shadow: 0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10);
+  --shadow-sm: 0 1px 2px rgba(30,26,20,.10);
+
+  --a-story: #C25A34;
+  --a-poly: #1f7d86;
+  --a-sign: #6E4FB4;
+  --a-budget: #235f9e;
+  --a-wow: #8a5c15;
+  --a-pass: #4d5867;
+  --a-account: #63625a;
+  --gold-text: #8a6300;     /* deep gold: legible accent text/icons/focus on light */
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+::selection { background: var(--gold); color: var(--ink-on-gold); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+a { color: inherit; text-decoration: none; }
+
+/* themed scrollbar */
+* { scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 20px; border: 3px solid var(--bg); }
+
+.display {
+  font-family: "Archivo Expanded", "Archivo", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+.wrap { max-width: var(--maxw); margin: 0 auto; padding-inline: var(--gutter); }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 60;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.topbar__in { display: flex; align-items: center; gap: 1rem; height: 64px; }
+.brand { display: flex; align-items: center; gap: .6rem; }
+.brand__mark { width: 32px; height: 32px; display: block; flex: none; object-fit: contain; }
+.brand__word {
+  font-family: "Archivo Expanded", sans-serif; font-weight: 700;
+  font-size: 1.15rem; letter-spacing: -0.03em;
+}
+.topbar__spacer { flex: 1; }
+.topbar__right { display: flex; align-items: center; gap: .5rem; }
+
+/* segmented theme control */
+.seg {
+  display: inline-flex; padding: 3px; gap: 2px;
+  background: var(--plane); border: 1px solid var(--line); border-radius: var(--r);
+}
+.seg button {
+  appearance: none; border: 0; background: transparent; color: var(--ink-3);
+  font: 600 12px "Archivo", sans-serif; padding: 5px 9px; border-radius: 3px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0;
+}
+.seg button[aria-pressed="true"] { background: var(--plane-2); color: var(--ink); box-shadow: var(--shadow-sm); }
+.seg button:hover { color: var(--ink); }
+.seg svg { width: 15px; height: 15px; }
+
+.btn {
+  appearance: none; cursor: pointer; border-radius: var(--r);
+  font: 600 14px "Archivo", sans-serif; letter-spacing: -0.01em;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: 10px 16px; border: 1px solid transparent; white-space: nowrap; transition: background .16s ease, transform .06s ease, border-color .16s;
+}
+.si-short { display: none; }
+.btn:active { transform: translateY(1px); }
+.btn--gold { background: var(--gold); color: var(--ink-on-gold); }
+.btn--gold:hover { background: var(--gold-hover); }
+.btn--gold:active { background: var(--gold-press); }
+.btn--ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn--ghost:hover { background: var(--plane); }
+.btn--sm { padding: 7px 12px; font-size: 13px; }
+.g-logo { width: 16px; height: 16px; }
+
+/* icon button + avatar */
+.iconbtn {
+  appearance: none; cursor: pointer; width: 38px; height: 38px; border-radius: var(--r);
+  background: var(--plane); border: 1px solid var(--line); color: var(--ink-2);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.iconbtn:hover { color: var(--ink); border-color: var(--line-strong); }
+.iconbtn svg { width: 19px; height: 19px; }
+.avatar {
+  width: 38px; height: 38px; border-radius: var(--r); overflow: hidden; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--plane-2); padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 700 14px "Archivo", sans-serif; color: var(--ink);
+}
+
+.only-out { display: inline-flex; }
+.only-in { display: none; }
+[data-auth="in"] .only-out { display: none; }
+[data-auth="in"] .only-in { display: inline-flex; }
+
+/* dropdowns */
+.menu { position: relative; }
+.pop {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+  background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  box-shadow: var(--shadow); padding: 6px; min-width: 210px;
+  opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .14s, transform .14s;
+}
+.menu.open .pop { opacity: 1; transform: none; pointer-events: auto; }
+.pop__item {
+  display: flex; align-items: center; gap: .6rem; width: 100%; text-align: left;
+  padding: 9px 10px; border-radius: var(--r); color: var(--ink-2);
+  font: 500 14px "Archivo", sans-serif; background: transparent; border: 0; cursor: pointer;
+}
+.pop__item:hover { background: var(--plane-2); color: var(--ink); }
+.pop__item svg { width: 17px; height: 17px; flex: none; }
+.pop__sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop__head { padding: 8px 10px 4px; color: var(--ink-3); font: 600 11px "Archivo",sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+.pop__danger { color: var(--danger); }
+.pop__danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+
+/* app-switcher grid */
+.switch { min-width: 320px; padding: 8px; }
+.switch__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.switch__cell {
+  display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center;
+  padding: 12px 6px; border-radius: var(--r); background: transparent; border: 0; cursor: pointer; color: var(--ink-2);
+}
+.switch__cell:hover { background: var(--plane-2); color: var(--ink); }
+.switch__cell .em { width: 30px; height: 30px; }
+.switch__cell span { font: 600 11.5px "Archivo",sans-serif; line-height: 1.15; }
+
+/* ---------- masthead ---------- */
+.hero { padding: clamp(3rem, 8vw, 6.5rem) 0 clamp(2.5rem,5vw,4rem); }
+.hero__grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(2rem,5vw,4rem); align-items: center; }
+.hero h1 { margin: 0; font-size: clamp(2.6rem, 6.2vw, 5rem); }
+.hero h1 .accentword { color: var(--gold-text); }  /* sanctioned brand-emphasis use of gold (deep gold on light) */
+.hero__lead { margin: 1.4rem 0 0; max-width: 46ch; color: var(--ink-2); font-size: clamp(1.05rem,1.6vw,1.2rem); line-height: 1.5; }
+.hero__cta { margin-top: 2rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.hero__note { margin-top: 1.4rem; display: flex; align-items: center; gap: .55rem; color: var(--ink-3); font-size: .9rem; }
+.hero__note svg { width: 16px; height: 16px; color: var(--ink-3); }
+.textlink { color: var(--ink); font-weight: 600; display: inline-flex; align-items: center; gap: .4rem; border-bottom: 2px solid var(--line-strong); padding-bottom: 2px; }
+.textlink:hover { border-color: var(--gold); }
+.textlink svg { width: 15px; height: 15px; }
+
+/* the collection object (signature bench) */
+.bench {
+  background: var(--plane);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  position: relative;
+}
+.bench__label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  color: var(--ink-3); font: 600 11px "Archivo",sans-serif;
+  text-transform: uppercase; letter-spacing: .12em; margin-bottom: 16px;
+}
+.bench__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.bench__cell {
+  aspect-ratio: 1 / 1; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--bg-2); display: flex; align-items: center; justify-content: center;
+  color: var(--accent, var(--ink-2));
+}
+.bench__cell .em { width: 40px; height: 40px; }
+.bench__foot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: .82rem; display:flex; justify-content:space-between; }
+
+/* ---------- tools directory ---------- */
+.tools { padding: clamp(2rem,5vw,3.5rem) 0 2rem; }
+.tools__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2.4rem; }
+.tools__head h2 { margin: 0; font-size: clamp(1.9rem,3.4vw,2.8rem); }
+.tools__head p { margin: 0; color: var(--ink-3); max-width: 34ch; text-align: right; }
+
+.group { margin-bottom: 2.6rem; }
+.group__title {
+  display: flex; align-items: center; gap: 1rem; margin: 0 0 1rem;
+  font: 700 .82rem "Archivo", sans-serif; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-2);
+}
+.group__title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+/* bench row — a directory entry, not a card */
+.row {
+  display: grid; grid-template-columns: 60px 1fr auto; align-items: center; gap: 1.1rem;
+  padding: 1.05rem 1rem; border-radius: var(--r-lg);
+  border: 1px solid transparent; border-bottom-color: var(--line);
+  cursor: pointer; transition: background .16s, border-color .16s, transform .1s;
+  position: relative;
+}
+.group .row:last-child { border-bottom-color: transparent; }
+.row:hover { background: var(--plane); border-color: var(--line); transform: translateX(2px); box-shadow: var(--shadow-sm); }
+.row:hover .row__go { color: var(--accent); transform: translateX(3px); }
+.row__em {
+  width: 52px; height: 52px; border-radius: var(--r); flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--plane));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.row__em .em { width: 30px; height: 30px; }
+.row__name { font-family: "Archivo Expanded", sans-serif; font-weight: 700; font-size: 1.18rem; letter-spacing: -0.02em; }
+.row__desc { color: var(--ink-2); font-size: .95rem; margin-top: 1px; }
+.row__meta { display: flex; align-items: center; gap: .5rem; margin-top: .5rem; flex-wrap: wrap; }
+.chip {
+  font: 600 11px "Archivo",sans-serif; letter-spacing: .01em;
+  padding: 3px 8px; border-radius: 3px; border: 1px solid var(--line-strong); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 5px; background: var(--bg-2);
+}
+.chip--go { cursor: pointer; }
+.chip--go:hover { border-color: var(--accent); color: var(--accent); }
+.chip__pair { font-variant-numeric: tabular-nums; }
+.row__go { color: var(--ink-3); transition: color .16s, transform .16s; }
+.row__go svg { width: 22px; height: 22px; display:block; }
+
+/* flagship rows (make & learn) sit a touch taller/expressive */
+.row--lg { grid-template-columns: 68px 1fr auto; padding: 1.35rem 1rem; }
+.row--lg .row__em { width: 58px; height: 58px; }
+.row--lg .row__em .em { width: 34px; height: 34px; }
+.row--lg .row__name { font-size: 1.34rem; }
+
+/* the vault — a distinct, sturdier module */
+.vault {
+  display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 1.2rem;
+  padding: 1.5rem 1.4rem; border-radius: var(--r-lg);
+  background: var(--plane); border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow); cursor: pointer; position: relative;
+  --accent: var(--a-pass);
+}
+.vault:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong)); }
+.vault__em {
+  width: 58px; height: 58px; border-radius: var(--r); flex: none;
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--plane));
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+}
+.vault__em .em { width: 32px; height: 32px; }
+.vault__name { font-family:"Archivo Expanded",sans-serif; font-weight:700; font-size:1.3rem; letter-spacing:-.02em; display:flex; align-items:center; gap:.6rem; }
+.vault__desc { color: var(--ink-2); font-size: .95rem; margin-top: 2px; }
+.vault__dots { letter-spacing: .18em; color: var(--accent); font-size: 1.1rem; }
+.tag-secure {
+  font: 700 11px "Archivo",sans-serif; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  padding: 2px 7px; border-radius: 3px;
+}
+
+/* ---------- ecosystem band ---------- */
+.eco { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-2); padding: 3.25rem 1.5rem; }
+.eco__in { max-width: var(--maxw); margin-inline: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.5rem,3vw,2.5rem); }
+.eco__item { display: grid; grid-template-columns: 40px 1fr; gap: .9rem; align-items: start; }
+.eco__ico { width: 40px; height: 40px; border-radius: var(--r); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--ink-2); background: var(--plane); }
+.eco__ico svg { width: 22px; height: 22px; }
+.eco__item h3 { margin: 2px 0 .3rem; font: 700 1.02rem "Archivo",sans-serif; letter-spacing: -.01em; }
+.eco__item p { margin: 0; color: var(--ink-2); font-size: .93rem; }
+
+/* ---------- footer ---------- */
+.foot { padding: 2.6rem 0 3rem; }
+.foot__in { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.foot__nav { display: flex; gap: 1.4rem; color: var(--ink-3); font-size: .9rem; }
+.foot__nav a:hover { color: var(--ink); }
+.foot__copy { color: var(--ink-3); font-size: .84rem; }
+
+/* ---------- review controls (comp only) ---------- */
+.review {
+  position: fixed; left: 12px; bottom: 12px; z-index: 200;
+  background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  box-shadow: var(--shadow); padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  font: 500 12px "Archivo", sans-serif; max-width: 240px;
+}
+.review__t { color: var(--ink-3); font: 700 11px "Archivo",sans-serif; text-transform: uppercase; letter-spacing: .1em; }
+.review__row { display: flex; gap: 6px; align-items: center; }
+.review .seg button { font-size: 11px; padding: 5px 8px; }
+.review__hide { position: absolute; top: 6px; right: 6px; background: transparent; border: 0; color: var(--ink-3); cursor: pointer; font-size: 15px; line-height: 1; }
+.review.collapsed .review__body { display: none; }
+.review__peek { display: none; }
+.review.collapsed .review__peek { display: block; color: var(--ink-3); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .bench__cell { opacity: 0; transform: translateY(8px) scale(.96); animation: settle .6s cubic-bezier(.2,.8,.2,1) forwards; }
+  .bench__cell:nth-child(1){animation-delay:.05s}.bench__cell:nth-child(2){animation-delay:.10s}
+  .bench__cell:nth-child(3){animation-delay:.15s}.bench__cell:nth-child(4){animation-delay:.20s}
+  .bench__cell:nth-child(5){animation-delay:.25s}.bench__cell:nth-child(6){animation-delay:.30s}
+  .bench__cell:nth-child(7){animation-delay:.35s}.bench__cell:nth-child(8){animation-delay:.40s}
+  @keyframes settle { to { opacity: 1; transform: none; } }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .hero__grid { grid-template-columns: 1fr; gap: 2.4rem; }
+  .bench { order: 2; }
+  .eco__in { grid-template-columns: 1fr; gap: 1.5rem; }
+  .tools__head { flex-direction: column; align-items: flex-start; }
+  .tools__head p { text-align: left; }
+}
+@media (max-width: 640px) {
+  .seg--theme .seg__lbl { display: none; }
+  .topbar .si-full { display: none; }
+  .topbar .si-short { display: inline; }
+  .topbar__in { height: 58px; }
+  .brand__word { font-size: 1.05rem; }
+  .hero { padding-top: 2.4rem; }
+  .row, .row--lg { grid-template-columns: 48px 1fr auto; gap: .85rem; padding: 1rem .6rem; }
+  .row__em, .row--lg .row__em { width: 46px; height: 46px; }
+  .row__desc { font-size: .9rem; }
+  .row__go svg { width: 19px; height: 19px; }
+  .bench__grid { grid-template-columns: repeat(3, 1fr); }
+  .vault { grid-template-columns: 52px 1fr; }
+  .vault__go { display: none; }
+  .review { left: 8px; right: 8px; bottom: 8px; max-width: none; }
+}
+@media (max-width: 430px) {
+  .brand__word { display: none; }           /* pixel-B carries the brand on small screens */
+  .topbar__right { gap: .4rem; }
+  .hero h1 { font-size: clamp(2.3rem, 9vw, 3rem); }
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="topbar">
+  <div class="wrap topbar__in">
+    <a class="brand" href="#" aria-label="BakerRang home">
+      <img class="brand__mark" src="bakerrang-logo.png" alt="BakerRang" />
+      <span class="brand__word">BakerRang</span>
+    </a>
+    <div class="topbar__spacer"></div>
+    <div class="topbar__right">
+      <!-- theme control (light / dark / system) -->
+      <div class="seg seg--theme" role="group" aria-label="Theme">
+        <button data-theme-set="light" aria-pressed="false" title="Light">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+          <span class="seg__lbl">Light</span>
+        </button>
+        <button data-theme-set="dark" aria-pressed="true" title="Dark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+          <span class="seg__lbl">Dark</span>
+        </button>
+        <button data-theme-set="system" aria-pressed="false" title="System">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4" stroke-linecap="round"/></svg>
+          <span class="seg__lbl">System</span>
+        </button>
+      </div>
+
+      <!-- signed OUT -->
+      <button class="btn btn--gold only-out" id="signin">
+        <svg class="g-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1a1a1a" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1-.8 2.6-2.3 3.6l3.6 2.8c2.1-2 3.7-4.9 3.7-8.3z"/><path fill="#1a1a1a" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.6-2.8c-1 .7-2.3 1.2-4.3 1.2-3.3 0-6.1-2.2-7.1-5.2l-3.7 2.9C3.2 21.3 7.3 24 12 24z"/><path fill="#1a1a1a" d="M4.9 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.8C.4 8.3 0 10.1 0 12s.4 3.7 1.2 5.2l3.7-2.9z"/><path fill="#1a1a1a" d="M12 4.8c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.9 14.4.9 12 .9 7.3.9 3.2 3.6 1.2 6.8l3.7 2.9C5.9 6.7 8.7 4.8 12 4.8z"/></svg>
+        <span class="si-full">Sign in with Google</span><span class="si-short">Sign in</span>
+      </button>
+
+      <!-- signed IN: app switcher + avatar -->
+      <div class="menu only-in" id="switchMenu">
+        <button class="iconbtn" id="switchBtn" aria-label="Switch app" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+        </button>
+        <div class="pop switch" role="menu" aria-label="Your tools">
+          <div class="pop__head">Jump to a tool</div>
+          <div class="switch__grid" id="switchGrid"><!-- filled by JS --></div>
+          <div class="pop__sep"></div>
+          <button class="pop__item" role="menuitem" style="color:var(--ink-2)">
+            <span class="em" data-em="account" style="width:17px;height:17px;color:var(--a-account)"></span>
+            Account
+          </button>
+        </div>
+      </div>
+      <div class="menu only-in" id="profileMenu">
+        <button class="avatar" id="profileBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">AR</button>
+        <div class="pop" role="menu" aria-label="Account">
+          <div class="pop__head" style="display:flex;flex-direction:column;gap:1px">
+            <span style="color:var(--ink);font-weight:700;text-transform:none;letter-spacing:0;font-size:13px">Alex Rang</span>
+            <span style="text-transform:none;letter-spacing:0;font-weight:400">alex@bakerrang.com</span>
+          </div>
+          <button class="pop__item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.6-5 8-5s6.5 1.5 8 5"/></svg>
+            Account
+          </button>
+          <button class="pop__item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+            Theme: <span id="menuTheme" style="color:var(--ink-2)">Dark</span>
+          </button>
+          <div class="pop__sep"></div>
+          <button class="pop__item pop__danger" role="menuitem" id="signout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M18 15l3-3-3-3M10 12h11"/></svg>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ===================== MASTHEAD ===================== -->
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <h1 class="display"><span class="accentword">Variety of Tools.</span><br>One Workshop.</h1>
+      <p class="hero__lead only-out">BakerRang builds a handful of focused apps — a story maker, a translator, a password vault and more. Each is its own tool. All share one account.</p>
+      <p class="hero__lead only-in">Welcome back, Alex. Pick up where you left off, or reach for a different tool — they all know you're signed in.</p>
+      <div class="hero__cta">
+        <button class="btn btn--gold only-out">
+          <svg class="g-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1a1a1a" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1-.8 2.6-2.3 3.6l3.6 2.8c2.1-2 3.7-4.9 3.7-8.3z"/><path fill="#1a1a1a" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.6-2.8c-1 .7-2.3 1.2-4.3 1.2-3.3 0-6.1-2.2-7.1-5.2l-3.7 2.9C3.2 21.3 7.3 24 12 24z"/><path fill="#1a1a1a" d="M4.9 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.8C.4 8.3 0 10.1 0 12s.4 3.7 1.2 5.2l3.7-2.9z"/><path fill="#1a1a1a" d="M12 4.8c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.9 14.4.9 12 .9 7.3.9 3.2 3.6 1.2 6.8l3.7 2.9C5.9 6.7 8.7 4.8 12 4.8z"/></svg>
+          Sign in with Google
+        </button>
+        <a class="btn btn--gold only-in" href="#tools">Open your tools</a>
+        <a class="textlink" href="#tools">See what's on the bench
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </a>
+      </div>
+      <div class="hero__note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+        One account. Install any tool to your phone as its own app.
+      </div>
+    </div>
+
+    <!-- signature collection object (the bench) -->
+    <div class="bench" aria-hidden="true">
+      <div class="bench__label"><span>The bench</span><span>6 tools</span></div>
+      <div class="bench__grid" id="benchGrid"><!-- filled by JS --></div>
+      <div class="bench__foot"><span>BakerRang</span><span>one maker · many tools</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TOOLS DIRECTORY ===================== -->
+<section class="tools" id="tools">
+  <div class="wrap">
+    <div class="tools__head">
+      <h2 class="display">What's on the bench</h2>
+      <p>Six tools, each built for one job. Open one — or install it on its own.</p>
+    </div>
+
+    <!-- Make & learn -->
+    <div class="group">
+      <h3 class="group__title">Make &amp; learn</h3>
+      <div id="grp-make"></div>
+    </div>
+
+    <!-- Manage -->
+    <div class="group">
+      <h3 class="group__title">Manage day to day</h3>
+      <div id="grp-manage"></div>
+    </div>
+
+    <!-- Play -->
+    <div class="group">
+      <h3 class="group__title">Play</h3>
+      <div id="grp-play"></div>
+    </div>
+
+    <!-- Keep safe -->
+    <div class="group">
+      <h3 class="group__title">Keep safe</h3>
+      <div class="vault" role="button" tabindex="0">
+        <div class="vault__em"><span class="em" data-em="passwords"></span></div>
+        <div>
+          <div class="vault__name">Passwords <span class="tag-secure">Zero-knowledge</span></div>
+          <div class="vault__desc">A private vault that encrypts on your device. We store the locked bytes and never see your passwords. <span class="vault__dots">••••••••</span></div>
+        </div>
+        <div class="row__go vault__go" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account (cross-cutting, not a tool) -->
+    <div class="group">
+      <h3 class="group__title">Your account</h3>
+      <div class="row" role="button" tabindex="0" style="--accent:var(--a-account)">
+        <div class="row__em"><span class="em" data-em="account"></span></div>
+        <div>
+          <div class="row__name">Account</div>
+          <div class="row__desc">Profile, security and preferences for every BakerRang tool. Also in your avatar menu, top-right.</div>
+        </div>
+        <div class="row__go" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ECOSYSTEM BAND ===================== -->
+<section class="eco">
+  <div class="eco__in">
+    <div class="eco__item">
+      <div class="eco__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 4-3 7-7 10-4-3-7-6-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div><h3>Sign in once</h3><p>Sign in with Google and every BakerRang tool already knows you — no logging in twice.</p></div>
+    </div>
+    <div class="eco__item">
+      <div class="eco__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
+      <div><h3>Install what you use</h3><p>Add a tool to your phone or desktop and it becomes its own app, with its own icon — not a shortcut.</p></div>
+    </div>
+    <div class="eco__item">
+      <div class="eco__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></div>
+      <div><h3>Light or dark, everywhere</h3><p>Pick light, dark, or follow your system once. Your choice carries across every tool and device.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="foot">
+  <div class="wrap foot__in">
+    <a class="brand" href="#">
+      <img class="brand__mark" src="bakerrang-logo.png" alt="BakerRang" />
+      <span class="brand__word">BakerRang</span>
+    </a>
+    <div class="foot__copy">© 2026 BakerRang · one maker, many tools</div>
+  </div>
+</footer>
+
+<!-- ===================== REVIEW CONTROLS (comp only) ===================== -->
+<div class="review" id="review">
+  <button class="review__hide" id="reviewHide" aria-label="Collapse preview controls">×</button>
+  <div class="review__peek">Comp ▸</div>
+  <div class="review__body">
+    <div class="review__t">Comp preview</div>
+    <div class="review__row">
+      <span style="color:var(--ink-3);width:42px">State</span>
+      <div class="seg" role="group" aria-label="Auth state">
+        <button data-auth-set="out" aria-pressed="true">Signed out</button>
+        <button data-auth-set="in" aria-pressed="false">Signed in</button>
+      </div>
+    </div>
+    <div class="review__row">
+      <span style="color:var(--ink-3);width:42px">Theme</span>
+      <div class="seg" role="group" aria-label="Theme preview">
+        <button data-theme-set="light" aria-pressed="false">Light</button>
+        <button data-theme-set="dark" aria-pressed="true">Dark</button>
+        <button data-theme-set="system" aria-pressed="false">Sys</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- drawn emblems (one stroke system, distinct forms) ---------- */
+const S = 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
+const EMBLEMS = {
+  storybook: `<svg viewBox="0 0 32 32" ${S}><path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/></svg>`,
+  polyglot: `<svg viewBox="0 0 32 32" ${S}><path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/><path d="M17 26l4.5-10L26 26M18.7 22h5.6"/></svg>`,
+  // Five-finger raised hand, drawn on the kit's shared 0 0 32 32 / stroke-width 1.75 geometry
+  // (path scaled into the 32 grid; non-scaling stroke keeps the weight identical to the other emblems).
+  sign: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path vector-effect="non-scaling-stroke" transform="translate(3.1 2.1) scale(1.05)" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317"/></svg>`,
+  budget: `<svg viewBox="0 0 32 32" ${S}><circle cx="16" cy="16" r="11"/><path d="M16 9.4v13.2"/><path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/></svg>`,
+  // PLACEHOLDER: generic neutral crest. No BakerRang WoW/World of Warcraft logo asset
+  // exists in the repo, and the WoW logo must not be redrawn/approximated. Swap in the
+  // real licensed mark once provided (see Phase-0 open decisions).
+  wow: `<svg viewBox="0 0 32 32" ${S}><path d="M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z"/><path d="M16 10v9M12.5 13.5L16 11l3.5 2.5"/></svg>`,
+  passwords: `<svg viewBox="0 0 32 32" ${S}><rect x="7" y="14" width="18" height="12" rx="2.5"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="1.6"/></svg>`,
+  account: `<svg viewBox="0 0 32 32" ${S}><circle cx="16" cy="12" r="5"/><path d="M6 26c1.8-4.4 5.6-6.5 10-6.5S24.2 21.6 26 26"/></svg>`
+};
+
+const TOOLS = [
+  { id:'storybook', name:'Story Book', accent:'--a-story', desc:'Write and illustrate a story with a few words, then have it read aloud.', verb:'Make a story', big:true },
+  { id:'polyglot', name:'Polyglot', accent:'--a-poly', desc:'Speak and translate between languages, out loud, in real time.', verb:'Start translating', big:true, pair:'EN ⇄ ES', instant:true },
+  { id:'sign', name:'Sign Language', accent:'--a-sign', desc:'Practise sign language with your camera and instant feedback.', verb:'Practise signing', big:true },
+  { id:'budget', name:'Budget', accent:'--a-budget', desc:'Track spending against a plan without a spreadsheet.' },
+  { id:'wow', name:'WoW Advisor', accent:'--a-wow', desc:'Get World of Warcraft advice tuned to your character and goals.' },
+];
+
+function toolRow(t){
+  const lg = t.big ? ' row--lg' : '';
+  const meta = (t.pair || t.instant) ? `<div class="row__meta">
+      ${t.pair ? `<span class="chip chip__pair">${t.pair}</span>`:''}
+      ${t.instant ? `<span class="chip chip--go"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg> Instant mode</span>`:''}
+    </div>` : '';
+  return `<div class="row${lg}" role="button" tabindex="0" style="--accent:var(${t.accent})">
+    <div class="row__em"><span class="em" data-em="${t.id}"></span></div>
+    <div>
+      <div class="row__name">${t.name}</div>
+      <div class="row__desc">${t.desc}</div>
+      ${meta}
+    </div>
+    <div class="row__go" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </div>
+  </div>`;
+}
+
+document.getElementById('grp-make').innerHTML   = TOOLS.filter(t=>['storybook','polyglot','sign'].includes(t.id)).map(toolRow).join('');
+document.getElementById('grp-manage').innerHTML = TOOLS.filter(t=>['budget'].includes(t.id)).map(toolRow).join('');
+document.getElementById('grp-play').innerHTML   = TOOLS.filter(t=>t.id==='wow').map(toolRow).join('');
+
+/* bench collection object — the six TOOLS (Account is cross-cutting, not on the bench) */
+const BENCH = ['storybook','polyglot','sign','budget','wow','passwords'];
+const accentOf = {storybook:'--a-story',polyglot:'--a-poly',sign:'--a-sign',budget:'--a-budget',wow:'--a-wow',passwords:'--a-pass',account:'--a-account'};
+document.getElementById('benchGrid').innerHTML = BENCH.map(id=>
+  `<div class="bench__cell" style="--accent:var(${accentOf[id]})"><span class="em" data-em="${id}"></span></div>`).join('');
+
+/* app-switcher grid — TOOLS only (Account is a separate entry below, not a tool) */
+const TOOL_IDS = BENCH.filter(id => id !== 'account');
+document.getElementById('switchGrid').innerHTML = TOOL_IDS.map(id=>{
+  const name = id==='storybook'?'Story Book':id==='polyglot'?'Polyglot':id==='sign'?'Sign':id==='budget'?'Budget':id==='wow'?'WoW':'Passwords';
+  return `<button class="switch__cell" style="--accent:var(${accentOf[id]})"><span class="em" data-em="${id}" style="color:var(${accentOf[id]})"></span><span>${name}</span></button>`;
+}).join('');
+
+/* inject emblem SVGs */
+document.querySelectorAll('.em[data-em]').forEach(el=>{ el.innerHTML = EMBLEMS[el.dataset.em] || ''; });
+
+/* ---------- theme ---------- */
+const root = document.documentElement;
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+let themePref = 'dark';
+function resolveTheme(){ return themePref==='system' ? (mq.matches?'dark':'light') : themePref; }
+function applyTheme(){
+  root.setAttribute('data-theme', resolveTheme());
+  document.querySelectorAll('[data-theme-set]').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.themeSet===themePref)));
+  const mt = document.getElementById('menuTheme'); if(mt) mt.textContent = themePref[0].toUpperCase()+themePref.slice(1);
+}
+document.querySelectorAll('[data-theme-set]').forEach(b=> b.addEventListener('click',()=>{ themePref=b.dataset.themeSet; applyTheme(); }));
+mq.addEventListener('change', ()=>{ if(themePref==='system') applyTheme(); });
+applyTheme();
+
+/* ---------- auth state ---------- */
+document.querySelectorAll('[data-auth-set]').forEach(b=> b.addEventListener('click',()=>{
+  root.setAttribute('data-auth', b.dataset.authSet);
+  document.querySelectorAll('[data-auth-set]').forEach(x=> x.setAttribute('aria-pressed', String(x===b)));
+  closeAll();
+}));
+document.getElementById('signin').addEventListener('click',()=>{ root.setAttribute('data-auth','in'); document.querySelectorAll('[data-auth-set]').forEach(x=> x.setAttribute('aria-pressed', String(x.dataset.authSet==='in'))); });
+document.getElementById('signout').addEventListener('click',()=>{ root.setAttribute('data-auth','out'); document.querySelectorAll('[data-auth-set]').forEach(x=> x.setAttribute('aria-pressed', String(x.dataset.authSet==='out'))); closeAll(); });
+
+/* ---------- dropdown menus ---------- */
+function closeAll(){ document.querySelectorAll('.menu.open').forEach(m=>{ m.classList.remove('open'); m.querySelector('[aria-expanded]')?.setAttribute('aria-expanded','false'); }); }
+function wireMenu(menuId, btnId){
+  const menu=document.getElementById(menuId), btn=document.getElementById(btnId);
+  btn.addEventListener('click',(e)=>{ e.stopPropagation(); const open=menu.classList.contains('open'); closeAll(); if(!open){ menu.classList.add('open'); btn.setAttribute('aria-expanded','true'); } });
+}
+wireMenu('switchMenu','switchBtn'); wireMenu('profileMenu','profileBtn');
+document.addEventListener('click', closeAll);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAll(); });
+
+/* ---------- review controls collapse ---------- */
+const review=document.getElementById('review');
+document.getElementById('reviewHide').addEventListener('click',()=> review.classList.toggle('collapsed'));
+review.querySelector('.review__peek').addEventListener('click',()=> review.classList.remove('collapsed'));
+</script>
+</body>
+</html>

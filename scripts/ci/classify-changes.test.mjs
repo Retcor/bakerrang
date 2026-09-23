@@ -4,8 +4,8 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, client: false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, client: false, ...deploy },
+  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, ...ci },
+  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, ...deploy },
   unknown: []
 })
 
@@ -17,6 +17,50 @@ test('classifies API-only source and lockfile changes', () => {
 test('classifies Client source for Client CI and deployment only', () => {
   assert.deepEqual(classifyChanges(['client/src/App.jsx']), expected({ client: true }))
   assert.deepEqual(classifyChanges(['client/package-lock.json']), expected({ client: true }))
+})
+
+test('classifies Launcher source for Launcher CI and deployment only', () => {
+  assert.deepEqual(
+    classifyChanges(['web/apps/launcher/src/App.jsx']),
+    expected({ 'web-launcher': true })
+  )
+})
+
+test('fans shared consumer packages and workspace infrastructure out to all web apps', () => {
+  for (const repositoryPath of [
+    'web/packages/web-tokens/src/tokens.css',
+    'web/package.json',
+    'web/package-lock.json',
+    'web/Dockerfile',
+    'web/nginx/nginx.conf',
+    'web/eslint.config.js',
+    'web/vitest.config.js'
+  ]) {
+    assert.deepEqual(
+      classifyChanges([repositoryPath]),
+      expected({ 'web-launcher': true }),
+      repositoryPath
+    )
+  }
+})
+
+test('keeps consumer design and workspace guidance repository-only', () => {
+  for (const repositoryPath of [
+    'web/PRODUCT.md',
+    'web/DESIGN.md',
+    'web/.impeccable/mocks/launcher-comp.html',
+    'web/README.md',
+    'web/AGENTS.md',
+    'web/CLAUDE.md',
+    'web/.nvmrc'
+  ]) {
+    assert.deepEqual(classifyChanges([repositoryPath]), expected({}), repositoryPath)
+  }
+})
+
+test('fails closed on unknown consumer app and root paths', () => {
+  assert.deepEqual(classifyChanges(['web/apps/future/src/App.jsx']).unknown, ['web/apps/future/src/App.jsx'])
+  assert.deepEqual(classifyChanges(['web/unrecognized.config.js']).unknown, ['web/unrecognized.config.js'])
 })
 
 test('classifies app-only paths', () => {
