@@ -39,6 +39,7 @@ export const validateServerRuntimeConfig = (env = process.env) => {
   requireValue(env, 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_OAUTH_CLIENT_SECRET is required.')
   const serverOrigin = requireHttpOrigin(env, 'SERVER_DOMAIN')
   validateOptionalHttpOrigin(env, 'CLIENT_DOMAIN')
+  validateOptionalHttpOrigin(env, 'LAUNCHER_DOMAIN')
   requireHttpOrigin(env, 'PORTAL_DOMAIN')
   requireHttpOrigin(env, 'SITE_RENDERER_DOMAIN')
 

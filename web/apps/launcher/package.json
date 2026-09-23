@@ -1,0 +1,21 @@
+{
+  "name": "@bakerrang/web-launcher",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "@bakerrang/web-api-client": "0.0.0",
+    "@bakerrang/web-app-shell": "0.0.0",
+    "@bakerrang/web-auth": "0.0.0",
+    "@bakerrang/web-theme": "0.0.0",
+    "@bakerrang/web-tokens": "0.0.0",
+    "@bakerrang/web-ui": "0.0.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

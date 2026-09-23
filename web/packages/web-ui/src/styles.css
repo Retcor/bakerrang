@@ -1,0 +1,70 @@
+.br-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font: 600 14px "Archivo", sans-serif;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 60ms ease;
+}
+
+.br-button:active {
+  transform: translateY(1px);
+}
+
+.br-button--gold {
+  background: var(--gold);
+  color: var(--ink-on-gold);
+}
+
+.br-button--gold:hover {
+  background: var(--gold-hover);
+}
+
+.br-button--gold:active {
+  background: var(--gold-press);
+}
+
+.br-button--ghost {
+  border-color: var(--line-strong);
+}
+
+.br-button--ghost:hover {
+  background: var(--plane);
+}
+
+.br-button--small {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.br-icon-button {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--plane);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.br-icon-button:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.br-icon-button svg {
+  width: 19px;
+  height: 19px;
+}

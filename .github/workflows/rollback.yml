@@ -12,6 +12,7 @@ on:
           - portal
           - renderer
           - client
+          - web-launcher
       mechanism:
         description: Image keeps current config; revision pins historical code and config
         required: true

@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, or client)
+        description: Logical service (api, portal, renderer, client, or web-launcher)
         required: true
         type: string
       environment:
@@ -42,6 +42,7 @@ jobs:
       PORTAL_SERVICE: ${{ vars.PORTAL_SERVICE }}
       RENDERER_SERVICE: ${{ vars.RENDERER_SERVICE }}
       CLIENT_SERVICE: ${{ vars.CLIENT_SERVICE }}
+      WEB_LAUNCHER_SERVICE: ${{ vars.WEB_LAUNCHER_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
@@ -49,6 +50,8 @@ jobs:
       CUSTOM_DOMAIN_CNAME_TARGET: ${{ vars.CUSTOM_DOMAIN_CNAME_TARGET }}
       PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
       CLIENT_BASE_URL: ${{ vars.CLIENT_BASE_URL }}
+      LAUNCHER_BASE_URL: ${{ vars.LAUNCHER_BASE_URL }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
       - name: Check out triggering commit
         uses: actions/checkout@v7
@@ -153,6 +156,12 @@ jobs:
               smoke_path="/"
               smoke_url="${CLIENT_BASE_URL%/}/"
               ;;
+            web-launcher)
+              service_name="$WEB_LAUNCHER_SERVICE"
+              image_name="web-launcher"
+              smoke_path="/"
+              smoke_url="${LAUNCHER_BASE_URL%/}/"
+              ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
@@ -227,6 +236,15 @@ jobs:
                 ;;
               client)
                 docker build "${common_args[@]}" client
+                ;;
+              web-launcher)
+                [[ -n "$VITE_API_BASE_URL" ]]
+                docker build "${common_args[@]}" \
+                  --file web/Dockerfile \
+                  --build-arg APP=launcher \
+                  --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                  --build-arg VITE_OAUTH_TARGET=launcher \
+                  web
                 ;;
             esac
             docker push "$tagged_image"
@@ -325,7 +343,7 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                client|web-launcher) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then

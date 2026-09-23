@@ -1,0 +1,13 @@
+{
+  "name": "@bakerrang/web-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind-preset": {
+      "require": "./tailwind-preset.cjs",
+      "default": "./tailwind-preset.cjs"
+    }
+  }
+}

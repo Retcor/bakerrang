@@ -9,9 +9,10 @@ import {
   isOriginAllowed
 } from '../config/origins.js'
 
-test('CORS allowlist includes client, portal, renderer, and chatbot origins', () => {
+test('CORS allowlist includes client, Launcher, portal, renderer, and chatbot origins', () => {
   const origins = buildAllowedOrigins({
     CLIENT_DOMAIN: 'http://localhost:3000',
+    LAUNCHER_DOMAIN: 'https://launch.bakerrang.com',
     PORTAL_DOMAIN: 'http://localhost:3001',
     SITE_RENDERER_DOMAIN: 'http://localhost:3002',
     CHATBOT_ORIGIN: 'https://chat.example.com'
@@ -19,11 +20,13 @@ test('CORS allowlist includes client, portal, renderer, and chatbot origins', ()
 
   assert.deepEqual(origins, [
     'http://localhost:3000',
+    'https://launch.bakerrang.com',
     'http://localhost:3001',
     'http://localhost:3002',
     'https://chat.example.com'
   ])
   assert.equal(isOriginAllowed('http://localhost:3000', origins), true)
+  assert.equal(isOriginAllowed('https://launch.bakerrang.com', origins), true)
   assert.equal(isOriginAllowed('http://localhost:3001', origins), true)
   assert.equal(isOriginAllowed('http://localhost:3002', origins), true)
   assert.equal(isOriginAllowed('https://chat.example.com', origins), true)

@@ -47,7 +47,7 @@ test('MAIN remains automatic on main and manually dispatchable', () => {
 
   const dispatch = main.match(/^  workflow_dispatch:\n[\s\S]*?(?=^permissions:)/m)?.[0] ?? ''
   assert.match(dispatch, /required: true/)
-  assert.match(dispatch, /options:\n          - api\n          - portal\n          - renderer\n          - client/)
+  assert.match(dispatch, /options:\n          - api\n          - portal\n          - renderer\n          - client\n          - web-launcher/)
   assert.doesNotMatch(dispatch, /- all/)
   assert.match(job(main, 'guard-main'), /refs\/heads\/main/)
   assert.match(job(main, 'deploy-selected-service'), /needs: guard-main/)
@@ -62,7 +62,7 @@ test('push classification uses the authoritative classifier and actual push rang
   assert.match(changes, /"\$BEFORE\.\.\$AFTER"/)
   assert.match(changes, /classify-changes\.mjs --input/)
   assert.match(changes, /refusing to classify an invalid range/)
-  for (const service of ['api', 'portal', 'renderer', 'client']) {
+  for (const service of ['api', 'portal', 'renderer', 'client', 'web_launcher']) {
     assert.match(changes, new RegExp(`deploy_${service}: \\$\\{\\{ steps\\.classify\\.outputs\\.deploy_${service} \\}\\}`))
   }
 })
@@ -72,17 +72,18 @@ test('only MAIN deployment callers receive OIDC and all use production', () => {
   assert.doesNotMatch(job(main, 'validate-api'), /id-token/)
   assert.doesNotMatch(job(main, 'validate-platform'), /id-token/)
   assert.doesNotMatch(job(main, 'validate-client'), /id-token/)
+  assert.doesNotMatch(job(main, 'validate-web'), /id-token/)
   assert.doesNotMatch(job(main, 'live-deploy-passed'), /id-token/)
   assert.doesNotMatch(pr, /id-token/)
 
-  for (const id of ['deploy-api', 'deploy-portal', 'deploy-renderer', 'deploy-client', 'deploy-selected-service']) {
+  for (const id of ['deploy-api', 'deploy-portal', 'deploy-renderer', 'deploy-client', 'deploy-web-launcher', 'deploy-selected-service']) {
     const deployment = job(main, id)
     assert.match(deployment, /id-token: write/)
     assert.match(deployment, /uses: \.\/\.github\/workflows\/_deploy-cloud-run\.yml/)
     assert.match(deployment, /environment: production/)
     assert.match(deployment, /smoke_via_service_url: true/)
   }
-  assert.equal((main.match(/id-token: write/g) ?? []).length, 5)
+  assert.equal((main.match(/id-token: write/g) ?? []).length, 6)
 })
 
 test('no active workflow contains a DEV deployment path or development Environment', () => {
@@ -109,6 +110,7 @@ test('public verification workflow is credential-free and uses fixed hosts only'
     'https://api.bakerrang.com/health',
     'https://bakerrang.com/',
     'https://custom.bakerrang.com/',
+    'https://launch.bakerrang.com/',
     'https://portal.bakerrang.com/',
     'https://sites.bakerrang.com/robots.txt'
   ])
@@ -125,7 +127,7 @@ test('rollback is manual-only with a fixed service/mechanism enum and exact-targ
   const triggers = rollback.match(/^on:\n([\s\S]*?)(?=^permissions:)/m)?.[1] ?? ''
   assert.deepEqual([...triggers.matchAll(/^  ([a-z_]+):/gm)].map(match => match[1]), ['workflow_dispatch'])
   assert.deepEqual([...triggers.matchAll(/^      ([a-z_]+):/gm)].map(match => match[1]), ['service', 'mechanism', 'target'])
-  assert.match(triggers, /service:\n[\s\S]*?type: choice\n        options:\n          - api\n          - portal\n          - renderer\n          - client/)
+  assert.match(triggers, /service:\n[\s\S]*?type: choice\n        options:\n          - api\n          - portal\n          - renderer\n          - client\n          - web-launcher/)
   assert.match(triggers, /mechanism:\n[\s\S]*?type: choice\n        default: image\n        options:\n          - image\n          - revision/)
   assert.match(triggers, /target:\n[\s\S]*?required: true\n        type: string/)
   assert.match(job(rollback, 'guard-main'), /rollback\.ps1[^\n]+-ValidateOnly/)
@@ -185,8 +187,8 @@ test('Step 2.6b exact changed paths classify as no-service without broadening ru
     'docs/CI-CD.md'
   ]
   assert.deepEqual(classifyChanges(paths), {
-    ci: { api: false, portal: false, renderer: false, client: false },
-    deploy: { api: false, portal: false, renderer: false, client: false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
     unknown: []
   })
   assert.deepEqual(classifyChanges(['scripts/deploy-dev.ps1']).unknown, [])
@@ -198,11 +200,13 @@ test('each classifier output independently controls its MAIN service deployment'
     api: 'validate-api',
     portal: 'validate-platform',
     renderer: 'validate-platform',
-    client: 'validate-client'
+    client: 'validate-client',
+    'web-launcher': 'validate-web'
   }
-  for (const service of ['api', 'portal', 'renderer', 'client']) {
+  for (const service of ['api', 'portal', 'renderer', 'client', 'web-launcher']) {
     const deployment = job(main, `deploy-${service}`)
-    assert.match(deployment, new RegExp(`needs\\.changes\\.outputs\\.deploy_${service} == 'true'`))
+    const outputName = service.replace('-', '_')
+    assert.match(deployment, new RegExp(`needs\\.changes\\.outputs\\.deploy_${outputName} == 'true'`))
     assert.match(deployment, new RegExp(`needs\\.${validation[service]}\\.result == 'success'`))
     assert.match(deployment, new RegExp(`service: ${service}`))
   }
@@ -223,8 +227,8 @@ test('Phase B changed paths classify as no-service with no unknown paths', () =>
     'docs/marketing-site/Step2/Step2.5e-DecommissionDevInfra-Plan.md'
   ]
   assert.deepEqual(classifyChanges(phaseBPaths), {
-    ci: { api: false, portal: false, renderer: false, client: false },
-    deploy: { api: false, portal: false, renderer: false, client: false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
     unknown: []
   })
 })
@@ -242,8 +246,8 @@ test('Step 2.6a changed paths classify as no-service with no unknown paths', () 
     'docs/marketing-site/Step2/Step2.6-DeployHardening-Plan.md'
   ]
   assert.deepEqual(classifyChanges(step26aPaths), {
-    ci: { api: false, portal: false, renderer: false, client: false },
-    deploy: { api: false, portal: false, renderer: false, client: false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false },
     unknown: []
   })
 })
@@ -258,6 +262,8 @@ test('aggregate status handles manual, affected, skipped, and no-service paths',
     assert.match(aggregate, new RegExp(`"\\$DEPLOY_${service}" == "true"`))
     assert.match(aggregate, new RegExp(`"\\$${service}_RESULT" != "success"`))
   }
+  assert.match(aggregate, /"\$DEPLOY_WEB_LAUNCHER" == "true"/)
+  assert.match(aggregate, /"\$WEB_LAUNCHER_RESULT" != "success"/)
   assert.match(aggregate, /All affected MAIN\/live validations and deployments passed/)
 })
 
@@ -282,4 +288,9 @@ test('MAIN deployment smoke resolves and validates Cloud Run status.url', () => 
   assert.equal((reusable.match(/tr -d '\\r\\n'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -qi 'User-agent'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -Fq '<div id="root"'/g) ?? []).length, 1)
+  assert.match(reusable, /client\|web-launcher\) grep -Fq '<div id="root"'/)
+  assert.match(reusable, /WEB_LAUNCHER_SERVICE: \$\{\{ vars\.WEB_LAUNCHER_SERVICE \}\}/)
+  assert.match(reusable, /web-launcher\)\n\s+service_name="\$WEB_LAUNCHER_SERVICE"\n\s+image_name="web-launcher"/)
+  assert.match(reusable, /--build-arg APP=launcher/)
+  assert.match(reusable, /--build-arg VITE_OAUTH_TARGET=launcher/)
 })

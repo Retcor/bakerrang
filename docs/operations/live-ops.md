@@ -6,13 +6,14 @@ deployed environment. For detailed emergency procedures, use the
 
 ## Architecture at a glance
 
-Local development runs the API, Portal, Site Renderer, and Client on the
+Local development runs the API, Portal, Site Renderer, Client, and Web Launcher on the
 developer machine. Those processes use developer Application Default
 Credentials (ADC), Firestore in `bakerrang-dev`, and the
 `bakerrang-dev-media-marketing` bucket. There is no deployed DEV environment.
 
-MAIN/live runs the same four services in project `avian-cable-379805`, behind
-one external load balancer:
+MAIN/live has the same five deployment targets in project `avian-cable-379805`.
+The established four services are behind one external load balancer; the staged
+Launcher uses its reviewed non-apex Cloud Run domain mapping:
 
 | Service | Public host |
 | --- | --- |
@@ -20,6 +21,7 @@ one external load balancer:
 | Portal | `portal.bakerrang.com` |
 | Site Renderer | `sites.bakerrang.com` and customer domains |
 | Client | `bakerrang.com` |
+| Web Launcher | `launch.bakerrang.com` |
 
 Merges to `main` selectively deploy only affected services.
 

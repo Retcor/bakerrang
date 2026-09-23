@@ -62,6 +62,15 @@ $malformed = Get-TrafficAnalysis `
 Assert-Equal $malformed.Mode 'UNKNOWN' 'E: malformed traffic must fail closed as UNKNOWN.'
 
 $source = Get-Content -Raw (Join-Path (Split-Path -Parent $PSScriptRoot) 'verify-live.ps1')
+$launcher = @($Services | Where-Object { $_.Logical -ceq 'web-launcher' })
+Assert-Equal $Services.Count 5 'Live verification must cover every production deployment target.'
+Assert-Equal $launcher.Count 1 'Web Launcher must have exactly one live-service mapping.'
+Assert-Equal $launcher[0].Service 'bakerrang-web-launcher' 'Web Launcher physical service mapping is wrong.'
+Assert-Equal $launcher[0].Package 'web-launcher' 'Web Launcher Artifact Registry package mapping is wrong.'
+Assert-Equal $launcher[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Launcher runtime identity mapping is wrong.'
+if ($source -notmatch "https://launch\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
+    throw 'verify-live.ps1 is missing the fixed Web Launcher public SPA-shell check.'
+}
 $forbiddenGcloudMutation = "'(?:update|deploy|delete|create|replace|set|add|remove|update-traffic)'"
 if ($source -match $forbiddenGcloudMutation) {
     throw "verify-live.ps1 contains a forbidden gcloud mutation verb: $($Matches[0])"
