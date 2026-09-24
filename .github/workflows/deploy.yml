@@ -16,6 +16,7 @@ on:
           - renderer
           - client
           - web-launcher
+          - web-storybook
 
 permissions:
   contents: read
@@ -33,6 +34,7 @@ jobs:
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
       deploy_client: ${{ steps.classify.outputs.deploy_client }}
       deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
+      deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
     steps:
       - name: Check out pushed commit
         uses: actions/checkout@v7
@@ -138,7 +140,7 @@ jobs:
   validate-web:
     name: Validate Shared Web
     needs: changes
-    if: needs.changes.outputs.deploy_web_launcher == 'true'
+    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -155,7 +157,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - run: npm run build -w @bakerrang/web-launcher
+      - name: Build Launcher
+        if: needs.changes.outputs.deploy_web_launcher == 'true'
+        run: npm run build -w @bakerrang/web-launcher
+      - name: Build Story Book
+        if: needs.changes.outputs.deploy_web_storybook == 'true'
+        run: npm run build -w @bakerrang/web-storybook
 
   deploy-api:
     name: Deploy API
@@ -227,6 +234,20 @@ jobs:
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
 
+  deploy-web-storybook:
+    name: Deploy Web Story Book
+    needs: [changes, validate-web]
+    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_web_storybook == 'true' && needs.validate-web.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: web-storybook
+      environment: production
+      image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
+
   guard-main:
     name: Require main branch
     if: github.event_name == 'workflow_dispatch'
@@ -273,6 +294,7 @@ jobs:
       - deploy-renderer
       - deploy-client
       - deploy-web-launcher
+      - deploy-web-storybook
       - guard-main
       - deploy-selected-service
     runs-on: ubuntu-latest
@@ -289,6 +311,7 @@ jobs:
           DEPLOY_RENDERER: ${{ needs.changes.outputs.deploy_renderer }}
           DEPLOY_CLIENT: ${{ needs.changes.outputs.deploy_client }}
           DEPLOY_WEB_LAUNCHER: ${{ needs.changes.outputs.deploy_web_launcher }}
+          DEPLOY_WEB_STORYBOOK: ${{ needs.changes.outputs.deploy_web_storybook }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
           VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
           VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
@@ -298,6 +321,7 @@ jobs:
           RENDERER_RESULT: ${{ needs.deploy-renderer.result }}
           CLIENT_RESULT: ${{ needs.deploy-client.result }}
           WEB_LAUNCHER_RESULT: ${{ needs.deploy-web-launcher.result }}
+          WEB_STORYBOOK_RESULT: ${{ needs.deploy-web-storybook.result }}
           GUARD_RESULT: ${{ needs.guard-main.result }}
           SELECTED_RESULT: ${{ needs.deploy-selected-service.result }}
         run: |
@@ -345,6 +369,10 @@ jobs:
           fi
           if [[ "$DEPLOY_WEB_LAUNCHER" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_LAUNCHER_RESULT" != "success" ) ]]; then
             echo "Affected Web Launcher validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_LAUNCHER_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_WEB_STORYBOOK" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_STORYBOOK_RESULT" != "success" ) ]]; then
+            echo "Affected Web Story Book validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_STORYBOOK_RESULT" >&2
             exit 1
           fi
           echo "All affected MAIN/live validations and deployments passed."

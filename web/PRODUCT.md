@@ -64,6 +64,23 @@ while family resemblance comes from shared foundations, not from one universal p
 - Whether **Polyglot Instant** is a separate launcher destination or a mode within Polyglot is an
   open design decision to resolve and document during this design step.
 
+## Product: Story Book (Phase C truth, 2026-09-22)
+
+Full inventory and architecture: `docs/apps/PhaseC-StoryBook.md`; surface brief:
+`.impeccable/surfaces/storybook.md`.
+
+- **What it does:** from one short idea, writes a short story (usually three paragraphs, one per page),
+  generates one square illustration per page, keeps it in a private library, and reads any page aloud in
+  a voice the user has cloned in their BakerRang account.
+- **Audience:** all ages, general (product-owner decision) — not a children's app; image prompts stay
+  kid-safe server-side.
+- **A story** = title, the idea, created date, page texts, one picture (or none) per page, thumbnail — one
+  private Firestore document owned by the user. No sharing, public links, export, or text editing exist.
+- **Saving:** every completed story auto-saves, titled from the idea; rename/delete later.
+- **Narration:** cloned voices only; users without one are pointed to Account. No stock voice.
+- **AI dependencies:** story text + pictures (OpenAI), narration (ElevenLabs). Library, reading, rename
+  and delete don't need them. No quotas, pricing, or usage limits exist; none may be claimed.
+
 ## Brand Commitments
 
 - Keep the **BakerRang** name.

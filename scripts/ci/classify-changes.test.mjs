@@ -4,8 +4,8 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, ...deploy },
+  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, ...ci },
+  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, ...deploy },
   unknown: []
 })
 
@@ -26,6 +26,13 @@ test('classifies Launcher source for Launcher CI and deployment only', () => {
   )
 })
 
+test('classifies Story Book source for Story Book CI and deployment only', () => {
+  assert.deepEqual(
+    classifyChanges(['web/apps/storybook/src/App.jsx']),
+    expected({ 'web-storybook': true })
+  )
+})
+
 test('fans shared consumer packages and workspace infrastructure out to all web apps', () => {
   for (const repositoryPath of [
     'web/packages/web-tokens/src/tokens.css',
@@ -38,7 +45,7 @@ test('fans shared consumer packages and workspace infrastructure out to all web 
   ]) {
     assert.deepEqual(
       classifyChanges([repositoryPath]),
-      expected({ 'web-launcher': true }),
+      expected({ 'web-launcher': true, 'web-storybook': true }),
       repositoryPath
     )
   }

@@ -63,13 +63,21 @@ Assert-Equal $malformed.Mode 'UNKNOWN' 'E: malformed traffic must fail closed as
 
 $source = Get-Content -Raw (Join-Path (Split-Path -Parent $PSScriptRoot) 'verify-live.ps1')
 $launcher = @($Services | Where-Object { $_.Logical -ceq 'web-launcher' })
-Assert-Equal $Services.Count 5 'Live verification must cover every production deployment target.'
+$storybook = @($Services | Where-Object { $_.Logical -ceq 'web-storybook' })
+Assert-Equal $Services.Count 6 'Live verification must cover every production deployment target.'
 Assert-Equal $launcher.Count 1 'Web Launcher must have exactly one live-service mapping.'
 Assert-Equal $launcher[0].Service 'bakerrang-web-launcher' 'Web Launcher physical service mapping is wrong.'
 Assert-Equal $launcher[0].Package 'web-launcher' 'Web Launcher Artifact Registry package mapping is wrong.'
 Assert-Equal $launcher[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Launcher runtime identity mapping is wrong.'
+Assert-Equal $storybook.Count 1 'Web Story Book must have exactly one live-service mapping.'
+Assert-Equal $storybook[0].Service 'bakerrang-web-storybook' 'Web Story Book physical service mapping is wrong.'
+Assert-Equal $storybook[0].Package 'web-storybook' 'Web Story Book Artifact Registry package mapping is wrong.'
+Assert-Equal $storybook[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Story Book runtime identity mapping is wrong.'
 if ($source -notmatch "https://launch\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
     throw 'verify-live.ps1 is missing the fixed Web Launcher public SPA-shell check.'
+}
+if ($source -notmatch "https://storybook\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
+    throw 'verify-live.ps1 is missing the fixed Web Story Book public SPA-shell check.'
 }
 $forbiddenGcloudMutation = "'(?:update|deploy|delete|create|replace|set|add|remove|update-traffic)'"
 if ($source -match $forbiddenGcloudMutation) {

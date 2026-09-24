@@ -148,7 +148,7 @@ try {
     }
     Test-Case 'fixed service/package/identity mappings and lowercase full SHA' {
         Reset-Fixture
-        foreach ($logical in @('api', 'portal', 'renderer', 'client', 'web-launcher')) {
+        foreach ($logical in @('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook')) {
             $request = Get-RollbackRequest $logical 'image' $Sha
             $package = if ($logical -ceq 'renderer') { 'site-renderer' } else { $logical }
             Assert-That ($request.Config.Package -ceq $package) 'Wrong package mapping.'
@@ -324,9 +324,9 @@ try {
     }
     Test-Case 'fixed smoke paths/markers for every service and invalid status URL rejected' {
         Reset-Fixture
-        $paths = @('/health', '/', '/robots.txt', '/', '/')
-        $assertions = @('Healthy', 'StatusOnly', 'UserAgent', 'ClientRoot', 'ClientRoot')
-        $publicUrls = @('https://api.bakerrang.com/health', 'https://portal.bakerrang.com/', 'https://sites.bakerrang.com/robots.txt', 'https://bakerrang.com/', 'https://launch.bakerrang.com/')
+        $paths = @('/health', '/', '/robots.txt', '/', '/', '/')
+        $assertions = @('Healthy', 'StatusOnly', 'UserAgent', 'ClientRoot', 'ClientRoot', 'ClientRoot')
+        $publicUrls = @('https://api.bakerrang.com/health', 'https://portal.bakerrang.com/', 'https://sites.bakerrang.com/robots.txt', 'https://bakerrang.com/', 'https://launch.bakerrang.com/', 'https://storybook.bakerrang.com/')
         for ($i = 0; $i -lt $Services.Count; $i++) {
             $script:HttpCalls.Clear()
             $null = Invoke-RollbackSmoke $Services[$i] 'https://service.a.run.app'

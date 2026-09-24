@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import {
   applyResolvedTheme,
   isThemePreference,
@@ -18,7 +18,9 @@ export const ThemeProvider = ({ children, apiClient, isAuthenticated = false, wi
   const [persistenceError, setPersistenceError] = useState(null)
   const resolvedTheme = resolveTheme(preference, systemIsDark)
 
-  useEffect(() => {
+  // Layout effect: apply the theme in the same commit as the state change, so the
+  // document never lags a render (a passive effect can flush after the commit).
+  useLayoutEffect(() => {
     applyResolvedTheme(documentObject.documentElement, resolvedTheme)
   }, [documentObject, resolvedTheme])
 

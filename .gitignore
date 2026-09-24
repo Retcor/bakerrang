@@ -14,5 +14,11 @@ client/.env.*.local
 /.impeccable/config.local.json
 /.impeccable/hook.cache.json
 
+# Impeccable transient build, review, and decision-session output
+/.impeccable/build/
+/.impeccable/review/
+/.impeccable/questions/
+/.impeccable/critique/*-structure-payload.json
+
 # Generated temporary credentials from google-github-actions/auth
 gha-creds-*.json

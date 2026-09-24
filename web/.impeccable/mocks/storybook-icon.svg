@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Story Book app-icon master (design spec for the PWA icon set; rasterise to 512/192/180/32/16 at build).
+    - Tile: world charcoal #161514, full-bleed (maskable-safe: artwork kept inside the central 80% circle).
+    - Mark: the shared Story Book emblem (open book, the same path as web-app-shell ProductEmblem 'storybook'),
+      stroked in Story Ember #F08A5D at the emblem's 1.75/32 weight scaled to the tile.
+    - Badge: the canonical BakerRang pixel-B, composited from bakerrang-logo.png (never redrawn).
+    Provenance: authored for Phase C by the planner; no generated raster.
+  -->
+  <rect width="512" height="512" fill="#161514"/>
+  <g transform="translate(80 64) scale(10)" fill="none" stroke="#F08A5D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/>
+  </g>
+  <image href="bakerrang-logo.png" xlink:href="bakerrang-logo.png" x="300" y="316" width="88" height="88"/>
+</svg>
