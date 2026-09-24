@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "literata",
+        "createdAt": "2026-09-23T03:04:04.269Z",
+        "reason": "Planner decision for Story Book (Phase C): Literata is the product-scoped reading face for story content; DESIGN.md Story Book layer documents it at finish"
+      }
+    ]
+  }
+}

@@ -883,6 +883,7 @@ automated tests · manual verification.** Each product-extraction phase also car
   deploys only `web-launcher`); the SW precaches shell only and does **not** cache API responses.
 
 ### Phase C — Extract **Story Book** → `storybook.bakerrang.com`
+> Detailed Phase C plan (proposed, pending review): [PhaseC-StoryBook.md](PhaseC-StoryBook.md).
 - **Scope:** move Story Book UI into `web/apps/storybook` (reuse `server` `/storybook`,
   `/text/to/speech`); redesign to the "reading room" direction; per-app PWA; new service +
   subdomain. Legacy `/storybook` route in `client/` stays live until cutover, then **redirects**.

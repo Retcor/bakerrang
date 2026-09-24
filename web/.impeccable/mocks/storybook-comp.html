@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#161514" />
+<title>Story Book — comp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Expanded:wght@700;800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet" />
+<style>
+/* =========================================================
+   Story Book comp — BakerRang consumer world + reading layer.
+   Chrome: Archivo / Archivo Expanded (shared). Story content: Literata.
+   Gold = one primary action per surface. Story Ember = emblem, ribbon, hover.
+   ========================================================= */
+:root {
+  color-scheme: dark;
+  --gold: #ffd500; --gold-hover: #f0c400; --gold-press: #ddba00; --gold-text: #ffd500; --ink-on-gold: #1a1a1a;
+  --desk: #161514; --desk-2: #1c1b1a;
+  --plane: #201f1d; --plane-2: #262523;
+  --line: rgba(255,255,255,.10); --line-strong: rgba(255,255,255,.18);
+  --ink: #f2efe9; --ink-2: #c3bfb6; --ink-3: #928d83;
+  --danger: #e88a8a;
+  --ember: #f08a5d;
+  /* reading layer */
+  --page: #1f1c19; --page-2: #282420; --page-line: rgba(255,238,215,.09);
+  --page-ink: #ece4d8; --page-ink-2: #c2b8aa; --page-ink-3: #978d80; --page-dim: #8a8174;
+  --shadow-resting: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --shadow-contact: 0 1px 2px rgba(0,0,0,.4);
+  --r-inner: 3px; --r: 4px; --r-panel: 8px;
+  --bar-h: 56px;
+  --serif: "Literata", Georgia, serif;
+  --sans: "Archivo", system-ui, sans-serif;
+  --expanded: "Archivo Expanded", "Archivo", sans-serif;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --gold-text: #8a6300;
+  --desk: #e6e1d8; --desk-2: #ddd7cc;
+  --plane: #ffffff; --plane-2: #f6f4ef;
+  --line: rgba(20,18,16,.12); --line-strong: rgba(20,18,16,.22);
+  --ink: #1b1a18; --ink-2: #4f4b44; --ink-3: #726d64;
+  --danger: #c0362b;
+  --ember: #c25a34;
+  --page: #ffffff; --page-2: #f7f4ee; --page-line: rgba(40,30,20,.11);
+  --page-ink: #221e19; --page-ink-2: #51493f; --page-ink-3: #756b5f; --page-dim: #8c8274;
+  --shadow-resting: 0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10);
+  --shadow-contact: 0 1px 2px rgba(40,30,20,.12);
+}
+*,*::before,*::after { box-sizing: border-box; }
+html { background: var(--desk); -webkit-text-size-adjust: 100%; }
+html:has(body.library) { scrollbar-gutter: stable; }
+body { margin: 0; min-height: 100dvh; background: var(--desk); color: var(--ink); font: 400 16px/1.55 var(--sans); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; transition: background .16s ease, color .16s ease; }
+button, input, textarea { font: inherit; color: inherit; }
+.text, .contents, .entry__title, .entry__first, .dialog q, .rbar__title, .idea, .field textarea, .welcome, .lost, .plate--type, .empty { font-synthesis: none; }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--gold); color: var(--ink-on-gold); }
+:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; border-radius: var(--r-inner); }
+* { scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid var(--desk); border-radius: 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 40px; padding: 9px 16px; border-radius: var(--r); border: 1px solid transparent; font: 600 14px/1.2 var(--sans); letter-spacing: -.01em; cursor: pointer; background: transparent; transition: background .16s ease, border-color .16s ease, color .16s ease, transform .06s ease; white-space: nowrap; }
+.btn:active { transform: translateY(1px); }
+.btn--gold { background: var(--gold); color: var(--ink-on-gold); }
+.btn--gold:hover { background: var(--gold-hover); }
+.btn--gold:active { background: var(--gold-press); }
+.btn--gold:disabled { background: var(--plane-2); color: var(--ink-3); cursor: not-allowed; transform: none; }
+.btn--ghost { border-color: var(--line-strong); color: var(--ink); }
+.btn--ghost:hover { background: var(--plane); }
+.btn--quiet { color: var(--ink-2); padding-inline: 10px; }
+.btn--quiet:hover { color: var(--ink); background: var(--plane); }
+.btn--danger { background: transparent; border-color: color-mix(in srgb, var(--danger) 55%, transparent); color: var(--danger); }
+.btn--danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.btn--sm { min-height: 34px; padding: 6px 11px; font-size: 13px; }
+.ibtn { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink-2); cursor: pointer; transition: background .16s, color .16s, border-color .16s; }
+.ibtn:hover { background: var(--plane); color: var(--ink); border-color: var(--line); }
+.ibtn[aria-expanded="true"] { background: var(--plane); border-color: var(--line-strong); color: var(--ink); }
+.avatar { width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--plane); color: var(--ink); font: 700 12px var(--sans); cursor: pointer; letter-spacing: .02em; }
+.avatar:hover { border-color: var(--ink-3); }
+
+/* ---------- app bar (library / compose / welcome) ---------- */
+.bar { position: sticky; top: 0; z-index: 40; height: 60px; background: var(--desk); border-bottom: 1px solid var(--line); transition: transform .22s var(--ease), background .16s; }
+.bar__in { height: 100%; max-width: 1240px; margin: 0 auto; padding: 0 clamp(12px, 3vw, 28px); display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand__mark { width: 30px; height: 30px; display: block; }
+.brand__rule { width: 1px; height: 22px; background: var(--line-strong); }
+.brand__name { font: 800 15px/1 var(--expanded); letter-spacing: -.02em; color: var(--ink); white-space: nowrap; }
+.bar__sp { flex: 1; }
+.bar__right { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- popovers / menus ---------- */
+.menu { position: relative; }
+.pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 6px; z-index: 60; display: none; }
+.menu.is-open > .pop { display: block; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.pop__head { font: 700 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 6px; }
+.pop__item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r); border: 0; background: none; color: var(--ink-2); font: 500 14px var(--sans); text-align: left; cursor: pointer; }
+.pop__item:hover { background: var(--plane-2); color: var(--ink); }
+.pop__item svg.i { width: 18px; height: 18px; }
+.pop__danger { color: var(--danger); }
+.pop__danger:hover { color: var(--danger); }
+.pop__sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop__who { padding: 8px 10px 10px; display: grid; gap: 1px; }
+.pop__who strong { font: 600 14px var(--sans); color: var(--ink); }
+.pop__who span { font-size: 13px; color: var(--ink-3); }
+.seg { display: flex; padding: 3px; gap: 2px; background: var(--desk-2); border: 1px solid var(--line); border-radius: var(--r); margin: 4px 6px 6px; }
+.seg button { flex: 1; appearance: none; border: 0; background: transparent; color: var(--ink-3); font: 600 12px var(--sans); padding: 6px 6px; border-radius: var(--r-inner); cursor: pointer; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--plane-2); color: var(--ink); box-shadow: var(--shadow-contact); }
+.switcher { width: 292px; }
+.switcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.switcher__cell { display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: var(--r); font: 600 11.5px var(--sans); color: var(--ink-2); }
+.switcher__cell:hover { background: var(--plane-2); color: var(--ink); }
+.switcher__cell svg { width: 26px; height: 26px; color: var(--acc); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.switcher__cell.is-here { background: var(--plane-2); color: var(--ink); }
+
+/* ---------- desk + page planes ---------- */
+.desk { padding: clamp(20px, 4vw, 48px) clamp(12px, 3vw, 28px) 96px; }
+.leaf { background: var(--page); color: var(--page-ink); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); }
+
+/* ---------- library: contents page ---------- */
+.contents { max-width: 860px; margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(20px, 5vw, 68px) clamp(28px, 4vw, 52px); }
+.contents__head { display: flex; align-items: flex-end; gap: 20px; justify-content: space-between; padding-bottom: 22px; border-bottom: 1px solid var(--page-line); }
+.contents__title { font: 600 clamp(2.3rem, 5vw, 3.3rem)/1 var(--serif); font-variation-settings: "opsz" 72; letter-spacing: -.02em; margin: 0; color: var(--page-ink); }
+.contents__meta { margin: 10px 0 0; font: 500 13.5px var(--sans); color: var(--page-ink-3); font-variant-numeric: tabular-nums; }
+.status { display: flex; align-items: center; gap: 10px; margin: 18px 0 0; padding: 10px 12px; border: 1px solid var(--page-line); border-radius: var(--r); font-size: 14px; color: var(--page-ink-2); }
+.status .x { margin-left: auto; }
+.toc { list-style: none; margin: 8px 0 0; padding: 0; }
+.entry { position: relative; display: grid; grid-template-columns: 64px 1fr auto; gap: 18px; align-items: center; padding: 16px 10px; margin: 0 -10px; border-radius: var(--r); border-bottom: 1px solid var(--page-line); transition: background .16s ease; }
+.entry:last-child { border-bottom-color: transparent; }
+.entry:hover { background: var(--page-2); }
+.entry__link { position: absolute; inset: 0; border-radius: var(--r); }
+.entry__link:focus-visible { outline-offset: -2px; }
+.thumb { position: relative; width: 64px; height: 64px; border-radius: var(--r-inner); overflow: hidden; background: var(--page-2); border: 1px solid var(--page-line); }
+.thumb svg, .thumb img { width: 100%; height: 100%; display: block; }
+.thumb--type { display: grid; place-items: center; font: 500 24px var(--serif); font-style: italic; color: var(--page-ink-3); }
+.ribbon { position: absolute; top: -1px; right: 8px; width: 9px; height: 22px; background: var(--ember); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%); }
+.entry__body { min-width: 0; }
+.entry__top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.entry__title { font: 600 1.22rem/1.25 var(--serif); letter-spacing: -.01em; color: var(--page-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.entry__lead { flex: 1; min-width: 24px; border-bottom: 1.5px dotted var(--page-ink-3); opacity: .55; transform: translateY(-4px); }
+.entry__meta { font: 500 13px var(--sans); color: var(--page-ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.entry__meta b { color: var(--page-ink-2); font-weight: 600; }
+.entry__first { margin: 4px 0 0; font: 400 1rem/1.5 var(--serif); color: var(--page-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry .menu { position: relative; z-index: 2; }
+.entry:has(.menu.is-open) { z-index: 5; }
+.entry .ibtn { color: var(--page-ink-3); }
+.entry .ibtn:hover { background: var(--page); color: var(--page-ink); border-color: var(--page-line); }
+.rename { display: flex; gap: 8px; align-items: center; margin: -4px 0; position: relative; z-index: 2; }
+.rename input { flex: 1; min-width: 0; font: 600 1.18rem/1.2 var(--serif); color: var(--page-ink); background: var(--page); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 6px 10px; }
+.rename input:focus { outline: 2px solid var(--gold-text); outline-offset: 1px; }
+.empty { display: grid; justify-items: start; gap: 10px; padding: 44px 0 16px; max-width: 32rem; }
+.empty > svg { width: 46px; height: 46px; color: var(--ember); stroke-width: 1.5; }
+.empty h2 { margin: 6px 0 0; font: 600 1.6rem/1.2 var(--serif); color: var(--page-ink); }
+.empty p { margin: 0 0 10px; font: 400 1.06rem/1.6 var(--serif); color: var(--page-ink-2); }
+.skel { display: grid; grid-template-columns: 64px 1fr; gap: 18px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--page-line); }
+.skel i { display: block; background: var(--page-2); border-radius: var(--r-inner); }
+.skel .b { display: grid; gap: 9px; }
+.skel__t { height: 16px; width: 46%; } .skel__l { height: 12px; width: 78%; }
+@media (prefers-reduced-motion: no-preference) { .skel i { animation: breathe 1.6s ease-in-out infinite; } }
+@keyframes breathe { 50% { opacity: .45; } }
+.fab { display: none; }
+
+/* ---------- reading bar ---------- */
+.rbar { position: sticky; top: 0; z-index: 40; height: var(--bar-h); background: var(--desk); border-bottom: 1px solid var(--line); transition: transform .22s var(--ease); }
+.rbar__in { height: 100%; padding: 0 clamp(8px, 2vw, 20px); display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 12px; }
+.rbar__left, .rbar__right { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.rbar__right { justify-content: flex-end; }
+.back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px 8px 6px; border-radius: var(--r); color: var(--ink-2); font: 600 14px var(--sans); }
+.back:hover { background: var(--plane); color: var(--ink); }
+.back img { width: 24px; height: 24px; margin-right: 4px; }
+.rbar__title { font: italic 400 15px/1.2 var(--serif); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; text-align: center; }
+.rbar__saved { font: 500 12.5px var(--sans); color: var(--ink-3); margin-left: 6px; white-space: nowrap; }
+.rbar__saved svg { width: 14px; height: 14px; vertical-align: -2px; color: var(--ink-2); }
+.aloud { gap: 8px; }
+.aloud svg.i { width: 18px; height: 18px; }
+.aloud.is-playing { border-color: var(--ink-3); background: var(--plane); }
+.aloud__n { font-variant-numeric: tabular-nums; color: var(--ink-3); font-weight: 500; }
+.voices { width: 280px; }
+.voices p { margin: 4px 10px 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+.voice { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: var(--r); background: none; color: var(--ink); font: 500 14px var(--sans); cursor: pointer; text-align: left; }
+.voice:hover { background: var(--plane-2); }
+.voice small { margin-left: auto; font: 600 11px var(--sans); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+.voice__dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.voice.is-last .voice__dot { background: var(--ink); border-color: var(--ink); }
+.pop__note { margin: 2px 10px 10px; font-size: 13px; color: var(--ink-3); }
+
+/* ---------- the spread ---------- */
+.stage { position: relative; display: grid; grid-template-columns: 76px minmax(0,1fr) 76px; align-items: center; min-height: calc(100dvh - var(--bar-h)); padding: 22px 12px 18px; }
+.turn { justify-self: center; width: 48px; height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: transparent; color: var(--ink-2); display: grid; place-items: center; cursor: pointer; transition: background .16s, color .16s, border-color .16s; }
+.turn:hover:not(:disabled) { background: var(--plane); color: var(--ink); border-color: var(--line-strong); }
+.turn:disabled { opacity: .3; cursor: default; }
+.turn svg { width: 22px; height: 22px; }
+.book { display: grid; justify-items: center; gap: 16px; }
+.spread { --h: min(820px, calc(100dvh - var(--bar-h) - 96px), calc((100vw - 200px) / 1.42)); height: var(--h); width: calc(var(--h) * 1.42); display: grid; grid-template-columns: 1fr 1px 1fr; background: var(--page); color: var(--page-ink); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); overflow: hidden; }
+.gutter { background: var(--page-line); position: relative; }
+.pg { position: relative; min-height: 0; display: flex; flex-direction: column; padding: calc(var(--h) * .075) calc(var(--h) * .07) calc(var(--h) * .055); }
+.pg__head { font: 600 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--page-ink-3); height: 12px; margin-bottom: calc(var(--h) * .045); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg--recto .pg__head { text-align: right; }
+.pg__folio { margin-top: auto; padding-top: 14px; font: 500 13px var(--serif); color: var(--page-ink-3); font-variant-numeric: oldstyle-nums; }
+.pg--recto .pg__folio { text-align: right; }
+.plate { flex: 1; min-height: 0; display: grid; place-items: center; }
+.plate__img { width: min(100%, calc(var(--h) * .66)); aspect-ratio: 1; border-radius: var(--r-inner); overflow: hidden; box-shadow: 0 0 0 1px var(--page-line); background: var(--page-2); }
+.plate__img svg, .plate__img img { width: 100%; height: 100%; display: block; }
+.plate--type { display: grid; place-items: center; text-align: center; gap: 10px; }
+.plate--type .n { font: 400 calc(var(--h) * .22)/1 var(--serif); font-variation-settings: "opsz" 72; font-style: italic; color: var(--page-ink-3); opacity: .5; }
+.plate--type .t { margin-top: 18px; font: italic 400 1.05rem/1.35 var(--serif); color: var(--page-ink-2); max-width: 24ch; margin-inline: auto; text-wrap: balance; }
+.plate--type .c { margin-top: 14px; font: 500 13px/1.5 var(--sans); color: var(--page-ink-3); max-width: 26ch; margin-inline: auto; }
+.text { flex: 1; min-height: 0; overflow: auto; font: 400 clamp(16.5px, calc(var(--h) * .0265), 21.5px)/1.62 var(--serif); font-variation-settings: "opsz" 16; color: var(--page-ink); hyphens: auto; text-wrap: pretty; padding-right: 4px; }
+.text p { margin: 0 0 .8em; }
+.text h1 { font: 600 calc(var(--h) * .052)/1.08 var(--serif); font-variation-settings: "opsz" 60; letter-spacing: -.015em; margin: 0 0 .35em; text-wrap: balance; }
+.text .byline { font: 500 13px var(--sans); color: var(--page-ink-3); margin: 0 0 1.6em; font-variant-numeric: tabular-nums; }
+.chunk { transition: color .3s ease; }
+.is-narrating .chunk { color: var(--page-dim); }
+.is-narrating .chunk.is-now { color: var(--page-ink); }
+.end { margin-top: 1.4em; padding-top: 1em; border-top: 1px solid var(--page-line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.end__mark { font: italic 400 1em var(--serif); color: var(--page-ink-3); margin-right: auto; }
+.end .btn { font-size: 13px; min-height: 34px; padding: 6px 11px; }
+.end .btn--ghost { border-color: var(--page-line); color: var(--page-ink); }
+.end .btn--ghost:hover { background: var(--page-2); }
+.rule { display: flex; align-items: center; gap: 14px; }
+.rule__segs { display: flex; gap: 6px; }
+.rule__seg { width: 34px; height: 18px; border: 0; background: none; padding: 7px 0; cursor: pointer; }
+.rule__seg::before { content: ""; display: block; height: 3px; border-radius: 2px; background: var(--line-strong); transition: background .16s; }
+.rule__seg:hover::before { background: var(--ink-3); }
+.rule__seg[aria-current="page"]::before { background: var(--ink); }
+.rule__txt { font: 500 13px var(--sans); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.pbar { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .turning-next .pg > *:not(.pg__head) { animation: inR .26s var(--ease); }
+  .turning-prev .pg > *:not(.pg__head) { animation: inL .26s var(--ease); }
+  .drawn { animation: drawn .7s var(--ease) both; }
+}
+@keyframes inR { from { opacity: 0; transform: translateX(14px); } }
+@keyframes inL { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes drawn { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ---------- compose + generation ---------- */
+.new { --h: min(760px, calc(100dvh - 60px - 88px), calc((100vw - 120px) / 1.42)); }
+.new .spread { margin: 0 auto; }
+.new .stage { grid-template-columns: 1fr; min-height: calc(100dvh - 60px); padding-top: 28px; }
+.slots { flex: 1; min-height: 0; display: grid; align-content: center; gap: 18px; }
+.slots__row { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: 12px; }
+.slot { aspect-ratio: 1; border-radius: var(--r-inner); background: var(--page-2); box-shadow: 0 0 0 1px var(--page-line); display: grid; place-items: center; overflow: hidden; position: relative; font: 500 12px var(--sans); color: var(--page-ink-3); }
+.slot svg.art { width: 100%; height: 100%; display: block; }
+.slot__n { position: absolute; left: 8px; bottom: 6px; font: italic 400 13px var(--serif); color: var(--page-ink-3); }
+.slot.is-done .slot__n { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.slot__st { display: flex; align-items: center; gap: 7px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--page-ink-3); }
+@media (prefers-reduced-motion: no-preference) { .dot { animation: breathe 1.2s ease-in-out infinite; } }
+.slots__cap { font: 400 1rem/1.55 var(--serif); color: var(--page-ink-2); max-width: 30ch; }
+.idle { flex: 1; display: grid; place-content: center; justify-items: center; text-align: center; gap: 14px; }
+.idle svg { width: 64px; height: 64px; color: var(--ember); stroke-width: 1.3; }
+.idle p { margin: 0; font: 400 1.02rem/1.55 var(--serif); color: var(--page-ink-2); max-width: 26ch; }
+.ask h1 { font: 600 calc(var(--h) * .056)/1.08 var(--serif); font-variation-settings: "opsz" 60; letter-spacing: -.015em; margin: 0 0 .7em; text-wrap: balance; color: var(--page-ink); }
+.field { display: grid; gap: 8px; }
+.field textarea { width: 100%; resize: none; border: 0; border-bottom: 1px solid var(--page-ink-3); background: transparent; padding: 4px 0 10px; font: 400 clamp(18px, calc(var(--h) * .03), 22px)/1.5 var(--serif); color: var(--page-ink); min-height: 4.6em; border-radius: 0; }
+.field textarea::placeholder { color: var(--page-ink-3); font-style: italic; }
+.field textarea:focus { outline: none; border-bottom-color: var(--gold-text); box-shadow: 0 1px 0 var(--gold-text); }
+.field__row { display: flex; justify-content: space-between; gap: 12px; font: 500 12.5px var(--sans); color: var(--page-ink-3); font-variant-numeric: tabular-nums; }
+.text .ask__help { margin: 22px 0 0; font: 400 15px/1.6 var(--sans); color: var(--page-ink-2); max-width: 38ch; }
+.ask__act { display: flex; gap: 10px; align-items: center; margin-top: 26px; flex-wrap: wrap; }
+.ask__act .btn--quiet { color: var(--page-ink-2); }
+.ask__act .btn--quiet:hover { background: var(--page-2); color: var(--page-ink); }
+.text .idea { font: italic 400 clamp(18px, calc(var(--h) * .03), 22px)/1.45 var(--serif); color: var(--page-ink); margin: 0 0 1.4em; text-wrap: balance; }
+.idea::before { content: "\201C"; } .idea::after { content: "\201D"; }
+.steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--page-line); }
+.step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--page-line); align-items: start; }
+.step__i { width: 20px; height: 20px; margin-top: 1px; display: grid; place-items: center; color: var(--page-ink-3); }
+.step__i svg { width: 18px; height: 18px; }
+.step b { display: block; font: 600 15px/1.35 var(--sans); color: var(--page-ink-3); }
+.step span { display: block; font: 400 13.5px/1.5 var(--sans); color: var(--page-ink-3); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.step.is-now b, .step.is-done b { color: var(--page-ink); }
+.step.is-now span { color: var(--page-ink-2); }
+.step.is-done .step__i { color: var(--page-ink-2); }
+.step.is-err b { color: var(--danger); }
+.step.is-err .step__i { color: var(--danger); }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--page-line); border-top-color: var(--page-ink); }
+@media (prefers-reduced-motion: no-preference) { .spin { animation: spin .9s linear infinite; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.text .gen__note { margin: 18px 0 0; font: 400 14px/1.55 var(--sans); color: var(--page-ink-2); }
+.gen__warn { margin: 18px 0 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r); font: 400 14px/1.55 var(--sans); color: var(--page-ink); }
+.gen__warn strong { display: block; color: var(--danger); font-weight: 600; margin-bottom: 2px; }
+
+/* ---------- welcome ---------- */
+.welcome .plate { align-content: center; }
+.welcome h1 { font: 600 calc(var(--h) * .07)/1.04 var(--serif); font-variation-settings: "opsz" 72; letter-spacing: -.02em; margin: 0 0 .5em; text-wrap: balance; }
+.welcome p { font: 400 clamp(16px, calc(var(--h) * .026), 20px)/1.6 var(--serif); color: var(--page-ink-2); margin: 0 0 1em; max-width: 34ch; }
+.welcome .ask__act { margin-top: 1.4em; }
+.welcome__fine { margin-top: auto; font: 500 13px var(--sans); color: var(--page-ink-3); }
+.welcome__fine a { color: var(--page-ink-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--page-line); }
+.welcome__fine a:hover { color: var(--page-ink); text-decoration-color: currentColor; }
+.g-logo { width: 16px; height: 16px; }
+
+/* ---------- dialog / toast ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(8,7,6,.62); z-index: 90; display: grid; place-items: center; padding: 16px; animation: fade .16s ease; }
+@keyframes fade { from { opacity: 0; } }
+.dialog { width: min(440px, 100%); background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 24px; animation: pop .18s var(--ease); }
+.dialog h2 { margin: 0 0 8px; font: 700 1.2rem/1.25 var(--sans); letter-spacing: -.015em; }
+.dialog h2 q { font: italic 400 1.15rem var(--serif); quotes: "\201C" "\201D"; }
+.dialog p { margin: 0 0 22px; color: var(--ink-2); font-size: 15px; }
+.dialog__act { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---------- not found ---------- */
+.lost { max-width: 620px; margin: 0 auto; padding: 56px clamp(20px, 5vw, 60px); }
+.lost h1 { font: 600 2rem/1.15 var(--serif); margin: 0 0 12px; color: var(--page-ink); }
+.lost p { font: 400 1.05rem/1.6 var(--serif); color: var(--page-ink-2); margin: 0 0 22px; }
+
+/* ================= responsive ================= */
+@media (max-width: 999px) {
+  .stage { display: block; min-height: 0; padding: 0; }
+  .turn { display: none; }
+  .book { display: block; }
+  .spread, .new .spread { --h: 640px; height: auto; width: auto; display: block; border-radius: 0; box-shadow: none; background: var(--page); max-width: 680px; margin: 0 auto; overflow: visible; }
+  .gutter { display: none; }
+  .pg { padding: 0 22px 26px; }
+  .pg--verso { padding: 0; }
+  .pg--verso .pg__head, .pg--verso .pg__folio { display: none; }
+  .plate__img { width: 100%; border-radius: 0; box-shadow: none; }
+  .plate--type { padding: 40px 20px 10px; }
+  .plate--type .n { font-size: 96px; }
+  .pg--recto .pg__head { display: none; }
+  .pg--recto { padding-top: 24px; }
+  .text { overflow: visible; font-size: 19px; padding: 0; }
+  .text h1 { font-size: 30px; }
+  .pg__folio { text-align: center !important; padding-bottom: 8px; }
+  .rule { display: none; }
+  body.reading { padding-bottom: calc(64px + env(safe-area-inset-bottom)); background: var(--page); }
+  body.reading .rbar { background: var(--page); border-bottom-color: var(--page-line); }
+  .rbar.is-hidden, .bar.is-hidden { transform: translateY(-100%); }
+  .rbar__title { display: none; }
+  .rbar__in { grid-template-columns: auto 1fr auto; }
+  .rbar .hide-sm { display: none; }
+  .pbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; align-items: center; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--desk); border-top: 1px solid var(--line); }
+  .pbar .turn { display: grid; width: 48px; height: 48px; border: 0; }
+  .pbar__n { font: 600 14px var(--sans); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 54px; text-align: center; }
+  .pbar .aloud { margin-left: auto; min-height: 44px; }
+  .pbar .menu .pop { top: auto; bottom: calc(100% + 10px); }
+  /* compose on small screens */
+  .new .stage { padding: 0; min-height: 0; }
+  .new .pg--verso { display: none; }
+  .new .pg--verso.show-sm { display: block; padding: 24px 22px 0; }
+  .new .pg--recto { padding-top: 28px; }
+  .new .ask h1 { font-size: 30px; }
+  .slots { gap: 10px; }
+  .slots__cap { display: none; }
+  body.composing { background: var(--page); }
+  body.composing .bar { background: var(--page); border-bottom-color: var(--page-line); }
+  .ask__act--sticky { position: sticky; bottom: 0; background: var(--page); padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); margin-top: 18px; border-top: 1px solid var(--page-line); }
+  .ask__act--sticky .btn--gold { flex: 1; min-height: 48px; }
+  .welcome .pg--verso { display: block; padding: 0; }
+  .welcome .pg--verso .pg__head { display: block; margin: 0; padding: 18px 22px 12px; height: auto; }
+  .welcome .plate__img { aspect-ratio: 4 / 3; }
+  .welcome .pg--verso .pg__folio { display: block; padding: 10px 22px 0; text-align: left !important; }
+  .welcome__fine { margin-top: 22px; }
+  .welcome h1 { font-size: 34px; }
+  .welcome p { font-size: 18px; }
+  .welcome .pg--recto { padding-top: 18px; }
+}
+@media (max-width: 640px) {
+  .desk { padding: 0 0 110px; }
+  .contents { border-radius: 0; box-shadow: none; padding: 26px 18px 20px; }
+  body.library { background: var(--page); }
+  body.library .bar { background: var(--page); border-bottom-color: var(--page-line); }
+  .contents__head .btn--gold { display: none; }
+  .fab { display: flex; position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 45; }
+  .fab .btn { flex: 1; min-height: 50px; box-shadow: var(--shadow-resting); font-size: 15px; }
+  .entry { grid-template-columns: 52px 1fr auto; gap: 14px; padding: 14px 8px; margin: 0 -8px; align-items: start; }
+  .thumb { width: 52px; height: 52px; }
+  .entry__lead { display: none; }
+  .entry__top { display: block; }
+  .entry__title { display: block; white-space: normal; font-size: 1.1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .entry__meta { display: block; margin-top: 4px; }
+  .entry__first { display: none; }
+  .brand__name { font-size: 14px; }
+  .brand__rule { display: none; }
+  .brand__mark { width: 28px; height: 28px; }
+
+}
+
+/* ---------- review controls (comp scaffolding only) ---------- */
+.review { position: fixed; left: 12px; bottom: 12px; z-index: 200; width: 272px; max-height: calc(100dvh - 24px); overflow: auto; background: #0d0c0b; color: #d7d2c8; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 12px; font: 500 12px/1.4 "Archivo", sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.review h4 { margin: 0 0 8px; font: 700 11px "Archivo"; letter-spacing: .1em; text-transform: uppercase; color: #8f897f; }
+.review label { display: block; margin: 8px 0 4px; color: #8f897f; }
+.review select, .review button { width: 100%; background: #1c1b1a; color: #f2efe9; border: 1px solid rgba(255,255,255,.18); border-radius: 4px; padding: 6px; font: 500 12px "Archivo"; cursor: pointer; }
+.review .row { display: flex; gap: 6px; } .review .row button { flex: 1; }
+.review .row button[aria-pressed="true"] { background: #f2efe9; color: #161514; }
+.review .note { margin: 10px 0 0; color: #8f897f; font-size: 11px; }
+.review__x { position: absolute; top: 6px; right: 8px; width: auto !important; border: 0 !important; background: none !important; font-size: 15px !important; color: #8f897f !important; }
+.review.collapsed > :not(.review__x):not(h4) { display: none; }
+.review.collapsed { width: auto; }
+@media (max-width: 640px) { .review { left: auto; right: 8px; top: 66px; bottom: auto; width: 230px; } .review.collapsed { top: 66px; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .13" /></feComponentTransfer>
+      <feComposite in2="SourceGraphic" operator="in" />
+    </filter>
+  </defs>
+</svg>
+
+<div id="app"></div>
+
+<aside class="review" id="review" aria-label="Comp review controls">
+  <button class="review__x" id="rvX" aria-label="Collapse review controls">–</button>
+  <h4>Story Book comp</h4>
+  <label for="rvScreen">Screen / state</label>
+  <select id="rvScreen">
+    <optgroup label="Signed out">
+      <option value="welcome">Welcome (signed out)</option>
+    </optgroup>
+    <optgroup label="Library">
+      <option value="library">Library — contents</option>
+      <option value="library/empty">Library — empty</option>
+      <option value="library/loading">Library — loading</option>
+      <option value="library/error">Library — load error</option>
+      <option value="library/deleted">Library — after delete</option>
+    </optgroup>
+    <optgroup label="Compose">
+      <option value="new">Compose — idle</option>
+      <option value="new/writing">Generating — writing</option>
+      <option value="new/drawing">Generating — drawing (1 of 3)</option>
+      <option value="new/write-failed">Generating — story failed</option>
+      <option value="new/save-failed">Generating — save failed</option>
+    </optgroup>
+    <optgroup label="Reader">
+      <option value="story/lighthouse/1">Reader — page 1 (just saved)</option>
+      <option value="story/lighthouse/2">Reader — page 2</option>
+      <option value="story/lighthouse/3">Reader — last page</option>
+      <option value="story/night-bakery/2">Reader — page with no picture</option>
+      <option value="story/missing">Reader — story not found</option>
+    </optgroup>
+  </select>
+  <label>Theme</label>
+  <div class="row" id="rvTheme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <label>Narration voices</label>
+  <div class="row" id="rvVoices"><button data-v="some">Has voices</button><button data-v="none">None</button><button data-v="error">Fails</button></div>
+  <p class="note">Sample stories, people and pictures are synthetic stand-ins; real pages show each user's generated illustrations. New stories are titled from the idea (see the first entry); the other titles depict stories their owner renamed. Try ←/→ keys, the page rule, Read aloud, ⋯ menus, rename and delete.</p>
+</aside>
+
+<script>
+/* ============ synthetic sample content ============ */
+/* Mirrors the production destination registry (web-app-shell DESTINATIONS) during Phase C coexistence:
+   extracted products use their subdomain; unextracted ones open their current legacy route directly. */
+const DEST = {
+  launcher: 'https://launch.bakerrang.com', storybook: 'https://storybook.bakerrang.com',
+  polyglot: 'https://bakerrang.com/polyglot', sign: 'https://bakerrang.com/sign-language',
+  budget: 'https://bakerrang.com/budget', wow: 'https://bakerrang.com/wow',
+  passwords: 'https://bakerrang.com/passwords', account: 'https://bakerrang.com/account'
+};
+const LAUNCHER = DEST.launcher;
+const ACCOUNT = DEST.account;
+const USER = { name: 'Sam Rivera', email: 'sam.rivera@example.com', initials: 'SR' };
+const VOICES = [ { id: 'v1', name: 'Grandad', primary: true }, { id: 'v2', name: 'My voice' } ];
+
+const STORIES = [
+  { id: 'lighthouse', title: 'A lighthouse that forgets how to shine', prompt: 'a lighthouse that forgets how to shine', created: '2026-09-18', art: 'lighthouse', pages: [
+    'On the last rock before the open sea stood a lighthouse named Wren. Every night for ninety years she had turned her great lamp in slow circles, and every night the fishing boats had found their way home by it. But on the evening before the autumn storm, Wren woke from her afternoon doze and could not remember how to shine. Her lamp sat cold and grey at the top of the tower, and far out on the water, the first boats were already turning for the harbour.',
+    'Tobias, the keeper, climbed the hundred and twelve steps with a paraffin lantern swinging in his hand. He did not scold the lighthouse. He sat beside the cold lamp and told her about the boats: the red one with the patched sail, the little green one that always came in last, the Kittiwake with its three noisy brothers. As he talked, the lantern’s small flame wobbled against the great glass, and something in Wren began, very faintly, to remember.',
+    'The lamp caught with a sound like a held breath let go. Light swung out over the black water, once, twice, then steady as a heartbeat, and one by one the boats slid into the harbour under it: the red one, the Kittiwake, and at last the little green one. Tobias blew out his lantern and leaned against the warm glass. “You didn’t forget,” he said. “You just needed someone to remind you what the light was for.”'
+  ] },
+  { id: 'kite', title: 'Marisol and the Paper Kite', prompt: 'a girl who builds a kite out of her old homework', created: '2026-09-12', art: 'kite', pages: [
+    'Marisol had kept every page of homework since the first grade, stacked in a shoebox under her bed. On the windiest Saturday of spring she spread them across the kitchen table and decided they had been waiting long enough. With two chopsticks, a ball of her grandmother’s baking string, and a great deal of tape, she folded spelling lists and times tables into the shape of a kite.',
+    'The kite did not want to fly at first. It dragged along the grass of Hollins Hill, flapping like an unhappy newspaper, while her little brother laughed. Marisol ran faster. She ran until the wind found the underside of the long-division pages and lifted, and suddenly the string was humming in her hands and the kite was climbing, fractions and all, over the tops of the chestnut trees.',
+    'By evening the kite was so high that the swallows were circling it, curious about the handwriting. Marisol lay on her back with the string tied around her wrist and read her old sentences upside down against the sky. “Everything you learn goes somewhere,” her grandmother said, sitting down beside her. “Some of it just goes up.”'
+  ] },
+  { id: 'night-bakery', title: 'The Night Bakery on Alder Street', prompt: 'a bakery that only opens at midnight', created: '2026-09-03', art: 'bakery', noArt: [1], pages: [
+    'Nobody on Alder Street could say when the bakery had first appeared. By day, number fourteen was only a blue door with no handle. But at midnight, exactly, a warm square of window lit up on the corner, and the whole street began to smell of cinnamon and burnt sugar. The people who noticed were mostly people awake for reasons of their own: night nurses, new parents, and one boy named Ellis who could never sleep before a test.',
+    'Ellis crept down in his slippers and found the blue door standing open. Inside, an old baker with flour in her eyebrows was pulling loaves from an oven the size of a wardrobe. She did not ask why he was awake. She handed him a bun still too hot to hold and pointed at a stool by the counter. “Everybody who comes in at midnight is worried about something,” she said. “The trick is to worry sitting down, with something warm.”',
+    'They talked until the loaves were cool: about spelling tests, about ovens, about how bread rises best when you stop checking on it. When Ellis climbed back into bed, the worry was still there, but it had become small and quiet, like a crumb in a pocket. In the morning the blue door was handleless again. But on his desk sat a paper bag, and inside it, one cinnamon bun, still warm.'
+  ] },
+  { id: 'fox', title: 'Fox Tracks in the First Snow', prompt: 'a young fox following strange tracks in the first snow of winter', created: '2026-08-27', art: 'fox', stoppedAt: 2, pages: [
+    'The first snow fell on the valley while the young fox was asleep, and when she pushed her nose out of the den in the morning, the whole world had gone quiet and white. Every sound was softer. Every tree wore a hat. And across the clearing, right past her front door, ran a line of small round tracks she had never seen before.',
+    'She followed them past the frozen stream, where the tracks hopped from stone to stone, and under the bramble, where they wriggled flat. She followed them up the ridge, where the wind had tried to erase them, and down into the pines. Whoever made them was small, and busy, and in no hurry to be found.',
+    'At the edge of the pines the tracks stopped at a hole in an old stump, and from inside came the sound of someone humming. The fox lay down in the snow and listened. She did not need to see who it was. When she walked home, she left her own tracks beside theirs, so they would know the white, quiet world had someone else in it too.'
+  ] },
+  { id: 'frost', title: 'A Map Drawn in Frost', prompt: 'frost on a bedroom window that draws a map to somewhere', created: '2026-08-09', art: 'frost', noArt: [0], pages: [
+    'The frost came in the night and drew on Ada’s window with a fine white pen: rivers, a ridge of hills, and a dotted line that wandered off the edge of the glass.',
+    'She breathed on the corner to see where the line went, and the frost drew a little more, as if it had been waiting to be asked.',
+    'By breakfast the map had a forest, a bridge, and a small cross marked with a star. Ada copied every line into her notebook before the sun could take them.',
+    'That afternoon she followed the notebook down the lane, over the bridge, and into the birches, and found, under the starred tree, a robin’s nest from last spring, perfectly empty and perfectly kept.'
+  ] }
+];
+
+/* ============ illustrations (synthetic stand-ins, flat print style) ============ */
+const grain = '<rect width="400" height="400" filter="url(#grain)" />';
+const svgWrap = (inner, cls = 'art') => `<svg class="${cls}" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Story illustration (sample)">${inner}${grain}</svg>`;
+const stars = (n, seed, h = 200) => { let s = ''; let x = seed; for (let i = 0; i < n; i++) { x = (x * 9301 + 49297) % 233280; const a = x / 233280; x = (x * 9301 + 49297) % 233280; const b = x / 233280; s += `<circle cx="${(a * 400).toFixed(1)}" cy="${(b * h).toFixed(1)}" r="${(0.8 + a * 1.4).toFixed(1)}" fill="#f6ecd2" opacity="${(0.45 + b * 0.5).toFixed(2)}"/>`; } return s; };
+const ART = {
+  lighthouse: (p) => {
+    const lit = p === 2;
+    const sky = p === 0 ? '#2a3552' : p === 1 ? '#1f2944' : '#141d33';
+    return svgWrap(`
+      <rect width="400" height="400" fill="${sky}"/>${stars(26, 7 + p, 190)}
+      <circle cx="${p === 0 ? 318 : 300}" cy="${p === 0 ? 92 : 70}" r="26" fill="#efe2bf"/>
+      ${lit ? '<path d="M178 132 L-20 70 L-20 150 Z M198 132 L420 60 L420 150 Z" fill="#f7d98a" opacity=".32"/>' : ''}
+      <path d="M0 262 C60 250 110 270 170 258 C240 244 300 268 400 252 L400 400 L0 400 Z" fill="#23466b"/>
+      <path d="M0 296 C80 282 150 304 230 290 C300 278 350 300 400 290 L400 400 L0 400 Z" fill="#1a3656"/>
+      <path d="M120 400 L150 250 L240 240 L275 400 Z" fill="#3a3530"/>
+      <path d="M170 248 L178 126 L200 126 L208 248 Z" fill="#e9e1d0"/>
+      <path d="M173 202 L205 202 L206 222 L172 222 Z M175 162 L203 162 L204 180 L174 180 Z" fill="#b8473a"/>
+      <rect x="172" y="104" width="34" height="24" rx="2" fill="${lit ? '#ffd98a' : '#58606e'}"/>
+      <path d="M166 104 L189 86 L212 104 Z" fill="#b8473a"/>
+      ${p === 1 ? '<circle cx="189" cy="118" r="6" fill="#ffcf6a"/><circle cx="189" cy="118" r="14" fill="#ffcf6a" opacity=".25"/>' : ''}
+      ${p === 2 ? '<path d="M300 300 l18 0 l-3 8 l-12 0 Z M312 300 l0 -16 l8 12 Z" fill="#c9433a"/><path d="M60 318 l16 0 l-3 7 l-10 0 Z M68 318 l0 -13 l7 10 Z" fill="#3f8a55"/>' : '<path d="M320 286 l14 0 l-3 7 l-9 0 Z M327 286 l0 -12 l6 9 Z" fill="#c9433a"/>'}
+    `);
+  },
+  kite: (p) => {
+    const ky = [300, 150, 70][p]; const kx = [250, 255, 280][p];
+    return svgWrap(`
+      <rect width="400" height="400" fill="${p === 2 ? '#f0b48a' : '#bfdcea'}"/>
+      <circle cx="${p === 2 ? 90 : 330}" cy="${p === 2 ? 230 : 80}" r="${p === 2 ? 44 : 30}" fill="${p === 2 ? '#f6dc9b' : '#fbefc4'}"/>
+      <path d="M0 290 C90 250 190 262 270 282 C330 296 370 280 400 270 L400 400 L0 400 Z" fill="#7aa66a"/>
+      <path d="M0 330 C110 300 220 318 400 306 L400 400 L0 400 Z" fill="#5d8c55"/>
+      <circle cx="330" cy="268" r="22" fill="#3e6c44"/><circle cx="352" cy="262" r="18" fill="#3e6c44"/><rect x="338" y="270" width="6" height="26" fill="#4b3b2e"/>
+      <path d="M${kx} ${ky - 34} L${kx + 26} ${ky} L${kx} ${ky + 38} L${kx - 26} ${ky} Z" fill="#fbf7ec" stroke="#2c3440" stroke-width="2"/>
+      <path d="M${kx - 16} ${ky - 6} h18 M${kx - 12} ${ky + 4} h24 M${kx - 8} ${ky + 14} h14" stroke="#6a7fa3" stroke-width="2"/>
+      <path d="M${kx} ${ky + 38} C${kx - 18} ${ky + 60} ${kx + 14} ${ky + 80} ${kx - 6} ${ky + 104}" fill="none" stroke="#c9433a" stroke-width="2.5"/>
+      ${p === 0 ? '' : `<path d="M${kx} ${ky + 38} Q ${(kx + 120) / 2} ${ky + 160} 120 ${p === 2 ? 322 : 300}" fill="none" stroke="#2c3440" stroke-width="1.4"/>`}
+      <circle cx="120" cy="${p === 2 ? 322 : 296}" r="9" fill="#2c3440"/><path d="M111 ${p === 2 ? 330 : 304} h18 l4 30 h-26 Z" fill="#c9433a"/>
+      ${p === 2 ? '<path d="M200 60 q8 -8 16 0 q8 -8 16 0 M150 100 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="#2c3440" stroke-width="2"/>' : ''}
+    `);
+  },
+  bakery: (p) => svgWrap(`
+      <rect width="400" height="400" fill="#1d2140"/>${stars(18, 3 + p, 150)}
+      <path d="M300 70 a24 24 0 1 0 12 44 a20 20 0 1 1 -12 -44 Z" fill="#efe2bf"/>
+      <rect x="40" y="130" width="150" height="270" fill="#2f3358"/><rect x="190" y="160" width="170" height="240" fill="#3a3f6a"/>
+      <rect x="220" y="230" width="${p === 2 ? 120 : 90}" height="${p === 2 ? 110 : 80}" fill="#ffc96b"/>
+      ${p === 2 ? '<circle cx="258" cy="300" r="14" fill="#a8622e"/><circle cx="296" cy="304" r="12" fill="#b8733a"/><path d="M234 330 h96" stroke="#7a4a22" stroke-width="4"/>' : '<path d="M220 270 h90 M265 230 v80" stroke="#b98b3f" stroke-width="3"/>'}
+      <rect x="70" y="250" width="52" height="150" fill="#3c6fb0"/><circle cx="112" cy="330" r="3" fill="#1d2140"/>
+      <rect x="60" y="160" width="36" height="40" fill="#23264a"/><rect x="118" y="160" width="36" height="40" fill="#ffc96b" opacity=".8"/>
+      <rect x="0" y="392" width="400" height="8" fill="#15182f"/>
+  `),
+  fox: (p) => svgWrap(`
+      <rect width="400" height="400" fill="${p === 2 ? '#2b3350' : '#dfe7ec'}"/>
+      ${p === 2 ? stars(20, 11, 170) + '<circle cx="80" cy="80" r="22" fill="#efe2bf"/>' : '<circle cx="320" cy="84" r="26" fill="#f4f1e8"/>'}
+      <path d="M0 250 C100 232 200 246 400 236 L400 400 L0 400 Z" fill="${p === 2 ? '#c9d3dc' : '#f6f7f5'}"/>
+      ${[40, 90, 330, 368].map((x, i) => `<path d="M${x} ${150 + (i % 2) * 20} l26 90 h-52 Z" fill="${p === 2 ? '#1f3a33' : '#3d5e52'}"/><path d="M${x} ${150 + (i % 2) * 20} l12 40 h-24 Z" fill="#fff" opacity="${p === 2 ? '.5' : '.85'}"/>`).join('')}
+      ${p !== 1 ? `<g transform="translate(${p === 2 ? 170 : 150} ${p === 2 ? 262 : 270})"><path d="M0 30 C10 0 60 0 76 20 L96 8 L94 34 C80 50 30 54 0 44 Z" fill="#d9692f"/><path d="M0 44 C-30 44 -48 26 -40 12 C-24 22 -12 30 0 30 Z" fill="#d9692f"/><path d="M-40 12 C-44 18 -44 22 -38 26" stroke="#fff" stroke-width="5" fill="none"/><path d="M84 12 L90 -6 L96 10 Z M74 16 L78 -2 L86 14 Z" fill="#b3521f"/><circle cx="88" cy="22" r="2" fill="#1d1d1d"/></g>` : ''}
+      ${Array.from({ length: 9 }, (_, i) => `<circle cx="${70 + i * 34}" cy="${320 - (i % 2) * 8 - i * 6}" r="3.2" fill="#9aa8b3"/>`).join('')}
+      ${p === 2 ? '<rect x="290" y="252" width="44" height="34" rx="4" fill="#6a4b35"/><ellipse cx="312" cy="262" rx="10" ry="7" fill="#2a1d14"/>' : ''}
+  `),
+  frost: (p) => svgWrap(`
+      <rect width="400" height="400" fill="#9fb8cc"/>
+      <rect x="30" y="30" width="340" height="340" fill="#c7d8e4" stroke="#6f8699" stroke-width="10"/>
+      <path d="M200 30 V370 M30 200 H370" stroke="#6f8699" stroke-width="8"/>
+      <path d="M50 300 C100 260 120 330 170 280 S250 240 300 200 S350 150 360 80" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="${p === 3 ? '0' : '7 7'}"/>
+      <path d="M60 120 l20 -30 l20 30 M90 120 l20 -40 l20 40" fill="none" stroke="#fff" stroke-width="2.4"/>
+      ${p >= 2 ? '<path d="M290 110 l6 12 l13 2 l-10 9 l3 13 l-12 -7 l-12 7 l3 -13 l-10 -9 l13 -2 Z" fill="#fff"/>' : ''}
+  `)
+};
+const artFor = (s, i) => (s.noArt || []).includes(i) ? null : ART[s.art](i);
+
+/* ============ icons ============ */
+const I = {
+  book: '<path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/>',
+  left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  speaker: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+  pencil: '<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', warn: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+  grid: '', out: '<path d="M15 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M18 15l3-3-3-3M10 12h11"/>',
+  person: '<circle cx="12" cy="9" r="3.6"/><path d="M5 20c1.3-3.2 4-4.8 7-4.8s5.7 1.6 7 4.8"/>',
+  ext: '<path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>'
+};
+const ic = (n, cls = 'i', vb = '0 0 24 24') => `<svg class="${cls}" viewBox="${vb}" aria-hidden="true">${I[n]}</svg>`;
+const gridIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">${[5, 12, 19].flatMap(y => [5, 12, 19].map(x => `<circle cx="${x}" cy="${y}" r="2"/>`)).join('')}</svg>`;
+const EMB = {
+  storybook: I.book,
+  polyglot: '<path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/><path d="M17 26l4.5-10L26 26M18.7 22h5.6"/>',
+  sign: '<path d="M10 6.5a1.6 1.6 0 1 1 3.2 0V15M13.2 5a1.6 1.6 0 1 1 3.2 0v10M16.4 7a1.6 1.6 0 1 1 3.2 0v9.5M10 15V9.5a1.6 1.6 0 1 0-3.2 0V18a8 8 0 0 0 8 8h1a7 7 0 0 0 7-7v-6.5a1.6 1.6 0 1 0-3.2 0V16"/>',
+  budget: '<circle cx="16" cy="16" r="11"/><path d="M16 9.4v13.2"/><path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/>',
+  wow: '<path d="M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z"/><path d="M16 10v9M12.5 13.5L16 11l3.5 2.5"/>',
+  passwords: '<rect x="7" y="14" width="18" height="12" rx="2.5"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="1.6"/>',
+  account: '<circle cx="16" cy="12" r="5"/><path d="M6 26c1.8-4.4 5.6-6.5 10-6.5S24.2 21.6 26 26"/>'
+};
+const emb = (id, cls = 'i') => `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true">${EMB[id]}</svg>`;
+const TOOLS = [['storybook', 'Story Book', '#f08a5d'], ['polyglot', 'Polyglot', '#58c0c9'], ['sign', 'Sign', '#b79ce0'], ['budget', 'Budget', '#7fb0e8'], ['wow', 'WoW', '#d69a4c'], ['passwords', 'Passwords', '#aeb8c2']];
+const google = '<svg class="g-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1-.8 2.6-2.3 3.6l3.6 2.8c2.1-2 3.7-4.9 3.7-8.3zM12 24c3.2 0 5.9-1.1 7.9-2.9l-3.6-2.8c-1 .7-2.3 1.2-4.3 1.2-3.3 0-6.1-2.2-7.1-5.2l-3.7 2.9C3.2 21.3 7.3 24 12 24zM4.9 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.8C.4 8.3 0 10.1 0 12s.4 3.7 1.2 5.2l3.7-2.9zM12 4.8c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.9 14.4.9 12 .9 7.3.9 3.2 3.6 1.2 6.8l3.7 2.9C5.9 6.7 8.7 4.8 12 4.8z"/></svg>';
+
+/* ============ state ============ */
+const S = { theme: 'dark', voices: 'some', lastVoice: 'v1', playing: null, chunk: 0, renaming: null, deleting: null, deletedTitle: null, justSaved: false, draft: '' };
+const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const fmtLong = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const chunkText = (text, maxLen = 220) => { const s = text.match(/[^.!?]+[.!?”]*\s*/g) || [text]; const out = []; let cur = ''; for (const x of s) { if (cur && (cur + x).length > maxLen) { out.push(cur.trim()); cur = x; } else cur += x; } if (cur.trim()) out.push(cur.trim()); return out; };
+
+/* ============ chrome pieces ============ */
+const switcher = () => `
+  <div class="menu" data-menu="switch">
+    <button class="ibtn" aria-label="Switch app" aria-haspopup="true" aria-expanded="false" data-toggle>${gridIcon}</button>
+    <div class="pop switcher" role="menu" aria-label="BakerRang tools">
+      <div class="pop__head">BakerRang tools</div>
+      <div class="switcher__grid">${TOOLS.map(([id, n, a]) => `<a class="switcher__cell ${id === 'storybook' ? 'is-here' : ''}" role="menuitem" href="${id === 'storybook' ? '#library' : DEST[id]}" style="--acc:${a}" ${id === 'storybook' ? 'aria-current="page"' : ''}>${emb(id, '')}<span>${n}</span></a>`).join('')}</div>
+      <div class="pop__sep"></div>
+      <a class="pop__item" role="menuitem" href="${DEST.account}">${emb('account')}Account</a>
+      <a class="pop__item" role="menuitem" href="${LAUNCHER}">${ic('back')}All tools — Launcher</a>
+    </div>
+  </div>`;
+const account = () => `
+  <div class="menu" data-menu="account">
+    <button class="avatar" aria-label="Account and settings" aria-haspopup="true" aria-expanded="false" data-toggle>${USER.initials}</button>
+    <div class="pop" role="menu" aria-label="Account">
+      <div class="pop__who"><strong>${USER.name}</strong><span>${USER.email}</span></div>
+      <div class="pop__head">Theme</div>
+      <div class="seg" role="group" aria-label="Theme">${['light', 'dark', 'system'].map(v => `<button data-theme-set="${v}" aria-pressed="${S.theme === v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div>
+      <div class="pop__sep"></div>
+      <a class="pop__item" role="menuitem" href="${ACCOUNT}">${emb('account')}Account</a>
+      <button class="pop__item pop__danger" role="menuitem">${ic('out')}Sign out</button>
+    </div>
+  </div>`;
+const appBar = (signedIn = true) => `
+  <header class="bar" id="topbar"><div class="bar__in">
+    <a class="brand" href="${LAUNCHER}" aria-label="BakerRang — all tools"><img class="brand__mark" src="bakerrang-logo.png" alt="" /></a>
+    <span class="brand__rule" aria-hidden="true"></span>
+    <a class="brand" href="#library"><span class="brand__name">Story Book</span></a>
+    <div class="bar__sp"></div>
+    <div class="bar__right">${signedIn ? `<span class="switch-sm">${switcher()}</span>${account()}` : `<button class="btn btn--ghost btn--sm" data-go="library">${google}Sign in</button>`}</div>
+  </div></header>`;
+
+/* ============ views ============ */
+function viewWelcome () {
+  document.body.className = 'composing';
+  return `${appBar(false)}
+  <main class="new welcome"><div class="stage"><div class="book"><div class="spread">
+    <section class="pg pg--verso" aria-label="Example page (sample illustration)"><div class="pg__head">An example page</div><div class="plate"><div class="plate__img">${ART.kite(2)}</div></div><div class="pg__folio">3</div></section>
+    <div class="gutter"></div>
+    <section class="pg pg--recto"><div class="pg__head"></div>
+      <div class="text" style="overflow:visible">
+        <h1>Type an idea. Read the story it becomes.</h1>
+        <p>Story Book writes a short story from a single idea, draws a picture for every page, and keeps it in your library.</p>
+        <p>Any page can be read aloud in a voice you’ve cloned in your BakerRang account.</p>
+        <div class="ask__act"><button class="btn btn--gold" data-go="library">${google}Sign in with Google</button></div>
+      </div>
+      <div class="welcome__fine">Part of BakerRang. <a href="${LAUNCHER}">See all the tools</a></div>
+    </section>
+  </div></div></div></main>`;
+}
+
+function viewLibrary (mode) {
+  document.body.className = 'library';
+  const list = mode === 'empty' ? [] : STORIES;
+  let body = '';
+  if (mode === 'loading') {
+    body = `<div aria-busy="true" aria-label="Loading your stories">${Array.from({ length: 4 }, () => '<div class="skel"><i style="width:64px;height:64px"></i><div class="b"><i class="skel__t"></i><i class="skel__l"></i></div></div>').join('')}</div>`;
+  } else if (mode === 'error') {
+    body = `<div class="empty" role="alert"><h2>Your stories didn’t load.</h2><p>Check your connection, then try again. Nothing has been lost.</p><button class="btn btn--ghost" data-go="library">Try again</button></div>`;
+  } else if (!list.length) {
+    body = `<div class="empty">${emb('storybook', 'i')}<h2>Nothing here yet.</h2><p>Every story you write is listed here, like the contents of a book. Start with a single idea.</p><button class="btn btn--gold" data-go="new">${ic('plus')}Begin your first story</button></div>`;
+  } else {
+    body = `<ol class="toc">${list.filter(s => !(mode === 'deleted' && s.id === 'fox')).map(entry).join('')}</ol>`;
+  }
+  const count = mode === 'loading' ? 'Loading…' : mode === 'error' ? '' : mode === 'deleted' ? '4 stories · newest first' : list.length ? `${list.length} stories · newest first` : 'No stories yet';
+  const hasList = list.length && mode !== 'loading' && mode !== 'error';
+  return `${appBar()}
+  <main class="desk"><article class="leaf contents" aria-labelledby="lib-h">
+    <header class="contents__head">
+      <div><h1 class="contents__title" id="lib-h">Stories</h1><p class="contents__meta">${count}</p></div>
+      ${hasList ? `<button class="btn btn--gold" data-go="new">${ic('plus')}Begin a new story</button>` : ''}
+    </header>
+    ${mode === 'deleted' ? `<div class="status" role="status">Deleted “Fox Tracks in the First Snow”.<button class="ibtn x" aria-label="Dismiss" data-go="library">${ic('close')}</button></div>` : ''}
+    ${body}
+  </article></main>
+  ${hasList ? `<div class="fab"><button class="btn btn--gold" data-go="new">${ic('plus')}Begin a new story</button></div>` : ''}`;
+}
+function entry (s) {
+  const thumb = artFor(s, 0);
+  const renaming = S.renaming === s.id;
+  return `<li class="entry">
+    ${renaming ? '' : `<a class="entry__link" href="#story/${s.id}/${s.stoppedAt || 1}" aria-label="${esc(s.title)}${s.stoppedAt ? `, continue from page ${s.stoppedAt}` : ''}"></a>`}
+    <div class="thumb ${thumb ? '' : 'thumb--type'}">${thumb || s.title[0]}${s.stoppedAt ? '<span class="ribbon" aria-hidden="true"></span>' : ''}</div>
+    <div class="entry__body">
+      ${renaming ? renameForm(s) : `<div class="entry__top"><span class="entry__title">${esc(s.title)}</span><span class="entry__lead" aria-hidden="true"></span><span class="entry__meta">${s.stoppedAt ? `<b>Stopped at p. ${s.stoppedAt}</b> · ` : ''}${s.pages.length} pp · ${fmt(s.created)}</span></div>
+      <p class="entry__first">${esc(s.pages[0].split(/(?<=[.!?])\s/)[0])}</p>`}
+    </div>
+    ${renaming ? '<span></span>' : storyMenu(s)}
+  </li>`;
+}
+const renameForm = (s) => `<form class="rename" data-rename="${s.id}"><label class="sr" for="rn-${s.id}">Story title</label><input id="rn-${s.id}" value="${esc(s.title)}" maxlength="120" /><button class="btn btn--ghost btn--sm" type="submit">Save</button><button class="btn btn--quiet btn--sm" type="button" data-cancel-rename>Cancel</button></form>`;
+const storyMenu = (s) => `<div class="menu" data-menu="story-${s.id}">
+  <button class="ibtn" aria-label="Options for ${esc(s.title)}" aria-haspopup="true" aria-expanded="false" data-toggle>${ic('more')}</button>
+  <div class="pop" role="menu">
+    <button class="pop__item" role="menuitem" data-rename-start="${s.id}">${ic('pencil')}Rename</button>
+    <div class="pop__sep"></div>
+    <button class="pop__item pop__danger" role="menuitem" data-delete="${s.id}">${ic('trash')}Delete story</button>
+  </div></div>`;
+
+function viewNew (mode) {
+  document.body.className = 'composing';
+  const prompt = S.draft || STORIES[0].prompt;
+  const n = 3;
+  let verso = '', recto = '';
+  if (!mode) {
+    verso = `<div class="idle">${emb('storybook', 'i')}<p>Each page gets its own picture. They’ll appear here as they’re drawn.</p></div>`;
+    recto = `<div class="ask"><h1>What’s the story about?</h1>
+      <form class="field" id="askForm"><label class="sr" for="idea">Story idea</label>
+        <textarea id="idea" rows="3" maxlength="300" placeholder="A lighthouse that forgets how to shine the night before a storm…">${esc(S.draft)}</textarea>
+        <div class="field__row"><span>Enter to write · Shift+Enter for a new line</span><span id="cc">${S.draft.length} / 300</span></div>
+      </form>
+      <p class="ask__help">You’ll get a short story, a few pages long, with a picture for each page. It’s saved to your library as soon as it’s ready.</p>
+      <div class="ask__act ask__act--sticky"><button class="btn btn--gold" id="writeBtn" ${S.draft.trim() ? '' : 'disabled'}>Write the story</button><a class="btn btn--quiet" href="#library">Cancel</a></div></div>`;
+  } else {
+    const st = {
+      writing: ['now', 'wait', 'wait'], drawing: ['done', 'now', 'wait'], 'write-failed': ['err', 'wait', 'wait'], 'save-failed': ['done', 'done', 'err']
+    }[mode];
+    const stepIc = (x) => x === 'done' ? ic('check') : x === 'now' ? '<span class="spin" aria-hidden="true"></span>' : x === 'err' ? ic('warn') : '<span class="dot" style="animation:none;opacity:.5"></span>';
+    const lines = [
+      ['Writing the story', { now: 'Usually under half a minute.', done: 'Written — 3 pages.', err: 'The story couldn’t be written.', wait: '' }],
+      ['Drawing the pictures', { now: '1 of 3 ready. Pages are drawn at the same time.', done: 'All 3 pictures drawn.', wait: 'One per page.' }],
+      ['Saving to your library', { now: '', done: '', err: 'Saving failed.', wait: '' }]
+    ];
+    recto = `<p class="idea">${esc(prompt)}</p>
+      <ol class="steps" aria-live="polite">${lines.map(([t, sub], i) => `<li class="step is-${st[i]}"><span class="step__i">${stepIc(st[i])}</span><div><b>${t}</b>${sub[st[i]] ? `<span>${sub[st[i]]}</span>` : ''}</div></li>`).join('')}</ol>
+      ${mode === 'write-failed' ? `<div class="gen__warn" role="alert"><strong>Nothing was written, and nothing was saved.</strong>Your idea is still here. It’s usually a brief hiccup — try again.</div><div class="ask__act"><button class="btn btn--gold" data-go="new/writing">Try again</button><button class="btn btn--quiet" data-go="new">Edit the idea</button></div>` : ''}
+      ${mode === 'save-failed' ? `<div class="gen__warn" role="alert"><strong>Your story is written but not saved yet.</strong>Leaving this page now would lose it.</div><div class="ask__act"><button class="btn btn--gold" data-go="story/lighthouse/1" data-saved>Try saving again</button></div>` : ''}
+      ${mode === 'writing' || mode === 'drawing' ? '<p class="gen__note">Stay on this page until it’s saved. It opens at page one when it’s ready.</p>' : ''}`;
+    const known = mode !== 'writing' && mode !== 'write-failed';
+    verso = `<div class="slots"><div class="slots__row" style="--n:${n}">${Array.from({ length: n }, (_, i) => {
+      const done = mode === 'save-failed' || (mode === 'drawing' && i === 0);
+      return `<div class="slot ${done ? 'is-done' : ''}">${done ? `<div class="drawn" style="width:100%;height:100%">${ART.lighthouse(i)}</div>` : known ? '<span class="slot__st"><span class="dot"></span>Drawing</span>' : ''}<span class="slot__n">${known ? i + 1 : ''}</span></div>`;
+    }).join('')}</div><p class="slots__cap">${known ? 'Pictures land here as each one is finished.' : 'Pages appear once the story is written.'}</p></div>`;
+  }
+  return `${appBar()}
+  <main class="new"><div class="stage"><div class="book"><div class="spread">
+    <section class="pg pg--verso ${mode ? 'show-sm' : ''}" aria-label="Pictures"><div class="pg__head">New story</div>${verso}<div class="pg__folio"></div></section>
+    <div class="gutter"></div>
+    <section class="pg pg--recto"><div class="pg__head"></div><div class="text" style="overflow:visible">${recto}</div></section>
+  </div></div></div></main>`;
+}
+
+function viewReader (id, pageNo, dir) {
+  document.body.className = 'reading';
+  const s = STORIES.find(x => x.id === id);
+  if (!s) {
+    document.body.className = 'library';
+    return `${appBar()}<main class="desk"><article class="leaf lost"><h1>This story isn’t in your library.</h1><p>It may have been deleted, or the link belongs to someone else’s account.</p><a class="btn btn--ghost" href="#library">${ic('back')}Back to stories</a></article></main>`;
+  }
+  const total = s.pages.length;
+  const p = Math.min(Math.max(1, pageNo || 1), total);
+  const art = artFor(s, p - 1);
+  const narr = S.playing && S.playing.id === s.id && S.playing.page === p;
+  const chunks = chunkText(s.pages[p - 1]);
+  const text = chunks.map((c, i) => `<span class="chunk ${narr && S.chunk === i ? 'is-now' : ''}">${esc(c)} </span>`).join('');
+  const verso = art ? `<div class="plate"><div class="plate__img">${art}</div></div>` : `<div class="plate plate--type"><div><div class="n">${p}</div><div class="t">${esc(s.title)}</div><div class="c">No picture for this page — it couldn’t be drawn when the story was made.</div></div></div>`;
+  const aloud = aloudCtl(s, p, narr);
+  const renaming = S.renaming === s.id;
+  return `
+  <header class="rbar" id="topbar"><div class="rbar__in">
+    <div class="rbar__left"><a class="back" href="#library">${ic('back')}<span>Stories</span></a>${S.justSaved ? `<span class="rbar__saved hide-sm">${ic('check')} Saved to your library</span>` : ''}</div>
+    ${renaming ? `<div>${renameForm(s)}</div>` : `<div class="rbar__title" title="${esc(s.title)}">${esc(s.title)}</div>`}
+    <div class="rbar__right"><span class="hide-sm">${aloud}</span>${storyMenu(s)}<span class="hide-sm">${switcher()}</span>${account()}</div>
+  </div></header>
+  <main class="stage ${dir ? 'turning-' + dir : ''}" aria-label="${esc(s.title)}">
+    <button class="turn" data-page="${p - 1}" ${p === 1 ? 'disabled' : ''} aria-label="Previous page">${ic('left')}</button>
+    <div class="book">
+      <div class="spread" id="spread">
+        <section class="pg pg--verso" aria-label="Illustration"><div class="pg__head">${esc(s.title)}</div>${verso}<div class="pg__folio">${p}</div></section>
+        <div class="gutter"></div>
+        <section class="pg pg--recto ${narr ? 'is-narrating' : ''}" aria-label="Page ${p} of ${total}"><div class="pg__head">${p > 1 ? esc(s.title) : ''}</div>
+          <div class="text">
+            ${p === 1 ? `<h1>${esc(s.title)}</h1><p class="byline">${fmtLong(s.created)} · ${total} pages</p>` : ''}
+            <p>${text}</p>
+            ${p === total ? `<div class="end"><span class="end__mark">The end.</span><button class="btn btn--ghost" data-go="new">Write another story</button><a class="btn btn--ghost" href="#library">Back to stories</a></div>` : ''}
+          </div>
+          <div class="pg__folio">${p} / ${total}</div></section>
+      </div>
+      <nav class="rule" aria-label="Pages"><div class="rule__segs">${s.pages.map((_, i) => `<button class="rule__seg" data-page="${i + 1}" aria-label="Page ${i + 1}" ${i + 1 === p ? 'aria-current="page"' : ''}></button>`).join('')}</div><span class="rule__txt">Page ${p} of ${total}</span></nav>
+    </div>
+    <button class="turn" data-page="${p + 1}" ${p === total ? 'disabled' : ''} aria-label="Next page">${ic('right')}</button>
+  </main>
+  <nav class="pbar" aria-label="Page controls">
+    <button class="turn" data-page="${p - 1}" ${p === 1 ? 'disabled' : ''} aria-label="Previous page">${ic('left')}</button>
+    <span class="pbar__n">${p} / ${total}</span>
+    <button class="turn" data-page="${p + 1}" ${p === total ? 'disabled' : ''} aria-label="Next page">${ic('right')}</button>
+    ${aloud.replace('data-menu="aloud"', 'data-menu="aloud-sm"')}
+  </nav>`;
+}
+function aloudCtl (s, p, narr) {
+  if (narr) return `<button class="btn btn--ghost btn--sm aloud is-playing" data-stop>${ic('pause')}<span>Pause</span><span class="aloud__n">${S.chunk + 1}/${chunkText(s.pages[p - 1]).length}</span></button>`;
+  let pop;
+  if (S.voices === 'none') {
+    pop = `<div class="pop__head">Read aloud</div><p>Read aloud uses a voice you’ve cloned. You haven’t added one yet — voices are set up in your BakerRang Account.</p><a class="pop__item" href="${ACCOUNT}">${ic('ext')}Set up a voice in Account</a>`;
+  } else {
+    pop = `<div class="pop__head">Read this page aloud</div>${VOICES.map(v => `<button class="voice ${S.lastVoice === v.id ? 'is-last' : ''}" role="menuitemradio" aria-checked="${S.lastVoice === v.id}" data-voice="${v.id}"><span class="voice__dot"></span>${v.name}${v.primary ? '<small>Primary</small>' : ''}</button>`).join('')}${S.voiceError ? '<p class="pop__note" role="alert" style="color:var(--danger)">Couldn’t read this page aloud. Pick a voice to try again.</p>' : '<p class="pop__note">Reads the page you’re on.</p>'}`;
+  }
+  return `<div class="menu" data-menu="aloud"><button class="btn btn--ghost btn--sm aloud" aria-haspopup="true" aria-expanded="false" data-toggle>${ic('speaker')}<span>Read aloud</span></button><div class="pop voices" role="menu">${pop}</div></div>`;
+}
+
+function dialog () {
+  if (!S.deleting) return '';
+  const s = STORIES.find(x => x.id === S.deleting);
+  return `<div class="scrim" data-cancel-delete><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dl-h" aria-describedby="dl-p" onclick="event.stopPropagation()">
+    <h2 id="dl-h">Delete <q>${esc(s.title)}</q>?</h2>
+    <p id="dl-p">This removes the story and its pictures from your library. It can’t be undone.</p>
+    <div class="dialog__act"><button class="btn btn--ghost" data-cancel-delete autofocus>Keep it</button><button class="btn btn--danger" data-confirm-delete>Delete story</button></div>
+  </div></div>`;
+}
+
+/* ============ router ============ */
+let lastPage = null;
+function render () {
+  const raw = location.hash.replace(/^#/, '') || 'library';
+  const [route] = raw.split('?');
+  const parts = route.split('/');
+  let html = '';
+  if (parts[0] === 'welcome') html = viewWelcome();
+  else if (parts[0] === 'library') html = viewLibrary(parts[1]);
+  else if (parts[0] === 'new') html = viewNew(parts[1]);
+  else if (parts[0] === 'story') {
+    const pg = parseInt(parts[2] || '1', 10);
+    const key = parts[1];
+    const dir = lastPage && lastPage.id === key && lastPage.p !== pg ? (pg > lastPage.p ? 'next' : 'prev') : '';
+    lastPage = { id: key, p: pg };
+    if (S.playing && (S.playing.id !== key || S.playing.page !== pg)) stopNarration(false);
+    html = viewReader(key, pg, dir);
+  } else html = viewLibrary();
+  document.getElementById('app').innerHTML = html + dialog();
+  document.getElementById('rvScreen').value = raw;
+  wire();
+}
+function go (h) { if (location.hash === '#' + h) render(); else location.hash = h; }
+window.addEventListener('hashchange', () => { S.renaming = null; render(); });
+
+/* ============ narration simulation ============ */
+let narrTimer = null;
+function startNarration (id, page) {
+  if (S.voices === 'error') { S.voiceError = true; render(); openMenu('aloud'); return; }
+  S.voiceError = false; S.playing = { id, page }; S.chunk = 0; render();
+  const n = chunkText(STORIES.find(s => s.id === id).pages[page - 1]).length;
+  clearInterval(narrTimer);
+  narrTimer = setInterval(() => { S.chunk++; if (S.chunk >= n) stopNarration(); else render(); }, 2600);
+}
+function stopNarration (rerender = true) { clearInterval(narrTimer); S.playing = null; S.chunk = 0; if (rerender) render(); }
+
+/* ============ wiring ============ */
+function closeMenus (except) { document.querySelectorAll('.menu.is-open').forEach(m => { if (m !== except) { m.classList.remove('is-open'); const t = m.querySelector('[data-toggle]'); t && t.setAttribute('aria-expanded', 'false'); } }); }
+function openMenu (name) { const m = document.querySelector(`[data-menu="${name}"]`) || document.querySelector(`[data-menu="${name}-sm"]`); if (m) { m.classList.add('is-open'); m.querySelector('[data-toggle]').setAttribute('aria-expanded', 'true'); } }
+function wire () {
+  document.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); const m = b.closest('.menu'); const open = !m.classList.contains('is-open'); closeMenus(m); m.classList.toggle('is-open', open); b.setAttribute('aria-expanded', String(open)); }));
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { if (b.hasAttribute('data-saved')) S.justSaved = true; go(b.dataset.go); }));
+  document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => { const s = location.hash.split('/'); S.justSaved = false; go(`story/${s[1]}/${b.dataset.page}`); }));
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); setTheme(b.dataset.themeSet); render(); openMenu('account'); }));
+  document.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', () => { S.lastVoice = b.dataset.voice; const s = location.hash.split('/'); startNarration(s[1], parseInt(s[2] || '1', 10)); }));
+  document.querySelectorAll('[data-stop]').forEach(b => b.addEventListener('click', () => stopNarration()));
+  document.querySelectorAll('[data-rename-start]').forEach(b => b.addEventListener('click', () => { S.renaming = b.dataset.renameStart; render(); const i = document.querySelector('.rename input'); i && (i.focus(), i.select()); }));
+  document.querySelectorAll('[data-cancel-rename]').forEach(b => b.addEventListener('click', () => { S.renaming = null; render(); }));
+  document.querySelectorAll('[data-rename]').forEach(f => f.addEventListener('submit', e => { e.preventDefault(); const v = f.querySelector('input').value.trim(); if (v) STORIES.find(s => s.id === f.dataset.rename).title = v; S.renaming = null; render(); }));
+  document.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', () => { S.deleting = b.dataset.delete; render(); document.querySelector('.dialog [autofocus]')?.focus(); }));
+  document.querySelectorAll('[data-cancel-delete]').forEach(b => b.addEventListener('click', () => { S.deleting = null; render(); }));
+  document.querySelectorAll('[data-confirm-delete]').forEach(b => b.addEventListener('click', () => { S.deleting = null; go('library/deleted'); }));
+  const idea = document.getElementById('idea');
+  if (idea) {
+    const btn = document.getElementById('writeBtn');
+    idea.addEventListener('input', () => { S.draft = idea.value; document.getElementById('cc').textContent = `${idea.value.length} / 300`; btn.disabled = !idea.value.trim(); });
+    idea.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (idea.value.trim()) runGeneration(); } });
+    btn.addEventListener('click', runGeneration);
+    if (S.draft) { idea.focus(); idea.setSelectionRange(idea.value.length, idea.value.length); }
+  }
+}
+function runGeneration () { go('new/writing'); setTimeout(() => { if (location.hash === '#new/writing') go('new/drawing'); }, 1800); setTimeout(() => { if (location.hash === '#new/drawing') { S.justSaved = true; S.draft = ''; go('story/lighthouse/1'); } }, 4200); }
+document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeMenus(); if (S.deleting) { S.deleting = null; render(); } }
+  if (!location.hash.startsWith('#story/') || e.target.closest('input,textarea') || S.deleting) return;
+  const [, id, p] = location.hash.split('/'); const s = STORIES.find(x => x.id === id); if (!s) return;
+  const n = parseInt(p || '1', 10);
+  if (e.key === 'ArrowRight' && n < s.pages.length) { S.justSaved = false; go(`story/${id}/${n + 1}`); }
+  if (e.key === 'ArrowLeft' && n > 1) { S.justSaved = false; go(`story/${id}/${n - 1}`); }
+});
+/* swipe to turn on touch */
+let sx = null;
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && location.hash.startsWith('#story/')) sx = [e.clientX, e.clientY]; });
+document.addEventListener('pointerup', e => { if (!sx) return; const dx = e.clientX - sx[0]; const dy = e.clientY - sx[1]; sx = null; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { const [, id, p] = location.hash.split('/'); const s = STORIES.find(x => x.id === id); const n = parseInt(p || '1', 10); if (!s) return; if (dx < 0 && n < s.pages.length) go(`story/${id}/${n + 1}`); if (dx > 0 && n > 1) go(`story/${id}/${n - 1}`); } });
+/* hide the top bar on scroll-down (phone) */
+let ly = 0;
+window.addEventListener('scroll', () => { const b = document.getElementById('topbar'); if (!b || window.innerWidth > 999) return; const y = window.scrollY; b.classList.toggle('is-hidden', y > ly && y > 80); ly = y; }, { passive: true });
+
+/* ============ theme + review controls ============ */
+function setTheme (v) { S.theme = v; const r = v === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : v; document.documentElement.dataset.theme = r; document.querySelector('meta[name=theme-color]').content = r === 'dark' ? '#161514' : '#e6e1d8'; document.querySelectorAll('#rvTheme button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === r))); }
+document.getElementById('rvScreen').addEventListener('change', e => { S.justSaved = e.target.value === 'story/lighthouse/1'; go(e.target.value); });
+document.querySelectorAll('#rvTheme button').forEach(b => b.addEventListener('click', () => { setTheme(b.dataset.v); render(); }));
+document.querySelectorAll('#rvVoices button').forEach(b => b.addEventListener('click', () => { S.voices = b.dataset.v; S.voiceError = false; document.querySelectorAll('#rvVoices button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
+document.getElementById('rvX').addEventListener('click', () => document.getElementById('review').classList.toggle('collapsed'));
+const params = new URLSearchParams(location.search);
+setTheme(params.get('theme') || 'dark');
+if (params.get('voices')) S.voices = params.get('voices');
+if (params.get('review') === 'off') document.getElementById('review').style.display = 'none';
+document.querySelectorAll('#rvVoices button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === S.voices)));
+if (location.hash === '#story/lighthouse/1') S.justSaved = true;
+render();
+</script>
+</body>
+</html>

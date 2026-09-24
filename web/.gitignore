@@ -3,3 +3,11 @@ apps/*/dist/
 coverage/
 .vite/
 *.local
+
+# Impeccable source artifacts stay visible; only transient run output is ignored.
+/.impeccable/build/
+/.impeccable/review/
+/.impeccable/questions/
+/.impeccable/hook.cache.json
+/.impeccable/config.local.json
+/.impeccable/critique/*-structure-payload.json

@@ -31,10 +31,12 @@ Image root: `us-west1-docker.pkg.dev/avian-cable-379805/bakerrang`.
 | `renderer` | `bakerrang-site-renderer` | `site-renderer` | `bakerrang-frontend` |
 | `client` | `bakerrang-client` | `client` | `bakerrang-frontend` |
 | `web-launcher` | `bakerrang-web-launcher` | `web-launcher` | `bakerrang-frontend` |
+| `web-storybook` | `bakerrang-web-storybook` | `web-storybook` | `bakerrang-frontend` |
 
 The workflow input is the logical deployment key. In particular, `web-launcher`
 selects the physical Cloud Run service `bakerrang-web-launcher`; the fixed mapping
 above is also used for package, revision-name, and runtime-identity validation.
+The same applies to `web-storybook` and `bakerrang-web-storybook`.
 
 Every SA above ends in `@avian-cable-379805.iam.gserviceaccount.com`.
 If credentials, identity, target membership, or state checks fail, stop and have the
@@ -105,7 +107,7 @@ Once corrected code/config is ready:
    a separate, intentional production mutation, **not** part of rollback.
 4. Run `scripts/verify-live.ps1` and require **Traffic mode = LATEST** for the recovered
    service, correct serving image/identity, readiness, and passing public checks.
-   The script checks all five services by default; investigate sibling warnings
+   The script checks all six services by default; investigate sibling warnings
    separately rather than rolling them back automatically.
 
 ## Checks and failure handling
@@ -131,6 +133,7 @@ are tested with the normal deployment markers:
 | Renderer | `/robots.txt` / `https://sites.bakerrang.com/robots.txt` | 200 + `User-agent` |
 | Client | `/` / `https://bakerrang.com/` | 200 + `<div id="root"` |
 | Web Launcher | `/` / `https://launch.bakerrang.com/` | 200 + `<div id="root"` |
+| Web Story Book | `/` / `https://storybook.bakerrang.com/` | 200 + `<div id="root"` |
 
 A selected-service smoke failure fails the rollback workflow but does **not** undo
 the mutation. Unrelated endpoints are never checked. A lost/failed mutation response

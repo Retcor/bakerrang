@@ -1,6 +1,6 @@
 # CI/CD operations
 
-MAIN/live is the sole deployed environment and has five deployment targets: API, Portal, Site Renderer, Client, and Web Launcher. Pull requests validate only, and pushes to `main` selectively deploy affected services to MAIN/live. DEV has no cloud deployment path; the `bakerrang-dev` project remains only as local-development data backing.
+MAIN/live is the sole deployed environment and has six deployment targets: API, Portal, Site Renderer, Client, Web Launcher, and Web Story Book. Pull requests validate only, and pushes to `main` selectively deploy affected services to MAIN/live. DEV has no cloud deployment path; the `bakerrang-dev` project remains only as local-development data backing.
 
 For routine release, verification, compatibility, and retention policy, see the [MAIN/live operations guide](operations/live-ops.md). For emergency recovery, see the [MAIN rollback runbook](operations/rollback.md).
 
@@ -12,6 +12,9 @@ For routine release, verification, compatibility, and retention policy, see the 
 
 - `server/**` → API;
 - `client/**` → Client only;
+- `web/apps/launcher/**` → Web Launcher only;
+- `web/apps/storybook/**` → Web Story Book only;
+- `web/packages/**` and shared Web workspace/build inputs → both web apps;
 - `platform/apps/portal/**` → Portal;
 - `platform/apps/site-renderer/**` → Renderer;
 - `platform/packages/site-schema/**` and `platform/packages/ui/**` → Portal and Renderer;
@@ -37,6 +40,7 @@ changes
   │                    → deploy-renderer
   ├─ validate-client   → deploy-client
   └─ validate-web      → deploy-web-launcher
+                         deploy-web-storybook
 ```
 
 Every deployment caller uses GitHub Environment `production`, immutable `git-${{ github.sha }}` image identity, and `smoke_via_service_url: true`. Only deployment callers receive `id-token: write`; classification, validation, guards, and aggregate status have `contents: read` only. Each reusable call retains service-specific concurrency, so unrelated services can proceed independently while two deployments of the same environment/service serialize with `cancel-in-progress: false`.
@@ -44,7 +48,8 @@ Every deployment caller uses GitHub Environment `production`, immutable `git-${{
 Service selectors and classifier outputs use logical deployment keys. For Launcher,
 the key is `web-launcher`; `WEB_LAUNCHER_SERVICE` in the `production` Environment
 must contain the canonical physical Cloud Run service name
-`bakerrang-web-launcher`. The reusable workflow performs that resolution before
+`bakerrang-web-launcher`. Story Book uses `web-storybook`,
+`WEB_STORYBOOK_SERVICE`, and `bakerrang-web-storybook`. The reusable workflow performs that resolution before
 the stale-deploy guard, digest-pinned update, and smoke check.
 
 `live-deploy-passed` is the stable aggregate status. A classifier failure, affected validation failure, or affected deployment failure is red. Unaffected service jobs may be skipped. A no-service push is green without authenticating to Google Cloud or deploying anything.
@@ -53,7 +58,7 @@ Before OIDC authentication, each reusable deployment fetches current `origin/mai
 
 ## Manual MAIN/live deployment
 
-The same `.github/workflows/deploy.yml` retains `workflow_dispatch`. The operator must select exactly one of `api`, `portal`, `renderer`, `client`, or `web-launcher`; there is intentionally no `all` option.
+The same `.github/workflows/deploy.yml` retains `workflow_dispatch`. The operator must select exactly one of `api`, `portal`, `renderer`, `client`, `web-launcher`, or `web-storybook`; there is intentionally no `all` option.
 
 ```text
 guard-main → deploy-selected-service → live-deploy-passed
@@ -74,12 +79,13 @@ MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` af
 - Renderer: `<status.url>/robots.txt` → HTTP 200 and `User-agent`;
 - Client: `<status.url>/` → HTTP 200 and the `<div id="root"` SPA shell.
 - Web Launcher: `<status.url>/` → HTTP 200 and the `<div id="root"` SPA shell.
+- Web Story Book: `<status.url>/` → HTTP 200 and the `<div id="root"` SPA shell.
 
-This proves the revision, image, and runtime work. Public ingress verification for `portal.bakerrang.com`, `sites.bakerrang.com`, `api.bakerrang.com`, `bakerrang.com`, `launch.bakerrang.com`, or a customer domain is separate because it proves DNS, load balancing or domain mapping, TLS, and host routing. The one-time Launcher prerequisites are in the [Milestone 1 Launcher runbook](apps/Launcher-Milestone1-Runbook.md).
+This proves the revision, image, and runtime work. Public ingress verification for `portal.bakerrang.com`, `sites.bakerrang.com`, `api.bakerrang.com`, `bakerrang.com`, `launch.bakerrang.com`, `storybook.bakerrang.com`, or a customer domain is separate because it proves DNS, load balancing or domain mapping, TLS, and host routing. The one-time prerequisites are in the [Milestone 1 Launcher runbook](apps/Launcher-Milestone1-Runbook.md) and [Phase C Story Book runbook](apps/StoryBook-PhaseC-Runbook.md).
 
 ## Read-only live verification
 
-Run `scripts/verify-live.ps1` from an operator workstation with readable production gcloud credentials to inspect the five services without mutating them. It reports configured traffic intent, actual serving revisions, latest ready/created revisions, serving image and resolvable `git-<SHA>` tag, serving-revision runtime identity, readiness, and fixed public ingress health. `-Deep` additionally checks `custom.bakerrang.com`. Traffic is healthy only when one 100% `latestRevision: true` target resolves to the latest ready revision; PINNED, SPLIT, UNKNOWN, readiness failures, identity mismatches, and required public-check failures produce a non-zero exit.
+Run `scripts/verify-live.ps1` from an operator workstation with readable production gcloud credentials to inspect the six services without mutating them. It reports configured traffic intent, actual serving revisions, latest ready/created revisions, serving image and resolvable `git-<SHA>` tag, serving-revision runtime identity, readiness, and fixed public ingress health. `-Deep` additionally checks `custom.bakerrang.com`. Traffic is healthy only when one 100% `latestRevision: true` target resolves to the latest ready revision; PINNED, SPLIT, UNKNOWN, readiness failures, identity mismatches, and required public-check failures produce a non-zero exit.
 
 `.github/workflows/verify-live.yml` performs only credential-free fixed-host HTTP checks. It runs manually, once daily, and after every completed `Deploy MAIN` workflow. It still runs after a failed deployment as diagnostic evidence and does not change or retroactively determine the deployment workflow's conclusion. The workflow has `contents: read` only and no OIDC permission.
 
@@ -89,6 +95,7 @@ For operator-initiated per-service recovery, see the [MAIN rollback runbook](ope
 `Rollback MAIN` is manual and main-only in `production`, authenticates with production WIF, shares the forward same-service deployment concurrency lock, and intentionally does not use the forward stale-deploy guard. Primary rollback is image-only: it requires LATEST traffic and preserves current config. Historical revision rollback pins traffic and requires explicit operator unpin recovery.
 Launcher is selected with the same logical key `web-launcher` and resolves through
 the rollback policy's fixed map to `bakerrang-web-launcher`.
+Story Book likewise uses `web-storybook` and resolves to `bakerrang-web-storybook`.
 
 ## Local development data backing
 

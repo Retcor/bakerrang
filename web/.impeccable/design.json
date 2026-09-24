@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-20T00:00:00Z",
+  "generatedAt": "2026-09-22T00:00:00Z",
   "title": "Design System: BakerRang Consumer Ecosystem",
   "extensions": {
     "colorMeta": {
@@ -23,14 +23,27 @@
       "accent-budget": { "role": "secondary", "displayName": "Budget Blue", "canonical": "#7FB0E8", "lightValue": "#235f9e", "note": "Budget emblem + hover only." },
       "accent-wow": { "role": "secondary", "displayName": "WoW Bronze", "canonical": "#D69A4C", "lightValue": "#8a5c15", "note": "WoW Advisor emblem + hover only." },
       "accent-pass": { "role": "secondary", "displayName": "Vault Steel", "canonical": "#AEB8C2", "lightValue": "#4d5867", "note": "Passwords vault accent + secure tag." },
-      "accent-account": { "role": "secondary", "displayName": "Account Stone", "canonical": "#A5A59C", "lightValue": "#63625a", "note": "Account emblem + hover only." }
+      "accent-account": { "role": "secondary", "displayName": "Account Stone", "canonical": "#A5A59C", "lightValue": "#63625a", "note": "Account emblem + hover only." },
+      "desk": { "role": "neutral", "displayName": "Story Desk", "canonical": "#161514", "lightValue": "#e6e1d8", "scope": "storybook", "note": "The ground the pages lie on. Dark = world Ground; light deliberately #e6e1d8 (vs world #efece6) so a white page reads as a sheet. Story Book only (product layer).", "tonalRamp": ["#0d0c0b","#161514","#2b2a27","#4a4640","#7a7368","#aca497","#d2cbbf","#e6e1d8"] },
+      "desk-2": { "role": "neutral", "displayName": "Story Desk 2", "canonical": "#1c1b1a", "lightValue": "#ddd7cc", "scope": "storybook", "note": "Recessed desk step (segmented theme track in the avatar menu). Story Book only (product layer)." },
+      "page": { "role": "neutral", "displayName": "Page", "canonical": "#1f1c19", "lightValue": "#ffffff", "scope": "storybook", "note": "Reading-layer page plane: leaf + spread. Story Book only (product layer).", "tonalRamp": ["#0f0d0b","#1f1c19","#282420","#3a342e","#5a5249","#8a8174","#c2b8aa","#ffffff"] },
+      "page-2": { "role": "neutral", "displayName": "Page 2", "canonical": "#282420", "lightValue": "#f7f4ee", "scope": "storybook", "note": "Recessed page fills: plate/thumb/slot ground, entry hover, skeleton. Story Book only (product layer)." },
+      "page-line": { "role": "neutral", "displayName": "Page Line", "canonical": "rgba(255,238,215,0.09)", "lightValue": "rgba(40,30,20,0.11)", "scope": "storybook", "note": "On-page hairline: gutter, contents rules, plate ring, steps. Story Book only (product layer)." },
+      "page-ink": { "role": "neutral", "displayName": "Page Ink", "canonical": "#ece4d8", "lightValue": "#221e19", "scope": "storybook", "note": "Story text and titles on the page. Story Book only (product layer).", "tonalRamp": ["#221e19","#3a332b","#51493f","#756b5f","#978d80","#c2b8aa","#dcd3c6","#ece4d8"] },
+      "page-ink-2": { "role": "neutral", "displayName": "Page Ink 2", "canonical": "#c2b8aa", "lightValue": "#51493f", "scope": "storybook", "note": "Secondary page text: first lines, captions, plate titles. Story Book only (product layer)." },
+      "page-ink-3": { "role": "neutral", "displayName": "Page Ink 3", "canonical": "#978d80", "lightValue": "#756b5f", "scope": "storybook", "note": "Muted page text: folios, running heads, meta, placeholders. Story Book only (product layer)." },
+      "page-dim": { "role": "neutral", "displayName": "Page Dim", "canonical": "#8a8174", "lightValue": "#8c8274", "scope": "storybook", "note": "Not-yet-spoken text during Read aloud; current chunk returns to Page Ink. Story Book only (product layer)." }
     },
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "Masthead statement of what BakerRang is. Archivo Expanded 800, tight tracking." },
       "headline": { "displayName": "Headline", "purpose": "Section mastheads (e.g. 'What's on the bench'). Archivo Expanded." },
       "title": { "displayName": "Title", "purpose": "Tool names in directory rows and the vault. Archivo Expanded 700." },
       "body": { "displayName": "Body", "purpose": "Leads, descriptions, UI copy. Archivo, slightly tight tracking." },
-      "label": { "displayName": "Label", "purpose": "Group titles and eyebrow labels, uppercase, wide tracking, Ink-3." }
+      "label": { "displayName": "Label", "purpose": "Group titles and eyebrow labels, uppercase, wide tracking, Ink-3." },
+      "story-body": { "displayName": "Story Body", "scope": "storybook", "purpose": "Recto story text. Literata 400, opsz 16, lh 1.62, fitted to spread height; 19px on phone. Scoped exception to the Expanded-for-Naming Rule (Story Book content only)." },
+      "story-title": { "displayName": "Story Title", "scope": "storybook", "purpose": "Story titles: recto page-one heading and compose heading (Literata 600, opsz 60; 30px phone). Contents-entry titles, rename field, dialog-quoted title and the italic reading-bar running title also use Literata." },
+      "masthead": { "displayName": "Story Book Masthead", "scope": "storybook", "purpose": "Story Book mastheads: the 'Stories' contents title (Literata 600, opsz 72), welcome headline, not-found heading. The 'Story Book' wordmark stays Archivo Expanded." },
+      "folio": { "displayName": "Folio", "scope": "storybook", "purpose": "Page numbers at the foot of each page: Literata 500 13px, old-style numerals, Page Ink 3, outer-edge aligned (centred on phone)." }
     },
     "shadows": [
       { "name": "resting", "value": "0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35)", "lightValue": "0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10)", "purpose": "Structural elevation on genuinely raised objects: bench, vault, popovers, menus." },
@@ -39,12 +52,15 @@
     "motion": [
       { "name": "state", "value": "0.16s ease", "purpose": "Default transition for background/border/color state changes." },
       { "name": "press", "value": "0.06s ease", "purpose": "Fast translateY press on buttons." },
-      { "name": "settle", "value": "0.6s cubic-bezier(.2,.8,.2,1)", "purpose": "Staggered bench-cell entrance; gated behind prefers-reduced-motion." }
+      { "name": "settle", "value": "0.6s cubic-bezier(.2,.8,.2,1)", "purpose": "Staggered bench-cell entrance; gated behind prefers-reduced-motion." },
+      { "name": "page-turn", "value": "0.26s cubic-bezier(.2,.8,.2,1)", "scope": "storybook", "purpose": "Story Book page turn: page content slides 14px in the turn direction; running head stays; gated behind prefers-reduced-motion." }
     ],
     "breakpoints": [
       { "name": "lg", "value": "900px", "note": "Masthead + ecosystem collapse to one column; bench moves below copy." },
       { "name": "md", "value": "640px", "note": "Compact top-bar sign-in; theme labels hide; rows tighten; vault drops arrow." },
-      { "name": "sm", "value": "430px", "note": "Wordmark hides; BakerRang logo mark carries the brand." }
+      { "name": "sm", "value": "430px", "note": "Wordmark hides; BakerRang logo mark carries the brand." },
+      { "name": "storybook-reader", "value": "999px", "scope": "storybook", "note": "Story Book: spread collapses to one column (plate full-bleed, then text); gutter/running heads/page rule drop; page becomes the screen; reading bar hides on scroll; fixed bottom page bar." },
+      { "name": "storybook-library", "value": "640px", "scope": "storybook", "note": "Story Book: contents leaf goes full-bleed; the single gold action moves to a fixed bottom bar." }
     ],
     "radii": [
       { "name": "control-inner", "value": "3px", "purpose": "Nested inner elements: segmented-control pills, chips, secure tag, focus radius." },
@@ -100,6 +116,33 @@
       "description": "Light/dark/system control. Track is Plane; the pressed segment gets a Plane-2 pill and contact shadow.",
       "html": "<div class=\"ds-seg\" role=\"group\"><button aria-pressed=\"false\">Light</button><button aria-pressed=\"true\">Dark</button><button aria-pressed=\"false\">System</button></div>",
       "css": ".ds-seg { display:inline-flex; padding:3px; gap:2px; background:#201f1d; border:1px solid rgba(255,255,255,0.10); border-radius:4px; } .ds-seg button { appearance:none; border:0; background:transparent; color:#928d83; font:600 12px 'Archivo',sans-serif; padding:5px 9px; border-radius:3px; cursor:pointer; } .ds-seg button:hover { color:#f2efe9; } .ds-seg button[aria-pressed=\"true\"] { background:#262523; color:#f2efe9; box-shadow:0 1px 2px rgba(0,0,0,.4); }"
+    },
+    {
+      "name": "Spread (Story Book)",
+      "kind": "custom",
+      "refersTo": "spread",
+      "scope": "storybook",
+      "description": "The flagship reading object: verso plate / 1px gutter rule / recto text, ~1.42:1, height-fitted, 8px panel radius, resting shadow on the desk. No fold shading.",
+      "html": "<div class=\"ds-spread\"><div class=\"ds-pg\"><div class=\"ds-pg__head\"></div><div class=\"ds-plate\"><div class=\"ds-plate__img\"></div></div><div class=\"ds-pg__folio\">2</div></div><div class=\"ds-gutter\"></div><div class=\"ds-pg ds-pg--recto\"><div class=\"ds-pg__head\">The Lighthouse That Forgot</div><div class=\"ds-text\"><p>On the last rock before the open sea stood a lighthouse named Wren. Every night for ninety years she had turned her great lamp in slow circles.</p></div><div class=\"ds-pg__folio\">3</div></div></div>",
+      "css": ".ds-spread { --h:380px; height:var(--h); width:calc(var(--h) * 1.42); display:grid; grid-template-columns:1fr 1px 1fr; background:#1f1c19; color:#ece4d8; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35); overflow:hidden; } .ds-gutter { background:rgba(255,238,215,.09); } .ds-pg { display:flex; flex-direction:column; min-height:0; padding:calc(var(--h) * .075) calc(var(--h) * .07) calc(var(--h) * .055); } .ds-pg__head { font:600 11px/1 'Archivo',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#978d80; height:12px; margin-bottom:calc(var(--h) * .045); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .ds-pg--recto .ds-pg__head, .ds-pg--recto .ds-pg__folio { text-align:right; } .ds-pg__folio { margin-top:auto; padding-top:14px; font:500 13px 'Literata',Georgia,serif; font-variant-numeric:oldstyle-nums; color:#978d80; } .ds-plate { flex:1; min-height:0; display:grid; place-items:center; } .ds-plate__img { width:min(100%, calc(var(--h) * .66)); aspect-ratio:1; border-radius:3px; background:#282420; box-shadow:0 0 0 1px rgba(255,238,215,.09); } .ds-text { flex:1; min-height:0; overflow:auto; font:400 16.5px/1.62 'Literata',Georgia,serif; font-variation-settings:'opsz' 16; color:#ece4d8; } .ds-text p { margin:0 0 .8em; }"
+    },
+    {
+      "name": "Contents Entry (Story Book)",
+      "kind": "card",
+      "refersTo": "contents-entry",
+      "scope": "storybook",
+      "description": "A table-of-contents line on the library leaf: thumb / Literata title + dotted leader + Archivo meta / kebab; first line beneath; ember ribbon when left mid-way. Flat at rest, Page 2 on hover.",
+      "html": "<div class=\"ds-toc\"><div class=\"ds-entry\"><div class=\"ds-thumb\"><span class=\"ds-ribbon\"></span></div><div class=\"ds-entry__body\"><div class=\"ds-entry__top\"><span class=\"ds-entry__title\">The Lighthouse That Forgot</span><span class=\"ds-entry__lead\"></span><span class=\"ds-entry__meta\"><b>5</b> pages &middot; 21 Sep</span></div><p class=\"ds-entry__first\">On the last rock before the open sea stood a lighthouse named Wren.</p></div><button class=\"ds-ibtn\" aria-label=\"Story menu\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><circle cx=\"5\" cy=\"12\" r=\"1.2\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\"/><circle cx=\"19\" cy=\"12\" r=\"1.2\"/></svg></button></div></div>",
+      "css": ".ds-toc { background:#1f1c19; padding:8px 20px; border-radius:8px; } .ds-entry { position:relative; display:grid; grid-template-columns:64px 1fr auto; gap:18px; align-items:center; padding:16px 10px; margin:0 -10px; border-radius:4px; border-bottom:1px solid rgba(255,238,215,.09); cursor:pointer; transition:background .16s ease; } .ds-entry:hover { background:#282420; } .ds-thumb { position:relative; width:64px; height:64px; border-radius:3px; background:#282420; border:1px solid rgba(255,238,215,.09); } .ds-ribbon { position:absolute; top:-1px; right:8px; width:9px; height:22px; background:#F08A5D; clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%); } .ds-entry__body { min-width:0; } .ds-entry__top { display:flex; align-items:baseline; gap:10px; } .ds-entry__title { font:600 1.22rem/1.25 'Literata',Georgia,serif; letter-spacing:-.01em; color:#ece4d8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .ds-entry__lead { flex:1; min-width:24px; border-bottom:1.5px dotted #978d80; opacity:.55; transform:translateY(-4px); } .ds-entry__meta { font:500 13px 'Archivo',sans-serif; color:#978d80; white-space:nowrap; font-variant-numeric:tabular-nums; } .ds-entry__meta b { color:#c2b8aa; font-weight:600; } .ds-entry__first { margin:4px 0 0; font:400 1rem/1.5 'Literata',Georgia,serif; color:#c2b8aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .ds-ibtn { display:inline-grid; place-items:center; width:38px; height:38px; border-radius:4px; border:1px solid transparent; background:transparent; color:#978d80; cursor:pointer; } .ds-ibtn:hover { background:#1f1c19; color:#ece4d8; border-color:rgba(255,238,215,.09); } .ds-ibtn:focus-visible { outline:2px solid #FFD500; outline-offset:3px; }"
+    },
+    {
+      "name": "Plate (Story Book)",
+      "kind": "custom",
+      "refersTo": "plate",
+      "scope": "storybook",
+      "description": "The verso picture: square, 3px inner radius, 1px Page Line ring on Page 2. When a picture fails, the typographic plate (large italic Literata folio + title) replaces it.",
+      "html": "<div class=\"ds-plates\"><div class=\"ds-plate-img\"></div><div class=\"ds-plate-type\"><div class=\"n\">4</div><div class=\"t\">The Lighthouse That Forgot</div><div class=\"c\">This page&rsquo;s picture couldn&rsquo;t be made.</div></div></div>",
+      "css": ".ds-plates { display:flex; gap:24px; padding:24px; background:#1f1c19; border-radius:8px; } .ds-plate-img { width:180px; aspect-ratio:1; border-radius:3px; background:#282420; box-shadow:0 0 0 1px rgba(255,238,215,.09); } .ds-plate-type { width:180px; aspect-ratio:1; display:grid; place-content:center; text-align:center; } .ds-plate-type .n { font:italic 400 84px/1 'Literata',Georgia,serif; font-variation-settings:'opsz' 72; color:#978d80; opacity:.5; } .ds-plate-type .t { margin-top:14px; font:italic 400 1.05rem/1.35 'Literata',Georgia,serif; color:#c2b8aa; } .ds-plate-type .c { margin-top:10px; font:500 13px/1.5 'Archivo',sans-serif; color:#978d80; }"
     }
   ],
   "narrative": {
@@ -119,7 +162,12 @@
       { "name": "The One-Accent-Per-Tool Rule", "body": "A product's accent appears only on its own emblem and hover state. Accents never mix on one surface and never tint text, backgrounds, or borders wider than 1px.", "section": "colors" },
       { "name": "The Expanded-for-Naming Rule", "body": "Archivo Expanded is reserved for the wordmark, mastheads, and tool names. Body, descriptions, chips, and controls are always plain Archivo; never set a paragraph in the expanded face.", "section": "typography" },
       { "name": "The No-Glass Rule", "body": "Depth is tonal planes + 1px rules + offset/blur shadow. Never backdrop-filter, translucency-as-material, or gradient fills to fake elevation.", "section": "elevation" },
-      { "name": "The Flat-At-Rest Rule", "body": "Directory rows are borderless (with only a bottom hairline) until hovered, when they gain a Plane background, a full 1px border, a 2px translateX nudge, and the contact shadow.", "section": "elevation" }
+      { "name": "The Flat-At-Rest Rule", "body": "Directory rows are borderless (with only a bottom hairline) until hovered, when they gain a Plane background, a full 1px border, a 2px translateX nudge, and the contact shadow.", "section": "elevation" },
+      { "name": "The Reading Layer Rule", "body": "Pages are a product-scoped tonal plane over the shared desk. Only the leaf (library contents) and the spread (reader, compose, welcome) carry Page colours and Page Ink; chrome (bars, menus, dialogs, turn buttons, the page rule) stays on the world's desk/plane/ink tokens. A control sitting on the page swaps its hairline and hover to Page Line and Page 2.", "section": "colors", "scope": "storybook" },
+      { "name": "The Ember Marker Rule", "body": "Story Ember (#F08A5D dark / #C25A34 light) has exactly three roles: the drawn Story Book emblem (including its use in the empty and compose-idle states), the ribbon \"you stopped here\" marker, and hover affordances. Never text, never a surface or button fill, never a border wider than 1px. The 9x22px ribbon is the only solid ember mark.", "section": "colors", "scope": "storybook" },
+      { "name": "The One Gold Action Still Rule", "body": "Gold remains one primary action per surface (\"Begin a new story\", \"Write the story\", \"Sign in with Google\", \"Try again\"). On phones the library's gold action moves into a fixed bottom bar; it moves, it is never duplicated. The compose field's focus is a --gold-text underline: the world's focus role, not a second action.", "section": "colors", "scope": "storybook" },
+      { "name": "The Literata-for-Story Rule", "body": "A named, explicit exception to The Expanded-for-Naming Rule, scoped to Story Book content only. Story text, story titles (recto heading, contents-entry titles, the inline rename field, the quoted title in the delete dialog, the italic running title in the reading bar) and Story Book mastheads (the \"Stories\" contents title, welcome headline, compose and not-found headings) are Literata. The app wordmark \"Story Book\" stays Archivo Expanded; every control, button, menu, label, meta line, byline, step and running head stays Archivo. Literata never appears outside Story Book content.", "section": "typography", "scope": "storybook" },
+      { "name": "The Rule-Not-Fold Gutter Rule", "body": "The gutter is a single 1px Page Line rule. No fold shading, no gradient, no page curl, no spine.", "section": "elevation", "scope": "storybook" }
     ],
     "dos": [
       "Do keep gold to the brand mark and the single primary action (plus ::selection and focus). One gold fill per surface, maximum.",
@@ -129,7 +177,10 @@
       "Do convey depth with tonal planes + 1px rules + restrained offset/blur shadow.",
       "Do treat dark as the signature default and light as a fully designed peer; support system too.",
       "Do hide the wordmark below 430px and let the BakerRang logo mark carry the brand.",
-      "Do draw every icon as an SVG on the shared 1.75 stroke weight."
+      "Do draw every icon as an SVG on the shared 1.75 stroke weight.",
+      "Do (Story Book) set story text, story titles and Story Book mastheads in Literata; keep every control and the \"Story Book\" wordmark in Archivo / Archivo Expanded.",
+      "Do (Story Book) keep the light desk #e6e1d8 scoped to Story Book; the world's light ground stays #efece6 everywhere else.",
+      "Do (Story Book) draw the gutter as a 1px rule and outline plates with a 1px ring; plates use the 3px inner radius, spread and leaf the 8px panel radius."
     ],
     "donts": [
       "Don't use glassmorphism, backdrop-filter, ambient/arbitrary gradients, or translucency-as-material.",
@@ -138,11 +189,19 @@
       "Don't color a card border wider than 1px, or tint text/backgrounds with a tool accent.",
       "Don't use emoji as icons or a system display face; use drawn SVG and Archivo Expanded.",
       "Don't let the launcher become a dashboard/widget console — it is a front door and index.",
-      "Don't introduce literal skeuomorphism (wood, pegboard, screws, taped labels)."
+      "Don't introduce literal skeuomorphism (wood, pegboard, screws, taped labels).",
+      "Don't (Story Book) use Story Ember as text, a surface or button fill, or a wide border; it is emblem, ribbon and hover only.",
+      "Don't (Story Book) add a second gold action to a Story Book surface, including inline rename.",
+      "Don't (Story Book) fake the book with texture, fold shading, curls or leather; proportion, folio, running head and serif carry it.",
+      "Don't let Literata or the page tokens leak into the launcher or other consumer apps."
     ]
   },
   "notCanonized": [
     "Fonts (Archivo, Archivo Expanded) currently load from the Google Fonts CDN in the shipped comp; self-hosting is a tracked pre-ship task, not a design-system rule.",
-    "The comp carries a fixed review-controls widget (auth/theme toggles) for finish review; it is scaffolding, not a product component, and is not documented as a system pattern."
+    "The comp carries a fixed review-controls widget (auth/theme toggles) for finish review; it is scaffolding, not a product component, and is not documented as a system pattern.",
+    "Story Book implementation: the comp (web/.impeccable/mocks/storybook-comp.html) loads Archivo, Archivo Expanded and Literata from Google Fonts; the build must self-host all three. Archivo + Archivo Expanded are already self-hosted in @bakerrang/web-tokens (packages/web-tokens/src/tokens.css); Literata (OFL, opsz subset, roman 400/500/600 + italic 400) ships inside apps/storybook. CDN loading is a comp shortcut, not a system rule.",
+    "Story Book comp, not canonized: the running-head slot carries chrome labels ('An example page' on welcome, 'New story' on compose) that act as eyebrows; a running head is canonized only as the story's title.",
+    "Story Book comp one-offs, not canonized: white #fff folio numerals with text-shadow on filled generation slots, the 2px page-rule bar radius, and the review-controls scaffolding widget.",
+    "Pre-existing drift (not repaired, out of scope): narrative.rules 'The Reserved Gold Rule' body here says the masthead accentword is set in --ink, while DESIGN.md's rule sanctions it in --gold-text."
   ]
 }

@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "dev:launcher": "npm run dev -w @bakerrang/web-launcher",
+    "dev:storybook": "npm run dev -w @bakerrang/web-storybook",
     "build": "npm run build --workspaces --if-present",
     "lint": "standard \"apps/**/*.{js,jsx}\" \"packages/**/*.{js,jsx}\" \"*.js\"",
     "test": "vitest run",
