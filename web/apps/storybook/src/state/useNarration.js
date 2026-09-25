@@ -13,20 +13,29 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
   const [chunkIndex, setChunkIndex] = useState(-1)
   const [error, setError] = useState(null)
   const audioRef = useRef(null)
+  const playbackRef = useRef(0)
   const chunks = chunkText(text)
 
-  const stop = useCallback(() => {
+  const cancel = useCallback((updateState) => {
+    playbackRef.current += 1
     const audio = audioRef.current
+    audioRef.current = null
     if (audio) {
+      audio.onended = null
+      audio.onerror = null
       audio.pause()
       audio.removeAttribute?.('src')
       audio.src = ''
       audio.load?.()
     }
-    audioRef.current = null
-    setPlaying(false)
-    setChunkIndex(-1)
+    if (updateState) {
+      setPlaying(false)
+      setChunkIndex(-1)
+      setError(null)
+    }
   }, [])
+
+  const stop = useCallback(() => cancel(true), [cancel])
 
   const loadVoices = useCallback(async () => {
     if (voicesStatus === 'ready') return voices
@@ -45,7 +54,8 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
     }
   }, [api, storage, voices, voicesStatus])
 
-  const playChunk = useCallback((index, selectedVoice) => {
+  const playChunk = useCallback((index, selectedVoice, playback) => {
+    if (playback !== playbackRef.current) return
     if (!chunks[index]) {
       stop()
       return
@@ -56,12 +66,17 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
     setPlaying(true)
     setError(null)
     audio.src = api.narrationUrl(selectedVoice, chunks[index])
-    audio.onended = () => playChunk(index + 1, selectedVoice)
+    audio.onended = () => {
+      if (playback !== playbackRef.current || audioRef.current !== audio) return
+      playChunk(index + 1, selectedVoice, playback)
+    }
     audio.onerror = () => {
+      if (playback !== playbackRef.current || audioRef.current !== audio) return
       stop()
       setError(new Error('Could not read this page aloud'))
     }
     Promise.resolve(audio.play()).catch((nextError) => {
+      if (playback !== playbackRef.current || audioRef.current !== audio) return
       stop()
       setError(nextError)
     })
@@ -72,14 +87,14 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
     try { storage.setItem('sb.voice', selectedVoice) } catch {}
     setVoiceId(selectedVoice)
     stop()
-    playChunk(0, selectedVoice)
+    playChunk(0, selectedVoice, playbackRef.current)
   }, [playChunk, stop, storage, voiceId])
 
   useEffect(() => {
     stop()
   }, [page, storyId, stop])
 
-  useEffect(() => stop, [stop])
+  useEffect(() => () => cancel(false), [cancel])
 
   return { voices, voicesStatus, voiceId, playing, chunkIndex, chunks, error, loadVoices, start, stop }
 }
