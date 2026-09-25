@@ -1,8 +1,11 @@
 import { OpenAI } from 'openai'
 
-const openai = new OpenAI({
+const defaultOpenAI = new OpenAI({
   apiKey: process.env.CHAT_GPT_API_KEY
 })
+let openai = defaultOpenAI
+
+export const _setOpenAI = client => { openai = client || defaultOpenAI }
 
 export const prompt = async input => {
   console.log(`prompting for content ${input.substring(0, 50)}`)
@@ -19,11 +22,10 @@ export const image = async input => {
     const imagePrompt = await prompt(`Based off this story text meant for kids, can you generate a safe prompt that I can send to Dall-E to generate an image based on the main point of the story? The story text is: ${input}`)
     console.log(`imagePrompt: ${imagePrompt}`)
     const res = await openai.images.generate({
-      model: 'dall-e-3',
+      model: 'gpt-image-2',
       prompt: `${imagePrompt}`,
       n: 1,
-      size: '1024x1024',
-      response_format: 'b64_json'
+      size: '1024x1024'
     })
     if (res.created) {
       return res?.data[0].b64_json || ''
