@@ -54,21 +54,31 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
     }
   }, [api, storage, voices, voicesStatus])
 
-  const playChunk = useCallback((index, selectedVoice, playback) => {
+  const playChunk = useCallback(async (index, selectedVoice, playback) => {
     if (playback !== playbackRef.current) return
     if (!chunks[index]) {
       stop()
       return
     }
+    let source
+    try {
+      source = await api.narrationUrl(selectedVoice, chunks[index])
+    } catch (nextError) {
+      if (playback !== playbackRef.current) return
+      stop()
+      setError(nextError)
+      return
+    }
+    if (playback !== playbackRef.current) return
     const audio = audioFactory()
     audioRef.current = audio
     setChunkIndex(index)
     setPlaying(true)
     setError(null)
-    audio.src = api.narrationUrl(selectedVoice, chunks[index])
+    audio.src = source
     audio.onended = () => {
       if (playback !== playbackRef.current || audioRef.current !== audio) return
-      playChunk(index + 1, selectedVoice, playback)
+      playChunk(index + 1, selectedVoice, playback).catch(() => {})
     }
     audio.onerror = () => {
       if (playback !== playbackRef.current || audioRef.current !== audio) return
@@ -87,7 +97,7 @@ export const useNarration = ({ api, storyId, page, text, audioFactory = () => ne
     try { storage.setItem('sb.voice', selectedVoice) } catch {}
     setVoiceId(selectedVoice)
     stop()
-    playChunk(0, selectedVoice, playbackRef.current)
+    playChunk(0, selectedVoice, playbackRef.current).catch(() => {})
   }, [playChunk, stop, storage, voiceId])
 
   useEffect(() => {

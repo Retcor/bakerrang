@@ -6,7 +6,7 @@ import { Button, IconButton, useDismiss } from '@bakerrang/web-ui'
 
 export const TOOL_DEFINITIONS = Object.freeze([
   { id: 'storybook', name: 'Story Book', shortName: 'Story Book', accent: 'var(--accent-story)', legacyPath: '/storybook', liveUrl: 'https://storybook.bakerrang.com', envKey: 'VITE_STORYBOOK_URL' },
-  { id: 'polyglot', name: 'Polyglot', shortName: 'Polyglot', accent: 'var(--accent-polyglot)', legacyPath: '/polyglot', liveUrl: null, envKey: 'VITE_POLYGLOT_URL' },
+  { id: 'polyglot', name: 'Polyglot', shortName: 'Polyglot', accent: 'var(--accent-polyglot)', legacyPath: '/polyglot/instant', liveUrl: null, envKey: 'VITE_POLYGLOT_URL' },
   { id: 'sign', name: 'Sign Language', shortName: 'Sign', accent: 'var(--accent-sign)', legacyPath: '/sign-language', liveUrl: null, envKey: 'VITE_SIGN_URL' },
   { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', legacyPath: '/budget', liveUrl: null, envKey: 'VITE_BUDGET_URL' },
   { id: 'wow', name: 'WoW Advisor', shortName: 'WoW', accent: 'var(--accent-wow)', legacyPath: '/wow', liveUrl: null, envKey: 'VITE_WOW_URL' },

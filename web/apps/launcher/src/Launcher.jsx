@@ -26,15 +26,6 @@ const ToolRow = ({ tool, large = false }) => (
     <div className='tool-row__copy'>
       <a className='tool-row__name' href={tool.url}>{tool.name}</a>
       <div className='tool-row__description'>{descriptions[tool.id]}</div>
-      {tool.id === 'polyglot' && (
-        <div className='tool-row__meta'>
-          <span className='tool-chip tool-chip--pair'>EN ⇄ ES</span>
-          <a className='tool-chip tool-chip--go' href={`${tool.url}/instant`}>
-            <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'><path d='M13 2L4 14h7l-1 8 9-12h-7z' /></svg>
-            Instant mode
-          </a>
-        </div>
-      )}
     </div>
     <span className='tool-row__arrow'><Arrow /></span>
   </div>

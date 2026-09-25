@@ -41,10 +41,11 @@ describe('Launcher', () => {
     expect(screen.queryByText('Supermarket')).toBeNull()
   })
 
-  it('keeps Instant within Polyglot and Account outside the tool count', () => {
+  it('gives Polyglot one destination with no Instant mode and keeps Account outside the tool count', () => {
     render(<Launcher />)
-    const instant = screen.getByRole('link', { name: /Instant mode/i })
-    expect(instant.getAttribute('href')).toContain('/polyglot/instant')
+    expect(screen.queryByRole('link', { name: /Instant mode/i })).toBeNull()
+    expect(screen.queryByText('EN ⇄ ES')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Polyglot' }).getAttribute('href')).toBe('https://bakerrang.com/polyglot/instant')
     expect(screen.getByRole('heading', { name: 'Your account' })).not.toBeNull()
     expect(screen.getByRole('link', { name: 'Account' })).not.toBeNull()
   })

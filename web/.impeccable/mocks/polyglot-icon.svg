@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Polyglot app-icon master (design spec for the PWA icon set; rasterise to 512/192/180/32/16 at build,
+    with an app-local scripts/generate-icons.cjs cloned from apps/storybook).
+    - Tile: world charcoal #161514, full-bleed (maskable-safe: artwork kept inside the central 80% circle).
+    - Mark: the shared Polyglot emblem (the same paths as web-app-shell ProductEmblem 'polyglot'),
+      stroked in Signal Teal #58C0C9 (the existing --accent-polyglot dark value) at the emblem's 1.75/32 weight scaled to the tile.
+    - Badge: the canonical BakerRang pixel-B, composited from bakerrang-logo.png (never redrawn;
+      SHA-256 566F5419…0EA84A21, byte-identical to client/src/assets/bakerrang-logo.png).
+    Provenance: authored for Phase D by the planner; no generated raster.
+  -->
+  <rect width="512" height="512" fill="#161514"/>
+  <g transform="translate(90 52) scale(10)" fill="none" stroke="#58C0C9" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/>
+    <path d="M17 26l4.5-10L26 26M18.7 22h5.6"/>
+  </g>
+  <image href="bakerrang-logo.png" xlink:href="bakerrang-logo.png" x="300" y="316" width="88" height="88"/>
+</svg>

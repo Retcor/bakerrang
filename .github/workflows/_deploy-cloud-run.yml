@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, client, web-launcher, or web-storybook)
+        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, or web-polyglot)
         required: true
         type: string
       environment:
@@ -44,6 +44,7 @@ jobs:
       CLIENT_SERVICE: ${{ vars.CLIENT_SERVICE }}
       WEB_LAUNCHER_SERVICE: ${{ vars.WEB_LAUNCHER_SERVICE }}
       WEB_STORYBOOK_SERVICE: ${{ vars.WEB_STORYBOOK_SERVICE }}
+      WEB_POLYGLOT_SERVICE: ${{ vars.WEB_POLYGLOT_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
@@ -53,6 +54,7 @@ jobs:
       CLIENT_BASE_URL: ${{ vars.CLIENT_BASE_URL }}
       LAUNCHER_BASE_URL: ${{ vars.LAUNCHER_BASE_URL }}
       STORYBOOK_BASE_URL: ${{ vars.STORYBOOK_BASE_URL }}
+      POLYGLOT_BASE_URL: ${{ vars.POLYGLOT_BASE_URL }}
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
       - name: Check out triggering commit
@@ -170,6 +172,12 @@ jobs:
               smoke_path="/"
               smoke_url="${STORYBOOK_BASE_URL%/}/"
               ;;
+            web-polyglot)
+              service_name="$WEB_POLYGLOT_SERVICE"
+              image_name="web-polyglot"
+              smoke_path="/"
+              smoke_url="${POLYGLOT_BASE_URL%/}/"
+              ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
@@ -261,6 +269,15 @@ jobs:
                   --build-arg APP=storybook \
                   --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
                   --build-arg VITE_OAUTH_TARGET=storybook \
+                  web
+                ;;
+              web-polyglot)
+                [[ -n "$VITE_API_BASE_URL" ]]
+                docker build "${common_args[@]}" \
+                  --file web/Dockerfile \
+                  --build-arg APP=polyglot \
+                  --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                  --build-arg VITE_OAUTH_TARGET=polyglot \
                   web
                 ;;
             esac
@@ -360,7 +377,7 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client|web-launcher|web-storybook) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                client|web-launcher|web-storybook|web-polyglot) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then

@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { db } from '../client/firestoreClient.js'
 import { createClient as createDeepgramClient } from '@deepgram/sdk'
+let httpClient = axios
+export const _setHttpClient = (client) => { httpClient = client || axios }
 const apiKey = process.env.ELEVEN_LABS_API_KEY
 const baseUrl = 'https://api.elevenlabs.io'
 const modelId = 'eleven_multilingual_v2'
@@ -28,7 +30,7 @@ export const convertTextToSpeech = async (input, voice = 'MjGS5hZkkMThMX72MRqu')
     }
   }
 
-  return axios(url, options)
+  return httpClient(url, options)
 }
 
 export const getVoices = async userId => {
@@ -54,7 +56,7 @@ export const getLanguages = async () => {
     }
   }
 
-  const response = await axios(url, options)
+  const response = await httpClient(url, options)
   if (response.data) {
     const multiLingualModel = response.data.filter(model => model.model_id === modelId)[0]
     return multiLingualModel.languages.map(language => language.name)
@@ -101,7 +103,7 @@ export const postVoice = async (userId, voice, files) => {
   }
 
   // Save at 3rd party vendor
-  const postVoiceRes = await axios(options)
+  const postVoiceRes = await httpClient(options)
 
   // Now save it on our side so we can associate it to a user
   const updatedVoice = postVoiceRes.data
@@ -143,7 +145,7 @@ export const deleteVoice = async (userId, voiceId) => {
   }
 
   // Delete from 3rd party vendor
-  await axios(url, options)
+  await httpClient(url, options)
   // Now delete it on our side
   const collection = db.collection('voices')
 

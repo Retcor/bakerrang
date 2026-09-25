@@ -50,8 +50,8 @@ while family resemblance comes from shared foundations, not from one universal p
 ## Capabilities and Constraints
 
 - Current products needing representation on the launcher (**6 tools + Account**): **Story Book** (AI
-  story generation with narration), **Polyglot** with **Instant** as a mode (speech translation /
-  instant voice translation), **Sign Language** (sign practice via camera), **Budget** (budget
+  story generation with narration), **Polyglot** (spoken translation in your own cloned voice; the
+  legacy "Instant" experience *is* Polyglot — no separate mode), **Sign Language** (sign practice via camera), **Budget** (budget
   tracking), **WoW Advisor** (World of Warcraft assistant), **Passwords** (a zero-knowledge,
   client-side-encrypted password vault), and **Account** (cross-cutting, not a tool).
 - **Supermarket is removed from the ecosystem (obsolete).** It was built for a game/use case no
@@ -61,8 +61,8 @@ while family resemblance comes from shared foundations, not from one universal p
 - **Passwords is zero-knowledge**: the server never sees plaintext; nothing in a redesign may weaken
   that or cache sensitive data. It is a distinct, high-trust product.
 - Shared session/auth, CSRF, and API infrastructure already exist and are reused unchanged.
-- Whether **Polyglot Instant** is a separate launcher destination or a mode within Polyglot is an
-  open design decision to resolve and document during this design step.
+- **Resolved (Phase D, 2026-09-25):** there is **one Polyglot** — neither a separate "Instant"
+  destination nor a mode. Legacy normal Polyglot is retired; legacy Instant becomes Polyglot.
 
 ## Product: Story Book (Phase C truth, 2026-09-22)
 
@@ -80,6 +80,25 @@ Full inventory and architecture: `docs/apps/PhaseC-StoryBook.md`; surface brief:
 - **Narration:** cloned voices only; users without one are pointed to Account. No stock voice.
 - **AI dependencies:** story text + pictures (OpenAI), narration (ElevenLabs). Library, reading, rename
   and delete don't need them. No quotas, pricing, or usage limits exist; none may be claimed.
+
+## Product: Polyglot (Phase D truth, 2026-09-25)
+
+Full inventory, retirement analysis and architecture: `docs/apps/PhaseD-Polyglot.md`; surface brief:
+`.impeccable/surfaces/polyglot.md`.
+
+- **What it does:** tap, speak, tap — Polyglot transcribes what it heard (Deepgram), translates it
+  (OpenAI) into one of 29 languages, shows both as text, and says the translation aloud in the user's
+  **own cloned voice** (ElevenLabs). Swap the pair and the other person answers. Typing is a secondary
+  input; the translation can be copied and replayed.
+- **Real scene:** a face-to-face moment (station, counter, visiting family), phone in hand, one thumb.
+- **Polyglot keeps nothing** (it can't speak for the AI providers it sends speech/text to — never
+  claim "nothing is saved" absolutely). No history, no phrasebook, no server data; the on-screen conversation is
+  session memory only (Clear / reload empties it). Only the language pair and chosen voice are
+  remembered, per device.
+- **Voices:** cloned voices only (made in Account). Without one, Polyglot still translates as text.
+  No stock voice; none may be claimed.
+- **Not offered (don't imply):** automatic source-language detection, offline translation, saved
+  history, conversation/split-screen mode, accuracy claims. No quotas or pricing exist.
 
 ## Brand Commitments
 

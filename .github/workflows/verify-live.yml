@@ -85,6 +85,7 @@ jobs:
           check_endpoint client https://bakerrang.com/ client-root || failed=1
           check_endpoint launcher https://launch.bakerrang.com/ client-root || failed=1
           check_endpoint storybook https://storybook.bakerrang.com/ client-root || failed=1
+          check_endpoint polyglot https://polyglot.bakerrang.com/ client-root || failed=1
           if [[ "$DEEP" == "true" ]]; then
             check_endpoint custom https://custom.bakerrang.com/ status-only || failed=1
           fi

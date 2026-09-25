@@ -14,6 +14,7 @@ test('CORS allowlist includes client, Launcher, Story Book, portal, renderer, an
     CLIENT_DOMAIN: 'http://localhost:3000',
     LAUNCHER_DOMAIN: 'https://launch.bakerrang.com',
     STORYBOOK_DOMAIN: 'https://storybook.bakerrang.com',
+    POLYGLOT_DOMAIN: 'https://polyglot.bakerrang.com',
     PORTAL_DOMAIN: 'http://localhost:3001',
     SITE_RENDERER_DOMAIN: 'http://localhost:3002',
     CHATBOT_ORIGIN: 'https://chat.example.com'
@@ -23,6 +24,7 @@ test('CORS allowlist includes client, Launcher, Story Book, portal, renderer, an
     'http://localhost:3000',
     'https://launch.bakerrang.com',
     'https://storybook.bakerrang.com',
+    'https://polyglot.bakerrang.com',
     'http://localhost:3001',
     'http://localhost:3002',
     'https://chat.example.com'
@@ -30,6 +32,7 @@ test('CORS allowlist includes client, Launcher, Story Book, portal, renderer, an
   assert.equal(isOriginAllowed('http://localhost:3000', origins), true)
   assert.equal(isOriginAllowed('https://launch.bakerrang.com', origins), true)
   assert.equal(isOriginAllowed('https://storybook.bakerrang.com', origins), true)
+  assert.equal(isOriginAllowed('https://polyglot.bakerrang.com', origins), true)
   assert.equal(isOriginAllowed('http://localhost:3001', origins), true)
   assert.equal(isOriginAllowed('http://localhost:3002', origins), true)
   assert.equal(isOriginAllowed('https://chat.example.com', origins), true)
