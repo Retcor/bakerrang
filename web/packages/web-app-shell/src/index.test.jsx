@@ -17,10 +17,10 @@ vi.mock('@bakerrang/web-theme', () => ({
 afterEach(cleanup)
 
 describe('destination registry', () => {
-  it('keeps Story Book and every unextracted product on its verified legacy route before cutover', () => {
+  it('keeps unextracted product on its verified legacy route before cutover', () => {
     const destinations = resolveDestinations({})
     expect(Object.fromEntries(destinations.tools.map((tool) => [tool.id, tool.url]))).toEqual({
-      storybook: 'https://bakerrang.com/storybook',
+      storybook: 'https://storybook.bakerrang.com',
       polyglot: 'https://bakerrang.com/polyglot',
       sign: 'https://bakerrang.com/sign-language',
       budget: 'https://bakerrang.com/budget',
