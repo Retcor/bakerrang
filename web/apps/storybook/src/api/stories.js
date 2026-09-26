@@ -14,8 +14,11 @@ export const createStoriesApi = ({ apiClient, apiBaseUrl }) => ({
   saveStory: async (story) => jsonOrThrow(await apiClient.request('/storybook', { method: 'POST', body: story })),
   renameStory: async (id, title) => jsonOrThrow(await apiClient.request(`/storybook/${encodeURIComponent(id)}`, { method: 'PATCH', body: { title } })),
   deleteStory: async (id) => jsonOrThrow(await apiClient.request(`/storybook/${encodeURIComponent(id)}`, { method: 'DELETE' })),
-  writeStory: async (idea, { signal } = {}) => textOrThrow(await apiClient.request(`/chat/gpt/prompt/story?prompt=${encodeURIComponent(idea)}`, { signal })),
-  drawPage: async (previous, text, { signal } = {}) => textOrThrow(await apiClient.request(`/chat/gpt/image/prompt?prompt=${encodeURIComponent(`${previous || ''}${text}`)}`, { signal })),
+  writeStory: async (idea, { signal } = {}) => textOrThrow(await apiClient.request('/chat/gpt/story', { method: 'POST', body: { idea }, signal })),
+  drawPage: async (previous, text, { signal } = {}) => textOrThrow(await apiClient.request('/chat/gpt/image', { method: 'POST', body: { prompt: `${previous || ''}${text}` }, signal })),
   listVoices: async () => jsonOrThrow(await apiClient.request('/text/to/speech/v1/voices')),
-  narrationUrl: (voiceId, text) => `${joinApiUrl(apiBaseUrl, `/text/to/speech/v1/convert/${encodeURIComponent(voiceId)}`)}?prompt=${encodeURIComponent(text)}`
+  narrationUrl: async (voiceId, text, { signal } = {}) => {
+    const payload = await jsonOrThrow(await apiClient.request('/text/to/speech/v1/speech-tokens', { method: 'POST', body: { voiceId, text }, signal }))
+    return joinApiUrl(apiBaseUrl, payload.url)
+  }
 })

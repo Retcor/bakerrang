@@ -896,6 +896,8 @@ automated tests · manual verification.** Each product-extraction phase also car
 ### Phase D — Extract **Polyglot** (+ Instant) → `polyglot.bakerrang.com`
 - Same template as C, "spoken instrument" direction; reuse speech/transcribe endpoints; Instant
   at `/instant`. Legacy routes redirect after cutover.
+- **Superseded (2026-09-25):** product-owner decision — normal Polyglot is retired and Instant *becomes*
+  Polyglot (one app, no mode; `/instant` only redirects to `/`). See [Phase D](PhaseD-Polyglot.md).
 
 ### Phase E — Stand up **Account** → `account.bakerrang.com`
 - **Scope:** Account app owns profile/security/global prefs + canonical theme write

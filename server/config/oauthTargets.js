@@ -2,7 +2,8 @@ const TARGET_ENV_KEYS = Object.freeze({
   client: 'CLIENT_DOMAIN',
   portal: 'PORTAL_DOMAIN',
   launcher: 'LAUNCHER_DOMAIN',
-  storybook: 'STORYBOOK_DOMAIN'
+  storybook: 'STORYBOOK_DOMAIN',
+  polyglot: 'POLYGLOT_DOMAIN'
 })
 
 const httpError = (status, message) => {

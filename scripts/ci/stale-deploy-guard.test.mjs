@@ -64,6 +64,14 @@ test('supports Web Story Book deployments and skips for newer app or shared-web 
   assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'web-storybook', triggerSha, currentRef: 'main' }).shouldDeploy, false)
 })
 
+test('supports Web Polyglot deployments and skips for newer app or shared-web changes', t => {
+  const repository = fixture()
+  t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))
+  const triggerSha = repository.commit('web/apps/polyglot/src/main.jsx', 'a')
+  repository.commit('web/packages/web-theme/src/index.jsx', 'newer shared web')
+  assert.equal(evaluateStaleDeployment({ cwd: repository.cwd, service: 'web-polyglot', triggerSha, currentRef: 'main' }).shouldDeploy, false)
+})
+
 test('deploys when newer commits affect a different service or only docs', t => {
   const repository = fixture()
   t.after(() => fs.rmSync(repository.cwd, { recursive: true, force: true }))

@@ -12,8 +12,8 @@ param(
 function Get-RollbackRequest {
     param([string]$LogicalService, [string]$Method, [string]$Value)
 
-    if (@('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook') -cnotcontains $LogicalService) {
-        throw 'Select exactly one supported service: api, portal, renderer, client, web-launcher, web-storybook.'
+    if (@('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot') -cnotcontains $LogicalService) {
+        throw 'Select exactly one supported service: api, portal, renderer, client, web-launcher, web-storybook, web-polyglot.'
     }
     if (@('image', 'revision') -cnotcontains $Method) { throw 'Mechanism must be image or revision.' }
     $config = $Services | Where-Object { $_.Logical -ceq $LogicalService }
@@ -161,6 +161,7 @@ function Invoke-RollbackSmoke {
         client = @{ Path = '/'; Public = 'https://bakerrang.com/'; Assertion = 'ClientRoot' }
         'web-launcher' = @{ Path = '/'; Public = 'https://launch.bakerrang.com/'; Assertion = 'ClientRoot' }
         'web-storybook' = @{ Path = '/'; Public = 'https://storybook.bakerrang.com/'; Assertion = 'ClientRoot' }
+        'web-polyglot' = @{ Path = '/'; Public = 'https://polyglot.bakerrang.com/'; Assertion = 'ClientRoot' }
     }
     $uri = $null
     if (-not [uri]::TryCreate($ServiceUrl, [UriKind]::Absolute, [ref]$uri) -or

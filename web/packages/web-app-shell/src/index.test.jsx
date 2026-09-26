@@ -21,7 +21,7 @@ describe('destination registry', () => {
     const destinations = resolveDestinations({})
     expect(Object.fromEntries(destinations.tools.map((tool) => [tool.id, tool.url]))).toEqual({
       storybook: 'https://storybook.bakerrang.com',
-      polyglot: 'https://bakerrang.com/polyglot',
+      polyglot: 'https://bakerrang.com/polyglot/instant',
       sign: 'https://bakerrang.com/sign-language',
       budget: 'https://bakerrang.com/budget',
       wow: 'https://bakerrang.com/wow',
@@ -38,7 +38,7 @@ describe('destination registry', () => {
       VITE_LAUNCHER_URL: 'http://localhost:3000'
     })
     expect(destinations.tools.find((tool) => tool.id === 'storybook').url).toBe('http://localhost:3010')
-    expect(destinations.tools.find((tool) => tool.id === 'polyglot').url).toBe('http://localhost:5173/polyglot')
+    expect(destinations.tools.find((tool) => tool.id === 'polyglot').url).toBe('http://localhost:5173/polyglot/instant')
     expect(destinations.launcher.url).toBe('http://localhost:3000')
   })
 })

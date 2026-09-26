@@ -23,12 +23,14 @@ jobs:
       client: ${{ steps.classify.outputs.client }}
       web_launcher: ${{ steps.classify.outputs.web_launcher }}
       web_storybook: ${{ steps.classify.outputs.web_storybook }}
+      web_polyglot: ${{ steps.classify.outputs.web_polyglot }}
       deploy_api: ${{ steps.classify.outputs.deploy_api }}
       deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
       deploy_client: ${{ steps.classify.outputs.deploy_client }}
       deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
       deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
+      deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
     steps:
       - name: Check out PR head
         uses: actions/checkout@v7
@@ -174,7 +176,7 @@ jobs:
   web-ci:
     name: Shared Web CI
     needs: changes
-    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true'
+    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true' || needs.changes.outputs.web_polyglot == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -203,6 +205,10 @@ jobs:
         if: needs.changes.outputs.web_storybook == 'true'
         run: npm run build -w @bakerrang/web-storybook
 
+      - name: Build Polyglot
+        if: needs.changes.outputs.web_polyglot == 'true'
+        run: npm run build -w @bakerrang/web-polyglot
+
       - name: Validate Launcher Docker packaging
         if: needs.changes.outputs.deploy_web_launcher == 'true'
         run: |
@@ -223,6 +229,17 @@ jobs:
             --build-arg VITE_API_BASE_URL=https://api.ci.invalid \
             --build-arg VITE_OAUTH_TARGET=storybook \
             --tag bakerrang-web-storybook:pr-${{ github.event.pull_request.head.sha }} \
+            .
+
+      - name: Validate Polyglot Docker packaging
+        if: needs.changes.outputs.deploy_web_polyglot == 'true'
+        run: |
+          docker build \
+            --file Dockerfile \
+            --build-arg APP=polyglot \
+            --build-arg VITE_API_BASE_URL=https://api.ci.invalid \
+            --build-arg VITE_OAUTH_TARGET=polyglot \
+            --tag bakerrang-web-polyglot:pr-${{ github.event.pull_request.head.sha }} \
             .
 
   ci-passed:

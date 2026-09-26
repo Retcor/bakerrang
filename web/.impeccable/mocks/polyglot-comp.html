@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#161514" />
+<title>Polyglot — comp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Expanded:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+/* =========================================================
+   Polyglot comp — BakerRang consumer world, "The Exchange Log".
+   Archivo only (Expanded for naming). World ground, not Story Book's desk.
+   Gold = the talk key (or Sign in on Welcome). Signal Teal = emblem + hover only.
+   ========================================================= */
+:root {
+  color-scheme: dark;
+  --gold: #ffd500; --gold-hover: #f0c400; --gold-press: #ddba00; --gold-text: #ffd500; --ink-on-gold: #1a1a1a;
+  --bg: #161514; --bg-2: #1c1b1a; --plane: #201f1d; --plane-2: #262523;
+  --line: rgba(255,255,255,.10); --line-strong: rgba(255,255,255,.18);
+  --ink: #f2efe9; --ink-2: #c3bfb6; --ink-3: #928d83;
+  --danger: #e88a8a;
+  --teal: #58c0c9;
+  --shadow-resting: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --shadow-contact: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-dock: 0 -1px 2px rgba(0,0,0,.35), 0 -12px 30px rgba(0,0,0,.30);
+  --r-inner: 3px; --r: 4px; --r-panel: 8px;
+  --col: 880px;
+  --gut: clamp(16px, 4vw, 32px);
+  --sans: "Archivo", system-ui, "Noto Sans", "Segoe UI", sans-serif;
+  --expanded: "Archivo Expanded", "Archivo", sans-serif;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --gold-text: #8a6300;
+  --bg: #efece6; --bg-2: #e7e3db; --plane: #ffffff; --plane-2: #f6f4ef;
+  --line: rgba(20,18,16,.12); --line-strong: rgba(20,18,16,.22);
+  --ink: #1b1a18; --ink-2: #4f4b44; --ink-3: #726d64;
+  --danger: #c0362b;
+  --teal: #1f7d86;
+  --shadow-resting: 0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10);
+  --shadow-contact: 0 1px 2px rgba(30,26,20,.10);
+  --shadow-dock: 0 -1px 2px rgba(30,26,20,.08), 0 -12px 28px rgba(30,26,20,.08);
+}
+*,*::before,*::after { box-sizing: border-box; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body { margin: 0; height: 100dvh; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--sans); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; overflow: hidden; transition: background .16s ease, color .16s ease; }
+body.is-page { overflow: auto; height: auto; min-height: 100dvh; }
+button, input, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+a { color: inherit; }
+::selection { background: var(--gold); color: var(--ink-on-gold); }
+:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; border-radius: var(--r-inner); }
+* { scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 12px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid var(--bg); border-radius: 20px; }
+input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- shared controls ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 40px; padding: 9px 16px; border-radius: var(--r); border: 1px solid transparent; font: 600 14px/1.2 var(--sans); cursor: pointer; background: transparent; transition: background .16s, border-color .16s, color .16s, transform .06s; white-space: nowrap; text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn--gold { background: var(--gold); color: var(--ink-on-gold); }
+.btn--gold:hover { background: var(--gold-hover); }
+.btn--gold:active { background: var(--gold-press); }
+.btn--ghost { border-color: var(--line-strong); color: var(--ink); }
+.btn--ghost:hover { background: var(--plane-2); }
+.btn--quiet { color: var(--ink-2); padding-inline: 10px; min-height: 34px; }
+.btn--quiet:hover { color: var(--ink); background: var(--plane); }
+.btn--sm { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+.ibtn { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink-2); cursor: pointer; transition: background .16s, color .16s, border-color .16s; flex: none; }
+.ibtn:hover { background: var(--plane); color: var(--ink); border-color: var(--line); }
+.ibtn[aria-expanded="true"] { background: var(--plane); border-color: var(--line-strong); color: var(--ink); }
+.avatar { width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--plane); color: var(--ink); font: 700 12px var(--sans); cursor: pointer; letter-spacing: .02em; }
+.avatar:hover { border-color: var(--ink-3); }
+
+/* ---------- app bar ---------- */
+.app { height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
+.bar { height: 58px; border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 40; }
+.bar__in { height: 100%; max-width: 1240px; margin: 0 auto; padding: 0 clamp(10px, 3vw, 28px); display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; text-decoration: none; }
+.brand__mark { width: 30px; height: 30px; display: block; }
+.brand__rule { width: 1px; height: 22px; background: var(--line-strong); }
+.brand__name { font: 800 15px/1 var(--expanded); letter-spacing: -.02em; color: var(--ink); white-space: nowrap; text-decoration: none; }
+.bar__sp { flex: 1; }
+.bar__right { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- popovers / menus ---------- */
+.menu { position: relative; }
+.pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 6px; z-index: 60; display: none; }
+.menu.is-open > .pop { display: block; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.pop__head { font: 700 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 6px; }
+.pop__item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r); border: 0; background: none; color: var(--ink-2); font: 500 14px var(--sans); text-align: left; cursor: pointer; text-decoration: none; }
+.pop__item:hover { background: var(--plane-2); color: var(--ink); }
+.pop__item svg.i { width: 18px; height: 18px; }
+.pop__danger, .pop__danger:hover { color: var(--danger); }
+.pop__sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop__who { padding: 8px 10px 10px; display: grid; gap: 1px; }
+.pop__who strong { font: 600 14px var(--sans); color: var(--ink); }
+.pop__who span { font-size: 13px; color: var(--ink-3); }
+.seg { display: flex; padding: 3px; gap: 2px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); margin: 4px 6px 6px; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--ink-3); font: 600 12px var(--sans); padding: 6px; border-radius: var(--r-inner); cursor: pointer; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--plane-2); color: var(--ink); box-shadow: var(--shadow-contact); }
+.switcher { width: 292px; }
+.switcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.switcher__cell { display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: var(--r); font: 600 11.5px var(--sans); color: var(--ink-2); text-decoration: none; }
+.switcher__cell:hover { background: var(--plane-2); color: var(--ink); }
+.switcher__cell svg { width: 26px; height: 26px; color: var(--acc); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.switcher__cell.is-here { background: var(--plane-2); color: var(--ink); }
+
+/* ---------- the log ---------- */
+.log { overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; }
+.log__in { max-width: var(--col); margin: 0 auto; padding: 0 var(--gut) 28px; min-height: 100%; display: flex; flex-direction: column; }
+.log__head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 12px 0 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.log__title { font: 700 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.log__note { font: 500 12.5px var(--sans); color: var(--ink-3); }
+.log__note::before { content: ""; display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); vertical-align: middle; margin: 0 8px 2px 0; }
+.log__head .btn--quiet { margin-left: auto; margin-right: -10px; }
+.turns { list-style: none; margin: auto 0 0; padding: 0; }
+
+.turn { position: relative; display: grid; grid-template-columns: 58px minmax(0,1fr) auto; column-gap: 16px; padding: 18px 0 17px; border-bottom: 1px solid var(--line); }
+.turn__more { display: none; }
+.turn__more { align-items: flex-start; }
+.turn__more .ibtn { position: relative; }
+.turn__more .ibtn::before { content: ""; position: absolute; inset: -2px; }
+.pop--turn.is-up { top: auto; bottom: calc(100% + 2px); }
+.pop--turn { top: calc(100% + 2px); min-width: 236px; }
+.turn:has(.turn__more.is-open) { z-index: 5; }
+.turn:last-child { border-bottom-color: transparent; }
+.turn__gutter { display: grid; align-content: start; gap: 5px; padding-top: 3px; }
+.turn__no { font: 600 12px/1 var(--sans); color: var(--ink-3); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.turn__dir { font: 700 10.5px/1 var(--sans); color: var(--ink-3); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.turn__body { min-width: 0; }
+.turn__heard { margin: 0; font: 400 15px/1.45 var(--sans); color: var(--ink-3); overflow-wrap: anywhere; }
+.turn__said { margin: 6px 0 0; font: 500 1.24rem/1.32 var(--sans); color: var(--ink-2); letter-spacing: -.015em; text-wrap: pretty; overflow-wrap: anywhere; max-width: 36em; }
+.turn.is-latest .turn__said { font-size: clamp(1.55rem, 4.2vw, 2.1rem); line-height: 1.18; letter-spacing: -.025em; color: var(--ink); }
+.turn.is-latest.is-long .turn__said { font-size: clamp(1.25rem, 3vw, 1.5rem); line-height: 1.32; }
+.turn__acts { display: flex; align-items: flex-start; gap: 2px; padding-top: 0; }
+.turn__acts .ibtn { color: var(--ink-3); width: 36px; height: 36px; }
+.turn__acts .ibtn:hover { color: var(--teal); }
+.ibtn.is-done, .ibtn.is-done:hover { color: var(--ink); }
+.turn:not(.is-latest) .turn__acts { opacity: .0; transition: opacity .16s; }
+.turn:not(.is-latest):hover .turn__acts, .turn:not(.is-latest):focus-within .turn__acts { opacity: 1; }
+/* Touch: older turns keep Copy / Replay behind one quiet overflow control (no permanent icon pair). */
+@media (hover: none), (max-width: 640px) {
+  .turn:not(.is-latest) .turn__acts { display: none; }
+  .turn:not(.is-latest) .turn__more { display: flex; gap: 2px; position: absolute; top: 10px; right: -8px; }
+  .turn:not(.is-latest) .turn__more .ibtn { width: 40px; height: 40px; color: var(--ink-3); }
+  .turn:not(.is-latest) .turn__more .ibtn.is-done { color: var(--ink); }
+  .turn:not(.is-latest) .turn__body { padding-right: 34px; }
+}
+.turn__voice { display: flex; align-items: center; gap: 8px; margin-top: 12px; font: 500 13px var(--sans); color: var(--ink-3); }
+.turn__voice b { color: var(--ink-2); font-weight: 600; }
+
+/* live entry: stage rule */
+.stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; max-width: 420px; margin-top: 16px; }
+.stage { display: grid; gap: 7px; min-width: 0; font: 600 10.5px/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.stage i { display: block; height: 3px; background: var(--line-strong); }
+.stage:first-child i { border-radius: var(--r-inner) 0 0 var(--r-inner); } .stage:last-child i { border-radius: 0 var(--r-inner) var(--r-inner) 0; }
+.stage.is-done i { background: var(--ink); }
+.stage.is-done { color: var(--ink-2); }
+.stage.is-now i { background: var(--ink-3); }
+.stage.is-now { color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) { .stage.is-now i { animation: breathe 1.1s ease-in-out infinite; } }
+@keyframes breathe { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: no-preference) { .turn__said.arrive { animation: arrive .34s var(--ease) both; } }
+@keyframes arrive { from { opacity: .35; transform: translateY(6px); } }
+.turn.is-live .turn__heard.is-pending { color: var(--ink-3); }
+.listen { display: flex; align-items: baseline; gap: 10px; font: 500 15px/1.45 var(--sans); color: var(--ink-2); }
+.listen b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* in-log notices (nothing heard, denied, failure) */
+.notice { display: grid; grid-template-columns: 58px minmax(0,1fr); column-gap: 16px; padding: 16px 0; }
+.notice__icon { padding-top: 2px; color: var(--ink-3); }
+.notice p { margin: 0; font: 500 15.5px/1.5 var(--sans); color: var(--ink); }
+.notice small { display: block; margin-top: 2px; font: 400 14px/1.5 var(--sans); color: var(--ink-3); }
+.notice__acts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.fail-row { display: flex; gap: 10px; margin-top: 12px; color: var(--ink-3); }
+.fail-row p { margin: 0; font: 500 15.5px/1.5 var(--sans); color: var(--ink); }
+.fail-row small { display: block; margin-top: 2px; font: 400 14px/1.5 var(--sans); color: var(--ink-3); }
+.turn .fail { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font: 500 15px/1.4 var(--sans); color: var(--ink); }
+
+/* empty */
+.empty { margin: auto 0 0; padding: 40px 0 24px; display: grid; gap: 12px; max-width: 30rem; }
+.empty svg { width: 44px; height: 44px; color: var(--teal); stroke-width: 1.5; }
+.empty h1 { margin: 6px 0 0; font: 600 clamp(1.5rem, 3.4vw, 1.9rem)/1.2 var(--sans); letter-spacing: -.025em; color: var(--ink); }
+.empty p { margin: 0; color: var(--ink-2); font-size: 16px; }
+.empty .fine { color: var(--ink-3); font-size: 14px; }
+
+/* ---------- the composer (docked) ---------- */
+.dock { background: var(--plane); border-top: 1px solid var(--line); box-shadow: var(--shadow-dock); position: relative; z-index: 20; padding: 10px 0 calc(12px + env(safe-area-inset-bottom)); }
+.dock__in { max-width: var(--col); margin: 0 auto; padding: 0 var(--gut); display: grid; gap: 10px; }
+.offline { max-width: var(--col); margin: 0 auto 10px; padding: 0 var(--gut); }
+.offline div { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: var(--r); font: 500 14px var(--sans); color: var(--ink); background: var(--bg-2); }
+.pair { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.lang { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--r); background: none; cursor: pointer; font: 600 15.5px/1 var(--sans); color: var(--ink); min-width: 0; }
+.lang:hover { background: var(--plane-2); border-color: var(--line); }
+.lang[aria-expanded="true"] { background: var(--plane-2); border-color: var(--line-strong); }
+.lang__role { font: 700 10.5px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.lang__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lang svg.i { width: 16px; height: 16px; color: var(--ink-3); }
+.swap { width: 42px; height: 42px; border: 1px solid var(--line-strong); }
+.swap svg.i { transition: transform .26s var(--ease); }
+.swap.did svg.i { transform: rotate(180deg); }
+.pair__sp { flex: 1; }
+.voicebtn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--r); background: none; cursor: pointer; font: 500 13.5px var(--sans); color: var(--ink-2); white-space: nowrap; }
+.voicebtn:hover { background: var(--plane-2); color: var(--ink); }
+.voicebtn svg.i { width: 17px; height: 17px; }
+.voicebtn[aria-expanded="true"] { background: var(--plane-2); border-color: var(--line-strong); color: var(--ink); }
+
+.drive { display: flex; align-items: stretch; gap: 10px; }
+.field { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 6px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 5px 5px 5px 14px; transition: border-color .16s; }
+.field:focus-within { border-color: var(--gold-text); }
+.field textarea { flex: 1; min-width: 0; resize: none; border: 0; background: none; outline: none; font: 400 16px/1.45 var(--sans); padding: 12px 0 11px; max-height: 6.2em; color: var(--ink); }
+.field .ibtn { width: 44px; height: 44px; }
+.send[disabled] { opacity: .35; cursor: default; }
+.kbd { display: none; }
+.talk { position: relative; flex: 0 0 240px; min-height: 64px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 0 22px; border: 0; border-radius: var(--r); background: var(--gold); color: var(--ink-on-gold); font: 700 16.5px/1.1 var(--sans); letter-spacing: -.015em; cursor: pointer; transition: background .16s, transform .06s; box-shadow: var(--shadow-contact); }
+.talk:hover { background: var(--gold-hover); }
+.talk:active { background: var(--gold-press); transform: translateY(1px); }
+.talk svg.i { width: 22px; height: 22px; stroke-width: 2; }
+.talk[aria-pressed="true"] { background: var(--gold-press); }
+.talk[aria-disabled="true"] { cursor: progress; }
+.talk:disabled { background: var(--plane-2); color: var(--ink-3); cursor: not-allowed; box-shadow: none; }
+.talk__t { font-variant-numeric: tabular-nums; }
+.meter { display: inline-flex; align-items: center; gap: 3px; height: 22px; }
+.meter i { width: 3px; height: 30%; border-radius: var(--r-inner); background: var(--ink-on-gold); }
+@media (prefers-reduced-motion: no-preference) {
+  .meter i { animation: lvl .9s ease-in-out infinite; }
+  .meter i:nth-child(2) { animation-delay: -.2s; } .meter i:nth-child(3) { animation-delay: -.5s; }
+  .meter i:nth-child(4) { animation-delay: -.35s; } .meter i:nth-child(5) { animation-delay: -.65s; }
+}
+@keyframes lvl { 0%,100% { height: 25%; } 30% { height: 90%; } 60% { height: 45%; } }
+@media (prefers-reduced-motion: reduce) { .meter i { height: 60%; } }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink-on-gold) 30%, transparent); border-top-color: var(--ink-on-gold); }
+@media (prefers-reduced-motion: no-preference) { .spin { animation: rot .8s linear infinite; } }
+@keyframes rot { to { transform: rotate(360deg); } }
+.hint { font: 500 12.5px var(--sans); color: var(--ink-3); text-align: right; margin-top: -2px; }
+.hint kbd { font: 600 11px var(--sans); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: var(--r-inner); padding: 1px 5px; color: var(--ink-2); }
+
+/* language picker + voice popover (open upward from the dock) */
+.picker, .vpop { position: absolute; bottom: calc(100% + 8px); left: 0; width: 300px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 6px; z-index: 70; display: none; }
+.menu.is-open > .picker, .menu.is-open > .vpop { display: block; animation: popUp .16s var(--ease); }
+@keyframes popUp { from { opacity: 0; transform: translateY(4px); } }
+.vpop { left: auto; right: 0; width: 290px; }
+.picker__find { display: flex; align-items: center; gap: 8px; margin: 2px 2px 6px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--bg); }
+.picker__find svg.i { width: 16px; height: 16px; color: var(--ink-3); }
+.picker__find input { flex: 1; border: 0; background: none; outline: none; padding: 10px 0; font: 500 15px var(--sans); }
+.picker__find:focus-within { border-color: var(--gold-text); }
+.picker ul { list-style: none; margin: 0; padding: 0; max-height: min(46dvh, 340px); overflow: auto; }
+.opt { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r); cursor: pointer; font: 500 15px var(--sans); color: var(--ink-2); }
+.opt:hover, .opt.is-active { background: var(--plane-2); color: var(--ink); }
+.opt[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+.opt small { margin-left: auto; font: 600 11px var(--sans); letter-spacing: .08em; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.opt .tick { width: 16px; height: 16px; color: var(--ink); visibility: hidden; }
+.opt[aria-selected="true"] .tick { visibility: visible; }
+.picker__none { padding: 12px 10px; color: var(--ink-3); font-size: 14px; }
+.sheet__head { display: none; }
+.vpop p { margin: 4px 10px 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+.voice { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: var(--r); background: none; color: var(--ink); font: 500 14px var(--sans); cursor: pointer; text-align: left; }
+.voice:hover { background: var(--plane-2); }
+.voice small { margin-left: auto; font: 600 11px var(--sans); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+.voice__dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.voice[aria-checked="true"] .voice__dot { background: var(--ink); border-color: var(--ink); }
+.vpop__note { margin: 2px 10px 8px; font-size: 13px; color: var(--ink-3); }
+.vpop__note a { color: var(--gold-text); text-underline-offset: 3px; }
+.scrim { display: none; }
+
+/* ---------- welcome ---------- */
+.welcome { max-width: 1160px; margin: 0 auto; padding: clamp(32px, 7vw, 88px) clamp(16px, 4vw, 40px) 64px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(28px, 6vw, 80px); align-items: center; }
+.welcome h1 { margin: 0; font: 800 clamp(2.4rem, 5.4vw, 4.2rem)/.98 var(--expanded); letter-spacing: -.035em; color: var(--ink); text-wrap: balance; }
+.welcome .lead { margin: 22px 0 28px; max-width: 34rem; font-size: 17.5px; line-height: 1.55; color: var(--ink-2); }
+.welcome .fine { margin: 18px 0 0; max-width: 30rem; font-size: 13.5px; color: var(--ink-3); }
+.gmark { width: 18px; height: 18px; }
+.sample { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 0 0 6px; }
+.sample__head { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
+.sample__tag { font: 600 11px var(--sans); color: var(--ink-3); border: 1px solid var(--line-strong); border-radius: var(--r-inner); padding: 2px 7px; }
+.sample .turn { grid-template-columns: 52px minmax(0,1fr); }
+.sample .turn.is-latest .turn__said { font-size: clamp(1.35rem, 2.4vw, 1.7rem); }
+
+.lost { max-width: 560px; margin: 0 auto; padding: 18vh 24px; }
+.lost h1 { font: 800 clamp(1.9rem, 4vw, 2.6rem)/1 var(--expanded); letter-spacing: -.035em; margin: 0 0 12px; }
+.lost p { color: var(--ink-2); margin: 0 0 24px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .welcome { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .bar { height: 58px; }
+  .brand__rule { display: none; }
+  .brand__mark { width: 28px; height: 28px; }
+  .brand__name { font-size: 14px; }
+  .turn { grid-template-columns: 44px minmax(0,1fr); column-gap: 10px; padding: 16px 0 15px; }
+  .turn__acts { grid-column: 2; margin: 8px 0 0 -8px; }
+  .notice { grid-template-columns: 44px minmax(0,1fr); column-gap: 10px; }
+  .turn__dir { font-size: 10.5px; letter-spacing: .05em; }
+  .turn__said { font-size: 1.02rem; }
+  .turn.is-latest .turn__said { font-size: 1.9rem; }
+  .turn.is-latest.is-long .turn__said { font-size: 1.55rem; }
+  .stage { font-size: 10px; letter-spacing: .04em; }
+  .lang { padding: 8px 8px; font-size: 15px; }
+  .lang__role { display: none; }
+  .voicebtn .vname, .voicebtn .chev { display: none; }
+  .voicebtn { padding: 6px 9px; }
+  .kbd { display: inline-grid; width: 56px; height: auto; min-height: 64px; border: 1px solid var(--line-strong); }
+  .drive .field { display: none; }
+  .talk { flex: 1 1 auto; }
+  .dock.is-typing .field { display: flex; }
+  .dock.is-typing .talk { flex: 0 0 56px; padding: 0; min-height: 56px; }
+  .dock.is-typing .talk .talk__label, .dock.is-typing .talk .meter, .dock.is-typing .talk .talk__t { display: none; }
+  .dock.is-typing .kbd { display: none; }
+  .hint { display: none; }
+  /* pickers become a bottom sheet */
+  .menu.is-open > .picker, .menu.is-open > .vpop { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 86dvh; border-radius: var(--r-panel) var(--r-panel) 0 0; padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); animation: sheet .22s var(--ease); }
+  .menu.is-open > .picker ul { max-height: calc(86dvh - 120px); }
+  .sheet__head { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 8px; font: 600 15px var(--sans); }
+  .menu.is-open ~ .scrim, .scrim.is-on { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 65; }
+  @keyframes sheet { from { transform: translateY(24px); opacity: 0; } }
+  .sample .turn { grid-template-columns: 40px minmax(0,1fr); }
+}
+@media (max-width: 380px) {
+  .brand__name { display: none; }
+}
+
+/* ---------- review controls (comp scaffolding only) ---------- */
+.review { position: fixed; left: 12px; bottom: 12px; z-index: 200; width: 272px; max-height: calc(100dvh - 24px); overflow: auto; background: #0d0c0b; color: #d7d2c8; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 12px; font: 500 12px/1.4 "Archivo", sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.review h4 { margin: 0 0 8px; font: 700 11px "Archivo"; letter-spacing: .1em; text-transform: uppercase; color: #8f897f; }
+.review label { display: block; margin: 8px 0 4px; color: #8f897f; }
+.review select, .review button { width: 100%; background: #1c1b1a; color: #f2efe9; border: 1px solid rgba(255,255,255,.18); border-radius: 4px; padding: 6px; font: 500 12px "Archivo"; cursor: pointer; }
+.review .row { display: flex; gap: 6px; } .review .row button { flex: 1; }
+.review .row button[aria-pressed="true"] { background: #f2efe9; color: #161514; }
+.review .note { margin: 10px 0 0; color: #8f897f; font-size: 11px; }
+.review__x { position: absolute; top: 6px; right: 8px; width: auto !important; border: 0 !important; background: none !important; font-size: 15px !important; color: #8f897f !important; }
+.review.collapsed > :not(.review__x):not(h4) { display: none; }
+.review.collapsed { width: auto; }
+@media (max-width: 640px) { .review { left: auto; right: 8px; top: 64px; bottom: auto; width: 230px; } .review.collapsed { top: 64px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<aside class="review collapsed" id="review" aria-label="Comp review controls">
+  <button class="review__x" id="rvX" aria-label="Expand or collapse review controls">+</button>
+  <h4>Polyglot comp</h4>
+  <label for="rvScreen">Screen / state</label>
+  <select id="rvScreen">
+    <optgroup label="Signed out">
+      <option value="welcome">Welcome (signed out)</option>
+      <option value="notfound">Not found</option>
+    </optgroup>
+    <optgroup label="Instrument">
+      <option value="empty">First use — empty log</option>
+      <option value="log" selected>Conversation — idle</option>
+      <option value="listening">Listening</option>
+      <option value="transcribing">Transcribing</option>
+      <option value="translating">Translating (heard shown)</option>
+      <option value="speaking">Speaking</option>
+      <option value="typing">Type instead (phone: keyboard open)</option>
+      <option value="picker">Language picker open</option>
+      <option value="voice">Voice popover open</option>
+      <option value="more">Older turn actions (touch overflow)</option>
+    </optgroup>
+    <optgroup label="Problems">
+      <option value="nothing">Nothing heard</option>
+      <option value="denied">Microphone blocked</option>
+      <option value="failed">Translation failed (retry)</option>
+      <option value="speakfail">Voice playback failed</option>
+      <option value="offline">Offline</option>
+    </optgroup>
+  </select>
+  <label>Theme</label>
+  <div class="row" id="rvTheme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <label>Cloned voices</label>
+  <div class="row" id="rvVoices"><button data-v="some">Has voices</button><button data-v="none">None</button></div>
+  <p class="note">Synthetic sample conversation (English ⇄ Spanish at a Madrid station). The talk key runs a simulated turn: tap (or Space) to listen, tap again to stop, then watch heard → translated → spoken. Swap, pick languages (type to jump), change voice, type instead (Enter), copy, replay, clear.</p>
+</aside>
+
+<script>
+/* ============ destinations (mirrors web-app-shell registry, Phase D pre-flip) ============ */
+const DEST = {
+  launcher: 'https://launch.bakerrang.com', storybook: 'https://storybook.bakerrang.com',
+  polyglot: 'https://bakerrang.com/polyglot/instant', sign: 'https://bakerrang.com/sign-language',
+  budget: 'https://bakerrang.com/budget', wow: 'https://bakerrang.com/wow',
+  passwords: 'https://bakerrang.com/passwords', account: 'https://bakerrang.com/account'
+};
+const USER = { name: 'Sam Rivera', email: 'sam.rivera@example.com', initials: 'SR' };
+const VOICES = [ { id: 'v1', name: 'My voice', primary: true }, { id: 'v2', name: 'Grandad' } ];
+
+/* the legacy language list (client/src/constants languages), verbatim */
+const LANGS = [['English','en-US'],['Arabic','ar-EG'],['Bulgarian','bg-BG'],['Chinese','zh-CN'],['Croatian','hr-HR'],['Czech','cs-CZ'],['Danish','da-DK'],['Dutch','nl-NL'],['Finnish','fi-FI'],['Filipino','fil-PH'],['French','fr-FR'],['German','de-DE'],['Greek','el-GR'],['Hindi','hi-IN'],['Indonesian','id-ID'],['Italian','it-IT'],['Japanese','ja-JP'],['Korean','ko-KR'],['Malay','ms-MY'],['Polish','pl-PL'],['Portuguese','pt-BR'],['Romanian','ro-RO'],['Russian','ru-RU'],['Slovak','sk-SK'],['Spanish','es-ES'],['Swedish','sv-SE'],['Tamil','ta-IN'],['Turkish','tr-TR'],['Ukrainian','uk-UA']]
+  .map(([name, code]) => ({ name, code, short: code.split('-')[0].toUpperCase() }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+const L = (code) => LANGS.find(l => l.code === code);
+
+/* synthetic conversation */
+const SEED = [
+  { from: 'en-US', to: 'es-ES', heard: 'Excuse me, does this train stop at Atocha?', said: 'Disculpe, ¿este tren para en Atocha?' },
+  { from: 'es-ES', to: 'en-US', heard: 'Sí, pero tiene que cambiar en Chamartín.', said: 'Yes, but you have to change at Chamartín.' },
+  { from: 'en-US', to: 'es-ES', heard: 'How long does that take?', said: '¿Cuánto tiempo tarda eso?' },
+  { from: 'es-ES', to: 'en-US', heard: 'Unos veinte minutos. Su andén es el cuatro, al fondo a la derecha.', said: 'About twenty minutes. Your platform is number four, at the far end on the right.' }
+];
+const NEXT = {
+  'en-US>es-ES': [
+    { heard: 'Thank you so much, you have been very kind.', said: 'Muchísimas gracias, ha sido muy amable.' },
+    { heard: 'Is there somewhere to buy a coffee on the platform?', said: '¿Hay algún sitio en el andén para comprar un café?' }
+  ],
+  'es-ES>en-US': [
+    { heard: 'De nada. Hay una cafetería junto a la salida.', said: "You're welcome. There's a café next to the exit." },
+    { heard: 'Buen viaje.', said: 'Have a good trip.' }
+  ]
+};
+let nextIdx = {};
+/* Stable identity: `id` is a monotonic session counter and never reused, even when the 50-turn cap drops
+   the oldest entry or Clear empties the log. `n` is the displayed number only. */
+let nextId = 1;
+const mkTurn = (t, n) => ({ ...t, id: `t${nextId++}`, n });
+const utter = (from, to) => {
+  const k = `${from}>${to}`;
+  const list = NEXT[k];
+  if (!list) return { heard: '(Synthetic sample — your words appear here.)', said: `(Synthetic sample — the ${L(to).name} translation appears here.)` };
+  const i = (nextIdx[k] || 0) % list.length; nextIdx[k] = i + 1; return list[i];
+};
+
+/* ============ state ============ */
+const S = {
+  screen: 'log', theme: 'dark', voices: 'some', voiceId: 'v1',
+  from: 'en-US', to: 'es-ES',
+  turns: SEED.map((t, i) => mkTurn(t, i + 1)), seq: SEED.length,
+  live: null,      // {phase:'listening'|'transcribing'|'translating'|'speaking', from,to, heard?, said?, t}
+  notice: null,    // 'nothing'|'denied'|'failed'|'speakfail'
+  typing: false, offline: false, open: null, copied: null, draft: '', swapped: false
+};
+let timers = [];
+const clearTimers = () => { timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = []; };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const say = (msg) => { const el = document.getElementById('live'); el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
+const voice = () => S.voices === 'none' ? null : VOICES.find(v => v.id === S.voiceId) || VOICES[0];
+
+/* ============ icons ============ */
+const I = {
+  mic: '<svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>',
+  stop: '<svg class="i" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor" stroke="none"/></svg>',
+  swap: '<svg class="i" viewBox="0 0 24 24"><path d="M4 8h14M14.5 4.5 18 8l-3.5 3.5M20 16H6M9.5 12.5 6 16l3.5 3.5"/></svg>',
+  chev: '<svg class="i chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>',
+  kbd: '<svg class="i" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg>',
+  send: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  replay: '<svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6M4 4v4.6h4.6"/></svg>',
+  copy: '<svg class="i" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="1.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg>',
+  done: '<svg class="i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  tick: '<svg class="i tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  voice: '<svg class="i" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>',
+  waffle: '<svg class="i" viewBox="0 0 24 24"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01" stroke-width="3.2"/></svg>',
+  find: '<svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>',
+  more: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/></svg>',
+  x: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  ear: '<svg class="i" viewBox="0 0 24 24"><path d="M7 10a5 5 0 0 1 10 0c0 3-2.5 3.8-3 6.2A3 3 0 0 1 8.2 17"/><path d="M10 10.5a2 2 0 0 1 4 0"/></svg>',
+  micOff: '<svg class="i" viewBox="0 0 24 24"><path d="M9 9v2a3 3 0 0 0 5.1 2.1M15 10V6a3 3 0 0 0-5.7-1.3M5.5 11a6.5 6.5 0 0 0 10.9 4.8M18.5 11a6.4 6.4 0 0 1-.4 2.2M12 17.5V21M8.5 21h7M3.5 3.5l17 17"/></svg>',
+  alert: '<svg class="i" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17h.01"/></svg>',
+  offline: '<svg class="i" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 4.2-2.7M9.6 5.2A15 15 0 0 1 22 8.8M5 12.4a10 10 0 0 1 5-2.6M17 11.6a10 10 0 0 1 2 .8M8.5 15.8a5 5 0 0 1 7 0M12 19.5h.01M3 3l18 18"/></svg>',
+  google: '<svg class="gmark" viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3zM12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22zM6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2L6.4 14zM12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.4 10c.8-2.3 3-4.1 5.6-4.1z"/></svg>'
+};
+const EMB = {
+  storybook: '<path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/>',
+  polyglot: '<path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/><path d="M17 26l4.5-10L26 26M18.7 22h5.6"/>',
+  sign: '<path transform="translate(3.1 2.1) scale(1.05)" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317"/>',
+  budget: '<circle cx="16" cy="16" r="11"/><path d="M16 9.4v13.2"/><path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/>',
+  wow: '<path d="M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z"/><path d="M16 10v9M12.5 13.5L16 11l3.5 2.5"/>',
+  passwords: '<rect x="7" y="14" width="18" height="12" rx="2.5"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="1.6"/>'
+};
+const ACC = { storybook: '#F08A5D', polyglot: 'var(--teal)', sign: '#B79CE0', budget: '#7FB0E8', wow: '#D69A4C', passwords: '#AEB8C2' };
+const TOOLS = [['storybook','Story Book'],['polyglot','Polyglot'],['sign','Sign'],['budget','Budget'],['wow','WoW'],['passwords','Passwords']];
+const LOGO = 'bakerrang-logo.png';
+
+/* ============ chrome ============ */
+const bar = (signedIn = true) => `
+<header class="bar"><div class="bar__in">
+  <a class="brand" href="${DEST.launcher}" aria-label="BakerRang — all tools"><img class="brand__mark" src="${LOGO}" alt="" width="30" height="30"></a>
+  <span class="brand__rule" aria-hidden="true"></span>
+  <a class="brand__name" href="#" data-go="log">Polyglot</a>
+  <span class="bar__sp"></span>
+  <div class="bar__right">
+  ${signedIn ? `
+    <div class="menu${S.open === 'switch' ? ' is-open' : ''}">
+      <button class="ibtn" data-open="switch" aria-label="Switch app" aria-haspopup="true" aria-expanded="${S.open === 'switch'}">${I.waffle}</button>
+      <div class="pop switcher" role="menu">
+        <div class="pop__head">BakerRang tools</div>
+        <div class="switcher__grid">${TOOLS.map(([id, name]) => `<a class="switcher__cell${id === 'polyglot' ? ' is-here' : ''}" href="${id === 'polyglot' ? '#' : DEST[id]}" ${id === 'polyglot' ? 'aria-current="page"' : ''} style="--acc:${ACC[id]}"><svg viewBox="0 0 32 32" aria-hidden="true">${EMB[id]}</svg>${name}</a>`).join('')}</div>
+        <div class="pop__sep"></div>
+        <a class="pop__item" href="${DEST.launcher}"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v6H4zM14 15h6v6h-6z"/></svg>All tools — Launcher</a>
+      </div>
+    </div>
+    <div class="menu${S.open === 'account' ? ' is-open' : ''}">
+      <button class="avatar" data-open="account" aria-label="Account menu for ${USER.name}" aria-haspopup="true" aria-expanded="${S.open === 'account'}">${USER.initials}</button>
+      <div class="pop" role="menu">
+        <div class="pop__who"><strong>${USER.name}</strong><span>${USER.email}</span></div>
+        <div class="pop__sep"></div>
+        <div class="pop__head">Theme</div>
+        <div class="seg" role="group" aria-label="Theme">${['light','dark','system'].map(t => `<button data-theme="${t}" aria-pressed="${S.theme === t || (t === 'system' && false)}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
+        <a class="pop__item" href="${DEST.account}"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1.2-3.5 3.8-5 7-5s5.8 1.5 7 5"/></svg>Account &amp; voices</a>
+        <div class="pop__sep"></div>
+        <button class="pop__item pop__danger"><svg class="i" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg>Sign out</button>
+      </div>
+    </div>` : `<a class="btn btn--ghost btn--sm" href="#" data-go="empty">Sign in</a>`}
+  </div>
+</div></header>`;
+
+/* ============ log ============ */
+const dirLabel = (t) => `${L(t.from).short}→${L(t.to).short}`;
+const turnHTML = (t, latest) => {
+  const long = t.said.length > 64;
+  const v = voice();
+  return `<li class="turn${latest ? ' is-latest' : ''}${long ? ' is-long' : ''}">
+    <div class="turn__gutter"><span class="turn__no">${String(t.n).padStart(2, '0')}</span><span class="turn__dir" aria-label="${L(t.from).name} to ${L(t.to).name}">${dirLabel(t)}</span></div>
+    <div class="turn__body">
+      <p class="turn__heard" lang="${t.from}" dir="auto"><span class="sr">Heard: </span>${esc(t.heard)}</p>
+      <p class="turn__said" lang="${t.to}" dir="auto"><span class="sr">${L(t.to).name}: </span>${esc(t.said)}</p>
+      ${latest && S.notice === 'speakfail' ? `<div class="fail">Couldn't play your voice. <button class="btn btn--ghost btn--sm" data-act="replay">${I.replay}Try again</button></div>` : ''}
+    </div>
+    <div class="turn__acts">
+      <button class="ibtn${S.copied === t.id ? ' is-done' : ''}" data-copy="${t.id}" aria-label="Copy the ${L(t.to).name} translation">${S.copied === t.id ? I.done : I.copy}</button>
+      ${v ? `<button class="ibtn" data-replay="${t.id}" aria-label="Say it again in ${esc(v.name)}">${I.replay}</button>` : ''}
+    </div>
+    ${latest ? '' : `<div class="menu turn__more${S.open === 'more-' + t.id ? ' is-open' : ''}">
+      <button class="ibtn${S.copied === t.id ? ' is-done' : ''}" data-open="more-${t.id}" aria-haspopup="menu" aria-expanded="${S.open === 'more-' + t.id}" aria-label="Actions for turn ${String(t.n).padStart(2, '0')}">${S.copied === t.id ? I.done : I.more}</button>
+      <div class="pop pop--turn" role="menu">
+        <button class="pop__item" role="menuitem" data-copy="${t.id}">${I.copy}Copy ${L(t.to).name} text</button>
+        ${v ? `<button class="pop__item" role="menuitem" data-replay="${t.id}">${I.replay}Say it again in ${esc(v.name)}</button>` : ''}
+      </div>
+    </div>`}
+  </li>`;
+};
+const liveHTML = () => {
+  const l = S.live; const n = S.seq + 1; const v = voice();
+  const st = (i) => {
+    const order = ['transcribing', 'translating', 'speaking', 'done'];
+    const p = order.indexOf(l.phase);
+    const cls = l.phase === 'listening' ? '' : (i < p ? ' is-done' : i === p ? ' is-now' : '');
+    return `<span class="stage${cls}"><i></i>${['Heard', 'Translated', v ? 'Spoken' : 'Shown'][i]}</span>`;
+  };
+  let body = '';
+  if (l.phase === 'listening') body = `<div class="listen">Listening in ${L(l.from).name} <b>0:${String(l.t).padStart(2, '0')}</b></div>`;
+  else if (l.phase === 'transcribing') body = `<p class="turn__heard">Working out what you said…</p>`;
+  else if (l.phase === 'translating') body = `<p class="turn__heard" lang="${l.from}" dir="auto">${esc(l.heard)}</p><p class="turn__heard" style="margin-top:10px">Translating into ${L(l.to).name}…</p>`;
+  else body = `<p class="turn__heard" lang="${l.from}" dir="auto">${esc(l.heard)}</p><p class="turn__said${l.fresh ? ' arrive' : ''}" lang="${l.to}" dir="auto">${esc(l.said)}</p>${v ? `<div class="turn__voice">${I.voice}<span>Speaking in <b>${esc(v.name)}</b></span></div>` : ''}`;
+  const cancel = ['listening', 'transcribing', 'translating'].includes(l.phase)
+    ? `<button class="btn btn--quiet btn--sm" data-act="cancel">Cancel</button>`
+    : `<button class="btn btn--quiet btn--sm" data-act="stopaudio">Stop</button>`;
+  return `<li class="turn is-live is-latest${(l.said || '').length > 64 ? ' is-long' : ''}" aria-busy="${l.phase !== 'speaking'}">
+    <div class="turn__gutter"><span class="turn__no">${String(n).padStart(2, '0')}</span><span class="turn__dir">${dirLabel(l)}</span></div>
+    <div class="turn__body">${body}<div class="stages" aria-hidden="true">${st(0)}${st(1)}${st(2)}</div></div>
+    <div class="turn__acts">${cancel}</div>
+  </li>`;
+};
+const noticeHTML = () => {
+  const map = {
+    nothing: [I.ear, "Didn't catch that.", 'Try again a little closer to the microphone.', `<button class="btn btn--ghost btn--sm" data-act="talk">Talk again</button>`],
+    denied: [I.micOff, 'Polyglot needs your microphone.', "It's blocked for this site. Allow it in your browser's site settings, or type instead.", `<button class="btn btn--ghost btn--sm" data-act="type">${I.kbd}Type instead</button>`],
+    failed: [I.alert, "Couldn't translate that.", 'The translation service didn’t answer. What we heard is still here, so you don’t have to say it again.', `<button class="btn btn--ghost btn--sm" data-act="retry">Try again</button><button class="btn btn--quiet btn--sm" data-act="dismiss">Discard</button>`]
+  };
+  const m = map[S.notice]; if (!m) return '';
+  if (S.notice === 'failed') {
+    const n = S.seq + 1;
+    return `<li class="turn is-latest" role="status">
+      <div class="turn__gutter"><span class="turn__no">${String(n).padStart(2, '0')}</span><span class="turn__dir">EN→ES</span></div>
+      <div class="turn__body"><p class="turn__heard" lang="en-US">Where can I buy a ticket for tomorrow?</p>
+        <div class="fail-row">${m[0]}<p>${m[1]}<small>${m[2]}</small></p></div><div class="notice__acts">${m[3]}</div></div>
+    </li>`;
+  }
+  const heard = '';
+  return `<li class="notice" role="status"><div class="notice__icon">${m[0]}</div><div>${heard}<p>${m[1]}<small>${m[2]}</small></p><div class="notice__acts">${m[3]}</div></div></li>`;
+};
+const emptyHTML = () => {
+  const v = voice();
+  return `<div class="empty">
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${EMB.polyglot}</svg>
+    <h1>Tap Talk and speak ${L(S.from).name}.</h1>
+    <p>Polyglot writes down what it heard, translates it into ${L(S.to).name}, and ${v ? `says it aloud in <strong>${esc(v.name)}</strong>` : 'shows it here'}. When they answer, swap the languages and hand it over.</p>
+    <p class="fine">Polyglot doesn't keep what you say. This conversation disappears when you leave.</p>
+  </div>`;
+};
+
+/* ============ dock ============ */
+const langBtn = (side) => {
+  const code = S[side]; const open = S.open === side;
+  const label = side === 'from' ? 'Speak' : 'Into';
+  return `<div class="menu${open ? ' is-open' : ''}">
+    <button class="lang" data-open="${side}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="${label}: ${L(code).name}"><span class="lang__role">${label}</span><span class="lang__name">${L(code).name}</span>${I.chev}</button>
+    <div class="picker" role="dialog" aria-label="Choose the ${side === 'from' ? 'language you speak' : 'language to translate into'}">
+      <div class="sheet__head"><span>${side === 'from' ? 'You speak' : 'Translate into'}</span><button class="ibtn" data-close aria-label="Close">${I.x}</button></div>
+      <label class="picker__find">${I.find}<span class="sr">Find a language</span><input id="find-${side}" autocomplete="off" placeholder="Find a language" data-find="${side}"></label>
+      <ul role="listbox" id="list-${side}" aria-label="Languages">${LANGS.map((l, i) => `<li class="opt${l.code === code ? ' is-active' : ''}" role="option" tabindex="-1" id="${side}-${l.code}" aria-selected="${l.code === code}" data-pick="${side}" data-code="${l.code}">${I.tick}<span>${l.name}</span><small>${l.short}</small></li>`).join('')}</ul>
+    </div>
+  </div>`;
+};
+const voiceBtn = () => {
+  const v = voice(); const open = S.open === 'voice';
+  return `<div class="menu${open ? ' is-open' : ''}">
+    <button class="voicebtn" data-open="voice" aria-haspopup="true" aria-expanded="${open}" aria-label="${v ? `Speaking voice: ${v.name}` : 'No cloned voice'}">${I.voice}<span class="vname">${v ? esc(v.name) : 'No voice'}</span>${I.chev}</button>
+    <div class="vpop" role="dialog" aria-label="Speaking voice">
+      <div class="sheet__head"><span>Speaking voice</span><button class="ibtn" data-close aria-label="Close">${I.x}</button></div>
+      ${v ? `<div class="pop__head">Say translations in</div><div role="radiogroup" aria-label="Voice">${VOICES.map(x => `<button class="voice" role="radio" aria-checked="${x.id === v.id}" data-voice="${x.id}"><span class="voice__dot"></span>${esc(x.name)}${x.primary ? '<small>Primary</small>' : ''}</button>`).join('')}</div>
+        <p class="vpop__note">Your cloned voices. Make or change them in <a href="${DEST.account}">Account</a>.</p>`
+      : `<p>You don't have a cloned voice yet, so translations are shown but not spoken.</p><p class="vpop__note"><a href="${DEST.account}">Add a voice in Account</a></p>`}
+    </div>
+  </div>`;
+};
+const talkBtn = () => {
+  const l = S.live;
+  if (S.offline) return `<button class="talk" disabled>${I.mic}<span class="talk__label">Talk</span></button>`;
+  if (l && l.phase === 'listening') return `<button class="talk" data-act="talk" aria-pressed="true" aria-label="Stop and translate">${I.stop}<span class="talk__label">Stop</span><span class="talk__t">0:${String(l.t).padStart(2, '0')}</span><span class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button>`;
+  if (l && (l.phase === 'transcribing' || l.phase === 'translating')) return `<button class="talk" aria-disabled="true" aria-label="Translating, please wait"><span class="spin" aria-hidden="true"></span><span class="talk__label">Translating…</span></button>`;
+  return `<button class="talk" data-act="talk" aria-pressed="false" aria-label="Start speaking ${L(S.from).name}">${I.mic}<span class="talk__label">Speak ${L(S.from).name}</span></button>`;
+};
+const dockHTML = () => `
+  ${S.offline ? `<div class="offline" role="status"><div>${I.offline}You're offline. Polyglot needs a connection to listen and translate.</div></div>` : ''}
+  <div class="dock__in">
+    <div class="pair">
+      ${langBtn('from')}
+      <button class="ibtn swap${S.swapped ? ' did' : ''}" data-act="swap" aria-label="Swap languages: speak ${L(S.to).name}, translate into ${L(S.from).name}">${I.swap}</button>
+      ${langBtn('to')}
+      <span class="pair__sp"></span>
+      ${voiceBtn()}
+    </div>
+    <div class="drive">
+      <button class="ibtn kbd" data-act="type" aria-label="Type instead">${I.kbd}</button>
+      <div class="field">
+        <label class="sr" for="draft">Type in ${L(S.from).name} instead</label>
+        <textarea id="draft" rows="1" placeholder="Or type in ${L(S.from).name}…" ${S.offline ? 'disabled' : ''}>${esc(S.draft)}</textarea>
+        <button class="ibtn send" data-act="send" aria-label="Translate what you typed" ${S.draft.trim() ? '' : 'disabled'}>${I.send}</button>
+      </div>
+      ${talkBtn()}
+    </div>
+    <div class="hint"><kbd>Space</kbd> talk · <kbd>Esc</kbd> cancel · <kbd>Enter</kbd> translate typed text</div>
+  </div>`;
+
+/* ============ screens ============ */
+const instrument = () => {
+  const has = S.turns.length || S.live || S.notice;
+  const list = S.turns.map((t, i) => turnHTML(t, i === S.turns.length - 1 && !S.live && !S.notice)).join('');
+  return `<div class="app">
+    ${bar()}
+    <main class="log" id="log" aria-label="Conversation">
+      <div class="log__in">
+        ${has ? `<div class="log__head"><span class="log__title">This conversation</span><span class="log__note">Not saved</span>${S.turns.length ? '<button class="btn btn--quiet btn--sm" data-act="clear">Clear</button>' : ''}</div>` : ''}
+        ${has ? `<ol class="turns">${list}${S.live ? liveHTML() : ''}${noticeHTML()}</ol>` : emptyHTML()}
+      </div>
+    </main>
+    <section class="dock${S.typing ? ' is-typing' : ''}" aria-label="Talk or type">${dockHTML()}</section>
+    <div class="scrim${S.open && ['from','to','voice'].includes(S.open) ? ' is-on' : ''}" data-close></div>
+  </div>`;
+};
+const welcome = () => `${bar(false)}
+  <main class="welcome">
+    <div>
+      <h1>Say it in yours. They hear it in theirs.</h1>
+      <p class="lead">Tap, talk, tap. Polyglot writes down what it heard, translates it into any of 29 languages, and says it aloud in your own cloned voice.</p>
+      <a class="btn btn--gold" href="#" data-go="empty">${I.google}<span>Sign in with Google</span></a>
+      <p class="fine">To do its work, Polyglot sends your speech to transcription, translation and voice services. Polyglot itself keeps none of it: the conversation disappears when you leave. Spoken playback uses a voice you've cloned in your BakerRang account.</p>
+    </div>
+    <div class="sample" aria-label="Example conversation">
+      <div class="sample__head"><span class="log__title">A conversation</span><span class="sample__tag">Example</span></div>
+      <ol class="turns">${SEED.slice(0, 3).map((t, i) => turnHTML({ ...t, n: i + 1 }, i === 2).replace(/<div class="turn__acts">[\s\S]*?<\/div>\s*<\/li>/, '</li>')).join('')}</ol>
+    </div>
+  </main>`;
+const notFound = () => `${bar()}<main class="lost"><h1>Nothing here.</h1><p>That page doesn't exist. Polyglot lives on one screen.</p><a class="btn btn--ghost" href="#" data-go="log">Open Polyglot</a></main>`;
+
+/* ============ render ============ */
+function render (focusSel) {
+  document.documentElement.dataset.theme = S.theme;
+  document.querySelector('meta[name="theme-color"]').content = S.theme === 'light' ? '#efece6' : '#161514';
+  const root = document.getElementById('root');
+  document.body.classList.toggle('is-page', S.screen === 'welcome' || S.screen === 'notfound');
+  root.innerHTML = S.screen === 'welcome' ? welcome() : S.screen === 'notfound' ? notFound() : instrument();
+  const log = document.getElementById('log');
+  if (log) log.scrollTop = log.scrollHeight;
+  if (focusSel) { const el = document.querySelector(focusSel); if (el) el.focus(); }
+  if (S.live && S.live.fresh) S.live.fresh = false;
+  const openMore = document.querySelector('.turn__more.is-open .pop--turn');
+  if (openMore) {
+    const lr = document.getElementById('log').getBoundingClientRect(); const pr = openMore.getBoundingClientRect();
+    if (pr.bottom > lr.bottom - 4) openMore.classList.add('is-up');
+    openMore.scrollIntoView({ block: 'nearest' });
+  }
+  const ta = document.getElementById('draft');
+  if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 110) + 'px'; }
+}
+
+/* ============ simulated turn ============ */
+function startListening () {
+  clearTimers(); S.notice = null; S.open = null; S.copied = null;
+  S.live = { phase: 'listening', from: S.from, to: S.to, t: 0 };
+  say(`Listening in ${L(S.from).name}`);
+  render('.talk');
+  timers.push(setInterval(() => {
+    if (!S.live || S.live.phase !== 'listening') return;
+    S.live.t = Math.min(S.live.t + 1, 60);
+    const t = document.querySelector('.talk__t'); if (t) t.textContent = `0:${String(S.live.t).padStart(2, '0')}`;
+    const b = document.querySelector('.listen b'); if (b) b.textContent = `0:${String(S.live.t).padStart(2, '0')}`;
+  }, 1000));
+}
+function runPipeline (fromText) {
+  clearTimers();
+  const u = fromText ? { heard: fromText, said: utter(S.live.from, S.live.to).said } : utter(S.live.from, S.live.to);
+  const l = S.live;
+  if (fromText) { l.phase = 'translating'; l.heard = u.heard; render(); say('Translating'); }
+  else { l.phase = 'transcribing'; render('.talk'); say('Transcribing'); }
+  const step1 = fromText ? 0 : 900;
+  timers.push(setTimeout(() => { if (S.live !== l) return; l.phase = 'translating'; l.heard = u.heard; render('.talk'); say('Translating'); }, step1));
+  timers.push(setTimeout(() => {
+    if (S.live !== l) return;
+    l.said = u.said; l.fresh = true;
+    if (voice()) { l.phase = 'speaking'; say(`${L(l.to).name}: ${u.said}`); render('.talk'); timers.push(setTimeout(() => finish(l), 2600)); }
+    else { say(`${L(l.to).name}: ${u.said}`); finish(l); }
+  }, step1 + 1100));
+}
+function finish (l) {
+  if (S.live !== l) return;
+  S.seq += 1;
+  S.turns.push(mkTurn({ from: l.from, to: l.to, heard: l.heard, said: l.said }, S.seq));
+  if (S.turns.length > 50) S.turns.shift();
+  S.live = null; render('.talk');
+}
+function toggleTalk () {
+  if (S.offline) return;
+  if (S.live && S.live.phase === 'listening') { runPipeline(); return; }
+  if (S.live && S.live.phase !== 'speaking') return;
+  if (S.live && S.live.phase === 'speaking') finish(S.live);
+  startListening();
+}
+
+/* ============ preset screens (review panel) ============ */
+function preset (v) {
+  clearTimers();
+  Object.assign(S, { screen: 'log', live: null, notice: null, typing: false, offline: false, open: null, copied: null, draft: '', turns: SEED.map((t, i) => mkTurn(t, i + 1)), seq: SEED.length, from: 'en-US', to: 'es-ES' });
+  if (v === 'welcome' || v === 'notfound') S.screen = v;
+  if (v === 'empty') { S.turns = []; S.seq = 0; }
+  if (v === 'listening') { S.live = { phase: 'listening', from: 'en-US', to: 'es-ES', t: 4 }; }
+  if (v === 'transcribing') S.live = { phase: 'transcribing', from: 'en-US', to: 'es-ES', t: 6 };
+  if (v === 'translating') S.live = { phase: 'translating', from: 'en-US', to: 'es-ES', heard: NEXT['en-US>es-ES'][0].heard };
+  if (v === 'speaking') S.live = { phase: 'speaking', from: 'en-US', to: 'es-ES', ...NEXT['en-US>es-ES'][0] };
+  if (v === 'typing') { S.typing = true; S.draft = 'Which carriage is the quiet one?'; }
+  if (v === 'picker') S.open = 'to';
+  if (v === 'voice') S.open = 'voice';
+  if (v === 'more') S.open = 'more-' + S.turns[1].id;
+  if (v === 'nothing' || v === 'denied' || v === 'failed') S.notice = v;
+  if (v === 'speakfail') S.notice = 'speakfail';
+  if (v === 'offline') S.offline = true;
+  render(v === 'typing' ? '#draft' : v === 'picker' ? '#find-to' : null);
+  if (v === 'listening') { const l = S.live; timers.push(setInterval(() => { if (S.live !== l) return; l.t++; const t = document.querySelector('.talk__t'); if (t) t.textContent = `0:${String(l.t).padStart(2, '0')}`; const b = document.querySelector('.listen b'); if (b) b.textContent = `0:${String(l.t).padStart(2, '0')}`; }, 1000)); }
+}
+
+/* ============ events ============ */
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-open],[data-act],[data-pick],[data-voice],[data-copy],[data-replay],[data-theme],[data-go],[data-close]');
+  if (!t) { if (S.open && !e.target.closest('.menu')) { S.open = null; render(); } return; }
+  if (t.dataset.go) { e.preventDefault(); preset(t.dataset.go); document.getElementById('rvScreen').value = t.dataset.go; return; }
+  if (t.dataset.close !== undefined) { S.open = null; render(); return; }
+  if (t.dataset.open) { const w = t.dataset.open; S.open = S.open === w ? null : w; render(['from', 'to'].includes(S.open) ? `#find-${S.open}` : (S.open || '').startsWith('more-') ? '.turn__more.is-open .pop__item' : null); return; }
+  if (t.dataset.theme) { S.theme = t.dataset.theme === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t.dataset.theme; syncReview(); render(); return; }
+  if (t.dataset.pick) { pick(t.dataset.pick, t.dataset.code); return; }
+  if (t.dataset.voice) { S.voiceId = t.dataset.voice; S.open = null; render(); say(`Voice: ${voice().name}`); return; }
+  if (t.dataset.copy) { const turn = S.turns.find(x => x.id === t.dataset.copy); if (!turn) return; const fromMenu = !!t.closest('.pop--turn'); const back = fromMenu ? `[data-open="more-${turn.id}"]` : `[data-copy="${turn.id}"]`; try { navigator.clipboard.writeText(turn.said); } catch {} S.copied = turn.id; S.open = null; say('Copied'); render(back); timers.push(setTimeout(() => { if (S.copied !== turn.id) return; S.copied = null; const f = document.activeElement && document.activeElement.matches(back); render(f ? back : null); }, 1600)); return; }
+  if (t.dataset.replay) { const turn = S.turns.find(x => x.id === t.dataset.replay); if (!turn) return; const back = t.closest('.pop--turn') ? `[data-open="more-${turn.id}"]` : `[data-replay="${turn.id}"]`; S.open = null; render(back); say(`Saying turn ${turn.n} again in ${voice().name}`); return; }
+  const a = t.dataset.act;
+  if (a === 'talk') toggleTalk();
+  if (a === 'swap') { [S.from, S.to] = [S.to, S.from]; S.swapped = !S.swapped; render('.swap'); say(`Now speaking ${L(S.from).name}, translating into ${L(S.to).name}`); }
+  if (a === 'cancel') { clearTimers(); S.live = null; render('.talk'); say('Cancelled'); }
+  if (a === 'stopaudio') finish(S.live);
+  if (a === 'type') { S.typing = true; S.notice = null; render('#draft'); }
+  if (a === 'send') sendDraft();
+  if (a === 'clear') { clearTimers(); S.turns = []; S.seq = 0; S.open = null; S.live = null; S.notice = null; render('.talk'); say('Conversation cleared'); }
+  if (a === 'retry') { S.notice = null; S.live = { phase: 'translating', from: 'en-US', to: 'es-ES', heard: 'Where can I buy a ticket for tomorrow?' }; runPipeline('Where can I buy a ticket for tomorrow?'); }
+  if (a === 'dismiss') { S.notice = null; render(); }
+  if (a === 'replay') { S.notice = null; render(); say(`Saying it again in ${voice().name}`); }
+});
+function pick (side, code) {
+  const other = side === 'from' ? 'to' : 'from';
+  if (S[other] === code) { S[other] = S[side]; }   // same language on both sides ⇒ swap
+  S[side] = code; S.open = null; render(`[data-open="${side}"]`);
+  say(`${side === 'from' ? 'Speaking' : 'Translating into'} ${L(code).name}`);
+}
+function sendDraft () {
+  const text = S.draft.trim(); if (!text || S.offline) return;
+  S.draft = ''; S.notice = null;
+  S.live = { phase: 'translating', from: S.from, to: S.to, heard: text };
+  runPipeline(text);
+}
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'draft') {
+    S.draft = e.target.value;
+    e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 110) + 'px';
+    const s = document.querySelector('.send'); if (s) s.disabled = !S.draft.trim();
+  }
+  if (e.target.dataset.find) {
+    const side = e.target.dataset.find; const q = e.target.value.trim().toLowerCase();
+    const items = [...document.querySelectorAll(`#list-${side} .opt`)];
+    let first = null;
+    items.forEach(li => { const show = !q || li.textContent.toLowerCase().includes(q); li.hidden = !show; li.classList.remove('is-active'); if (show && !first) first = li; });
+    if (first) first.classList.add('is-active');
+  }
+});
+document.addEventListener('keydown', (e) => {
+  const inField = e.target.matches('textarea, input');
+  if (e.target.dataset && e.target.dataset.find) {
+    const side = e.target.dataset.find;
+    const vis = [...document.querySelectorAll(`#list-${side} .opt:not([hidden])`)];
+    let i = vis.findIndex(li => li.classList.contains('is-active'));
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); i = Math.max(0, Math.min(vis.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1))); vis.forEach(li => li.classList.remove('is-active')); vis[i].classList.add('is-active'); vis[i].scrollIntoView({ block: 'nearest' }); e.target.setAttribute('aria-activedescendant', vis[i].id); }
+    if (e.key === 'Enter' && vis[i]) { e.preventDefault(); pick(side, vis[i].dataset.code); }
+    if (e.key === 'Escape') { S.open = null; render(`[data-open="${side}"]`); }
+    return;
+  }
+  if (e.target.id === 'draft' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDraft(); return; }
+  if (e.key === 'Escape') {
+    if (S.open) { const was = S.open; S.open = null; render(was.startsWith('more-') ? `[data-open="${was}"]` : ['from', 'to', 'voice'].includes(was) ? `[data-open="${was}"]` : null); return; }
+    if (S.live && S.live.phase !== 'speaking') { clearTimers(); S.live = null; render('.talk'); say('Cancelled'); }
+    return;
+  }
+  if (e.key === ' ' && !inField && !e.target.closest('.review') && S.screen === 'log') { e.preventDefault(); toggleTalk(); }
+});
+
+/* ============ review panel ============ */
+const rv = document.getElementById('review');
+document.getElementById('rvX').onclick = () => { rv.classList.toggle('collapsed'); document.getElementById('rvX').textContent = rv.classList.contains('collapsed') ? '+' : '–'; };
+document.getElementById('rvScreen').onchange = (e) => preset(e.target.value);
+function syncReview () {
+  document.querySelectorAll('#rvTheme button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.theme));
+  document.querySelectorAll('#rvVoices button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.voices));
+}
+document.querySelectorAll('#rvTheme button').forEach(b => { b.onclick = () => { S.theme = b.dataset.v; syncReview(); render(); }; });
+document.querySelectorAll('#rvVoices button').forEach(b => { b.onclick = () => { S.voices = b.dataset.v; syncReview(); render(); }; });
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) S.theme = q.get('theme');
+if (q.get('voices')) S.voices = q.get('voices');
+syncReview();
+preset(q.get('state') || 'log');
+if (q.get('state')) document.getElementById('rvScreen').value = q.get('state');
+if (q.get('review') === 'open') { rv.classList.remove('collapsed'); document.getElementById('rvX').textContent = '–'; }
+</script>
+</body>
+</html>

@@ -13,7 +13,8 @@ $Services = @(
     [pscustomobject]@{ Logical = 'renderer'; Service = 'bakerrang-site-renderer'; Package = 'site-renderer'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'client'; Service = 'bakerrang-client'; Package = 'client'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-launcher'; Service = 'bakerrang-web-launcher'; Package = 'web-launcher'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
-    [pscustomobject]@{ Logical = 'web-storybook'; Service = 'bakerrang-web-storybook'; Package = 'web-storybook'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
+    [pscustomobject]@{ Logical = 'web-storybook'; Service = 'bakerrang-web-storybook'; Package = 'web-storybook'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
+    [pscustomobject]@{ Logical = 'web-polyglot'; Service = 'bakerrang-web-polyglot'; Package = 'web-polyglot'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
 )
 
 function Get-PropertyValue {
@@ -341,7 +342,8 @@ function Invoke-VerifyLive {
         @{ Name = 'Renderer'; Url = 'https://sites.bakerrang.com/robots.txt'; Assertion = 'UserAgent' },
         @{ Name = 'Client'; Url = 'https://bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Launcher'; Url = 'https://launch.bakerrang.com/'; Assertion = 'ClientRoot' },
-        @{ Name = 'Web Story Book'; Url = 'https://storybook.bakerrang.com/'; Assertion = 'ClientRoot' }
+        @{ Name = 'Web Story Book'; Url = 'https://storybook.bakerrang.com/'; Assertion = 'ClientRoot' },
+        @{ Name = 'Web Polyglot'; Url = 'https://polyglot.bakerrang.com/'; Assertion = 'ClientRoot' }
     )
     if ($DeepCheck) {
         $checks += @{ Name = 'Custom domain'; Url = 'https://custom.bakerrang.com/'; Assertion = 'StatusOnly' }

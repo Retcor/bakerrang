@@ -28,6 +28,7 @@ import publicLeadRouter from './routes/publicLeads.js'
 import internalLeadNotificationRouter from './routes/internalLeadNotifications.js'
 import { resolveActiveDomain } from './services/siteDomainService.js'
 import { fileURLToPath } from 'url'
+import { sanitizeLogUrl } from './logging/accessLog.js'
 
 import passport from 'passport'
 import session from 'express-session'
@@ -56,7 +57,8 @@ app.use(helmet({
 
 const allowedOrigins = buildAllowedOrigins()
 app.use(cors(createCorsOptionsDelegate({ allowedOrigins, resolveActiveDomain })))
-app.use(logger('dev'))
+logger.token('safe-url', (req) => sanitizeLogUrl(req.originalUrl || req.url))
+app.use(logger(':method :safe-url :status :response-time ms - :res[content-length]'))
 const generalJsonParser = express.json({ limit: '10mb' })
 app.use((req, res, next) => {
   const publicLeadPost = req.method === 'POST' &&

@@ -90,6 +90,90 @@ typography:
     fontSize: "13px"
     fontWeight: 500
     fontFeature: "'onum'"
+  poly-said-latest:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "clamp(1.55rem, 4.2vw, 2.1rem)"
+    fontWeight: 500
+    lineHeight: 1.18
+    letterSpacing: "-0.025em"
+  poly-said-latest-phone:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1.9rem"
+    fontWeight: 500
+    lineHeight: 1.18
+    letterSpacing: "-0.025em"
+  poly-said-latest-long:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "clamp(1.25rem, 3vw, 1.5rem)"
+    fontWeight: 500
+    lineHeight: 1.32
+    letterSpacing: "-0.025em"
+  poly-said-latest-long-phone:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1.55rem"
+    fontWeight: 500
+    lineHeight: 1.32
+    letterSpacing: "-0.025em"
+  poly-said:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1.24rem"
+    fontWeight: 500
+    lineHeight: 1.32
+    letterSpacing: "-0.015em"
+  poly-said-phone:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1.02rem"
+    fontWeight: 500
+    lineHeight: 1.32
+    letterSpacing: "-0.015em"
+  poly-said-sample:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "clamp(1.35rem, 2.4vw, 1.7rem)"
+    fontWeight: 500
+    lineHeight: 1.18
+    letterSpacing: "-0.025em"
+  poly-heard:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.45
+  poly-turn-no:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.02em"
+    fontFeature: "'tnum'"
+  poly-turn-dir:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "0.12em"
+  poly-stage:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.07em"
+  poly-talk:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "16.5px"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "-0.015em"
+  poly-empty-title:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "clamp(1.5rem, 3.4vw, 1.9rem)"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  poly-welcome:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(2.4rem, 5.4vw, 4.2rem)"
+    fontWeight: 800
+    lineHeight: 0.98
+    letterSpacing: "-0.035em"
 rounded:
   control-inner: "3px"
   control: "4px"
@@ -100,6 +184,7 @@ spacing:
   md: "16px"
   lg: "22px"
   gutter: "clamp(1rem, 4vw, 2.5rem)"
+  poly-gutter: "clamp(16px, 4vw, 32px)"
 components:
   button-primary:
     backgroundColor: "{colors.gold}"
@@ -162,6 +247,92 @@ components:
     backgroundColor: "{colors.desk}"
     textColor: "{colors.ink-2}"
     height: "56px"
+  poly-bar:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    height: "58px"
+  log-head:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink-3}"
+    padding: "12px 0 10px"
+  log-entry:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    typography: "{typography.poly-said}"
+    padding: "18px 0 17px"
+    width: "min(100%, 880px)"
+  log-entry-latest:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.poly-said-latest}"
+  log-entry-heard:
+    textColor: "{colors.ink-3}"
+    typography: "{typography.poly-heard}"
+  stage-rule:
+    backgroundColor: "{colors.line-strong}"
+    textColor: "{colors.ink-3}"
+    typography: "{typography.poly-stage}"
+    height: "3px"
+    width: "420px"
+  stage-rule-now:
+    backgroundColor: "{colors.ink-3}"
+    textColor: "{colors.ink}"
+  stage-rule-done:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.ink-2}"
+  composer:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    padding: "10px 0 calc(12px + env(safe-area-inset-bottom))"
+    width: "min(100%, 880px)"
+  talk-key:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    typography: "{typography.poly-talk}"
+    rounded: "{rounded.control}"
+    padding: "0 22px"
+    height: "64px"
+    width: "240px"
+  talk-key-hover:
+    backgroundColor: "{colors.gold-hover}"
+    textColor: "{colors.ink-on-gold}"
+  talk-key-listening:
+    backgroundColor: "{colors.gold-press}"
+    textColor: "{colors.ink-on-gold}"
+  talk-key-disabled:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink-3}"
+  language-trigger:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "8px 10px"
+    height: "42px"
+  language-trigger-open:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+  language-picker:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.panel}"
+    padding: "6px"
+    width: "300px"
+  voice-button:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.control}"
+    padding: "6px 10px"
+    height: "38px"
+  type-field:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "5px 5px 5px 14px"
+  offline-strip:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "9px 12px"
 ---
 
 # Design System: BakerRang Consumer Ecosystem
@@ -541,3 +712,220 @@ control radius. On phone the spread and the plate go to 0 radius because they ar
 - **Don't** fake the book with texture, fold shading, curls or leather. Proportion, folio, running
   head and serif carry the book.
 - **Don't** let Literata or the page tokens leak into the launcher or other consumer apps.
+
+## Product layer: Polyglot
+
+This layer applies **only** inside the Polyglot app (`web/apps/polyglot`, polyglot.bakerrang.com).
+Everything above still holds there. Polyglot is the consumer world at its plainest: an interpreter's
+running log. Each turn becomes a ruled entry, with what was heard set small and what it became set
+large, and the newest entry sits just above a docked composer that holds every control. Unlike
+Story Book it adds no reading layer and no new colours. It adds only translation type steps, one
+shadow and its instrument components. It refuses the two-pane source/target board around a mic orb,
+and it refuses chat bubbles. Evidence: `web/.impeccable/mocks/polyglot-comp.html` (finish verdict:
+ship) and `web/.impeccable/review/*.png`. Direction: `web/.impeccable/surfaces/polyglot.md`.
+
+### Colors
+
+- **Ground** (world `bg`, `#161514` dark / `#efece6` light): the bar, the log and the sticky log
+  head all sit on the world ground. This is **not** Story Book's desk. The light `#e6e1d8` desk and
+  the Page tokens never appear in Polyglot.
+- **Plane** (`plane`): the docked composer slab, pickers and popovers.
+- **Plane 2** (`plane-2`): hover and open fills inside the composer (language trigger, voice button,
+  picker options, voices) and the disabled talk key.
+- **Ground as a field:** the type field and the picker's find field step back down to Ground inside
+  the Plane dock, with a `line-strong` border.
+- **Ground 2** (`bg-2`): the offline strip only.
+- **Ink ladder on the log:** the newest translation is Ink, older translations are Ink 2, and heard
+  lines, turn numbers, direction labels and the log head are Ink 3.
+
+**The Talk Key Is the Gold Rule.** In the instrument the talk key is the only gold fill, and it
+stays gold in every state. At idle it is gold. While listening it is press gold carrying an
+Ink-on-Gold timer and level bars. While translating it shows a spinner. It is never swapped for a
+red "recording" key or a glowing orb. On Welcome the only gold fill is "Sign in with Google", and
+the top-bar Sign in there is a ghost button. Gold Text appears only in the world's focus role: the
+focus outline, and the border of the type and find fields while they have focus.
+
+**The Teal Marks the Tool Rule.** Polyglot Teal (`#58C0C9` dark / `#1f7d86` light, the contract's
+"Signal Teal") has two roles. It draws the Polyglot emblem (the switcher cell and the empty state),
+and it is the hover colour of an entry's copy and replay icons. It never sets text, a fill, a rule,
+the stage rule or the talk key.
+
+**The Problems-in-Ink Rule.** Nothing heard, microphone blocked, translation failed, playback failed
+and offline are each written in Ink, with an Ink 3 explanation and a drawn line icon, inside the log
+or the dock. They never use Danger red, a toast or a coloured alert box. Danger stays with Sign out.
+
+### Typography
+
+**Archivo only.** Archivo Expanded is used only for the "Polyglot" wordmark (800, 15px; 14px on
+phone), the Welcome masthead and the Not found heading. Translations, heard lines, labels and every
+control are plain Archivo. Polyglot adds no second family, and Literata never appears.
+
+- **Newest translation** (`poly-said-latest`: 500, `clamp(1.55rem, 4.2vw, 2.1rem)`, lh 1.18,
+  `-0.025em`, Ink; **1.9rem on phone**): the loudest line on the screen. Capped at a 36em measure,
+  with `text-wrap: pretty`.
+- **Long newest translation**, over 64 characters (`poly-said-latest-long`:
+  `clamp(1.25rem, 3vw, 1.5rem)`, lh 1.32; **1.55rem on phone**).
+- **Older translation** (`poly-said`: 500, `1.24rem`, lh 1.32, `-0.015em`, Ink 2; **1.02rem on
+  phone**).
+- **Heard line** (`poly-heard`: 400, 15px, lh 1.45, Ink 3): set above the translation. Every line
+  carries its `lang` and `dir="auto"`.
+- **Turn gutter:** the turn number (`poly-turn-no`: 600, 12px, tabular, zero-padded "01", Ink 3)
+  sits over the direction label (`poly-turn-dir`: 700, 10.5px, `0.12em`, uppercase, "EN→ES",
+  Ink 3; tracking relaxes to `0.05em` on phone).
+- **Stage labels** (`poly-stage`: 600, 10.5px, `0.07em`, uppercase; 10px / `0.04em` on phone):
+  Heard · Translated · Spoken ("Shown" when there is no voice).
+- **Talk key** (`poly-talk`: 700, 16.5px, `-0.015em`): "Speak English", "Stop 0:04",
+  "Translating…".
+- **Log head and picker roles:** the world Label style. "This conversation" is 700 11px `0.14em`
+  uppercase Ink 3. The "Speak" / "Into" role labels are 700 10.5px `0.12em`.
+- **Empty-state title** (`poly-empty-title`: Archivo **600**, not Expanded,
+  `clamp(1.5rem, 3.4vw, 1.9rem)`, lh 1.2).
+- **Welcome masthead** (`poly-welcome`: Archivo Expanded 800, `clamp(2.4rem, 5.4vw, 4.2rem)`,
+  lh 0.98, `-0.035em`, balanced): set **entirely in Ink**, with no gold accent word. The Welcome
+  example's newest translation uses `poly-said-sample` (`clamp(1.35rem, 2.4vw, 1.7rem)`).
+
+**The Heard-Small, Said-Large Rule.** Every entry sets what was heard in 15px Archivo 400 Ink 3
+above what it became in Archivo 500. The translation is the loud line. The source is never the
+larger of the two.
+
+**The Newest-Is-Loudest Rule.** Only the newest entry's translation is at display size, in Ink.
+When a new entry lands, the previous one drops to 1.24rem Ink 2 (1.02rem on phone). A newest
+translation longer than 64 characters drops one step, so it stays readable at arm's length without
+flooding the log.
+
+### Layout
+
+- **App frame:** the bar, the log and the dock sit in a `100dvh` grid, and only the log scrolls.
+- **Bar:** 58px on every width (not the launcher's 64px). It sits on Ground with a bottom hairline
+  and an inner max of 1240px. Left: the logo mark (30px; 28px on phone), a 1px `line-strong` rule
+  and the Expanded wordmark. Right: the switcher and the avatar. Signed out, the right side is a
+  ghost "Sign in". The rule hides at ≤640px and the wordmark at ≤380px.
+- **Log column:** max 880px, centred, with a `poly-gutter` of `clamp(16px, 4vw, 32px)`. The list
+  **fills from the bottom**: when there are few turns, empty space sits above them and the newest
+  turn is always just above the dock.
+- **Log head:** a sticky strip at the top of the column on Ground with a bottom hairline. It reads
+  "This conversation · Not saved", with "Clear" as a quiet button at the far right. It shows only
+  when the log has content.
+- **Turn grid:** `58px gutter / 1fr / auto actions`, 16px column gap, `18px 0 17px` padding and a
+  1px Line between turns. The last turn drops its rule. On phone the grid is `44px / 1fr` with a
+  10px gap. The newest turn's actions move below its body. Older turns keep their actions behind one
+  quiet overflow control (see Components).
+- **Composer (dock):** a full-width slab whose inner column matches the log (880px). It has 10px of
+  top padding and 12px plus the safe-area inset at the bottom, and two rows 10px apart:
+  - **pair row:** Speak ▾ · swap (42px, `line-strong` border, rotates 180° on swap) · Into ▾ ·
+    spacer · voice button;
+  - **drive row:** the type field (flex) inline beside a **240px × 64px talk key**.
+  A desktop-only keyboard hint line ("Space talk · Esc cancel · Enter translate typed text") sits
+  under the drive row.
+- **Phone (≤640px):** the "Speak" / "Into" role labels and the voice name hide. The drive row
+  becomes a 56px keyboard button plus a full-width 64px talk key. "Type instead" reveals the field
+  and shrinks the talk key to a 56px icon square. The hint line hides.
+- **Pickers:** on desktop, the language picker (300px) and the voice popover (290px, right-aligned)
+  open **upward** as anchored panels, 8px above their trigger, with a type-ahead find field. The
+  list is capped at `min(46dvh, 340px)`. At ≤640px both become a **bottom sheet**: full width,
+  max 86dvh, 8px top corners only, a head row with the title and a close button, safe-area bottom
+  padding, over a flat `rgba(0,0,0,.45)` scrim with no blur. Never a native `<select>`.
+- **Welcome:** max 1160px, a `1.05fr / .95fr` two-column grid (copy + Sign in, then the example
+  conversation) that collapses to one column at 900px. **Not found:** a 560px single column.
+
+**The Thumb-Reach Rule.** Every Polyglot control (pair, swap, voice, type, talk) lives in the
+composer. The top bar carries only ecosystem chrome, and the log carries only per-entry copy,
+replay, cancel and stop.
+
+### Elevation & Depth
+
+The log is flat. Entries are separated by 1px rules only. The composer is the one raised object and
+introduces the layer's single new shadow:
+
+- **Dock shadow** (`box-shadow: 0 -1px 2px rgba(0,0,0,.35), 0 -12px 30px rgba(0,0,0,.30)` dark /
+  `0 -1px 2px rgba(30,26,20,.08), 0 -12px 28px rgba(30,26,20,.08)` light): upward, on the composer
+  only, together with a 1px Line top rule.
+
+Pickers and popovers use the world resting shadow. The talk key carries the world contact shadow,
+which it loses when disabled.
+
+**The Docked Slab Rule.** The composer is the only raised object in the instrument: a full-width
+Plane slab with a hairline top rule and the upward dock shadow. The log never raises anything.
+Entries never become cards, boxes or bubbles.
+
+### Shapes
+
+World radii unchanged. The talk key, fields, language triggers, voice button, swap, offline strip
+and option rows use the 4px control radius. Pickers and popovers use the 8px panel radius (a sheet
+rounds its top corners only). The stage-rule ends and the "Example" tag use the 3px inner radius.
+Log entries have no radius and no box, only rules.
+
+### Components
+
+- **Log entry (turn):** a gutter (number over direction), then a body (heard line over
+  translation), then actions (copy, and replay when a voice exists; 36px icon buttons in Ink 3 that
+  turn teal on hover). On hover-capable wide screens, older entries reveal their icons on hover or
+  focus. On touch (`hover: none`) or ≤ 640px, an older entry shows **one** 40px Ink 3 `⋯` overflow
+  button (drawn, absolute at the entry's top-right; the body reserves 34px for it). It opens a small
+  Plane menu anchored below it: "Copy {Language} text" and, when a voice exists, "Say it again in
+  {voice}". Focus moves to the first item, and Esc or an outside tap closes it. That keeps phone users at
+  parity without a permanent icon pair on every turn. On Copy, the copy icon (or the overflow button)
+  stays in place and shows a drawn check in Ink for 1.6s. "Copied" is announced through the live region, with no visible
+  text label that could collide with the entry's text. After Copy or
+  Say it again from the menu, focus returns to that turn's overflow button. The overflow button's visible size
+  is 40px, with a 44px hit area; the menu flips upward when it wouldn't fit below inside the log.
+- **Live turn + stage rule:** the newest entry while in flight. While listening, the body reads
+  "Listening in English **0:04**". Then it shows "Working out what you said…", then the heard line
+  plus "Translating into Spanish…", then the heard line plus the arriving translation (a 6px rise
+  over `.34s`) and "Speaking in **My voice**". Under the body sits the **stage rule**: three
+  **equal-thirds** segments (max 420px, 3px gap, 3px bars, 3px rounded outer ends) labelled Heard ·
+  Translated · Spoken. A pending segment is `line-strong`, the current one is Ink 3 and breathing,
+  and a done one is Ink. A stage is marked only when its request returns. Cancel (quiet) shows
+  while working, and Stop shows while speaking.
+- **Talk key:** gold, 64px tall, 4px radius, Ink-on-Gold mic and label, with the contact shadow.
+  Hover is `#F0C400`, and press is `#DDBA00` with a 1px drop. **Listening:** press gold, a stop
+  glyph, "Stop", a tabular timer and five 3px Ink-on-Gold level bars (held static under reduced
+  motion). **Translating:** `aria-disabled`, with an Ink-on-Gold spinner and "Translating…".
+  **Offline:** disabled, Plane 2 with Ink 3 and no shadow; it is the only non-gold state.
+- **Language picker:** the trigger is a role label, the language name (600 15.5px) and a chevron,
+  transparent at rest and Plane 2 when hovered or open. The panel holds a find field (Ground,
+  `line-strong`, gold-text border on focus) and a listbox of options (500 15px Ink 2; Plane 2 when
+  hovered or active; the selected option is Ink 600 with a tick; a tabular 11px code sits at the
+  right). Type-ahead, and a "no match" line in Ink 3.
+- **Voice popover:** the trigger is a 1px Line bordered button with a waveform glyph, the voice name
+  and a chevron (icon only on phone). The panel is a radiogroup of cloned voices (an 8px ring dot
+  that fills Ink when checked, and a small uppercase "Primary" tag) plus an Account note. With no
+  voice, the panel explains that translations are shown but not spoken, and the stage rule's third
+  label reads "Shown".
+- **In-log problem rows:** use the turn's gutter grid (58px / 44px). The drawn Ink 3 icon sits in
+  the gutter, the message is 500 15.5px Ink with a 400 14px Ink 3 explanation, and ghost / quiet
+  small buttons sit below (Talk again · Type instead). **Failed turn:** this stays a numbered turn
+  that keeps its heard line, and a problem row replaces the translation ("Couldn't translate that."
+  plus "The translation service didn't answer. What we heard is still here, so you don't have to say it
+  again.") with Try again (ghost) and
+  Discard (quiet). Only the heard **text** is kept for the retry. The raw audio is never kept past transcription. **Playback failed** appends
+  an inline "Couldn't play your voice." plus a ghost Try again to the newest entry.
+- **Offline strip:** sits above the dock's rows, inside the column. Ground 2, a 1px `line-strong`
+  border, 4px radius, a drawn icon and 500 14px Ink: "You're offline. Polyglot needs a connection
+  to listen and translate." The type field and talk key disable.
+- **Empty state:** a first-use block at the foot of the log. It shows the 44px teal Polyglot
+  emblem, the `poly-empty-title` instruction ("Tap Talk and speak English."), one Ink 2 paragraph
+  naming the loop and the voice, and an Ink 3 "doesn't keep what you say" line. Max 30rem. There is
+  no log head.
+- **Welcome example:** a real log fragment of three turns **between two `line-strong` rules**, with
+  a head row reading "A conversation" in Label style and an honest 3px-radius "Example" tag. Its
+  turns carry no actions. The gutter narrows to 52px (40px on phone).
+
+### Do's and Don'ts (Polyglot)
+
+- **Do** render every exchange as a ruled log entry: gutter number and direction, heard small,
+  translation large, with the newest entry at the bottom just above the dock.
+- **Do** keep the talk key gold in every live state, and make it the only gold fill in the
+  instrument.
+- **Do** show real progress with the three-part stage rule, advancing a stage only when its request
+  returns.
+- **Do** open pickers upward from the dock on desktop and as a bottom sheet on phones, with
+  type-ahead.
+- **Do** say problems in the log, in ink, with a way forward (Talk again, Type instead, Try again).
+- **Don't** use chat bubbles, cards, or a two-pane source/target board with a mic orb.
+- **Don't** turn the talk key red, make it glow, or take it off gold while listening.
+- **Don't** use Polyglot Teal for text, fills, rules or the stage rule. It is the emblem and hover
+  only.
+- **Don't** put controls in the top bar, or bring Story Book's desk, Page tokens or Literata into
+  Polyglot.
+- **Don't** use a native `<select>` for the language or voice choice.
