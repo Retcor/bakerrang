@@ -51,7 +51,7 @@ while family resemblance comes from shared foundations, not from one universal p
 
 - Current products needing representation on the launcher (**6 tools + Account**): **Story Book** (AI
   story generation with narration), **Polyglot** (spoken translation in your own cloned voice; the
-  legacy "Instant" experience *is* Polyglot — no separate mode), **Sign Language** (sign practice via camera), **Budget** (budget
+  legacy "Instant" experience *is* Polyglot — no separate mode), **Sign** ("Sign Language" in the registry: ASL handshape practice via the camera, read on-device; not an interpreter), **Budget** (budget
   tracking), **WoW Advisor** (World of Warcraft assistant), **Passwords** (a zero-knowledge,
   client-side-encrypted password vault), and **Account** (cross-cutting, not a tool).
 - **Supermarket is removed from the ecosystem (obsolete).** It was built for a game/use case no
@@ -99,6 +99,27 @@ Full inventory, retirement analysis and architecture: `docs/apps/PhaseD-Polyglot
   No stock voice; none may be claimed.
 - **Not offered (don't imply):** automatic source-language detection, offline translation, saved
   history, conversation/split-screen mode, accuracy claims. No quotas or pricing exist.
+
+## Product: Sign (Phase E truth, 2026-09-25)
+
+Full inventory, retirement analysis and architecture: `docs/apps/PhaseE-SignLanguage.md`; surface brief:
+`.impeccable/surfaces/sign.md`.
+
+- **What it does:** the camera reads your hand **on this device** and shows the ASL handshape it reads, both drawn at
+  your hand and as large text. Pick one of its handshapes as a target and hold it; Sign says **Held**.
+- **What it reads (exactly 20):** letters A B C E F G H I J K L O V W X Y Z (J and Z by their motion), the numbers 1
+  and 5, and I love you. **It can't read D M N P Q R S T U**, reads one hand at a time, and reads handshapes, not
+  signs in context. It is a **practice aid, not an interpreter**: never claim interpretation, translation,
+  fingerspelling of words, "A–Z", accuracy, or support for any sign language other than ASL.
+- **Real scene:** someone learning the ASL manual alphabet at a laptop webcam or with a phone propped up, checking
+  whether a handshape reads the way they meant it.
+- **Privacy is structural:** no video, image, landmark or reading leaves the browser. Sign calls no product API and
+  stores nothing (the held-this-session tally is memory only). "Sign sends no video or images anywhere" is true by
+  construction and may be claimed.
+- **No audio:** every output is visual text, so nothing depends on hearing. Sign-in is required (ecosystem
+  consistency), though the feature itself needs no identity.
+- **Not offered (don't imply):** words, sentences or a transcript; the missing letters; two-handed or moving signs
+  beyond J/Z; sign→speech or speech→sign; other sign languages; saved progress, scores or streaks; handshape images.
 
 ## Brand Commitments
 

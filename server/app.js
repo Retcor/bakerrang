@@ -19,7 +19,6 @@ import superMarketRouter from './routes/superMarket.js'
 import budgetRouter from './routes/budget.js'
 import storybookRouter from './routes/storybook.js'
 import chatbotRouter from './routes/chatbot.js'
-import signLanguageRouter from './routes/signLanguage.js'
 import wowRouter from './routes/wow.js'
 import vaultRouter from './routes/vault.js'
 import tenantRouter from './routes/tenants.js'
@@ -119,7 +118,6 @@ app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)
 app.use('/budget', isAuthenticated, budgetRouter)
 app.use('/storybook', isAuthenticated, storybookRouter)
-app.use('/sign-language', isAuthenticated, signLanguageRouter)
 app.use('/wow', isAuthenticated, wowRouter)
 app.use('/vault', vaultLimiter, isAuthenticated, vaultRouter)
 app.use('/tenants', tenantLimiter, isAuthenticated, tenantRouter)

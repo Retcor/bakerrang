@@ -148,7 +148,7 @@ try {
     }
     Test-Case 'fixed service/package/identity mappings and lowercase full SHA' {
         Reset-Fixture
-        foreach ($logical in @('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot')) {
+        foreach ($logical in @('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign')) {
             $request = Get-RollbackRequest $logical 'image' $Sha
             $package = if ($logical -ceq 'renderer') { 'site-renderer' } else { $logical }
             Assert-That ($request.Config.Package -ceq $package) 'Wrong package mapping.'

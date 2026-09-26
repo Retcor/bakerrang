@@ -7,7 +7,7 @@ import logoUrl from './assets/bakerrang-logo.png'
 const descriptions = Object.freeze({
   storybook: 'Write and illustrate a story with a few words, then have it read aloud.',
   polyglot: 'Speak and translate between languages, out loud, in real time.',
-  sign: 'Practise sign language with your camera and instant feedback.',
+  sign: 'Practise ASL handshapes with your camera. Sign reads your hand on this device.',
   budget: 'Track spending against a plan without a spreadsheet.',
   wow: 'Get World of Warcraft advice tuned to your character and goals.'
 })

@@ -15,6 +15,7 @@ $Services = @(
     [pscustomobject]@{ Logical = 'web-launcher'; Service = 'bakerrang-web-launcher'; Package = 'web-launcher'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-storybook'; Service = 'bakerrang-web-storybook'; Package = 'web-storybook'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-polyglot'; Service = 'bakerrang-web-polyglot'; Package = 'web-polyglot'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
+    [pscustomobject]@{ Logical = 'web-sign'; Service = 'bakerrang-web-sign'; Package = 'web-sign'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
 )
 
 function Get-PropertyValue {
