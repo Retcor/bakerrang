@@ -34,6 +34,15 @@ colors:
   page-ink-2: "#c2b8aa"
   page-ink-3: "#978d80"
   page-dim: "#8a8174"
+  finder: "#0c0b0a"
+  finder-rail: "#121110"
+  finder-well: "#080807"
+  finder-ink: "#f2efe9"
+  finder-ink-2: "rgba(242,239,233,0.66)"
+  finder-ink-3: "rgba(242,239,233,0.46)"
+  finder-line: "rgba(255,255,255,0.13)"
+  finder-edge: "rgba(255,255,255,0.08)"
+  finder-overlay: "rgba(255,255,255,0.78)"
 typography:
   display:
     fontFamily: "Archivo Expanded, Archivo, sans-serif"
@@ -171,6 +180,96 @@ typography:
   poly-welcome:
     fontFamily: "Archivo Expanded, Archivo, sans-serif"
     fontSize: "clamp(2.4rem, 5.4vw, 4.2rem)"
+    fontWeight: 800
+    lineHeight: 0.98
+    letterSpacing: "-0.035em"
+  sign-caption-glyph:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "40px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.04em"
+  sign-caption-glyph-phone:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "44px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.04em"
+  sign-caption-glyph-long:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "22px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.02em"
+  sign-caption-glyph-long-phone:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "20px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.02em"
+  sign-caption-name:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 600
+    lineHeight: 1.2
+  sign-caption-name-phone:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 600
+    lineHeight: 1.2
+  sign-caption-meta:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "12.5px"
+    fontWeight: 500
+    lineHeight: 1.3
+  sign-rail:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "11px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.09em"
+  sign-rail-phone:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.07em"
+  sign-howto:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.45
+  sign-howto-phone:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "14.5px"
+    fontWeight: 400
+    lineHeight: 1.45
+  sign-hold-state:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "13.5px"
+    fontWeight: 600
+    lineHeight: 1
+  sign-key:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "16.5px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.015em"
+  sign-target-glyph:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "20px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  sign-cell:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "22px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  sign-welcome:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(2.3rem, 5vw, 3.9rem)"
     fontWeight: 800
     lineHeight: 0.98
     letterSpacing: "-0.035em"
@@ -333,6 +432,81 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "9px 12px"
+  finder:
+    backgroundColor: "{colors.finder}"
+    textColor: "{colors.finder-ink}"
+    rounded: "{rounded.panel}"
+  finder-rail:
+    backgroundColor: "{colors.finder-rail}"
+    textColor: "{colors.finder-ink-3}"
+    typography: "{typography.sign-rail}"
+    padding: "0 12px"
+    height: "34px"
+  caption-strip:
+    backgroundColor: "{colors.finder}"
+    textColor: "{colors.finder-ink}"
+    typography: "{typography.sign-caption-name}"
+    padding: "0 16px"
+    height: "76px"
+  caption-glyph:
+    backgroundColor: "{colors.finder}"
+    textColor: "{colors.finder-ink}"
+    typography: "{typography.sign-caption-glyph}"
+    width: "76px"
+  caption-glyph-phone:
+    typography: "{typography.sign-caption-glyph-phone}"
+    height: "62px"
+    width: "64px"
+  target-trigger:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "6px 12px 6px 6px"
+    height: "52px"
+  target-trigger-open:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+  hold-rule:
+    backgroundColor: "{colors.line-strong}"
+    height: "3px"
+    width: "300px"
+  hold-rule-on:
+    backgroundColor: "{colors.ink}"
+  camera-key:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    typography: "{typography.sign-key}"
+    rounded: "{rounded.control}"
+    padding: "0 22px"
+    height: "64px"
+    width: "232px"
+  camera-key-hover:
+    backgroundColor: "{colors.gold-hover}"
+    textColor: "{colors.ink-on-gold}"
+  camera-key-busy:
+    backgroundColor: "{colors.gold-press}"
+    textColor: "{colors.ink-on-gold}"
+  camera-key-phone:
+    height: "60px"
+    width: "100%"
+  handshape-picker:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.panel}"
+    padding: "4px 12px 12px"
+    width: "392px"
+  handshape-cell:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink-2}"
+    typography: "{typography.sign-cell}"
+    rounded: "{rounded.control}"
+    height: "56px"
+  handshape-cell-active:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+  handshape-cell-selected:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.bg}"
 ---
 
 # Design System: BakerRang Consumer Ecosystem
@@ -929,3 +1103,251 @@ Log entries have no radius and no box, only rules.
 - **Don't** put controls in the top bar, or bring Story Book's desk, Page tokens or Literata into
   Polyglot.
 - **Don't** use a native `<select>` for the language or voice choice.
+
+## Product layer: Sign
+
+This layer applies **only** inside the Sign app (`web/apps/sign`, sign.bakerrang.com). Everything
+above still holds there. Sign is a camera **viewfinder**: the mirrored camera sits inside a fixed
+near-black finder frame with crop-mark corners marking where to hold your hand. What Sign reads is
+drawn at the hand and printed in the finder's caption strip, like a camera's info rail. Below the
+finder, the target line is printed on the ground, and it holds the Target trigger, a how-to sentence,
+the hold rule and the gold camera key. Sign adds one fixed object (the finder) and its overlay ink.
+It adds no reading layer, no dock and no new shadow. It refuses a rounded webcam card floating in a
+glass panel beside a stat grid. Evidence: `web/.impeccable/mocks/sign-comp.html` (finish verdict:
+ship) and `web/.impeccable/review/sign/*.png`. Direction: `web/.impeccable/surfaces/sign.md`.
+
+### Colors
+
+- **Finder** (`finder`, `#0c0b0a`): the camera object. It is the same in **both themes** because
+  it is a camera, not a surface. The caption strip also sits on it.
+- **Finder Rail** (`finder-rail`, `#121110`): the top info rail, one step lighter than the finder.
+- **Finder Well** (`finder-well`, `#080807`): the letterbox around the video when its aspect ratio
+  doesn't fill the finder.
+- **Finder Ink / Ink 2 / Ink 3** (`finder-ink` `#f2efe9`, `finder-ink-2` 66%, `finder-ink-3` 46%):
+  text inside the finder. The caption glyph and name are Finder Ink. The rail's lit items, the
+  quiet caption name and the caption side slot are Finder Ink 2. Rail labels, the caption meta line
+  and the empty glyph cell are Finder Ink 3. These inks never change with the theme.
+- **Finder Line** (`finder-line`, `rgba(255,255,255,0.13)`): hairlines inside the finder: under the
+  rail, above the caption strip, and beside the caption glyph column.
+- **Finder Edge** (`finder-edge`, `rgba(255,255,255,0.08)` dark / `rgba(20,18,16,0.28)` light): the
+  finder's 1px outer border. It is the only finder token that follows the theme, because it draws
+  the edge of the camera against the ground.
+- **Finder Overlay** (`finder-overlay`, `rgba(255,255,255,0.78)`): video-safe white drawn over the
+  camera image: the crop marks at rest and the skeleton lines. Joints, locked crop marks and the
+  reading glyph are pure `#fff`. Crop marks dim to `rgba(255,255,255,0.34)` while the camera is off.
+- **Ground, Line and Ink** (world tokens): the target line is printed on the world ground (`bg`),
+  never on Story Book's desk and never on a Plane slab. Its text uses the world Ink ladder.
+- **Plane / Plane 2 / Ground 2:** the handshape picker is Plane. Plane 2 marks the open trigger and
+  the active cell. Ground 2 fills picker cells and the trigger's glyph tile.
+
+**Sign Violet's role is now defined.** The world's per-tool accents (Colors → Secondary) list
+**Sign** `#B79CE0` (`#6E4FB4` light). This layer is where that accent's roles are set. They are
+narrower than a generic "emblem and hover".
+
+**The Violet Marks Held Rule.** Sign Violet (`#B79CE0` dark / `#6E4FB4` light) has three roles. It
+draws the Sign emblem (the switcher cell, and the 46px emblem on the camera-off plate, which uses
+the dark value in both themes because it sits on the finder). It draws the **held ticks** (the check
+beside "Held" in the hold row, and the small tick on each held picker cell). And it is the hover
+border of a picker cell (a 1px 55% `color-mix`). It never sets text, fills, the hold rule, the crop
+marks or the camera key.
+
+**The Camera Key Is the Gold Rule.** In the viewfinder the camera key is the only gold fill, and it
+stays gold in every state. It reads "Start camera", then "Starting…" (press gold, `aria-disabled`,
+an Ink-on-Gold spinner), then "Stop camera", and "Try again" after a problem. There is no disabled
+non-gold state and no red "recording" key. On Welcome the only gold fill is "Sign in with Google",
+and the top-bar Sign in is a ghost button. Gold Text appears only in the world's focus role (the
+focus outline, and the active picker cell's outline while the grid has focus).
+
+**The Fixed Finder Rule.** The finder, its rail, its inks and its overlays are fixed values, and
+they are independent of theme. Light mode changes the ground, the target line, the picker and the
+chrome. It never lightens the camera, and it never tints the overlay ink.
+
+**The Problems-in-Ink Rule (Sign).** Camera blocked, camera in use, no camera, hand reader failed
+and paused are each written **inside the finder plate**: a drawn 30px line icon in Finder Ink 2, a
+500 15.5px Finder Ink message, and a 13.5px Finder Ink 3 explanation. The camera key carries the way
+forward ("Try again" / "Start camera"). They never use Danger red, a toast or a coloured alert box.
+Danger stays with Sign out.
+
+### Typography
+
+**Archivo only, with Archivo Expanded for the reading glyph.** Archivo Expanded sets the "Sign"
+wordmark (800, 15px; 14px on phone), the caption glyph, the Target glyph tile, the picker cells, the
+unreadable-letter list ("D M N P Q R S T U", 700, `0.06em`), the Welcome masthead and the Not found
+heading. Everything else is plain Archivo. Sign adds no second family, and Literata never appears.
+
+- **Caption glyph** (`sign-caption-glyph`: Expanded 800, 40px, lh 1, `-0.04em`, Finder Ink;
+  **44px on phone**, `sign-caption-glyph-phone`): the reading as text of record, the loudest mark on
+  the screen. Multi-character glyphs ("ILY") drop to `sign-caption-glyph-long` (22px, `-0.02em`;
+  20px on phone). With nothing read, the cell shows a drawn 26px hand in Finder Ink 3, never a dash.
+- **Caption name** (`sign-caption-name`: 600, 18px, lh 1.2; 16px on phone): "Letter L". The quiet
+  states ("No hand in view", "Camera off") drop to 500 in Finder Ink 2.
+- **Caption meta** (`sign-caption-meta`: 500, 12.5px, lh 1.3, Finder Ink 3): "Reading · steady",
+  "Hold one hand inside the marks".
+- **Caption side slot:** 600 12px, `0.02em`, Finder Ink 2: "Target L · not yet", "On target", or a
+  drawn check plus "Held" in Finder Ink. On phone the not-yet text is omitted.
+- **Rail** (`sign-rail`: 600, 11px, `0.09em`, uppercase, Finder Ink 3; `sign-rail-phone` 10.5px,
+  `0.07em`): "Camera on · Mirror … Stays on this device" ("On device" on phone). It shows no camera
+  resolution.
+- **Target trigger:** a role label (700 10.5px, `0.12em`, uppercase, Ink 3, "Target") over the name
+  (600 15.5px Ink). The glyph tile uses `sign-target-glyph` (Expanded 800 20px; 12px for long glyphs).
+- **How-to** (`sign-howto`: 400, 15px, lh 1.45, Ink 2, max 52ch; 14.5px on phone,
+  `sign-howto-phone`): "Raise your index finger and stick your thumb out to make an L." Words only,
+  with no handshape illustration.
+- **Hold state** (`sign-hold-state`: 600, 13.5px, lh 1, Ink 2; Ink when Held): "Make the shape",
+  "Hold it…", "Held", "Not yet" (motion letters), "Reading only" (no target).
+- **Tally:** 500 13px Ink 3, with the count in 600 tabular Ink 2: "3 of 20 held this session"
+  ("this session" drops on phone). "What Sign reads" is a 500 13px Ink 2 text link underlined in
+  `line-strong`.
+- **Camera key** (`sign-key`: 700, 16.5px, lh 1, `-0.015em`, Ink on Gold).
+- **Picker:** the head "Handshapes Sign reads" is 700 11px `0.12em` uppercase Ink 3. Cells use
+  `sign-cell` (Expanded 700 22px; 13px for "ILY"), and a motion cell carries a 600 9px `0.08em`
+  uppercase "move" mark in Ink 3. The focused cell's description is a 600 14.5px Ink name over a
+  400 14px Ink 2 how-to. The footer note is 400 13px Ink 3.
+- **Welcome masthead** (`sign-welcome`: Expanded 800, `clamp(2.3rem, 5vw, 3.9rem)`, lh 0.98,
+  `-0.035em`, balanced, max 13ch; 2.3rem on phone): set **entirely in Ink**, with no gold accent
+  word.
+
+**The Reading-Is-Text Rule.** What Sign reads is always printed as text in the caption strip, in
+Archivo Expanded, as well as drawn at the hand. Match status is always words ("On target", "Held",
+"Not yet"), never colour alone. Every change is spoken through one polite live region
+("Held: Letter L").
+
+### Layout
+
+- **App frame:** the bar, the stage and the target line sit in a `100dvh` grid. The finder takes
+  the remaining height, so the target line never leaves the viewport.
+- **Bar:** 58px on every width, as in Polyglot: the logo mark (30px; 28px on phone), a 1px
+  `line-strong` rule and the Expanded wordmark on the left; the switcher and avatar on the right.
+  Signed out, the right side is a ghost "Sign in". The rule hides at ≤640px and the wordmark at
+  ≤380px.
+- **Column:** one centred column, max **960px**, with the `poly-gutter` value
+  `clamp(16px, 4vw, 32px)`. The stage has 14px of top padding (10px all round on phone, bottom 0).
+- **Finder:** a `rail / well / caption` grid. The rail is 34px (30px on phone). The well centres the
+  video plate at its own aspect ratio (16:9 on desktop, 3:4 on phone) inside the letterbox.
+- **Crop marks:** four 26px corners inset `9% 22%` of the plate on desktop and `12% 10%` on phone,
+  marking where to hold the hand.
+- **Caption strip:** a `76px glyph / 1fr text / auto side` grid, min-height 76px, with 16px text and
+  side padding. On phone it is `64px / 1fr / auto`, min-height 62px, with 12px side padding.
+- **Target line:** printed on the ground with no top border. Its inner column matches the finder
+  (960px). On desktop it is a two-row grid, "target" over "hold", with the camera key spanning both
+  rows on the right (24px column gap, 10px row gap, 14px top padding, 14px plus the safe-area inset
+  at the bottom).
+  - **target row:** Target trigger · how-to · Clear (a 40px icon button). The how-to always
+    **reserves two lines** (`min-height: 2.9em`), so a short how-to never moves the rows below it.
+  - **hold row:** fixed slots, `rule (≤300px) · state (8.5em) · slot · link`, 14px apart, **50px
+    tall**, with a 1px Line above it. The slot holds the tally, or "Next handshape" after Held. The
+    row never wraps.
+- **≤760px:** the target line stacks into target, hold, then key. The trigger and Clear share one
+  row, and the how-to runs full width below them. The camera key goes **full width at 60px** tall.
+- **≤640px (phone):** the hold row becomes two rows: the rule spans the full width, then
+  state · slot · link. The row is a fixed **76px** tall. The target line's inline padding is 14px.
+- **Handshape picker:** on desktop (≥641px) it is an anchored panel, **392px** wide, opening
+  **upward** 8px above the Target trigger, max `min(78dvh, 560px)`. At ≤640px it becomes a **bottom
+  sheet**: full width, max 88dvh, 8px top corners only, with safe-area bottom padding, over a flat
+  `rgba(0,0,0,.45)` scrim with no blur. Never a native `<select>`.
+- **Welcome:** max 1160px, a `1fr / 1.05fr` two-column grid (copy + Sign in, then the example
+  finder), gap `clamp(28px, 5vw, 72px)`. It collapses to one column at 900px. **Not found:** a
+  560px single column.
+
+**The Stable Finder Rule.** The finder's size never changes across reading, holding, Held or a
+target change. The how-to reserves two lines, the hold row has fixed slots and a fixed height, and
+reading, holding and Held update the existing nodes rather than re-mounting them. Keyboard focus
+stays where it is. On Held it does not move (Next is not auto-focused). After Clear, focus moves to
+the Target trigger.
+
+### Elevation & Depth
+
+The viewfinder is flat. The finder is a dark object set into the ground by tone and a 1px edge, with
+no shadow. The target line is printed on the ground between the finder and the page foot, with one
+hairline above the hold row. **There is no raised slab and no dock shadow.** The picker and the
+menus use the world resting shadow. The camera key carries the world contact shadow. On Welcome
+only, the example finder carries the resting shadow, because there it is a displayed object rather
+than the working instrument.
+
+**The Printed Target Line Rule.** The target line sits on the ground, never on a Plane slab and
+never with Polyglot's upward dock shadow. The finder is the one object on the screen, and it is
+defined by tone, not by elevation.
+
+### Shapes
+
+World radii are unchanged. The finder uses the 8px panel radius and clips its video. The camera key,
+Target trigger, buttons, icon buttons and picker cells use the 4px control radius. The Target glyph
+tile and the rail's "Example" tag use the 3px inner radius. The picker uses 8px (a sheet rounds its
+top corners only). The hold rule's 12 segments are square, 3px tall bars with 3px gaps.
+
+**The Crop Mark.** Each corner is an L of two **1.5px** Finder Overlay strokes, 26px on each arm. The
+crop mark is the viewfinder's signature, and it is the one place the layer uses a stroke that isn't
+a 1px rule or the 1.75 icon stroke.
+
+### Components
+
+- **Finder:** the flagship object. It is the rail (a lit dot and "Camera on", "Mirror",
+  "Stays on this device"), then the well with the mirrored video, the skeleton and the crop marks,
+  then the caption strip. It is labelled for assistive tech as "Camera, mirrored. Not recorded."
+  While the camera is off or starting, the plate shows a centred idle block: the Sign emblem (off),
+  a spinner plus a "Reader · Camera" step line (loading, permission), or a problem (see The
+  Problems-in-Ink Rule (Sign)).
+- **Reading at the hand:** the reader's skeleton is drawn over the video in Finder Overlay lines
+  with white joints. The reading sits in a small `#0c0b0a` label with a 1.5px white border at 28%
+  (2.5px at 90% when Held, plus a drawn check), anchored above the hand's topmost landmark and set
+  in white Archivo Expanded 800.
+- **Focus lock (signature):** when a target is Held, the four crop marks step **6px inward** and
+  thicken from 1.5px to **3px**, turning pure white, over **180ms**
+  (`cubic-bezier(.2,.8,.2,1)`). They hold for **~900ms** and then release. The lock class is added
+  to the persistent crop element a frame after paint, so the animation plays forward. Under reduced
+  motion they only thicken (no transform). The same moment is announced as text: "Held: Letter L".
+- **Caption strip:** the glyph column (right-bordered in Finder Line), the name over the meta line,
+  and the side slot. It is text of record and is hidden from assistive tech, because the finder's
+  own text and the live region carry the reading.
+- **Target trigger:** a 52px button with a 1px `line-strong` border, transparent at rest, and
+  Plane 2 with an Ink 3 border when hovered or open. It holds a 40px glyph tile (Ground 2, 1px Line,
+  3px radius; a drawn Ink 3 hand when there is no target), the role label and name, and an up
+  chevron. With no target the name reads "Choose a handshape".
+- **Hold rule:** 12 equal segments, 3px tall, 3px apart, `line-strong` at rest, and Ink as the hold
+  fills over 1.2s. All 12 are Ink when Held. It is a `progressbar` labelled "Hold Letter L". Motion
+  letters (J, Z) show no rule. They show "Held the moment Sign sees the motion." (500 13.5px Ink 2)
+  and a Not yet → Held state instead.
+- **Camera key:** gold, **232px min × 64px**, 0 22px padding, 4px radius, a drawn 22px Ink-on-Gold
+  camera or stop glyph, and the contact shadow. Hover is `#F0C400`. Press is `#DDBA00` with a 1px
+  drop. While starting, it is press gold with a spinner. At ≤760px it is full width and 60px tall.
+- **Handshape picker:** a `dialog` holding a 5×4 `listbox` of the 20 handshapes, with type-ahead
+  and arrow keys (Up/Down move by five). Cells are square (min 56px, 4px gap; 6px on phone),
+  Ground 2 with Ink 2 glyphs. **Hover:** Ink text with a 1px violet border. **Active:** Plane 2, Ink,
+  `line-strong` border, and a 2px Gold Text outline when the grid has focus. **Selected (the
+  current target):** inverted, an Ink fill with Ground-coloured text. **Held:** a small violet tick
+  at the top right (Ground-coloured on the selected cell). Below the grid, the focused cell's name
+  and how-to (min-height 76px) sit between Line rules. The footer names the letters Sign can't read
+  yet and says it is a practice aid, not an interpreter.
+- **"What Sign reads":** the coverage link in the hold row. It opens the picker, where the coverage
+  note lives.
+- **Welcome:** the Expanded masthead ("Hold up a handshape. Sign reads it."), a 17px Ink 2 lead, the
+  gold "Sign in with Google" (52px tall), an on-device line (13.5px Ink 3 with a drawn device icon),
+  and a coverage note under a Line rule. Beside it sits an **example finder**: a
+  drawn hand held on L with the crop marks locked, a rail carrying an honest "Example" tag (600
+  10.5px, `0.08em`, 1px white 28% border, 3px radius) instead of the device label, and a caption
+  reading "Target L · held for 1.2 s". A 13.5px Ink 3 foot says it's a drawn example. There is no
+  eyebrow above it.
+
+### Do's and Don'ts (Sign)
+
+- **Do** keep the finder `#0c0b0a` with fixed white overlay ink in both themes. Only its 1px edge
+  follows the theme.
+- **Do** print what Sign reads as Archivo Expanded text in the caption strip, as well as drawing it
+  at the hand, and state every match in words.
+- **Do** keep the camera key gold in every state, and make it the only gold fill in the viewfinder.
+- **Do** confirm Held with the focus lock (6px step-in, 1.5px → 3px, ~900ms hold; thicken only
+  under reduced motion) plus the live-region announcement.
+- **Do** keep the finder's size stable: a two-line how-to, a fixed-slot hold row, and no
+  re-mounting of controls.
+- **Do** say camera and reader problems inside the plate, in finder ink, with a drawn icon and the
+  camera key as the way forward.
+- **Do** open the handshape picker upward from Target on desktop and as a bottom sheet on phones,
+  with type-ahead.
+- **Don't** put the camera in a rounded card on a glass panel, or beside a stat grid.
+- **Don't** raise the target line onto a slab or give it a dock shadow.
+- **Don't** turn the camera key red, make it glow, or take it off gold while the camera runs.
+- **Don't** use Sign Violet for text, fills, the hold rule, the crop marks or the camera key. It is
+  the emblem, the held ticks and cell hover only.
+- **Don't** tint or theme the finder, its rail or its overlay ink.
+- **Don't** bring Literata, Story Book's desk or Page tokens, or Polyglot's dock into Sign.
+- **Don't** use a native `<select>` for the handshape choice.

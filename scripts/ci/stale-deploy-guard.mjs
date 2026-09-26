@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import { classifyChanges } from './classify-changes.mjs'
 
-const SERVICES = new Set(['api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot'])
+const SERVICES = new Set(['api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign'])
 const git = (cwd, args, encoding = 'utf8') => execFileSync('git', args, {
   cwd,
   encoding,

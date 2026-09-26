@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Sign app-icon master (design spec for the PWA icon set; rasterise to 512/192/180/32/16 at build,
+    with an app-local scripts/generate-icons.cjs cloned from apps/polyglot).
+    - Tile: world charcoal #161514, full-bleed (maskable-safe: artwork kept inside the central 80% circle).
+    - Finder corners: three crop marks in Ink #f2efe9 at 40% (the app's viewfinder signature), inside the
+      maskable circle (farthest corner ~198px from centre, radius 204.8); the pixel-B badge takes the fourth corner.
+    - Mark: the shared Sign emblem (the same path and transform as web-app-shell ProductEmblem 'sign'),
+      stroked in Sign Violet #B79CE0 (the existing accent-sign token, dark value) at the emblem's 1.75/32 weight scaled to the tile.
+    - Badge: the canonical BakerRang pixel-B, composited from bakerrang-logo.png (never redrawn;
+      SHA-256 566F5419…0EA84A21, byte-identical to client/src/assets/bakerrang-logo.png).
+    Provenance: authored for Phase E by the planner; no generated raster.
+  -->
+  <rect width="512" height="512" fill="#161514"/>
+  <g fill="none" stroke="#f2efe9" stroke-opacity=".4" stroke-width="6" stroke-linecap="square">
+    <path d="M116 144V116H144M368 116H396V144M116 368V396H144"/>
+  </g>
+  <g transform="translate(104 76) scale(8.6)" fill="none" stroke="#B79CE0" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path transform="translate(3.1 2.1) scale(1.05)" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317"/>
+  </g>
+  <image href="bakerrang-logo.png" xlink:href="bakerrang-logo.png" x="300" y="316" width="88" height="88"/>
+</svg>

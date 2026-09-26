@@ -18,6 +18,7 @@ on:
           - web-launcher
           - web-storybook
           - web-polyglot
+          - web-sign
 
 permissions:
   contents: read
@@ -37,6 +38,7 @@ jobs:
       deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
       deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
       deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
+      deploy_web_sign: ${{ steps.classify.outputs.deploy_web_sign }}
     steps:
       - name: Check out pushed commit
         uses: actions/checkout@v7
@@ -142,7 +144,7 @@ jobs:
   validate-web:
     name: Validate Shared Web
     needs: changes
-    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true'
+    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true' || needs.changes.outputs.deploy_web_sign == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -168,6 +170,9 @@ jobs:
       - name: Build Polyglot
         if: needs.changes.outputs.deploy_web_polyglot == 'true'
         run: npm run build -w @bakerrang/web-polyglot
+      - name: Build Sign
+        if: needs.changes.outputs.deploy_web_sign == 'true'
+        run: npm run build -w @bakerrang/web-sign
 
   deploy-api:
     name: Deploy API
@@ -267,6 +272,20 @@ jobs:
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
 
+  deploy-web-sign:
+    name: Deploy Web Sign
+    needs: [changes, validate-web]
+    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_web_sign == 'true' && needs.validate-web.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: web-sign
+      environment: production
+      image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
+
   guard-main:
     name: Require main branch
     if: github.event_name == 'workflow_dispatch'
@@ -315,6 +334,7 @@ jobs:
       - deploy-web-launcher
       - deploy-web-storybook
       - deploy-web-polyglot
+      - deploy-web-sign
       - guard-main
       - deploy-selected-service
     runs-on: ubuntu-latest
@@ -333,6 +353,7 @@ jobs:
           DEPLOY_WEB_LAUNCHER: ${{ needs.changes.outputs.deploy_web_launcher }}
           DEPLOY_WEB_STORYBOOK: ${{ needs.changes.outputs.deploy_web_storybook }}
           DEPLOY_WEB_POLYGLOT: ${{ needs.changes.outputs.deploy_web_polyglot }}
+          DEPLOY_WEB_SIGN: ${{ needs.changes.outputs.deploy_web_sign }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
           VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
           VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
@@ -344,6 +365,7 @@ jobs:
           WEB_LAUNCHER_RESULT: ${{ needs.deploy-web-launcher.result }}
           WEB_STORYBOOK_RESULT: ${{ needs.deploy-web-storybook.result }}
           WEB_POLYGLOT_RESULT: ${{ needs.deploy-web-polyglot.result }}
+          WEB_SIGN_RESULT: ${{ needs.deploy-web-sign.result }}
           GUARD_RESULT: ${{ needs.guard-main.result }}
           SELECTED_RESULT: ${{ needs.deploy-selected-service.result }}
         run: |
@@ -399,6 +421,10 @@ jobs:
           fi
           if [[ "$DEPLOY_WEB_POLYGLOT" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_POLYGLOT_RESULT" != "success" ) ]]; then
             echo "Affected Web Polyglot validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_POLYGLOT_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_WEB_SIGN" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_SIGN_RESULT" != "success" ) ]]; then
+            echo "Affected Web Sign validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_SIGN_RESULT" >&2
             exit 1
           fi
           echo "All affected MAIN/live validations and deployments passed."

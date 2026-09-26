@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, or web-polyglot)
+        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, or web-sign)
         required: true
         type: string
       environment:
@@ -45,6 +45,7 @@ jobs:
       WEB_LAUNCHER_SERVICE: ${{ vars.WEB_LAUNCHER_SERVICE }}
       WEB_STORYBOOK_SERVICE: ${{ vars.WEB_STORYBOOK_SERVICE }}
       WEB_POLYGLOT_SERVICE: ${{ vars.WEB_POLYGLOT_SERVICE }}
+      WEB_SIGN_SERVICE: ${{ vars.WEB_SIGN_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
@@ -55,6 +56,7 @@ jobs:
       LAUNCHER_BASE_URL: ${{ vars.LAUNCHER_BASE_URL }}
       STORYBOOK_BASE_URL: ${{ vars.STORYBOOK_BASE_URL }}
       POLYGLOT_BASE_URL: ${{ vars.POLYGLOT_BASE_URL }}
+      SIGN_BASE_URL: ${{ vars.SIGN_BASE_URL }}
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
       - name: Check out triggering commit
@@ -178,6 +180,12 @@ jobs:
               smoke_path="/"
               smoke_url="${POLYGLOT_BASE_URL%/}/"
               ;;
+            web-sign)
+              service_name="$WEB_SIGN_SERVICE"
+              image_name="web-sign"
+              smoke_path="/"
+              smoke_url="${SIGN_BASE_URL%/}/"
+              ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
@@ -280,6 +288,15 @@ jobs:
                   --build-arg VITE_OAUTH_TARGET=polyglot \
                   web
                 ;;
+              web-sign)
+                [[ -n "$VITE_API_BASE_URL" ]]
+                docker build "${common_args[@]}" \
+                  --file web/Dockerfile \
+                  --build-arg APP=sign \
+                  --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                  --build-arg VITE_OAUTH_TARGET=sign \
+                  web
+                ;;
             esac
             docker push "$tagged_image"
             digest=""
@@ -377,8 +394,14 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client|web-launcher|web-storybook|web-polyglot) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                client|web-launcher|web-storybook|web-polyglot|web-sign) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
+            fi
+            if [[ "$valid" == "true" ]]; then
+              if [[ "$LOGICAL_SERVICE" == "web-sign" ]]; then
+                vendor_headers="$(curl --silent --show-error --head --max-time 20 "${SMOKE_URL%/}/vendor/hand_landmarker-f16-v1.task")"
+                grep -qi '^cache-control:.*immutable' <<< "$vendor_headers" || valid=false
+              fi
             fi
             if [[ "$valid" == "true" ]]; then
               echo "result=passed" >> "$GITHUB_OUTPUT"

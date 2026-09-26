@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#161514" />
+<title>Sign — comp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Expanded:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+/* =========================================================
+   Sign comp — BakerRang consumer world, "The Viewfinder".
+   Archivo only (Expanded for naming + the reading glyph). World ground.
+   The finder is a fixed near-black camera object in both themes.
+   Gold = the camera key only. Sign Violet = emblem, held ticks, hover only.
+   ========================================================= */
+:root {
+  color-scheme: dark;
+  --gold: #ffd500; --gold-hover: #f0c400; --gold-press: #ddba00; --gold-text: #ffd500; --ink-on-gold: #1a1a1a;
+  --bg: #161514; --bg-2: #1c1b1a; --plane: #201f1d; --plane-2: #262523;
+  --line: rgba(255,255,255,.10); --line-strong: rgba(255,255,255,.18);
+  --ink: #f2efe9; --ink-2: #c3bfb6; --ink-3: #928d83;
+  --danger: #e88a8a;
+  --violet: #b79ce0;
+  --shadow-resting: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --shadow-contact: 0 1px 2px rgba(0,0,0,.4);
+  /* the finder: a camera object, identical in both themes */
+  --finder: #0c0b0a; --finder-rail: #121110; --finder-ink: #f2efe9; --finder-ink-2: rgba(242,239,233,.66); --finder-ink-3: rgba(242,239,233,.46);
+  --finder-line: rgba(255,255,255,.13); --finder-edge: rgba(255,255,255,.08);
+  --r-inner: 3px; --r: 4px; --r-panel: 8px;
+  --col: 960px;
+  --gut: clamp(16px, 4vw, 32px);
+  --sans: "Archivo", system-ui, "Noto Sans", "Segoe UI", sans-serif;
+  --expanded: "Archivo Expanded", "Archivo", sans-serif;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --gold-text: #8a6300;
+  --bg: #efece6; --bg-2: #e7e3db; --plane: #ffffff; --plane-2: #f6f4ef;
+  --line: rgba(20,18,16,.12); --line-strong: rgba(20,18,16,.22);
+  --ink: #1b1a18; --ink-2: #4f4b44; --ink-3: #726d64;
+  --danger: #c0362b;
+  --violet: #6e4fb4;
+  --shadow-resting: 0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10);
+  --shadow-contact: 0 1px 2px rgba(30,26,20,.10);
+  --finder-edge: rgba(20,18,16,.28);
+}
+*,*::before,*::after { box-sizing: border-box; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body { margin: 0; height: 100dvh; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--sans); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; overflow: hidden; transition: background .16s ease, color .16s ease; }
+body.is-page { overflow: auto; height: auto; min-height: 100dvh; }
+button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+a { color: inherit; }
+::selection { background: var(--gold); color: var(--ink-on-gold); }
+:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; border-radius: var(--r-inner); }
+* { scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 12px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid var(--bg); border-radius: 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---------- shared controls ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: 10px 16px; border-radius: var(--r); border: 1px solid transparent; font: 600 14px/1.2 var(--sans); cursor: pointer; background: transparent; transition: background .16s, border-color .16s, color .16s, transform .06s; white-space: nowrap; text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn--gold { background: var(--gold); color: var(--ink-on-gold); box-shadow: var(--shadow-contact); }
+.btn--gold:hover { background: var(--gold-hover); }
+.btn--gold:active { background: var(--gold-press); }
+.btn--ghost { border-color: var(--line-strong); color: var(--ink); }
+.btn--ghost:hover { background: var(--plane-2); }
+.btn--quiet { color: var(--ink-2); padding-inline: 10px; }
+.btn--quiet:hover { color: var(--ink); background: var(--plane); }
+.btn--sm { min-height: 36px; padding: 7px 12px; font-size: 13px; }
+.ibtn { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink-2); cursor: pointer; transition: background .16s, color .16s, border-color .16s; flex: none; }
+.ibtn:hover { background: var(--plane); color: var(--ink); border-color: var(--line); }
+.ibtn[aria-expanded="true"] { background: var(--plane); border-color: var(--line-strong); color: var(--ink); }
+.avatar { width: 36px; height: 36px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--plane); color: var(--ink); font: 700 12px var(--sans); cursor: pointer; letter-spacing: .02em; }
+.avatar:hover { border-color: var(--ink-3); }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- app frame + bar ---------- */
+.app { height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
+.bar { height: 58px; border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 40; }
+.bar__in { height: 100%; max-width: 1240px; margin: 0 auto; padding: 0 clamp(10px, 3vw, 28px); display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; text-decoration: none; }
+.brand__mark { width: 30px; height: 30px; display: block; }
+.brand__rule { width: 1px; height: 22px; background: var(--line-strong); }
+.brand__name { font: 800 15px/1 var(--expanded); letter-spacing: -.02em; color: var(--ink); white-space: nowrap; }
+.bar__sp { flex: 1; }
+.bar__right { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- popovers / menus (world) ---------- */
+.menu { position: relative; }
+.pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 6px; z-index: 60; display: none; }
+.menu.is-open > .pop { display: block; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.pop__head { font: 700 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 6px; }
+.pop__item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r); border: 0; background: none; color: var(--ink-2); font: 500 14px var(--sans); text-align: left; cursor: pointer; text-decoration: none; }
+.pop__item:hover { background: var(--plane-2); color: var(--ink); }
+.pop__item svg.i { width: 18px; height: 18px; }
+.pop__danger, .pop__danger:hover { color: var(--danger); }
+.pop__sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop__who { padding: 8px 10px 10px; display: grid; gap: 1px; }
+.pop__who strong { font: 600 14px var(--sans); color: var(--ink); }
+.pop__who span { font-size: 13px; color: var(--ink-3); }
+.seg { display: flex; padding: 3px; gap: 2px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); margin: 4px 6px 6px; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--ink-3); font: 600 12px var(--sans); padding: 6px; border-radius: var(--r-inner); cursor: pointer; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--plane-2); color: var(--ink); box-shadow: var(--shadow-contact); }
+.switcher { width: 292px; }
+.switcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.switcher__cell { display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: var(--r); font: 600 11.5px var(--sans); color: var(--ink-2); text-decoration: none; }
+.switcher__cell:hover { background: var(--plane-2); color: var(--ink); }
+.switcher__cell svg { width: 26px; height: 26px; color: var(--acc); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.switcher__cell.is-here { background: var(--plane-2); color: var(--ink); }
+
+/* ---------- the stage (finder area) ---------- */
+.stage { min-height: 0; display: flex; flex-direction: column; padding: 14px var(--gut) 0; }
+.stage__col { flex: 1; min-height: 0; width: 100%; max-width: var(--col); margin: 0 auto; display: flex; flex-direction: column; }
+
+/* The finder: rail / plate / caption, one near-black camera object */
+.finder { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr) auto; background: var(--finder); color: var(--finder-ink); border-radius: var(--r-panel); border: 1px solid var(--finder-edge); overflow: hidden; }
+.finder__rail { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--finder-rail); border-bottom: 1px solid var(--finder-line); font: 600 11px/1 var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--finder-ink-3); }
+.finder__rail svg.i { width: 14px; height: 14px; }
+.finder__rail .on { color: var(--finder-ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.finder__rail .sp { flex: 1; }
+.finder__rail .res { letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.finder__rail .short { display: none; }
+.rec { width: 7px; height: 7px; border-radius: 50%; background: var(--finder-ink-2); }
+.rec.off { background: transparent; border: 1px solid var(--finder-ink-3); }
+.finder__well { min-height: 0; container-type: size; display: grid; place-items: center; background: #080807; }
+.plate { position: relative; width: min(100cqw, calc(100cqh * var(--ar, 1.7778))); aspect-ratio: var(--ar, 1.7778); overflow: hidden; background: #151412; }
+.plate > svg.cam { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.plate__idle { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; text-align: center; padding: 24px; color: var(--finder-ink-2); }
+.plate__idle p { margin: 0; max-width: 30ch; font: 500 15.5px/1.45 var(--sans); color: var(--finder-ink); }
+.plate__idle small { font-size: 13.5px; color: var(--finder-ink-3); max-width: 34ch; line-height: 1.45; }
+.plate__idle .emb { width: 46px; height: 46px; color: #b79ce0; }
+.plate__idle .spin { width: 26px; height: 26px; color: var(--finder-ink-2); }
+.plate__idle .steps { display: flex; gap: 14px; font: 600 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--finder-ink-3); }
+.plate__idle .steps b { color: var(--finder-ink); font-weight: 600; }
+.plate__idle .steps span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; border: 1px solid currentColor; margin-right: 6px; vertical-align: 1px; }
+.plate__idle .steps b::before { background: var(--finder-ink); border-color: var(--finder-ink); }
+.plate__idle .alert { width: 30px; height: 30px; color: var(--finder-ink-2); }
+.plate__idle .btn--ghost { border-color: rgba(255,255,255,.3); color: var(--finder-ink); }
+.plate__idle .btn--ghost:hover { background: rgba(255,255,255,.08); }
+
+/* crop marks: the hand zone. Signature: focus lock on Held */
+.crop { position: absolute; inset: 9% 22%; pointer-events: none; }
+.crop i { position: absolute; width: 26px; height: 26px; border: 0 solid rgba(255,255,255,.78); transition: transform .18s var(--ease), border-width .18s var(--ease), border-color .18s; }
+.crop i:nth-child(1) { left: 0; top: 0; border-left-width: 1.5px; border-top-width: 1.5px; }
+.crop i:nth-child(2) { right: 0; top: 0; border-right-width: 1.5px; border-top-width: 1.5px; }
+.crop i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.crop i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+.crop.is-dim i { border-color: rgba(255,255,255,.34); }
+.crop.is-locked i { border-color: #fff; }
+.crop.is-locked i:nth-child(1) { transform: translate(6px, 6px); border-left-width: 3px; border-top-width: 3px; }
+.crop.is-locked i:nth-child(2) { transform: translate(-6px, 6px); border-right-width: 3px; border-top-width: 3px; }
+.crop.is-locked i:nth-child(3) { transform: translate(6px, -6px); border-left-width: 3px; border-bottom-width: 3px; }
+.crop.is-locked i:nth-child(4) { transform: translate(-6px, -6px); border-right-width: 3px; border-bottom-width: 3px; }
+
+/* caption strip: what Sign reads, as text of record */
+.caption { display: grid; grid-template-columns: 76px minmax(0,1fr) auto; align-items: stretch; min-height: 76px; border-top: 1px solid var(--finder-line); background: var(--finder); }
+.caption__glyph { display: grid; place-items: center; border-right: 1px solid var(--finder-line); font: 800 40px/1 var(--expanded); letter-spacing: -.04em; color: var(--finder-ink); }
+.caption__glyph.is-long { font-size: 22px; letter-spacing: -.02em; }
+.caption__glyph.is-none { color: var(--finder-ink-3); }
+.caption__glyph svg.i { width: 26px; height: 26px; stroke-width: 1.5; }
+.caption__text { display: grid; align-content: center; gap: 2px; padding: 0 16px; min-width: 0; }
+.caption__name { font: 600 18px/1.2 var(--sans); color: var(--finder-ink); }
+.caption__name.is-quiet { color: var(--finder-ink-2); font-weight: 500; }
+.caption__meta { font: 500 12.5px/1.3 var(--sans); color: var(--finder-ink-3); }
+.caption__side { display: flex; align-items: center; padding: 0 16px; gap: 8px; font: 600 12px var(--sans); letter-spacing: .02em; color: var(--finder-ink-2); }
+.caption__side svg.i { width: 18px; height: 18px; }
+.caption__side.is-held { color: var(--finder-ink); }
+
+/* ---------- target line (printed on the ground, not a raised slab) ---------- */
+.tline { padding: 0 var(--gut) calc(14px + env(safe-area-inset-bottom)); background: var(--bg); }
+.tline__in { max-width: var(--col); margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "target key" "hold key"; column-gap: 24px; row-gap: 10px; padding-top: 14px; }
+.tl-target { grid-area: target; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; min-width: 0; }
+.tl-hold { grid-area: hold; display: grid; grid-template-columns: minmax(0,300px) 8.5em minmax(0,1fr) auto; grid-template-areas: "rule state slot link"; align-items: center; column-gap: 14px; height: 50px; padding-top: 10px; border-top: 1px solid var(--line); }
+.tl-hold > .h-rule { grid-area: rule; min-width: 0; }
+.tl-hold > .h-state { grid-area: state; }
+.tl-hold > .h-slot { grid-area: slot; justify-self: end; }
+.tl-hold > .h-link { grid-area: link; }
+.hold__motion { font: 500 13.5px/1.3 var(--sans); color: var(--ink-2); }
+.tally .short { display: none; }
+.tl-key { grid-area: key; align-self: start; display: flex; }
+.trig { display: inline-flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 12px 6px 6px; border-radius: var(--r); border: 1px solid var(--line-strong); background: transparent; cursor: pointer; text-align: left; transition: background .16s, border-color .16s; }
+.trig:hover, .trig[aria-expanded="true"] { background: var(--plane-2); border-color: var(--ink-3); }
+.trig__glyph { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--r-inner); background: var(--bg-2); border: 1px solid var(--line); font: 800 20px/1 var(--expanded); letter-spacing: -.03em; color: var(--ink); }
+.trig__glyph.is-long { font-size: 12px; letter-spacing: 0; }
+.trig__glyph svg.i { width: 20px; height: 20px; color: var(--ink-3); }
+.trig__txt { display: grid; gap: 1px; }
+.trig__role { font: 700 10.5px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.trig__name { font: 600 15.5px/1.2 var(--sans); color: var(--ink); white-space: nowrap; }
+.trig svg.chev { width: 18px; height: 18px; color: var(--ink-3); }
+.howto { margin: 0; font: 400 15px/1.45 var(--sans); color: var(--ink-2); max-width: 52ch; min-height: 2.9em; display: flex; align-items: center; }
+.howto b { font-weight: 600; color: var(--ink); }
+.clear { color: var(--ink-3); }
+
+/* hold rule: 12 segments, text state beside it */
+.hold { display: flex; gap: 3px; width: 100%; }
+.hold span { flex: 1; height: 3px; background: var(--line-strong); transition: background .09s linear; }
+.hold span.on { background: var(--ink); }
+.hold.is-held span { background: var(--ink); }
+.hold__state { font: 600 13.5px/1 var(--sans); color: var(--ink-2); min-width: 7.5em; display: inline-flex; align-items: center; gap: 6px; }
+.hold__state.is-held { color: var(--ink); }
+.hold__state svg.i { width: 18px; height: 18px; color: var(--violet); stroke-width: 2.2; }
+.tally { font: 500 13px var(--sans); color: var(--ink-3); white-space: nowrap; }
+.tally b { color: var(--ink-2); font-weight: 600; }
+.linkish { border: 0; background: none; padding: 6px 2px; color: var(--ink-2); font: 500 13px var(--sans); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); cursor: pointer; }
+.linkish:hover { color: var(--ink); text-decoration-color: var(--ink-3); }
+
+/* the camera key: the one gold fill */
+.key { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 232px; min-height: 64px; padding: 0 22px; border-radius: var(--r); border: 0; background: var(--gold); color: var(--ink-on-gold); font: 700 16.5px/1 var(--sans); letter-spacing: -.015em; cursor: pointer; box-shadow: var(--shadow-contact); transition: background .14s, transform .06s; }
+.key:hover { background: var(--gold-hover); }
+.key:active { background: var(--gold-press); transform: translateY(1px); }
+.key[aria-disabled="true"] { cursor: progress; background: var(--gold-press); }
+.key svg.i { width: 22px; height: 22px; }
+.key .spin { color: var(--ink-on-gold); }
+
+/* ---------- handshape picker (anchored panel ≥641 / sheet ≤640) ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 70; display: none; }
+.picker { position: fixed; z-index: 80; width: 392px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); display: none; flex-direction: column; max-height: min(78dvh, 560px); }
+.picker.is-open { display: flex; animation: pop .16s var(--ease); }
+.picker__head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; }
+.picker__head h2 { margin: 0; font: 700 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); flex: 1; }
+.picker__head .tally { margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 4px 12px 12px; outline: none; }
+.cell { position: relative; aspect-ratio: 1; min-height: 56px; display: grid; place-items: center; border-radius: var(--r); border: 1px solid transparent; background: var(--bg-2); color: var(--ink-2); font: 700 22px/1 var(--expanded); letter-spacing: -.03em; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+.cell.is-long { font-size: 13px; letter-spacing: 0; }
+.cell:hover { color: var(--ink); border-color: color-mix(in srgb, var(--violet) 55%, transparent); }
+.cell.is-active { background: var(--plane-2); color: var(--ink); border-color: var(--line-strong); }
+.grid:focus-visible .cell.is-active { outline: 2px solid var(--gold-text); outline-offset: 1px; }
+.cell[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.cell .tick { position: absolute; top: 4px; right: 4px; width: 13px; height: 13px; color: var(--violet); stroke-width: 2.4; }
+.cell[aria-selected="true"] .tick { color: var(--bg); }
+.cell .motion { position: absolute; bottom: 4px; left: 0; right: 0; font: 600 9px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: center; }
+.cell[aria-selected="true"] .motion { color: var(--bg); opacity: .7; }
+.picker__desc { margin: 0 12px; padding: 12px 4px; border-top: 1px solid var(--line); min-height: 76px; }
+.picker__desc b { display: block; font: 600 14.5px var(--sans); color: var(--ink); }
+.picker__desc p { margin: 2px 0 0; font: 400 14px/1.45 var(--sans); color: var(--ink-2); }
+.picker__foot { margin: 0 12px; padding: 12px 4px 14px; border-top: 1px solid var(--line); font: 400 13px/1.5 var(--sans); color: var(--ink-3); }
+.picker__foot strong { color: var(--ink-2); font-weight: 600; }
+.picker__foot .dead { font-family: var(--expanded); font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
+.picker__close { display: inline-grid; }
+
+/* ---------- welcome / not found ---------- */
+.page-bar .bar__in { max-width: 1240px; }
+.welcome { max-width: 1160px; margin: 0 auto; padding: clamp(32px, 7vh, 88px) var(--gut) 64px; display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(28px, 5vw, 72px); align-items: center; }
+.welcome h1 { margin: 0 0 18px; font: 800 clamp(2.3rem, 5vw, 3.9rem)/.98 var(--expanded); letter-spacing: -.035em; text-wrap: balance; max-width: 13ch; }
+.welcome .lead { margin: 0 0 26px; font-size: 17px; line-height: 1.55; color: var(--ink-2); max-width: 44ch; }
+.welcome .fine { margin: 18px 0 0; font-size: 13.5px; color: var(--ink-3); max-width: 44ch; display: flex; gap: 8px; align-items: flex-start; }
+.welcome .fine svg.i { width: 16px; height: 16px; margin-top: 2px; }
+.welcome .cover { margin: 26px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-2); max-width: 46ch; }
+.welcome .cover .dead { font-family: var(--expanded); font-weight: 700; letter-spacing: .06em; }
+.example { display: grid; gap: 10px; }
+.finder__rail .tag { font: 600 10.5px/1 var(--sans); letter-spacing: .08em; padding: 4px 7px; border: 1px solid rgba(255,255,255,.28); border-radius: var(--r-inner); color: var(--finder-ink); }
+.example .finder { flex: none; box-shadow: var(--shadow-resting); }
+.example .plate { width: 100%; }
+.example__foot { font-size: 13.5px; color: var(--ink-3); }
+.notfound { max-width: 560px; margin: 0 auto; padding: 18vh var(--gut) 40px; }
+.notfound h1 { font: 800 clamp(2rem, 5vw, 2.8rem)/1 var(--expanded); letter-spacing: -.035em; margin: 0 0 14px; }
+.notfound p { color: var(--ink-2); margin: 0 0 24px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .welcome { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .tline__in { grid-template-columns: 1fr; grid-template-areas: "target" "hold" "key"; row-gap: 10px; }
+  .tl-target { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "trig clear" "how how"; row-gap: 8px; }
+  .tl-target .trig { grid-area: trig; justify-self: start; }
+  .tl-target .howto { grid-area: how; font-size: 14.5px; }
+  .tl-target .clear { grid-area: clear; }
+  .key { width: 100%; min-height: 60px; }
+}
+@media (max-width: 640px) {
+  .brand__rule { display: none; }
+  .brand__mark { width: 28px; height: 28px; }
+  .brand__name { font-size: 14px; }
+  .stage { padding: 10px 10px 0; }
+  .finder__rail { height: 30px; padding: 0 10px; font-size: 10.5px; letter-spacing: .07em; }
+  .finder__rail .res, .finder__rail .long { display: none; }
+  .finder__rail .short { display: inline; }
+  .caption { grid-template-columns: 64px minmax(0,1fr) auto; min-height: 62px; }
+  .caption__glyph { font-size: 44px; }
+  .caption__glyph.is-long { font-size: 20px; }
+  .caption__name { font-size: 16px; }
+  .caption__side { padding: 0 12px; }
+  .caption__side .nm { display: none; }
+  .crop { inset: 12% 10%; }
+  .tline { padding-inline: 14px; }
+  .tline__in { padding-top: 10px; }
+  .tl-hold { grid-template-columns: auto minmax(0,1fr) auto; grid-template-areas: "rule rule rule" "state slot link"; row-gap: 8px; height: 76px; padding-top: 12px; }
+  .tl-hold > .h-slot { justify-self: start; }
+  .tally .long { display: none; }
+  .picker { left: 0 !important; right: 0; bottom: 0 !important; top: auto !important; width: 100%; max-height: 88dvh; border-radius: var(--r-panel) var(--r-panel) 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .grid { gap: 6px; }
+  .welcome { padding-top: 28px; }
+  .welcome h1 { font-size: 2.3rem; }
+}
+@media (max-width: 380px) { .brand__name { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .crop.is-locked i { transform: none !important; }
+}
+:root.rm .crop.is-locked i { transform: none !important; }
+:root.rm * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+
+/* ---------- review controls (comp scaffolding only) ---------- */
+.review { position: fixed; left: 12px; bottom: 12px; z-index: 200; width: 278px; max-height: calc(100dvh - 24px); overflow: auto; background: #0d0c0b; color: #d7d2c8; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 12px; font: 500 12px/1.4 "Archivo", sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.review h4 { margin: 0 0 8px; font: 700 11px "Archivo"; letter-spacing: .1em; text-transform: uppercase; color: #8f897f; }
+.review label { display: block; margin: 8px 0 4px; color: #8f897f; }
+.review select, .review button { width: 100%; background: #1c1b1a; color: #f2efe9; border: 1px solid rgba(255,255,255,.18); border-radius: 4px; padding: 6px; font: 500 12px "Archivo"; cursor: pointer; }
+.review .row { display: flex; gap: 6px; } .review .row button { flex: 1; }
+.review .row button[aria-pressed="true"] { background: #f2efe9; color: #161514; }
+.review .note { margin: 10px 0 0; color: #8f897f; font-size: 11px; }
+.review__x { position: absolute; top: 6px; right: 8px; width: auto !important; border: 0 !important; background: none !important; font-size: 15px !important; color: #8f897f !important; }
+.review.collapsed > :not(.review__x):not(h4) { display: none; }
+.review.collapsed { width: auto; }
+@media (max-width: 640px) { .review { left: auto; right: 8px; top: 64px; bottom: auto; width: 236px; } .review.collapsed { top: 64px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="sr" id="live" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<aside class="review collapsed" id="review" aria-label="Comp review controls">
+  <button class="review__x" id="rvX" aria-label="Expand or collapse review controls">+</button>
+  <h4>Sign comp</h4>
+  <label for="rvScreen">Screen / state</label>
+  <select id="rvScreen">
+    <optgroup label="Signed out">
+      <option value="welcome">Welcome (signed out)</option>
+      <option value="notfound">Not found</option>
+    </optgroup>
+    <optgroup label="Viewfinder">
+      <option value="off">First visit — camera off</option>
+      <option value="loading">Loading the hand reader</option>
+      <option value="permission">Waiting for camera permission</option>
+      <option value="nohand">On — no hand in view</option>
+      <option value="noshape">On — not a shape Sign reads</option>
+      <option value="reading">On — reading, no target</option>
+      <option value="holding" selected>Target L — holding</option>
+      <option value="held">Target L — held (focus lock)</option>
+      <option value="motion">Target J — motion letter</option>
+      <option value="picker">Handshape picker open</option>
+    </optgroup>
+    <optgroup label="Problems">
+      <option value="denied">Camera blocked</option>
+      <option value="busy">Camera in use elsewhere</option>
+      <option value="nocamera">No camera</option>
+      <option value="failed">Hand reader failed</option>
+      <option value="paused">Paused (tab was hidden)</option>
+    </optgroup>
+  </select>
+  <label>Simulated hand</label>
+  <select id="rvHand">
+    <option value="none">No hand</option>
+    <option value="other">A shape Sign doesn't read</option>
+    <option value="A">A</option><option value="B">B</option><option value="L">L</option><option value="V">V</option>
+    <option value="Y">Y</option><option value="1">1</option><option value="5">5</option><option value="ILY">I love you</option>
+  </select>
+  <label>Theme</label>
+  <div class="row" id="rvTheme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <label>Motion</label>
+  <div class="row" id="rvMotion"><button data-v="full">Full</button><button data-v="reduced">Reduced</button></div>
+  <p class="note">Synthetic camera image: a drawn hand silhouette and skeleton stand in for live video. Pick a target (Target ▾, type a letter to jump), then set the simulated hand to the same shape: the hold rule fills over 1.2 s, the crop marks lock and it's Held. Start/Stop runs the camera states. Esc clears the target.</p>
+</aside>
+
+<script>
+/* ============ data ============ */
+const SHAPES = [
+  ['A','A','Letter A','Make a fist with your thumb resting against the side of your index finger.'],
+  ['B','B','Letter B','Hold four fingers straight up and together, with your thumb folded across your palm.'],
+  ['C','C','Letter C','Curve your fingers and thumb into a C shape.'],
+  ['E','E','Letter E','Bend your fingertips down to rest on your thumb, tucked across your palm.'],
+  ['F','F','Letter F','Touch your thumb and index fingertip in a circle, with the other three fingers up.'],
+  ['G','G','Letter G','Point your index finger and thumb sideways, parallel, with the other fingers closed.'],
+  ['H','H','Letter H','Point your index and middle fingers sideways together, with the others closed.'],
+  ['I','I','Letter I','Raise your pinky, with the other fingers closed over your thumb.'],
+  ['J','J','Letter J','Make an I, then draw a J in the air with your pinky.', true],
+  ['K','K','Letter K','Raise your index and middle fingers in a V, with your thumb touching between them.'],
+  ['L','L','Letter L','Raise your index finger and stick your thumb out to make an L.'],
+  ['O','O','Letter O','Curve all your fingertips to meet your thumb in an O.'],
+  ['V','V','Letter V','Raise your index and middle fingers apart in a V, with the others closed.'],
+  ['W','W','Letter W','Raise your index, middle and ring fingers apart, with your thumb holding your pinky.'],
+  ['X','X','Letter X','Hook your index finger, with the other fingers closed.'],
+  ['Y','Y','Letter Y','Stretch out your thumb and pinky, with the middle three fingers closed.'],
+  ['Z','Z','Letter Z','Draw a Z in the air with your index finger.', true],
+  ['1','1','Number 1','Raise your index finger, with the other fingers closed and your thumb over them.'],
+  ['5','5','Number 5','Spread all five fingers open.'],
+  ['ILY','ILY','I love you','Stretch out your thumb, index finger and pinky, with the middle two fingers folded down.']
+].map(([id, glyph, name, howTo, motion]) => ({ id, glyph, name, howTo, motion: !!motion }))
+const byId = Object.fromEntries(SHAPES.map(s => [s.id, s]))
+const DEAD = 'D M N P Q R S T U'
+
+/* ============ icons ============ */
+const P = {
+  camera: '<path d="M3.5 8.5A1.5 1.5 0 0 1 5 7h2.2l1.4-2h6.8l1.4 2H19a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/><circle cx="12" cy="12.8" r="3.4"/>',
+  stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor" stroke="none"/>',
+  chevron: '<path d="m7 14 5-5 5 5"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  device: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
+  mirror: '<path d="M12 3v18M8 7 4 12l4 5M16 7l4 5-4 5"/>',
+  alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17h.01"/>',
+  camoff: '<path d="M3 3l18 18M9 5h6.4l1.4 2H19a1.5 1.5 0 0 1 1.5 1.5v8M16.6 19H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 7h.5"/><path d="M9.8 10.3a3.4 3.4 0 0 0 4.4 4.9"/>',
+  pause: '<path d="M9 6v12M15 6v12"/>',
+  hand: '<path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11m0-6.5V4a1.5 1.5 0 0 1 3 0v7m0-5.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.8a6 6 0 0 1-5.1-2.8L3.6 14a1.5 1.5 0 0 1 2.5-1.6L8 15"/>',
+  grid: '<rect x="4" y="4" width="4" height="4" rx=".8"/><rect x="10" y="4" width="4" height="4" rx=".8"/><rect x="16" y="4" width="4" height="4" rx=".8"/><rect x="4" y="10" width="4" height="4" rx=".8"/><rect x="10" y="10" width="4" height="4" rx=".8"/><rect x="16" y="10" width="4" height="4" rx=".8"/><rect x="4" y="16" width="4" height="4" rx=".8"/><rect x="10" y="16" width="4" height="4" rx=".8"/><rect x="16" y="16" width="4" height="4" rx=".8"/>',
+  home: '<path d="M4 11 12 4l8 7M6 9.5V20h12V9.5"/>',
+  user: '<circle cx="12" cy="9" r="3.6"/><path d="M5 20c1.3-3.3 4-4.8 7-4.8s5.7 1.5 7 4.8"/>',
+  signout: '<path d="M15 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M18 15l3-3-3-3M10 12h11"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>',
+  system: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
+  google: '<path fill="currentColor" stroke="none" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1-.8 2.6-2.3 3.6l3.6 2.8c2.1-2 3.7-4.9 3.7-8.3zM12 24c3.2 0 5.9-1.1 7.9-2.9l-3.6-2.8c-1 .7-2.3 1.2-4.3 1.2-3.3 0-6.1-2.2-7.1-5.2l-3.7 2.9C3.2 21.3 7.3 24 12 24zM4.9 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.8C.4 8.3 0 10.1 0 12s.4 3.7 1.2 5.2l3.7-2.9zM12 4.8c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.9 14.4.9 12 .9 7.3.9 3.2 3.6 1.2 6.8l3.7 2.9C5.9 6.7 8.7 4.8 12 4.8z"/>'
+}
+const ic = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`
+const EMB = {
+  sign: '<path vector-effect="non-scaling-stroke" transform="translate(3.1 2.1) scale(1.05)" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317"/>',
+  storybook: '<path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/>',
+  polyglot: '<path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/><path d="M17 26l4.5-10L26 26M18.7 22h5.6"/>',
+  budget: '<circle cx="16" cy="16" r="11"/><path d="M16 9.4v13.2"/><path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/>',
+  wow: '<path d="M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z"/><path d="M16 10v9M12.5 13.5L16 11l3.5 2.5"/>',
+  passwords: '<rect x="7" y="14" width="18" height="12" rx="2.5"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="1.6"/>',
+  account: '<circle cx="16" cy="12" r="5"/><path d="M6 26c1.8-4.4 5.6-6.5 10-6.5S24.2 21.6 26 26"/>'
+}
+const emb = (id, cls = '') => `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${EMB[id]}</svg>`
+
+/* ============ synthetic camera: a parametric drawn hand ============
+   Hand units: wrist at (0,0), fingers up (screen y down). Frontal view, mirrored
+   (thumb on the viewer's left, as a right hand seen in a mirror). Curl folds a
+   finger toward the camera: each segment projects by cos(cumulative flex). */
+const FING = {
+  index: { mcp: [-0.30, -0.84], len: [0.40, 0.25, 0.19], ang: -97, w: 0.155 },
+  middle: { mcp: [-0.09, -0.91], len: [0.45, 0.29, 0.21], ang: -91, w: 0.16 },
+  ring: { mcp: [0.12, -0.87], len: [0.42, 0.27, 0.19], ang: -85, w: 0.15 },
+  pinky: { mcp: [0.31, -0.76], len: [0.32, 0.20, 0.17], ang: -78, w: 0.13 }
+}
+const POSES = {
+  '5': { f: { index: [0, -8], middle: [0, -2], ring: [0, 5], pinky: [0, 12] }, t: [-158, 0] },
+  B: { f: { index: [0, 3], middle: [0, 1], ring: [0, -1], pinky: [0, -3] }, t: [-38, .6] },
+  A: { f: { index: [1, 0], middle: [1, 0], ring: [1, 0], pinky: [1, 0] }, t: [-102, 0] },
+  L: { f: { index: [0, 0], middle: [1, 0], ring: [1, 0], pinky: [1, 0] }, t: [-176, 0] },
+  V: { f: { index: [0, -10], middle: [0, 7], ring: [1, 0], pinky: [1, 0] }, t: [-40, .7] },
+  Y: { f: { index: [1, 0], middle: [1, 0], ring: [1, 0], pinky: [0, 16] }, t: [-164, 0] },
+  1: { f: { index: [0, 0], middle: [1, 0], ring: [1, 0], pinky: [1, 0] }, t: [-40, .7] },
+  ILY: { f: { index: [0, -6], middle: [1, 0], ring: [1, 0], pinky: [0, 14] }, t: [-162, 0] },
+  I: { f: { index: [1, 0], middle: [1, 0], ring: [1, 0], pinky: [0, 6] }, t: [-40, .7] },
+  other: { f: { index: [.45, -4], middle: [0, 0], ring: [.45, 4], pinky: [0, 16] }, t: [-120, .3] }
+}
+const rad = d => d * Math.PI / 180
+function handPoints (pose) {
+  const P0 = [0, 0]
+  const pts = new Array(21)
+  pts[0] = P0
+  // thumb
+  const cmc = [-0.24, -0.2]
+  let a = pose.t[0]; const tc = pose.t[1]
+  const tl = [0.30, 0.26, 0.21]; const bend = [0, 28 * tc, 38 * tc]
+  let p = cmc; pts[1] = cmc
+  const fold = 1 - 0.42 * tc // a thumb folded across the palm foreshortens toward the camera
+  for (let k = 0; k < 3; k++) { a += bend[k]; p = [p[0] + tl[k] * fold * Math.cos(rad(a)), p[1] + tl[k] * fold * Math.sin(rad(a))]; pts[2 + k] = p }
+  // fingers
+  const order = ['index', 'middle', 'ring', 'pinky']
+  order.forEach((name, fi) => {
+    const F = FING[name]; const [c, spread] = pose.f[name]
+    const ang = F.ang + spread
+    const flex = [80 * c, 95 * c, 55 * c]
+    let cum = 0; let q = F.mcp
+    const base = 5 + fi * 4
+    pts[base] = q
+    for (let k = 0; k < 3; k++) {
+      cum += flex[k]
+      const l = F.len[k] * Math.cos(rad(cum))
+      const drift = F.len[k] * Math.sin(rad(cum)) * 0.12
+      q = [q[0] + l * Math.cos(rad(ang)) + drift * 0.4, q[1] + l * Math.sin(rad(ang)) + drift]
+      pts[base + 1 + k] = q
+    }
+  })
+  return pts
+}
+function camSVG (shape, { ar = 16 / 9, held = false, label = true } = {}) {
+  const W = 1000; const H = Math.round(W / ar)
+  const s = Math.min(H * 0.36, W * 0.4); const ox = W * 0.52; const oy = H * 0.9
+  const X = x => (ox + x * s).toFixed(1); const Y = y => (oy + y * s).toFixed(1)
+  let g = `<svg class="cam" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`
+  // the room + a shoulder: flat tones, a stand-in for video
+  g += `<rect width="${W}" height="${H}" fill="#1b1a18"/><rect y="${H * 0.62}" width="${W}" height="${H * 0.38}" fill="#191816"/>`
+  g += `<path d="M${W * 0.08} ${H} C ${W * 0.12} ${H * 0.66}, ${W * 0.3} ${H * 0.6}, ${W * 0.4} ${H * 0.58} L ${W * 0.6} ${H * 0.58} C ${W * 0.72} ${H * 0.6}, ${W * 0.9} ${H * 0.66}, ${W * 0.93} ${H} Z" fill="#221f1c"/>`
+  g += `<ellipse cx="${W * 0.5}" cy="${H * 0.36}" rx="${H * 0.15}" ry="${H * 0.19}" fill="#24211e"/>`
+  if (!shape || shape === 'none') return g + '</svg>'
+  const pts = handPoints(POSES[shape] || POSES['5'])
+  const skin = '#57504a'; const skin2 = '#4c4640'
+  // forearm
+  g += `<path d="M${X(-0.26)} ${Y(0.02)} L ${X(-0.34)} ${Y(1.2)} L ${X(0.36)} ${Y(1.2)} L ${X(0.27)} ${Y(0.02)} Z" fill="${skin2}"/>`
+  // palm
+  const palm = [[-0.27, 0.02], pts[1], [-0.33, -0.62], FING.index.mcp, FING.middle.mcp, FING.ring.mcp, FING.pinky.mcp, [0.36, -0.5], [0.28, 0.02]]
+  g += `<path d="M${palm.map(p => `${X(p[0])} ${Y(p[1])}`).join(' L ')} Z" fill="${skin}" stroke="${skin}" stroke-width="${s * 0.1}" stroke-linejoin="round"/>`
+  const chain = (ids, w) => `<polyline points="${ids.map(i => `${X(pts[i][0])},${Y(pts[i][1])}`).join(' ')}" fill="none" stroke="${skin}" stroke-width="${(s * w).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`
+  g += chain([1, 2, 3, 4], 0.17)
+  ;['index', 'middle', 'ring', 'pinky'].forEach((n, fi) => { const b = 5 + fi * 4; g += chain([b, b + 1, b + 2, b + 3], FING[n].w) })
+  // knuckle creases, quiet
+  // skeleton overlay (what the reader draws)
+  const bones = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]]
+  g += `<g stroke="rgba(255,255,255,.78)" stroke-width="2.2" stroke-linecap="round" fill="none">${bones.map(([a, b]) => `<line x1="${X(pts[a][0])}" y1="${Y(pts[a][1])}" x2="${X(pts[b][0])}" y2="${Y(pts[b][1])}"/>`).join('')}</g>`
+  g += `<g fill="#fff">${pts.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4.2"/>`).join('')}</g>`
+  // the reading at the hand: an upright chip above the highest landmark
+  if (label && byId[shape]) {
+    const tip = pts.reduce((m, p) => (p[1] < m[1] ? p : m)); const top = oy + tip[1] * s; const cx = ox + tip[0] * s // anchored over the topmost landmark
+    const glyph = byId[shape].glyph; const long = glyph.length > 1
+    const fs = Math.max(34, H * 0.075) * (long ? 0.62 : 1)
+    const w = (long ? fs * 2.6 : fs * 1.25) + (held ? fs * 0.95 : 0); const h = Math.max(34, H * 0.075) * 1.32
+    const x0 = Math.min(Math.max(cx - w / 2, 12), W - w - 12); const y0 = Math.max(top - h - 18, 12)
+    g += `<g><rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="5" fill="#0c0b0a" stroke="rgba(255,255,255,${held ? 0.9 : 0.28})" stroke-width="${held ? 2.5 : 1.5}"/>`
+    g += `<text x="${x0 + (held ? (w - fs * 0.95) / 2 : w / 2)}" y="${y0 + h / 2}" fill="#fff" font-family="Archivo Expanded, Archivo, sans-serif" font-weight="800" font-size="${fs}" text-anchor="middle" dominant-baseline="central" letter-spacing="-1">${glyph}</text>`
+    if (held) { const cxk = x0 + w - fs * 0.62; const cyk = y0 + h / 2; const k = fs * 0.018; g += `<path transform="translate(${cxk - 12 * k} ${cyk - 12 * k}) scale(${k})" d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>` }
+    g += '</g>'
+  }
+  return g + '</svg>'
+}
+
+/* ============ state ============ */
+const S = {
+  screen: 'finder', theme: 'dark', motion: 'full',
+  cam: 'on', // off | loading | permission | on | denied | busy | nocamera | failed | paused
+  hand: 'L', target: 'L', held: new Set(['A', 'B', 'V']), progress: 0.58, heldNow: false,
+  picker: false, active: 'L', lock: false
+}
+const root = document.getElementById('root')
+const live = document.getElementById('live')
+let lastSaid = ''
+const say = t => { if (t && t !== lastSaid) { lastSaid = t; live.textContent = ''; setTimeout(() => { live.textContent = t }, 30) } }
+const isPhone = () => matchMedia('(max-width: 640px)').matches
+const ar = () => isPhone() ? 3 / 4 : 16 / 9
+
+const reading = () => {
+  if (S.cam !== 'on') return null
+  if (S.hand === 'none') return { none: 'hand' }
+  if (!byId[S.hand]) return { none: 'shape' }
+  return byId[S.hand]
+}
+
+/* ============ templates ============ */
+function bar (signedIn = true) {
+  return `<header class="bar${signedIn ? '' : ' page-bar'}"><div class="bar__in">
+    <a class="brand" href="#" aria-label="Sign — home"><img class="brand__mark" src="bakerrang-logo.png" alt="BakerRang" width="30" height="30"><span class="brand__rule" aria-hidden="true"></span><span class="brand__name">Sign</span></a>
+    <div class="bar__sp"></div>
+    ${signedIn ? `<div class="bar__right">
+      <div class="menu" id="mSw"><button class="ibtn" aria-label="Switch app" aria-haspopup="true" aria-expanded="false" data-menu="mSw">${ic('grid')}</button>
+        <div class="pop switcher" role="menu"><div class="pop__head">BakerRang tools</div><div class="switcher__grid">
+          ${[['storybook', 'Story Book', '#f08a5d'], ['polyglot', 'Polyglot', '#58c0c9'], ['sign', 'Sign', 'var(--violet)'], ['budget', 'Budget', '#7fb0e8'], ['wow', 'WoW', '#d69a4c'], ['passwords', 'Passwords', '#aeb8c2']].map(([id, n, c]) => `<a class="switcher__cell${id === 'sign' ? ' is-here' : ''}" href="#" style="--acc:${c}" role="menuitem"${id === 'sign' ? ' aria-current="page"' : ''}>${emb(id)}${n}</a>`).join('')}
+        </div><div class="pop__sep"></div><a class="pop__item" href="#" role="menuitem">${ic('home')}All tools — Launcher</a></div></div>
+      <div class="menu" id="mAc"><button class="avatar" aria-label="Account menu for Jamie Baker" aria-haspopup="true" aria-expanded="false" data-menu="mAc">JB</button>
+        <div class="pop" role="menu"><div class="pop__who"><strong>Jamie Baker</strong><span>jamie@example.com</span></div>
+          <div class="pop__head">Theme</div>
+          <div class="seg" role="group" aria-label="Theme">${[['light', 'sun', 'Light'], ['dark', 'moon', 'Dark'], ['system', 'system', 'System']].map(([v, i, l]) => `<button data-theme-set="${v}" aria-pressed="${S.theme === v}">${l}</button>`).join('')}</div>
+          <div class="pop__sep"></div>
+          <a class="pop__item" href="#" role="menuitem">${ic('user')}Account</a>
+          <button class="pop__item pop__danger" role="menuitem">${ic('signout')}Sign out</button></div></div>
+    </div>` : `<button class="btn btn--ghost btn--sm" data-go="finder">${ic('google')}Sign in</button>`}
+  </div></header>`
+}
+
+function plateInner () {
+  const r = reading()
+  const idle = (inner) => `<div class="plate__idle">${inner}</div>`
+  switch (S.cam) {
+    case 'off': return idle(`${emb('sign', 'emb')}<p>Hold your hand up to the camera and Sign reads the handshape.</p><small>Your camera stays on this device. Sign sends no video or images anywhere.</small>`)
+    case 'loading': return idle(`<div class="spin" aria-hidden="true"></div><p>Loading the hand reader…</p><div class="steps"><b>Reader</b><span>Camera</span></div><small>The first start downloads about 20 MB. Later starts are quicker.</small>`)
+    case 'permission': return idle(`${ic('camera', 'i alert')}<p>Allow camera access in your browser to continue.</p><div class="steps"><b>Reader</b><b>Camera</b></div>`)
+    case 'denied': return idle(`${ic('camoff', 'i alert')}<p>Sign can't see your camera.</p><small>Allow camera access for sign.bakerrang.com in your browser's site settings, then try again.</small>`)
+    case 'busy': return idle(`${ic('alert', 'i alert')}<p>Your camera is being used by another app.</p><small>Close it, then try again.</small>`)
+    case 'nocamera': return idle(`${ic('camoff', 'i alert')}<p>No camera found on this device.</p><small>Sign needs a camera to read your hand.</small>`)
+    case 'failed': return idle(`${ic('alert', 'i alert')}<p>Sign couldn't start its hand reader on this device.</p><small>Check your connection and try again.</small>`)
+    case 'paused': return idle(`${ic('pause', 'i alert')}<p>Camera paused while Sign was in the background.</p><small>It turns off whenever you leave, so it's never on unseen.</small>`)
+  }
+  const shape = r && !r.none ? r.id : (r && r.none === 'shape' ? 'other' : 'none')
+  return camSVG(shape, { ar: ar(), held: S.heldNow })
+}
+
+function caption () {
+  const r = reading()
+  let glyph = ic('hand'); let long = false; let none = true; let name = ''; let meta = ''; let side = ''; let sideCls = ''
+  const t = S.target && byId[S.target]
+  if (S.cam !== 'on') {
+    name = { off: 'Camera off', loading: 'Starting…', permission: 'Waiting for permission', paused: 'Camera paused' }[S.cam] || 'Camera off'
+    meta = 'Nothing is being read'
+  } else if (r.none === 'hand') { name = 'No hand in view'; meta = 'Hold one hand inside the marks' } else if (r.none === 'shape') { name = 'Not a shape Sign reads'; meta = 'Try one from Target' } else {
+    glyph = r.glyph; long = glyph.length > 1; none = false; name = r.name; meta = 'Reading · steady'
+    if (t && S.heldNow) { side = `${ic('check')}<span>Held</span>`; sideCls = ' is-held' } else if (t && r.id === t.id) side = '<span>On target</span>'
+    else if (t) side = `<span class="nm">Target ${t.glyph} · not yet</span>`
+  }
+  return `<div class="caption" aria-hidden="true">
+    <div class="caption__glyph${long ? ' is-long' : ''}${none ? ' is-none' : ''}">${glyph}</div>
+    <div class="caption__text"><div class="caption__name${none ? ' is-quiet' : ''}">${name}</div><div class="caption__meta">${meta}</div></div>
+    <div class="caption__side${sideCls}">${side}</div></div>`
+}
+
+function finder () {
+  const on = S.cam === 'on'
+  const locked = S.lock ? ' is-locked' : ''
+  const dim = on ? '' : ' is-dim'
+  const r = reading()
+  const readText = !on ? 'Camera off' : r.none === 'hand' ? 'No hand in view' : r.none === 'shape' ? 'Not a shape Sign reads' : `Reading: ${r.name}`
+  return `<section class="finder" aria-label="Camera, mirrored. Not recorded.">
+    <div class="finder__rail"><span class="on"><span class="rec${on ? '' : ' off'}"></span>${on ? 'Camera on' : 'Camera off'}</span><span aria-hidden="true">·</span><span class="on">${ic('mirror')}Mirror</span><span class="sp"></span><span class="on">${ic('device')}<span class="long">Stays on this device</span><span class="short">On device</span></span></div>
+    <div class="finder__well"><div class="plate" style="--ar:${ar()}">${plateInner()}<div class="crop${dim}${locked}" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div></div>
+    ${caption()}
+    <p class="sr">${readText}</p>
+  </section>`
+}
+
+function tline () {
+  const t = S.target && byId[S.target]
+  const on = S.cam === 'on'
+  const n = S.held.size
+  const keyLabel = { off: 'Start camera', loading: 'Starting…', permission: 'Starting…', on: 'Stop camera', paused: 'Start camera', denied: 'Try again', busy: 'Try again', failed: 'Try again', nocamera: 'Start camera' }[S.cam]
+  const keyIcon = (S.cam === 'loading' || S.cam === 'permission') ? '<span class="spin" aria-hidden="true"></span>' : on ? ic('stop') : ic('camera')
+  const busy = S.cam === 'loading' || S.cam === 'permission'
+  const segs = Array.from({ length: 12 }, (_, i) => `<span class="${S.heldNow || i < Math.round(S.progress * 12) ? 'on' : ''}"></span>`).join('')
+  let holdState = ''
+  if (t && on) {
+    if (S.heldNow) holdState = `<span class="hold__state is-held">${ic('check')}Held</span>`
+    else if (t.motion) holdState = '<span class="hold__state">Not yet</span>'
+    else if (S.progress > 0) holdState = '<span class="hold__state">Hold it…</span>'
+    else holdState = '<span class="hold__state">Make the shape</span>'
+  } else if (on) holdState = '<span class="hold__state">Reading only</span>'
+  return `<div class="tline"><div class="tline__in">
+    <div class="tl-target">
+      <button class="trig" id="trig" aria-haspopup="dialog" aria-expanded="${S.picker}" aria-controls="picker">
+        <span class="trig__glyph${t && t.glyph.length > 1 ? ' is-long' : ''}">${t ? t.glyph : ic('hand')}</span>
+        <span class="trig__txt"><span class="trig__role">Target</span><span class="trig__name">${t ? t.name : 'Choose a handshape'}</span></span>${ic('chevron', 'i chev')}
+      </button>
+      <p class="howto">${t ? t.howTo : 'Pick one of the 20 handshapes Sign reads, then hold it until Sign says Held.'}</p>
+      ${t ? `<button class="ibtn clear" data-act="clear" aria-label="Clear target">${ic('close')}</button>` : '<span></span>'}
+    </div>
+    <div class="tl-hold">
+      <div class="h-rule">${t && on && !t.motion ? `<div class="hold${S.heldNow ? ' is-held' : ''}" role="progressbar" aria-label="Hold ${t.name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${S.heldNow ? 100 : Math.round(S.progress * 100)}">${segs}</div>` : t && on ? `<span class="hold__motion">Held the moment Sign sees the motion.</span>` : ''}</div>
+      <div class="h-state">${holdState}</div>
+      <div class="h-slot">${S.heldNow ? '<button class="btn btn--ghost btn--sm" data-act="next">Next handshape</button>' : `<span class="tally"><b class="tnum">${n}</b> of 20 held<span class="long"> this session</span></span>`}</div>
+      <button class="linkish h-link" data-act="coverage">What Sign reads</button>
+    </div>
+    <div class="tl-key"><button class="key" data-act="cam"${busy ? ' aria-disabled="true"' : ''}>${keyIcon}${keyLabel}</button></div>
+  </div></div>`
+}
+
+function picker () {
+  const a = byId[S.active] || SHAPES[0]
+  return `<div class="scrim" id="scrim" style="display:${S.picker && isPhone() ? 'block' : 'none'}"></div>
+  <div class="picker${S.picker ? ' is-open' : ''}" id="picker" role="dialog" aria-modal="${isPhone()}" aria-labelledby="pkTitle">
+    <div class="picker__head"><h2 id="pkTitle">Handshapes Sign reads</h2><span class="tally"><b class="tnum">${S.held.size}</b> of 20 held</span><button class="ibtn picker__close" data-act="closepk" aria-label="Close">${ic('close')}</button></div>
+    <div class="grid" id="grid" role="listbox" tabindex="0" aria-label="Handshapes" aria-activedescendant="c-${a.id}" aria-describedby="pkDesc">
+      ${SHAPES.map(s => `<div class="cell${s.glyph.length > 1 ? ' is-long' : ''}${s.id === S.active ? ' is-active' : ''}" id="c-${s.id}" role="option" aria-selected="${s.id === S.target}" aria-label="${s.name}${S.held.has(s.id) ? ', held' : ''}${s.motion ? ', motion' : ''}" data-id="${s.id}">${s.glyph}${S.held.has(s.id) ? ic('check', 'i tick') : ''}${s.motion ? '<span class="motion" aria-hidden="true">move</span>' : ''}</div>`).join('')}
+    </div>
+    <div class="picker__desc" id="pkDesc" aria-live="off"><b>${a.name}${S.held.has(a.id) ? ' · held' : ''}</b><p>${a.howTo}</p></div>
+    <div class="picker__foot"><strong>Can't read yet:</strong> <span class="dead">${DEAD}</span>. Sign reads one hand at a time. It's a practice aid, not an interpreter.</div>
+  </div>`
+}
+
+function welcome () {
+  return `${bar(false)}<main class="welcome">
+    <section>
+      <h1>Hold up a handshape. Sign reads it.</h1>
+      <p class="lead">Practise the ASL handshapes with your camera. Sign shows what it reads at your hand, and tells you when you're holding the one you're practising.</p>
+      <button class="btn btn--gold" data-go="finder" style="min-height:52px;padding:0 22px;font-size:15px">${ic('google')}Sign in with Google</button>
+      <p class="fine">${ic('device')}<span>Sign reads your hand on this device. No video or images leave your browser.</span></p>
+      <p class="cover">Reads 20 handshapes: 17 letters of the manual alphabet, 1, 5 and I love you. It can't read <span class="dead">${DEAD}</span> yet, and it isn't an interpreter.</p>
+    </section>
+    <section class="example" aria-label="Example: Sign reading the letter L">
+      <div class="finder"><div class="finder__rail"><span class="on"><span class="rec"></span>Camera on</span><span aria-hidden="true">·</span><span class="on">${ic('mirror')}Mirror</span><span class="sp"></span><span class="tag">Example</span></div>
+        <div class="plate" style="--ar:1.6">${camSVG('L', { ar: 1.6, held: true })}<div class="crop is-locked" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+        <div class="caption" aria-hidden="true"><div class="caption__glyph">L</div><div class="caption__text"><div class="caption__name">Letter L</div><div class="caption__meta">Target L · held for 1.2 s</div></div><div class="caption__side is-held">${ic('check')}<span>Held</span></div></div>
+      </div>
+      <p class="example__foot">Drawn example. In the app, this is your own camera, mirrored.</p>
+    </section>
+  </main>`
+}
+
+function notfound () {
+  return `${bar(true)}<main class="notfound"><h1>Nothing here.</h1><p>This page doesn't exist in Sign. The viewfinder is on the home page.</p><button class="btn btn--ghost" data-go="finder">Back to Sign</button></main>`
+}
+
+/* ============ render ============ */
+let pkPos = null
+function render () {
+  const f = document.activeElement
+  const fKey = f && f !== document.body ? (f.id ? '#' + f.id : (f.dataset && f.dataset.act ? `[data-act="${f.dataset.act}"]` : null)) : null
+  document.documentElement.dataset.theme = S.theme
+  document.documentElement.classList.toggle('rm', S.motion === 'reduced')
+  document.querySelector('meta[name=theme-color]').content = S.theme === 'dark' ? '#161514' : '#efece6'
+  document.body.classList.toggle('is-page', S.screen !== 'finder')
+  if (S.screen === 'welcome') root.innerHTML = welcome()
+  else if (S.screen === 'notfound') root.innerHTML = notfound()
+  else root.innerHTML = `<div class="app">${bar(true)}<main class="stage"><div class="stage__col">${finder()}</div></main>${tline()}</div>${picker()}`
+  placePicker()
+  if (fKey && !S.picker) {
+    const el = document.querySelector(fKey) || (['[data-act="clear"]', '[data-act="next"]'].includes(fKey) ? document.getElementById('trig') : null)
+    if (el) el.focus({ preventScroll: true })
+  }
+}
+function placePicker () {
+  const pk = document.getElementById('picker'); const trig = document.getElementById('trig')
+  if (!pk || !trig || !S.picker || isPhone()) return
+  const r = trig.getBoundingClientRect()
+  pk.style.left = Math.max(12, Math.min(r.left, innerWidth - 404)) + 'px'
+  pk.style.top = 'auto'
+  pk.style.bottom = (innerHeight - r.top + 8) + 'px'
+}
+
+/* ============ behavior ============ */
+let holdTimer = null; let lockTimer = null
+function tick () {
+  clearInterval(holdTimer)
+  const t = byId[S.target]
+  if (!t || S.cam !== 'on' || S.heldNow) return
+  if (S.hand !== S.target) { if (S.progress) { S.progress = 0; render() } return }
+  if (t.motion) return
+  holdTimer = setInterval(() => {
+    S.progress = Math.min(1, S.progress + 0.1 / 1.2)
+    if (S.progress >= 1) { clearInterval(holdTimer); onHeld(); return }
+    const segs = document.querySelectorAll('.hold span'); const n = Math.round(S.progress * 12)
+    segs.forEach((s, i) => s.classList.toggle('on', i < n))
+    const st = document.querySelector('.hold__state'); if (st) st.textContent = 'Hold it…'
+    const pb = document.querySelector('.hold'); if (pb) pb.setAttribute('aria-valuenow', Math.round(S.progress * 100))
+  }, 100)
+}
+function onHeld () {
+  S.heldNow = true; S.held.add(S.target); S.lock = false
+  render(); say(`Held: ${byId[S.target].name}`)
+  // the lock animates forward: add the class a frame after paint, then release
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.crop')?.classList.add('is-locked')))
+  clearTimeout(lockTimer); lockTimer = setTimeout(() => { document.querySelector('.crop')?.classList.remove('is-locked') }, 900)
+}
+function setTarget (id) {
+  S.target = id; S.active = id || S.active; S.progress = 0; S.heldNow = false; S.lock = false
+  render(); if (id) say(`Target: ${byId[id].name}. ${byId[id].howTo}`); else say('Target cleared. Reading only.')
+  tick()
+}
+function setHand (h) {
+  S.hand = h; S.heldNow = false; S.progress = 0; S.lock = false
+  render()
+  const r = reading(); if (r) say(r.none === 'hand' ? 'No hand in view' : r.none === 'shape' ? 'Not a shape Sign reads' : `Reading: ${r.name}`)
+  tick()
+}
+let camTimer = null
+function startCam () {
+  clearTimeout(camTimer)
+  S.cam = 'loading'; S.heldNow = false; S.progress = 0; render(); say('Loading the hand reader')
+  camTimer = setTimeout(() => { S.cam = 'permission'; render(); say('Allow camera access in your browser to continue.')
+    camTimer = setTimeout(() => { S.cam = 'on'; render(); say('Camera on'); tick() }, 900) }, 1100)
+}
+function stopCam () { clearTimeout(camTimer); clearInterval(holdTimer); S.cam = 'off'; S.progress = 0; S.heldNow = false; render(); say('Camera off') }
+
+function openPicker (open) {
+  S.picker = open; if (open) S.active = S.target || S.active || 'A'
+  render()
+  if (open) document.getElementById('grid')?.focus(); else document.getElementById('trig')?.focus()
+}
+function moveActive (d) {
+  const i = SHAPES.findIndex(s => s.id === S.active)
+  const j = Math.max(0, Math.min(SHAPES.length - 1, d === 'home' ? 0 : d === 'end' ? SHAPES.length - 1 : i + d))
+  S.active = SHAPES[j].id
+  const grid = document.getElementById('grid')
+  grid.setAttribute('aria-activedescendant', 'c-' + S.active)
+  grid.querySelectorAll('.cell').forEach(c => c.classList.toggle('is-active', c.dataset.id === S.active))
+  const a = byId[S.active]
+  document.getElementById('pkDesc').innerHTML = `<b>${a.name}${S.held.has(a.id) ? ' · held' : ''}</b><p>${a.howTo}</p>`
+}
+let typeBuf = ''; let typeT = null
+
+document.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-menu]')
+  if (m) { const box = document.getElementById(m.dataset.menu); const open = !box.classList.contains('is-open'); document.querySelectorAll('.menu.is-open').forEach(x => { x.classList.remove('is-open'); x.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false') }); box.classList.toggle('is-open', open); m.setAttribute('aria-expanded', open); return }
+  if (!e.target.closest('.menu')) document.querySelectorAll('.menu.is-open').forEach(x => { x.classList.remove('is-open'); x.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false') })
+  const th = e.target.closest('[data-theme-set]'); if (th) { S.theme = th.dataset.themeSet === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : th.dataset.themeSet; syncReview(); render(); return }
+  const go = e.target.closest('[data-go]'); if (go) { S.screen = go.dataset.go; render(); return }
+  if (e.target.closest('#trig')) { openPicker(!S.picker); return }
+  const cell = e.target.closest('.cell'); if (cell) { S.picker = false; setTarget(cell.dataset.id); document.getElementById('trig')?.focus(); return }
+  if (e.target.id === 'scrim') { openPicker(false); return }
+  const act = e.target.closest('[data-act]')?.dataset.act
+  if (act === 'cam') { if (S.cam === 'on') stopCam(); else if (S.cam !== 'loading' && S.cam !== 'permission') startCam() }
+  if (act === 'clear') setTarget(null)
+  if (act === 'closepk') openPicker(false)
+  if (act === 'coverage') openPicker(true)
+  if (act === 'next') { const i = SHAPES.findIndex(s => s.id === S.target); setTarget(SHAPES[(i + 1) % SHAPES.length].id) }
+  if (S.picker && !e.target.closest('#picker') && !e.target.closest('#trig') && !act) openPicker(false)
+})
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest && e.target.closest('.review')) return
+  if (e.key === 'Escape') {
+    if (document.querySelector('.menu.is-open')) { document.querySelectorAll('.menu.is-open').forEach(x => x.classList.remove('is-open')); return }
+    if (S.picker) { openPicker(false); return }
+    if (S.target) { setTarget(null); return }
+  }
+  if (e.target.id === 'grid') {
+    const map = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 5, ArrowUp: -5, Home: 'home', End: 'end' }
+    if (e.key in map) { e.preventDefault(); moveActive(map[e.key]); return }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.picker = false; setTarget(S.active); document.getElementById('trig')?.focus(); return }
+    if (/^[a-z0-9]$/i.test(e.key)) {
+      clearTimeout(typeT); typeBuf += e.key.toUpperCase(); typeT = setTimeout(() => { typeBuf = '' }, 700)
+      const hit = SHAPES.find(s => s.id.startsWith(typeBuf) || s.name.toUpperCase().startsWith(typeBuf)) || SHAPES.find(s => s.id.startsWith(e.key.toUpperCase()))
+      if (hit) { S.active = hit.id; moveActive(0) }
+      if (DEAD.includes(e.key.toUpperCase()) && e.key.length === 1 && !hit) say(`Sign can't read ${e.key.toUpperCase()} yet`)
+    }
+  }
+})
+addEventListener('resize', () => { if (S.screen === 'finder') render() })
+
+/* ============ preset screens (review panel) ============ */
+function preset (v) {
+  clearInterval(holdTimer); clearTimeout(camTimer); clearTimeout(lockTimer)
+  Object.assign(S, { screen: 'finder', picker: false, lock: false, heldNow: false, progress: 0 })
+  S.held = new Set(['A', 'B', 'V'])
+  const on = (hand, target, extra = {}) => Object.assign(S, { cam: 'on', hand, target, active: target || 'A' }, extra)
+  switch (v) {
+    case 'welcome': S.screen = 'welcome'; break
+    case 'notfound': S.screen = 'notfound'; break
+    case 'off': Object.assign(S, { cam: 'off', hand: 'none', target: null }); S.held = new Set(); break
+    case 'loading': Object.assign(S, { cam: 'loading', hand: 'none', target: null }); break
+    case 'permission': Object.assign(S, { cam: 'permission', hand: 'none', target: null }); break
+    case 'nohand': on('none', null); break
+    case 'noshape': on('other', 'Y'); break
+    case 'reading': on('V', null); break
+    case 'holding': on('L', 'L', { progress: 0.58 }); break
+    case 'held': on('L', 'L', { heldNow: true, lock: true }); S.held.add('L'); break
+    case 'motion': on('I', 'J'); break
+    case 'picker': on('B', 'L', { picker: true, active: 'L' }); break
+    case 'denied': Object.assign(S, { cam: 'denied', hand: 'none', target: 'L' }); break
+    case 'busy': Object.assign(S, { cam: 'busy', hand: 'none', target: 'L' }); break
+    case 'nocamera': Object.assign(S, { cam: 'nocamera', hand: 'none', target: null }); break
+    case 'failed': Object.assign(S, { cam: 'failed', hand: 'none', target: 'L' }); break
+    case 'paused': Object.assign(S, { cam: 'paused', hand: 'none', target: 'L' }); break
+  }
+  document.getElementById('rvHand').value = S.hand in POSES || S.hand === 'none' ? S.hand : 'none'
+  render()
+  if (v === 'held') { lockTimer = setTimeout(() => { S.lock = false; document.querySelector('.crop')?.classList.remove('is-locked') }, 900000) }
+  if (v === 'holding' && !new URLSearchParams(location.search).get('freeze')) tick()
+}
+
+/* ============ review panel ============ */
+const rv = document.getElementById('review')
+document.getElementById('rvX').onclick = () => { rv.classList.toggle('collapsed'); document.getElementById('rvX').textContent = rv.classList.contains('collapsed') ? '+' : '–' }
+document.getElementById('rvScreen').onchange = (e) => preset(e.target.value)
+document.getElementById('rvHand').onchange = (e) => setHand(e.target.value)
+function syncReview () {
+  document.querySelectorAll('#rvTheme button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.theme))
+  document.querySelectorAll('#rvMotion button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.motion))
+}
+document.querySelectorAll('#rvTheme button').forEach(b => { b.onclick = () => { S.theme = b.dataset.v; syncReview(); render() } })
+document.querySelectorAll('#rvMotion button').forEach(b => { b.onclick = () => { S.motion = b.dataset.v; syncReview(); render() } })
+const q = new URLSearchParams(location.search)
+if (q.get('theme')) S.theme = q.get('theme')
+if (q.get('motion')) S.motion = q.get('motion')
+syncReview()
+preset(q.get('state') || 'holding')
+if (q.get('state')) document.getElementById('rvScreen').value = q.get('state')
+if (q.get('review') === 'open') { rv.classList.remove('collapsed'); document.getElementById('rvX').textContent = '–' }
+</script>
+</body>
+</html>

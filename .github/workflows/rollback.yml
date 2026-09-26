@@ -15,6 +15,7 @@ on:
           - web-launcher
           - web-storybook
           - web-polyglot
+          - web-sign
       mechanism:
         description: Image keeps current config; revision pins historical code and config
         required: true

@@ -6,6 +6,7 @@ COPY package.json package-lock.json ./
 COPY apps/launcher/package.json apps/launcher/package.json
 COPY apps/storybook/package.json apps/storybook/package.json
 COPY apps/polyglot/package.json apps/polyglot/package.json
+COPY apps/sign/package.json apps/sign/package.json
 COPY packages/web-tokens/package.json packages/web-tokens/package.json
 COPY packages/web-theme/package.json packages/web-theme/package.json
 COPY packages/web-auth/package.json packages/web-auth/package.json

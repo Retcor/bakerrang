@@ -899,6 +899,13 @@ automated tests · manual verification.** Each product-extraction phase also car
 - **Superseded (2026-09-25):** product-owner decision — normal Polyglot is retired and Instant *becomes*
   Polyglot (one app, no mode; `/instant` only redirects to `/`). See [Phase D](PhaseD-Polyglot.md).
 
+> **Superseded sequencing (2026-09-25):** the orchestrator ran the next extraction as **"Phase E — Sign
+> Language"** (`sign.bakerrang.com`, [PhaseE-SignLanguage.md](PhaseE-SignLanguage.md)), which pulls Sign forward
+> from Phase G. The Account phase below is unchanged in scope but is **no longer next**. Its phase label will be
+> reassigned by the orchestrator. References elsewhere to "Account in Phase E" (e.g. Phase C/D copy "legacy
+> `bakerrang.com/account` until Phase E") mean *the Account phase*, whatever its final number. Sign's product was also
+> re-scoped as an honest ASL handshape practice + reader, not an interpreter (see the Phase E doc).
+
 ### Phase E — Stand up **Account** → `account.bakerrang.com`
 - **Scope:** Account app owns profile/security/global prefs + canonical theme write
   (`GET/PUT /account/preferences` or reuse of the settings pattern); other apps link to it.
@@ -915,7 +922,7 @@ automated tests · manual verification.** Each product-extraction phase also car
 
 ### Phase G — Extract remaining products & retire `client/`
 - **Scope:** Passwords (its own hardened PWA — minimal caching, its crypto/kdbx code lifted
-  intact), then Budget, Sign, WoW, each via the template. **Supermarket is NOT extracted** — it is
+  intact), then Budget, WoW, each via the template (Sign moved forward. See the Phase E supersede note). **Supermarket is NOT extracted** — it is
   decommissioned (§11.S). When the last real product is live and redirects are in place,
   **delete `client/`** and its classifier/workflow entries.
 - **Acceptance:** no product depends on `client/`; classifier no longer references it; all apps
