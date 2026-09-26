@@ -45,7 +45,7 @@ describe('Launcher', () => {
     render(<Launcher />)
     expect(screen.queryByRole('link', { name: /Instant mode/i })).toBeNull()
     expect(screen.queryByText('EN ⇄ ES')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Polyglot' }).getAttribute('href')).toBe('https://bakerrang.com/polyglot/instant')
+    expect(screen.getByRole('link', { name: 'Polyglot' }).getAttribute('href')).toBe('https://polyglot.bakerrang.com')
     expect(screen.getByRole('heading', { name: 'Your account' })).not.toBeNull()
     expect(screen.getByRole('link', { name: 'Account' })).not.toBeNull()
   })

@@ -35,10 +35,11 @@ describe('destination registry', () => {
     const destinations = resolveDestinations({
       VITE_LEGACY_CLIENT_BASE_URL: 'http://localhost:5173/',
       VITE_STORYBOOK_URL: 'http://localhost:3010',
+      VITE_POLYGLOT_URL: 'http://localhost:3020',
       VITE_LAUNCHER_URL: 'http://localhost:3000'
     })
     expect(destinations.tools.find((tool) => tool.id === 'storybook').url).toBe('http://localhost:3010')
-    expect(destinations.tools.find((tool) => tool.id === 'polyglot').url).toBe('http://localhost:5173/polyglot/instant')
+    expect(destinations.tools.find((tool) => tool.id === 'polyglot').url).toBe('http://localhost:3020')
     expect(destinations.launcher.url).toBe('http://localhost:3000')
   })
 })
