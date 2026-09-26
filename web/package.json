@@ -13,6 +13,7 @@
     "dev:launcher": "npm run dev -w @bakerrang/web-launcher",
     "dev:storybook": "npm run dev -w @bakerrang/web-storybook",
     "dev:polyglot": "npm run dev -w @bakerrang/web-polyglot",
+    "dev:sign": "npm run dev -w @bakerrang/web-sign",
     "build": "npm run build --workspaces --if-present",
     "lint": "standard \"apps/**/*.{js,jsx}\" \"packages/**/*.{js,jsx}\" \"*.js\"",
     "test": "vitest run",

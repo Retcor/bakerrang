@@ -24,6 +24,7 @@ jobs:
       web_launcher: ${{ steps.classify.outputs.web_launcher }}
       web_storybook: ${{ steps.classify.outputs.web_storybook }}
       web_polyglot: ${{ steps.classify.outputs.web_polyglot }}
+      web_sign: ${{ steps.classify.outputs.web_sign }}
       deploy_api: ${{ steps.classify.outputs.deploy_api }}
       deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
@@ -31,6 +32,7 @@ jobs:
       deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
       deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
       deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
+      deploy_web_sign: ${{ steps.classify.outputs.deploy_web_sign }}
     steps:
       - name: Check out PR head
         uses: actions/checkout@v7
@@ -176,7 +178,7 @@ jobs:
   web-ci:
     name: Shared Web CI
     needs: changes
-    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true' || needs.changes.outputs.web_polyglot == 'true'
+    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true' || needs.changes.outputs.web_polyglot == 'true' || needs.changes.outputs.web_sign == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -208,6 +210,21 @@ jobs:
       - name: Build Polyglot
         if: needs.changes.outputs.web_polyglot == 'true'
         run: npm run build -w @bakerrang/web-polyglot
+
+      - name: Build Sign
+        if: needs.changes.outputs.web_sign == 'true'
+        run: npm run build -w @bakerrang/web-sign
+
+      - name: Validate Sign Docker packaging
+        if: needs.changes.outputs.deploy_web_sign == 'true'
+        run: |
+          docker build \
+            --file Dockerfile \
+            --build-arg APP=sign \
+            --build-arg VITE_API_BASE_URL=https://api.ci.invalid \
+            --build-arg VITE_OAUTH_TARGET=sign \
+            --tag bakerrang-web-sign:pr-${{ github.event.pull_request.head.sha }} \
+            .
 
       - name: Validate Launcher Docker packaging
         if: needs.changes.outputs.deploy_web_launcher == 'true'
