@@ -43,6 +43,7 @@
     "ignore": [
       "**/dist/**",
       "**/node_modules/**",
+      "**/public/vendor/**",
       ".impeccable/**"
     ]
   }
