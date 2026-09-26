@@ -21,7 +21,7 @@ describe('destination registry', () => {
     const destinations = resolveDestinations({})
     expect(Object.fromEntries(destinations.tools.map((tool) => [tool.id, tool.url]))).toEqual({
       storybook: 'https://storybook.bakerrang.com',
-      polyglot: 'https://bakerrang.com/polyglot/instant',
+      polyglot: 'https://polyglot.bakerrang.com',
       sign: 'https://bakerrang.com/sign-language',
       budget: 'https://bakerrang.com/budget',
       wow: 'https://bakerrang.com/wow',
