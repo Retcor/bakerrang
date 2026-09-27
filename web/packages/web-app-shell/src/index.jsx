@@ -136,7 +136,7 @@ export const AppSwitcher = ({ destinations, current, showLauncher = true }) => {
   )
 }
 
-export const AccountMenu = ({ destinations, themeControl = false }) => {
+export const AccountMenu = ({ destinations, themeControl = false, onLogout }) => {
   const auth = useAuth()
   const menu = usePopover()
   return (
@@ -147,7 +147,7 @@ export const AccountMenu = ({ destinations, themeControl = false }) => {
         {themeControl && <><div className='br-popover__head'>Theme</div><ThemeControl /><div className='br-popover__separator' /></>}
         <a className='br-popover__item' role='menuitem' href={destinations.account.url}><ProductEmblem id='account' />Account</a>
         <div className='br-popover__separator' />
-        <button className='br-popover__item br-popover__danger' role='menuitem' onClick={auth.logout}><SignOutIcon />Sign out</button>
+        <button className='br-popover__item br-popover__danger' role='menuitem' onClick={onLogout || auth.logout}><SignOutIcon />Sign out</button>
       </div>
     </div>
   )

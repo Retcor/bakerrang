@@ -6,7 +6,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
-import { csrfProtection, authLimiter, vaultLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
+import { csrfProtection, authLimiter, vaultLimiter, budgetLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
 import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 import { validateServerRuntimeConfig } from './config/runtimeConfig.js'
@@ -17,6 +17,7 @@ import chatgptRouter from './routes/chatgpt.js'
 import textToSpeechRouter from './routes/textToSpeech.js'
 import superMarketRouter from './routes/superMarket.js'
 import budgetRouter from './routes/budget.js'
+import { noStore } from './middleware/contentSecurity.js'
 import storybookRouter from './routes/storybook.js'
 import chatbotRouter from './routes/chatbot.js'
 import wowRouter from './routes/wow.js'
@@ -116,7 +117,7 @@ app.use('/account', isAuthenticated, accountRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)
-app.use('/budget', isAuthenticated, budgetRouter)
+app.use('/budget', noStore, budgetLimiter, isAuthenticated, budgetRouter)
 app.use('/storybook', isAuthenticated, storybookRouter)
 app.use('/wow', isAuthenticated, wowRouter)
 app.use('/vault', vaultLimiter, isAuthenticated, vaultRouter)

@@ -66,7 +66,8 @@ $launcher = @($Services | Where-Object { $_.Logical -ceq 'web-launcher' })
 $storybook = @($Services | Where-Object { $_.Logical -ceq 'web-storybook' })
 $polyglot = @($Services | Where-Object { $_.Logical -ceq 'web-polyglot' })
 $sign = @($Services | Where-Object { $_.Logical -ceq 'web-sign' })
-Assert-Equal $Services.Count 8 'Live verification must cover every production deployment target.'
+$budget = @($Services | Where-Object { $_.Logical -ceq 'web-budget' })
+Assert-Equal $Services.Count 9 'Live verification must cover every production deployment target.'
 Assert-Equal $launcher.Count 1 'Web Launcher must have exactly one live-service mapping.'
 Assert-Equal $launcher[0].Service 'bakerrang-web-launcher' 'Web Launcher physical service mapping is wrong.'
 Assert-Equal $launcher[0].Package 'web-launcher' 'Web Launcher Artifact Registry package mapping is wrong.'
@@ -83,6 +84,10 @@ Assert-Equal $sign.Count 1 'Web Sign must have exactly one live-service mapping.
 Assert-Equal $sign[0].Service 'bakerrang-web-sign' 'Web Sign physical service mapping is wrong.'
 Assert-Equal $sign[0].Package 'web-sign' 'Web Sign Artifact Registry package mapping is wrong.'
 Assert-Equal $sign[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Sign runtime identity mapping is wrong.'
+Assert-Equal $budget.Count 1 'Web Budget must have exactly one live-service mapping.'
+Assert-Equal $budget[0].Service 'bakerrang-web-budget' 'Web Budget physical service mapping is wrong.'
+Assert-Equal $budget[0].Package 'web-budget' 'Web Budget Artifact Registry package mapping is wrong.'
+Assert-Equal $budget[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Budget runtime identity mapping is wrong.'
 if ($source -notmatch "https://launch\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
     throw 'verify-live.ps1 is missing the fixed Web Launcher public SPA-shell check.'
 }

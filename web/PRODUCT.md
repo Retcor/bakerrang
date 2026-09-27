@@ -51,8 +51,8 @@ while family resemblance comes from shared foundations, not from one universal p
 
 - Current products needing representation on the launcher (**6 tools + Account**): **Story Book** (AI
   story generation with narration), **Polyglot** (spoken translation in your own cloned voice; the
-  legacy "Instant" experience *is* Polyglot — no separate mode), **Sign** ("Sign Language" in the registry: ASL handshape practice via the camera, read on-device; not an interpreter), **Budget** (budget
-  tracking), **WoW Advisor** (World of Warcraft assistant), **Passwords** (a zero-knowledge,
+  legacy "Instant" experience *is* Polyglot — no separate mode), **Sign** ("Sign Language" in the registry: ASL handshape practice via the camera, read on-device; not an interpreter), **Budget** (a
+  paycheck-to-bills planner, not a spending tracker), **WoW Advisor** (World of Warcraft assistant), **Passwords** (a zero-knowledge,
   client-side-encrypted password vault), and **Account** (cross-cutting, not a tool).
 - **Supermarket is removed from the ecosystem (obsolete).** It was built for a game/use case no
   longer relevant and is being **deleted, not migrated** (no `supermarket.` subdomain, no app, no
@@ -120,6 +120,24 @@ Full inventory, retirement analysis and architecture: `docs/apps/PhaseE-SignLang
   consistency), though the feature itself needs no identity.
 - **Not offered (don't imply):** words, sentences or a transcript; the missing letters; two-handed or moving signs
   beyond J/Z; sign→speech or speech→sign; other sign languages; saved progress, scores or streaks; handshape images.
+
+## Product: Budget (Phase F truth, 2026-09-26)
+
+Full inventory, money/date contracts and architecture: `docs/apps/PhaseF-Budget.md`; surface brief:
+`.impeccable/surfaces/budget.md`.
+
+- **What it does:** you enter your paydays (monthly on a day / first / last, every 2 weeks, or weekly) and your bills
+  (monthly bills, debts with an optional last payment, and one-offs). **Month** shows each paycheck with the bills it has
+  to pay before the next payday, what that covers, and what's **Left** (or **Short**). **Plan** holds the rules.
+- **Allocation rule (owner):** an automatic bill is paid by the most recent payday on or before its due date, even last
+  month's. A bill can be assigned to a payday by hand ("Paid from").
+- **Real scene:** checking, around payday, whether this paycheck covers rent and the rest, often on a phone.
+- **It is a plan, not a record:** no transactions, no "spent", no bank or account connections, no balances that update,
+  no charts. The debt "balance" is a note the user keeps. USD only. Amounts are exact to the cent.
+- **Data:** one private document per user in the BakerRang account (shared with the legacy `/budget` page during
+  coexistence). Never claim encryption, bank-grade security or "private" beyond "saved to your BakerRang account".
+- **Not offered (don't imply):** spending tracking, categories of spending, budgets-vs-actuals, reminders or
+  notifications, bank sync, CSV import/export, multiple currencies, sharing, savings goals, forecasts.
 
 ## Brand Commitments
 

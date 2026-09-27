@@ -31,15 +31,17 @@ export const csrfProtection = (req, res, next) => {
   return doubleCsrfProtection(req, res, next)
 }
 
-const limiter = (max) => rateLimit({
+const limiter = (max, message) => rateLimit({
   windowMs: 15 * 60 * 1000,
   max,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  ...(message ? { message } : {})
 })
 
 export const authLimiter = limiter(100)
 export const vaultLimiter = limiter(300)
+export const budgetLimiter = limiter(300, { error: 'Too many requests. Please wait a moment.' })
 export const tenantLimiter = limiter(300)
 export const chatbotLimiter = limiter(60)
 export const previewReadLimiter = limiter(120)

@@ -8,7 +8,7 @@ const descriptions = Object.freeze({
   storybook: 'Write and illustrate a story with a few words, then have it read aloud.',
   polyglot: 'Speak and translate between languages, out loud, in real time.',
   sign: 'Practise ASL handshapes with your camera. Sign reads your hand on this device.',
-  budget: 'Track spending against a plan without a spreadsheet.',
+  budget: 'See which paycheck covers which bills, month by month.',
   wow: 'Get World of Warcraft advice tuned to your character and goals.'
 })
 

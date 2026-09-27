@@ -19,6 +19,7 @@ on:
           - web-storybook
           - web-polyglot
           - web-sign
+          - web-budget
 
 permissions:
   contents: read
@@ -39,6 +40,7 @@ jobs:
       deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
       deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
       deploy_web_sign: ${{ steps.classify.outputs.deploy_web_sign }}
+      deploy_web_budget: ${{ steps.classify.outputs.deploy_web_budget }}
     steps:
       - name: Check out pushed commit
         uses: actions/checkout@v7
@@ -144,7 +146,7 @@ jobs:
   validate-web:
     name: Validate Shared Web
     needs: changes
-    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true' || needs.changes.outputs.deploy_web_sign == 'true'
+    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true' || needs.changes.outputs.deploy_web_sign == 'true' || needs.changes.outputs.deploy_web_budget == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -173,6 +175,9 @@ jobs:
       - name: Build Sign
         if: needs.changes.outputs.deploy_web_sign == 'true'
         run: npm run build -w @bakerrang/web-sign
+      - name: Build Budget
+        if: needs.changes.outputs.deploy_web_budget == 'true'
+        run: npm run build -w @bakerrang/web-budget
 
   deploy-api:
     name: Deploy API
@@ -286,6 +291,20 @@ jobs:
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
 
+  deploy-web-budget:
+    name: Deploy Web Budget
+    needs: [changes, validate-web]
+    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_web_budget == 'true' && needs.validate-web.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: web-budget
+      environment: production
+      image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
+
   guard-main:
     name: Require main branch
     if: github.event_name == 'workflow_dispatch'
@@ -335,6 +354,7 @@ jobs:
       - deploy-web-storybook
       - deploy-web-polyglot
       - deploy-web-sign
+      - deploy-web-budget
       - guard-main
       - deploy-selected-service
     runs-on: ubuntu-latest
@@ -354,6 +374,7 @@ jobs:
           DEPLOY_WEB_STORYBOOK: ${{ needs.changes.outputs.deploy_web_storybook }}
           DEPLOY_WEB_POLYGLOT: ${{ needs.changes.outputs.deploy_web_polyglot }}
           DEPLOY_WEB_SIGN: ${{ needs.changes.outputs.deploy_web_sign }}
+          DEPLOY_WEB_BUDGET: ${{ needs.changes.outputs.deploy_web_budget }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
           VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
           VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
@@ -366,6 +387,7 @@ jobs:
           WEB_STORYBOOK_RESULT: ${{ needs.deploy-web-storybook.result }}
           WEB_POLYGLOT_RESULT: ${{ needs.deploy-web-polyglot.result }}
           WEB_SIGN_RESULT: ${{ needs.deploy-web-sign.result }}
+          WEB_BUDGET_RESULT: ${{ needs.deploy-web-budget.result }}
           GUARD_RESULT: ${{ needs.guard-main.result }}
           SELECTED_RESULT: ${{ needs.deploy-selected-service.result }}
         run: |
@@ -425,6 +447,10 @@ jobs:
           fi
           if [[ "$DEPLOY_WEB_SIGN" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_SIGN_RESULT" != "success" ) ]]; then
             echo "Affected Web Sign validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_SIGN_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_WEB_BUDGET" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_BUDGET_RESULT" != "success" ) ]]; then
+            echo "Affected Web Budget validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_BUDGET_RESULT" >&2
             exit 1
           fi
           echo "All affected MAIN/live validations and deployments passed."
