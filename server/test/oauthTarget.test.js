@@ -19,7 +19,8 @@ const env = {
   LAUNCHER_DOMAIN: 'http://localhost:3010',
   STORYBOOK_DOMAIN: 'http://localhost:3020',
   POLYGLOT_DOMAIN: 'http://localhost:3030',
-  SIGN_DOMAIN: 'http://localhost:3040'
+  SIGN_DOMAIN: 'http://localhost:3040',
+  BUDGET_DOMAIN: 'http://localhost:3050'
 }
 
 const response = () => ({
@@ -48,18 +49,21 @@ test('OAuth targets are a closed symbolic set and never arbitrary URLs', () => {
   assert.equal(oauthTargetFromQuery('storybook'), 'storybook')
   assert.equal(oauthTargetFromQuery('polyglot'), 'polyglot')
   assert.equal(oauthTargetFromQuery('sign'), 'sign')
+  assert.equal(oauthTargetFromQuery('budget'), 'budget')
   assert.equal(resolveOAuthTarget('client', env), env.CLIENT_DOMAIN)
   assert.equal(resolveOAuthTarget('portal', env), env.PORTAL_DOMAIN)
   assert.equal(resolveOAuthTarget('launcher', env), env.LAUNCHER_DOMAIN)
   assert.equal(resolveOAuthTarget('storybook', env), env.STORYBOOK_DOMAIN)
   assert.equal(resolveOAuthTarget('polyglot', env), env.POLYGLOT_DOMAIN)
   assert.equal(resolveOAuthTarget('sign', env), env.SIGN_DOMAIN)
+  assert.equal(resolveOAuthTarget('budget', env), env.BUDGET_DOMAIN)
   assert.equal(isValidOAuthTarget('client'), true)
   assert.equal(isValidOAuthTarget('portal'), true)
   assert.equal(isValidOAuthTarget('launcher'), true)
   assert.equal(isValidOAuthTarget('storybook'), true)
   assert.equal(isValidOAuthTarget('polyglot'), true)
   assert.equal(isValidOAuthTarget('sign'), true)
+  assert.equal(isValidOAuthTarget('budget'), true)
   assert.equal(isValidOAuthTarget('https://evil.example'), false)
   assert.throws(() => oauthTargetFromQuery('https://evil.example'), { status: 400 })
   assert.throws(() => resolveOAuthTarget('https://evil.example', env), { status: 500 })

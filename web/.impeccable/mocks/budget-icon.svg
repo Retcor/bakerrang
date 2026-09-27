@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Budget app-icon master (design spec for the PWA icon set; rasterise to 512/192/180/32/16 at build,
+    with an app-local scripts/generate-icons.cjs cloned from apps/polyglot).
+    - Tile: world charcoal #161514, full-bleed (maskable-safe: artwork kept inside the central 80% circle;
+      farthest artwork point ~160px from centre, radius 204.8).
+    - Mark: the shared Budget emblem (the same paths as web-app-shell ProductEmblem 'budget'),
+      stroked in Budget Blue #7FB0E8 (the existing --accent-budget dark value) at the emblem's 1.75/32 weight scaled to the tile.
+    - Rule: an accounting double rule (the app's "Left" total signature) in Ink #f2efe9 at 40%, under the coin.
+    - Badge: the canonical BakerRang pixel-B, composited from bakerrang-logo.png (never redrawn;
+      SHA-256 566F5419…0EA84A21, byte-identical to client/src/assets/bakerrang-logo.png).
+    Provenance: authored for Phase F by the planner; no generated raster.
+  -->
+  <rect width="512" height="512" fill="#161514"/>
+  <g transform="translate(102.4 84.4) scale(8.6)" fill="none" stroke="#7FB0E8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="16" cy="16" r="11"/>
+    <path d="M16 9.4v13.2"/>
+    <path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/>
+  </g>
+  <g fill="none" stroke="#f2efe9" stroke-opacity=".4" stroke-width="6" stroke-linecap="square">
+    <path d="M152 350H282M152 364H282"/>
+  </g>
+  <image href="bakerrang-logo.png" xlink:href="bakerrang-logo.png" x="300" y="316" width="88" height="88"/>
+</svg>

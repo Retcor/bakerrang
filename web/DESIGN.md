@@ -273,6 +273,65 @@ typography:
     fontWeight: 800
     lineHeight: 0.98
     letterSpacing: "-0.035em"
+  budget-sheet-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(1.55rem, 3vw, 2.05rem)"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "-0.03em"
+  budget-band:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1.35
+  budget-band-figure:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 700
+    lineHeight: 1.35
+    fontFeature: "\"tnum\", \"lnum\""
+  budget-figure:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 500
+    lineHeight: 1.55
+    letterSpacing: "-0.01em"
+    fontFeature: "\"tnum\", \"lnum\""
+  budget-tag:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "0.12em"
+  budget-foot-label:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    lineHeight: 1.3
+  budget-statement-figure:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 600
+    lineHeight: 1.25
+    fontFeature: "\"tnum\", \"lnum\""
+  budget-statement-net:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "19px"
+    fontWeight: 800
+    lineHeight: 1.25
+    fontFeature: "\"tnum\", \"lnum\""
+  budget-plan-head:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.02rem"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.02em"
+  budget-welcome:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(2.2rem, 4.6vw, 3.6rem)"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.035em"
 rounded:
   control-inner: "3px"
   control: "4px"
@@ -507,6 +566,57 @@ components:
   handshape-cell-selected:
     backgroundColor: "{colors.ink}"
     textColor: "{colors.bg}"
+  paycheck-band:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink}"
+    typography: "{typography.budget-band}"
+    padding: "11px 12px"
+  ledger-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.budget-figure}"
+    padding: "12px"
+  ledger-row-hover:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+  ledger-statement:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    typography: "{typography.budget-statement-figure}"
+    padding: "13px 12px 14px"
+  ledger-editor:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    padding: "4px 12px 16px"
+  ledger-field:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "10px 12px"
+    height: "44px"
+  button-save:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.bg}"
+    rounded: "{rounded.control}"
+    padding: "10px 16px"
+    height: "44px"
+  button-save-hover:
+    backgroundColor: "{colors.ink-2}"
+    textColor: "{colors.bg}"
+  budget-add:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control}"
+    padding: "10px 16px"
+    height: "44px"
+  budget-add-phone:
+    height: "52px"
+    width: "100%"
+  budget-listbox:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.panel}"
+    padding: "6px"
 ---
 
 # Design System: BakerRang Consumer Ecosystem
@@ -1351,3 +1461,260 @@ a 1px rule or the 1.75 icon stroke.
 - **Don't** tint or theme the finder, its rail or its overlay ink.
 - **Don't** bring Literata, Story Book's desk or Page tokens, or Polyglot's dock into Sign.
 - **Don't** use a native `<select>` for the handshape choice.
+
+## Product layer: Budget
+
+This layer applies **only** inside the Budget app (`web/apps/budget`, budget.bakerrang.com). Everything
+above still holds there. Budget is a **pay-period ledger** set as two ruled sheets. **Month** lays each
+paycheck over the bills it has to pay before the next payday, then foots them: Covered, and what's Left
+(or Short). **Plan** holds the standing paydays, bills, debts and one-offs that produce it. The sheets
+sit flat on the ground in one 920px column. They have no containers: each paycheck heads its period as
+a ruled band, money sits in one right-aligned column, and accounting rules do the structure. Budget
+adds no new colour token, no reading layer and no slab. It refuses KPI cards over a donut chart and a
+month grid of coloured chips. Evidence: `web/.impeccable/mocks/budget-comp.html` (finish verdict: ship;
+states via `?state=…`), `web/.impeccable/mocks/budget-icon.svg` and `web/.impeccable/review/budget/*.png`.
+Direction: `web/.impeccable/surfaces/budget.md`.
+
+### Colors
+
+- **Ground, Line and Ink** (world tokens): both sheets are printed on the world ground (`bg`), never on
+  Story Book's desk or a Plane slab. Figures, names and totals use the world Ink ladder. Nothing in the
+  money column is ever green or red.
+- **Ground 2** (`bg-2`): the paycheck band's fill, across the full column. It is the only tinted strip
+  in a period.
+- **Plane** (`plane`): a hovered ledger row, the row that is open for editing, and the editor beneath
+  it. Also the listbox and menu panels.
+- **Plane 2** (`plane-2`): the checked segment in the Month | Plan switch and in the editor's
+  radiogroups, and the active listbox option.
+- **Line / Line strong:** Line separates bill rows, closes a band's bottom edge and rules the editor
+  foot. Line strong draws a band's top rule, the column-head rule, the Plan section-head rule, the
+  single rule over Covered, the notice rules and the editor row's bottom edge.
+- **Ink 2 for the double rule:** the two lines under Left and the Today rule's line are Ink 2, one step
+  quieter than the figure they close.
+- **Ink 3:** column heads, kind tags, the band's "Paycheck" label, the "Pay period …" span line, weekday
+  names, the out-of-month note, hints and optional marks.
+
+**The Blue Underlines Rule.** Budget Blue (`#7FB0E8` dark / `#235f9e` light) has two roles. It draws
+the Budget emblem (the switcher cell and the app icon), and it is the 1px underline under a row's name
+while the row is hovered or open. It never sets text, a fill, a rule, a figure, a tag or a button.
+
+**The Gold Is Add Rule.** On a sheet the only gold fill is **Add**. In first run the top Add is a ghost
+button, so "Add a payday" is the one gold fill. While the plan is loading, or after it failed to load,
+Add is not rendered at all, and "Try again" leads. The editor's Save is ink, never gold. On Welcome the
+only gold fill is "Sign in with Google", and the top-bar Sign in is a ghost button. Gold Text appears
+only in the world's focus outline.
+
+**The Words-and-Sign Rule.** Money is never judged by colour. A period that runs out reads **Short**
+with a drawn down-arrow beside the word, and its figure is the shortfall with no minus. The month's
+**Net** carries its sign inside the figure (`+$2,215.36`, `−$…`, with a true minus). "Left" is reserved
+for per-period figures.
+
+**The Ink-Not-Red Rule.** A field that fails validation keeps its Ink border and gains a 3px inset Ink
+bar on its leading edge, with an Ink message and a drawn alert icon below it. Save failures, conflicts,
+offline and load failures are written in Ink with an Ink 3 explanation and a drawn icon. Danger red is
+kept for the Delete action and Sign out.
+
+### Typography
+
+**Archivo only, with Archivo Expanded for naming.** Expanded sets the "Budget" wordmark (800, 15px),
+the sheet title (the month, or "Plan"), the Plan section heads, the first-run heading, the Welcome
+masthead and the Not found heading. Every figure, row, tag, label and control is plain Archivo. Budget
+adds no second family, and Literata never appears.
+
+- **Sheet title** (`budget-sheet-title`: Expanded 800, `clamp(1.55rem, 3vw, 2.05rem)`, lh 1.05,
+  `-0.03em`): "September 2026" between the month arrows, held at an `11.5ch` minimum width so the
+  arrows don't move between months. On phone it uses the clamp floor.
+- **Column heads:** 700 11px, `0.12em`, uppercase, Ink 3: "Due · Bill · Amount". They are visual
+  only; each period's table carries its own screen-reader headers and caption.
+- **Paycheck band** (`budget-band`: 600 15px, lh 1.35; 14.5px on phone): the "Paycheck" kind label
+  (700 10.5px, `0.14em`, uppercase, Ink 3), the date in Ink, and the source in 500 Ink 2. The band's
+  figure is `budget-band-figure` (700 16px; 15px on phone).
+- **Span line:** 400 13px Ink 3: "Pay period Aug 21 – Sep 3 · started in August". It names the paycheck's
+  **automatic window** (the payday to the day before the next payday of any source), never "Covers". A bill assigned by
+  hand ("Paid from") can be due after that window, never before it; when one is, the line appends
+  "· 1 bill due later is paid from here" ("· N bills due later are paid from here"). The row keeps its real due date and
+  its "Paid from …" tag, and its name carries a screen-reader-only ", due after this pay period". Covered and Left/Short
+  always include those rows.
+- **Ledger row:** the due date in Ink 2 with the weekday in Ink 3; the name in 500 Ink; the amount in
+  `budget-figure` (500 16px, tabular lining figures; 15px on phone).
+- **Kind tags** (`budget-tag`: 700 10.5px, lh 1.4, `0.12em`, uppercase, Ink 3): DEBT, ONE-OFF,
+  AUTO-PAY, PAID FROM …, PAUSED, NEEDS A DUE DAY. They are text set in small caps after the name,
+  never chips.
+- **Foot labels** (`budget-foot-label`: 600 13px, right-aligned): "Covered" in Ink 3, "Left" and
+  "Short" in Ink. The Covered figure is 500 Ink 2; the Left figure is 700 Ink.
+- **Statement:** the title (700 11px, `0.12em`, uppercase, Ink 3, over a 400 12.5px sentence) and three
+  figures, each a 600 12px Ink 3 label over `budget-statement-figure` (600 17px; 15px on phone).
+  **Net** is `budget-statement-net` (800 19px; 16.5px on phone).
+- **Today rule:** 700 10.5px, `0.14em`, uppercase, Ink: "Today · Sat, Sep 26".
+- **Plan section head** (`budget-plan-head`: Expanded 800 1.02rem, `-0.02em`), a 13px Ink 3 count, and
+  "Each month **$1,716.24**" (600 13px Ink 3, the figure in Ink 2) at the right.
+- **Editor:** labels 600 13px Ink 2 with "(optional)" in 400 Ink 3; fields 500 15px; hints 12.5px Ink 3;
+  errors 500 13px Ink; the intro line 13px Ink 3 ("Changes apply to every month.").
+- **Welcome masthead** (`budget-welcome`: Expanded 800, `clamp(2.2rem, 4.6vw, 3.6rem)`, lh 1,
+  `-0.035em`, max 13ch): "See what every paycheck has to cover.", set entirely in Ink.
+
+**The Tabular Money Rule.** Every amount is set in tabular lining figures, right-aligned, as dollars
+with thousands separators and exactly two decimals. Amounts are never abbreviated ("$1.4k"), never
+rounded and never coloured.
+
+### Layout
+
+- **Bar:** 58px and sticky, as in Polyglot and Sign, with a 1px Line bottom rule: the logo mark (30px),
+  a 1px `line-strong` rule and the Expanded wordmark on the left; the switcher and avatar on the right.
+- **Column:** one centred column, max **920px**, with a `clamp(16px, 4vw, 32px)` gutter (the
+  `poly-gutter` value).
+- **Sheet head:** a `1fr / auto / auto` grid: the month (‹ title ›, plus a quiet "This month" when you
+  are away from the current month), the **Month | Plan** switch (a world segmented control, min 200px),
+  and **Add** at the right. The Plan head carries the title "Plan" and a 14px Ink 3 line under it.
+- **The money column:** a fixed `11.5ch` right-aligned column at the right edge of every band, row,
+  foot and statement figure, so every figure on the sheet shares one right edge. The due column is a
+  fixed 7.2rem on the left. Rows pad 12px on every side.
+- **Period:** band, span line, then the period's table of bills, then its foot. Periods are 22px apart.
+  The **Today rule** sits between the last bill due on or before today and the first bill after it,
+  inside the period that covers today.
+- **Month order:** the carried-in period (an earlier paycheck that covers bills due this month) comes
+  first, then every period that starts in the month. Bills with no paycheck yet sit in a first band
+  headed "No paycheck · Not covered yet", which foots with "Due" only.
+- **Plan:** four sections, Paydays, Bills, Debts, One-offs, each a head over a `name / when (15rem) /
+  amount` table, ending in a quiet "Add a …" row. Sections are 30px apart.
+- **Statement:** pinned to the bottom of the viewport (sticky; 34px below the sheet at rest), across
+  the full width, with its content on the 920px column: a title, then Paychecks, Bills and Net, 28px
+  apart.
+- **Editor:** opens as a row directly beneath the row it edits, on a **6-column grid** (14px row gap,
+  18px column gap). Name spans 4, Amount 2, and most fields 3; schedule rows span all six.
+- **Welcome:** max 1120px, two equal columns (copy + gold Sign in, then an example sheet of two real
+  periods, non-interactive), gap `clamp(28px, 5vw, 64px)`. **Not found:** a 560px column.
+
+**The Phone Layer (≤640px).**
+- The sheet head stacks: the month row spans the width (arrows at the edges, the title centred), then
+  the switch goes full width. "This month" and the head's Add are hidden.
+- Month arrows and small buttons grow to **44px** targets. Every field and checkbox label is 44px tall.
+- **Add moves to a fixed bottom bar**: the ground, a Line top rule, 8px padding plus the safe-area
+  inset, and a full-width **52px** gold Add whose menu opens upward. It moves; it is never duplicated.
+- The **statement pins above that bar** (`bottom: 68px` plus the safe-area inset). Its title is
+  hidden, and the three figures share three equal columns (the last aligned right).
+- **While an editor is open, the bottom bar and the statement are both hidden**, so the editor has the
+  whole screen. The editor becomes **one column**, and Save widens to fill the foot.
+- The due column narrows to 4.6rem and stacks the **weekday (12px Ink 3) over the date**. The money
+  column narrows to `10.2ch`. Kind tags drop to their own line under the name. The band's source wraps
+  under the date.
+- The out-of-month note ("August") is **screen-reader only**; the Ink 3 date already says it.
+- On Plan the "when" column folds under the name as a 13px Ink 3 line, which is `aria-hidden` because
+  the table cell still carries it for assistive tech.
+- Welcome collapses to one column, and "Sign in with Google" goes full width at 52px.
+
+**The One Editor Rule.** Edits happen **in place** on both sheets and at every width: the row opens
+into its editor directly beneath it, and only one editor is open at a time. Nothing opens a modal, a
+side panel or a new page. After Save, focus returns to the row's name.
+
+### Elevation & Depth
+
+The ledger is flat. Bands, rows and foots are printed on the ground and separated only by rules and one
+Ground 2 strip. **There are no cards, no raised slab and no dock.** The listbox, the Add menu and the
+top-bar menus use the world resting shadow. Add carries the world contact shadow. The one Budget-specific
+depth is the **statement**: pinned over the scrolling sheet, it carries a 1px `line-strong` top edge
+and a soft upward shadow (`0 -1px 0 line-strong, 0 -12px 24px rgba(0,0,0,.28)`; light
+`0 -1px 0 line-strong, 0 -10px 22px rgba(30,26,20,.08)`), so rows visibly pass beneath it.
+
+**The Ruled Band Rule.** A paycheck band is a ruled section head, not a card: Ground 2 across the full
+column, a `line-strong` top rule and a Line bottom rule, **no side borders and no radius**. Nothing in
+a period is boxed.
+
+### Shapes
+
+World radii are unchanged, and the ledger itself is square. Bands, rows, foots, the statement, notices
+and the editor row have **no radius**. Buttons, fields, the listbox trigger and the segmented controls
+use the 4px control radius; checkboxes, segments and focus outlines use the 3px inner radius; the
+listbox and menus use 8px.
+
+**The Accounting Rules (signature).** Each period foots the way a ledger does. A **single** 1px
+`line-strong` rule sits over the Covered figure, spanning only the money column. A **double** rule sits
+under the Left figure: two 1px Ink 2 lines, 4px apart overall, 6px below the figure, spanning only the
+money column. These two rules are the only structure the foot has. The app icon repeats the double rule
+under the coin.
+
+### Components
+
+- **Paycheck period:** the band ("Paycheck" · Fri, Sep 4 · Acme payroll, figure at the right), the
+  span line, the bill rows, the Today rule where it falls, and the foot (Covered, then Left or Short).
+  A period with no bills reads "No bills due before the next payday." in Ink 3. Each period is a
+  labelled section with its own table, caption and row headers.
+- **Ledger row:** Due · name + tags · amount, with a Line rule beneath (none on the last row). The name
+  is a button that opens the editor. **Hover:** the whole row fills Plane and the name gains a 1px
+  Budget Blue underline at a 4px offset. **Open:** the row stays Plane with the blue underline and loses
+  its bottom rule, so it joins its editor. **Out of month:** the date in Ink 3, the name and amount in
+  400 Ink 2, and a 500 12px Ink 3 month note. **Paused (Plan):** name, when and amount in Ink 3 with a
+  PAUSED tag.
+- **Today rule:** a real table row, not decoration. "Today · Sat, Sep 26" in Ink, followed by a 1px
+  Ink 2 line to the right edge, 22px tall.
+- **Foot:** "Covered" beside its figure under the single rule; "Left" beside its figure over the double
+  rule. When the period is short, the label reads **Short** with a drawn 14px down-arrow, and the
+  figure is the shortfall.
+- **Statement:** "September 2026 · Paychecks received and bills due this month", then **Paychecks**,
+  **Bills** and **Net** (with its sign). It is month-based: paychecks received and bills due in the
+  month, not the period totals.
+- **Month | Plan switch:** the world segmented control as navigation (`aria-current` on the sheet),
+  13px labels, 8px 18px segments.
+- **Add:** a gold button with a drawn plus that opens a menu of **Payday**, **Bill**, **Debt** and
+  **One-off**, each with a drawn icon and a one-line Ink 3 description. Plan sections also carry quiet
+  "Add a payday / bill / debt / one-off" rows that open a new editor at the top of that section.
+- **In-place editor:** a Plane form under the row, with an Ink 3 intro line, the 6-column field grid,
+  and a foot ruled in Line: **Delete** (Danger text, existing entries only) at the left, a status
+  message, then **Cancel** (quiet) and **Save** at the right. **Save is ink-filled** (an Ink fill with
+  ground-coloured text; Ink 2 on hover) and reads "Save", "Saving…" (with the form `aria-busy`), or
+  "Add debt" for a new entry. Delete confirms **inline**: "Delete Rent?" with a consequence line, then
+  "Keep it" (ghost) and "Delete" (Danger text). A conflict swaps Save for an ink "Use latest".
+- **Fields:** 44px, 1px `line-strong` border, the ground as fill, 4px radius. **Hover:** an Ink 3
+  border. **Focus:** an Ink border plus a 1px Ink ring (gold stays on Add). **Invalid:** the Ink
+  border plus a 3px inset Ink bar on the leading edge, with the message below. Money fields show a
+  "$" in Ink 3 at the left and the figure right-aligned in 600 tabular type. Date fields are native
+  `type="date"` with `color-scheme` following the theme.
+- **Segmented radiogroups:** "Repeats" (Monthly · Every 2 weeks · Every week) and "Due every month on"
+  / "Paid on" (Day · First day · Last day) use the world segmented control with `role="radio"`, 8px
+  12px segments at 13px. "Day" is followed by a 5.2rem centred day field.
+- **Custom listboxes:** "Paid from" and the debt's last-payment month are a field-styled trigger with
+  a 16px Ink 3 chevron, opening a Plane list (8px radius, resting shadow, max 280px) with an 18px check
+  column, a one-line Ink 3 description per option ("Automatic · The most recent payday on or before
+  the due date"), and a Plane 2 active option. **Never a native `<select>`.**
+- **Checkboxes:** drawn 20px squares (1.5px Ink 3 border, 3px radius), Ink-filled with a
+  ground-coloured tick when checked, inside a 44px label ("Auto-pay", "Paused · Left out of every
+  month").
+- **Notices:** offline and "needs attention" notices are ruled strips (a `line-strong` rule above and
+  below, a drawn Ink 2 icon, Ink text with an Ink 3 line, and a ghost action), never a coloured box.
+- **First run:** "Start with a payday." (Expanded 800 1.45rem), one Ink 2 paragraph, three ruled
+  numbered steps, and the gold "Add a payday". **Loading:** the column heads over a spinner line.
+  **Couldn't load:** a drawn icon, a 600 17px Ink message, an Ink 3 line and a ghost "Try again".
+- **Welcome:** the masthead, a 17px Ink 2 lead, the gold "Sign in with Google", a 14px Ink 3 line
+  saying Budget is a plan, not a bank feed, and beside it an **example** sheet under a `line-strong`
+  rule tagged "Example · Sample figures" (700 10.5px, `0.14em`, uppercase, Ink 3), showing two real
+  periods that can't be edited.
+- **Re-footing (signature motion):** after a save, **only the figures that changed** roll up to their
+  new value (a 45% vertical rise from 0 opacity over **120ms**, `cubic-bezier(.2,.8,.2,1)`), and a
+  changed Left's **double rule redraws left to right** over **180ms**. Under reduced motion, values
+  swap instantly and the rule simply appears. The new totals are announced once through a polite live
+  region ("Saved Rent. September net is $2,215.36."). The editor opens with a 160ms, 4px rise.
+
+### Do's and Don'ts (Budget)
+
+- **Do** set every period as a ruled band over its bills, footed with a single rule over Covered and
+  a double rule under Left.
+- **Do** keep all money in one right-aligned tabular column, exact to the cent.
+- **Do** say Left, Short and Net in words, with a drawn down-arrow for Short and the sign inside the
+  Net figure.
+- **Do** write kinds as small-caps text tags after the name.
+- **Do** open edits in place, one at a time, with an ink-filled Save.
+- **Do** keep Add the only gold fill: ghost in first run, absent while loading or after a failed load.
+- **Do** on phones, move Add to the fixed 52px bottom bar, pin the statement above it, and hide both
+  while an editor is open.
+- **Do** re-foot only the changed figures (120ms roll, 180ms double-rule redraw; instant under reduced
+  motion) and announce the new totals once.
+- **Don't** put the ledger in cards, give a band side borders or a radius, or raise the sheet onto a
+  slab.
+- **Don't** build KPI cards, a donut or bar chart, or a month grid of coloured chips.
+- **Don't** colour money green or red, or signal Short or Net by colour alone.
+- **Don't** use Budget Blue for text, fills, rules, figures or tags. It is the emblem and the row-name
+  underline only.
+- **Don't** make Save gold, or put a second gold action on a sheet.
+- **Don't** mark validation or problems in Danger red, a toast or a coloured alert box.
+- **Don't** use a native `<select>` for "Paid from" or the month.
+- **Don't** bring Literata, Story Book's desk, Polyglot's dock or Sign's finder into Budget.

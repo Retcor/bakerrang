@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, or web-sign)
+        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, or web-budget)
         required: true
         type: string
       environment:
@@ -46,6 +46,7 @@ jobs:
       WEB_STORYBOOK_SERVICE: ${{ vars.WEB_STORYBOOK_SERVICE }}
       WEB_POLYGLOT_SERVICE: ${{ vars.WEB_POLYGLOT_SERVICE }}
       WEB_SIGN_SERVICE: ${{ vars.WEB_SIGN_SERVICE }}
+      WEB_BUDGET_SERVICE: ${{ vars.WEB_BUDGET_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
@@ -57,6 +58,7 @@ jobs:
       STORYBOOK_BASE_URL: ${{ vars.STORYBOOK_BASE_URL }}
       POLYGLOT_BASE_URL: ${{ vars.POLYGLOT_BASE_URL }}
       SIGN_BASE_URL: ${{ vars.SIGN_BASE_URL }}
+      BUDGET_BASE_URL: ${{ vars.BUDGET_BASE_URL }}
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
       - name: Check out triggering commit
@@ -186,6 +188,12 @@ jobs:
               smoke_path="/"
               smoke_url="${SIGN_BASE_URL%/}/"
               ;;
+            web-budget)
+              service_name="$WEB_BUDGET_SERVICE"
+              image_name="web-budget"
+              smoke_path="/"
+              smoke_url="${BUDGET_BASE_URL%/}/"
+              ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
@@ -297,6 +305,15 @@ jobs:
                   --build-arg VITE_OAUTH_TARGET=sign \
                   web
                 ;;
+              web-budget)
+                [[ -n "$VITE_API_BASE_URL" ]]
+                docker build "${common_args[@]}" \
+                  --file web/Dockerfile \
+                  --build-arg APP=budget \
+                  --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                  --build-arg VITE_OAUTH_TARGET=budget \
+                  web
+                ;;
             esac
             docker push "$tagged_image"
             digest=""
@@ -394,7 +411,7 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client|web-launcher|web-storybook|web-polyglot|web-sign) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                client|web-launcher|web-storybook|web-polyglot|web-sign|web-budget) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then

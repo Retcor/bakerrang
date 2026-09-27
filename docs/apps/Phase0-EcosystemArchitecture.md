@@ -906,6 +906,13 @@ automated tests · manual verification.** Each product-extraction phase also car
 > `bakerrang.com/account` until Phase E") mean *the Account phase*, whatever its final number. Sign's product was also
 > re-scoped as an honest ASL handshape practice + reader, not an interpreter (see the Phase E doc).
 
+> **Superseded sequencing (2026-09-26):** the orchestrator ran the next extraction as **"Phase F — Budget"**
+> (`budget.bakerrang.com`, [PhaseF-Budget.md](PhaseF-Budget.md)), pulling Budget forward from Phase G. The two
+> sections below keep their original scope, but their letters no longer describe the run order: "Phase E — Account"
+> means *the Account phase* and "Phase F — Apex cutover" means *the apex-cutover phase*, whatever their final numbers.
+> Completed phases keep their names: **Phase E = Sign, Phase F = Budget.** Budget was re-scoped as an honest
+> paycheck-to-bills planner (not "budget tracking").
+
 ### Phase E — Stand up **Account** → `account.bakerrang.com`
 - **Scope:** Account app owns profile/security/global prefs + canonical theme write
   (`GET/PUT /account/preferences` or reuse of the settings pattern); other apps link to it.
