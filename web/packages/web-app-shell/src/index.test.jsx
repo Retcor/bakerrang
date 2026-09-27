@@ -23,7 +23,7 @@ describe('destination registry', () => {
       storybook: 'https://storybook.bakerrang.com',
       polyglot: 'https://polyglot.bakerrang.com',
       sign: 'https://sign.bakerrang.com',
-      budget: 'https://bakerrang.com/budget',
+      budget: 'https://budget.bakerrang.com',
       wow: 'https://bakerrang.com/wow',
       passwords: 'https://bakerrang.com/passwords'
     })
