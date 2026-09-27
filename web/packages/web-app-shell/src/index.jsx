@@ -8,7 +8,7 @@ export const TOOL_DEFINITIONS = Object.freeze([
   { id: 'storybook', name: 'Story Book', shortName: 'Story Book', accent: 'var(--accent-story)', legacyPath: '/storybook', liveUrl: 'https://storybook.bakerrang.com', envKey: 'VITE_STORYBOOK_URL' },
   { id: 'polyglot', name: 'Polyglot', shortName: 'Polyglot', accent: 'var(--accent-polyglot)', legacyPath: '/polyglot/instant', liveUrl: 'https://polyglot.bakerrang.com', envKey: 'VITE_POLYGLOT_URL' },
   { id: 'sign', name: 'Sign Language', shortName: 'Sign', accent: 'var(--accent-sign)', legacyPath: '/sign-language', liveUrl: 'https://sign.bakerrang.com', envKey: 'VITE_SIGN_URL' },
-  { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', legacyPath: '/budget', liveUrl: null, envKey: 'VITE_BUDGET_URL' },
+  { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', legacyPath: '/budget', liveUrl: 'https://budget.bakerrang.com', envKey: 'VITE_BUDGET_URL' },
   { id: 'wow', name: 'WoW Advisor', shortName: 'WoW', accent: 'var(--accent-wow)', legacyPath: '/wow', liveUrl: null, envKey: 'VITE_WOW_URL' },
   { id: 'passwords', name: 'Passwords', shortName: 'Passwords', accent: 'var(--accent-passwords)', legacyPath: '/passwords', liveUrl: null, envKey: 'VITE_PASSWORDS_URL' }
 ])
