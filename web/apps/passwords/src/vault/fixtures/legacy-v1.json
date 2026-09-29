@@ -1,0 +1,133 @@
+{
+  "masterPassword": "synthetic legacy fixture password",
+  "meta": {
+    "kdf": {
+      "algo": "argon2id",
+      "iterations": 3,
+      "memory": 65536,
+      "parallelism": 1,
+      "hashLength": 32,
+      "salt": "i90a1xbxmNbqq5SaM5Gu2A=="
+    },
+    "protectedVaultKey": {
+      "iv": "4WgOqaWKg51W9vl2",
+      "ct": "f3bYMSuhhaGW/1Ga2MHCHjb2284UOc5rIWPSmHiPAzX9z+db3e3eYtA1UryuGeWb"
+    },
+    "publicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoyDLQ6PBZi+dHZP5nIlMfyUKm8TdD+/p5kEwbdGdvEU9JirmVkUJRu+MZbfQ411btW3ZfIiQMwbqPvEZfqtoRO7Bwv/ArLwYYavapqh4uXImR0iVMQDUIesPdJsH7k25UqvSHjnQmTkuy7GRAyriFpDMBLVdEPnKXcbzB8NFbrw0Hx2ZZqZ0bdoBGUjK9m82Ab4PNvfSsABYmQfaInGCarUu0KH2CiccMmrDcTRfjR0a8N1YVQ1f/1pqZGaXZJYUYzawrR2HapG9ugFwZglHGYVclgOmtt0jPitPrGE85VDSJGs0DMfTdN8wxtWM82dgKhwegrDG7ykNVjPjxfIkqQIDAQAB",
+    "protectedPrivateKey": {
+      "iv": "r0WwlOKNWqG6sSG6",
+      "ct": "nMuhaJySvfqiroT7pqrJVt4bKDCVG8t9R2gFYoBde6rfMW2uewU6DmOVKkGETQaPktbYCXCHTI8ZlmLPDNHIqwfHZpG/9bN/osvVG2o0WRPb5DA7eJA7ZynRrAX+LOrZodY5CAyKdikIxDjn91L9Mz1H2gx2O+QcsvgiNKhiwz/vq0eKDL12Wbs24EvkAwhWGtvfB4S56hGxCUpLemuHOM00FxUxVo49UxCO94/8nrFdZGMbF2f5wQ6BF4GK8RaHgukhYW+4EkWkkzD1wPg9qpa+RxozSyHiiRw/GV3RZfPIQfnSQitNhwNhjNsrFx9sHRjJ27fltfF9j30oBbv3tZXp7RpN25NhZtIfoHCNy+oo03Pbwf1ZAgcZ9w1ybIBd32iRET9zGwOBn3G6aEFcUp5NsYKm7VtRZQg5vMiLw4Bt9SuerdaYyxmfjMypSvKtKrLFA8CVA3y2ajTxOlCnZ5EzqktJevTJk6tcEV8NxTPuHkDSxjf4CPSV1v1HIKAdNd4Z+E9zQRJR+R4IcUzlMMjy1M28OYw+dRNtFVhmfaFbL89au/+sowSiyN6ORJa4OuqNcOwjbO+/PyB1stAzFycLlrRBGeqqexpsk9Vls0kEfqMtG4/6A6PYdUC49BJHjBeGN6CLYJGkVbXmn2d79A2S7BHFXsM/yATniYb+tQsMtjjcTXEyS2MOiVfMVNXmV/yDMupX7tknGH2N+Kr88LoLcWJeJJ0mSpzDPTmZEf+P/+VKbgCdINngwiq2TWJIuhr3IZgYu5w8A7eAGoKS4gGJRbwc9ZUiSyVqbC/uUBXYCZN+ydzj3yFvgaVS1fA9IQqyaX9mwS0jOYF5OFWUXdsNbF6Ezo75Rlmo4W6vw5akq+Qv9zQZcj7moCTqD1JD8WTQfzrh7zUaV1lk2Xa6C86KqC+mvuwuZwbXVCGUPY212AfId5556VdSDFTCZhnP+uFtv1Ig4JNzAQfK3ncQVxwdN93S6F9a93ZM47ZP8Kjs/ldYd5DCnP2aOm2Fg/y4CRHcQ3Y8sQs2FqjWG71d58EhDy+d/rrbMbDtfkBo89YoBuq2TagafvnrUhF5x3VUJqFLQN0f8Yfp3XBj6o6fWtIJs1hZESnNUTF6tjMy9hSn6zO3Xz2sW3Hhsdb+mxqRuo6y7WT6N/3n3aICehIBZjUoqg/VqNU91CO7nSE+lKeHbmk94TcwX0CBVz1DNCBGypNPpj1o2+TeK/8RrCMTnDh1c9TqrOa92Kzm3GYSL9mhQJnP6qZl/A9KgwB1JSmpt35BXb6qF1gXsA56BkbeS7mTHWRWigQncJGzSzNYSTstqU3/VJuUcyqPwrE701hXn1gSwWSIXvnSLvpZVaPdcg1yi09KwW1lT6gbJ4AnpoR4hOdlv4GBjL4wfihnm0q8paHAOUZBFkQiOOqYM2P8qSaxRBZSkH6iQWtLyNoWND0RXB3r0CTMAgVsXLzYKk11Pzi/q3uWO3iFUUqCebbn4eRoHyQWAiejmv+QAGd9EzMzDu/CM9qdaJJZfatEAMa+2wBldqtpB3pXMbBjBUbdP45UlfeOWKn3GRZBBQQSoMB4gDfD8eNPAkavPhP0aBNWubxuQfXU9s6i5YHlnoAvsw56IVEqU14or5lBR97MwWPN"
+    }
+  },
+  "preSharingMeta": {
+    "kdf": {
+      "algo": "argon2id",
+      "iterations": 3,
+      "memory": 65536,
+      "parallelism": 1,
+      "hashLength": 32,
+      "salt": "i90a1xbxmNbqq5SaM5Gu2A=="
+    },
+    "protectedVaultKey": {
+      "iv": "4WgOqaWKg51W9vl2",
+      "ct": "f3bYMSuhhaGW/1Ga2MHCHjb2284UOc5rIWPSmHiPAzX9z+db3e3eYtA1UryuGeWb"
+    }
+  },
+  "records": {
+    "ordinary": {
+      "id": "ordinary",
+      "folderId": null,
+      "rev": 1,
+      "ciphertext": {
+        "iv": "o0jH0mxnblaid1vJ",
+        "ct": "Mpv4pLsDSTkIeeRiUxEnGZQS4ogtBG7CdS1NOelg2bi3Tcd9DZlPs4Uf2i0gOgtynrq2bB+hmxAMdJU2ilnZqJto4inyT3y+Jtd1t9WJolv/1uCsxxFf5tuqQH9i8tWwQaCkjLwrw2R+aQOzHiW6xCfV8oH/tKmO+OIMV9IA9u6oP4gUO3sgQBb3YPpt3wuGHN8I1mCIZDRpVTN/cPA00q34Vn2fmcAIa2ui/PHL+bSXCQ=="
+      },
+      "wrappedItemKey": {
+        "iv": "uhTTmqugYwK7lol3",
+        "ct": "MJd3EiTmzVP/PUJS7/isaSGwErUw1eGO1Jl0sxflFrCbuFGp37wkM7f3p2MVcCAh"
+      }
+    },
+    "sharedOwner": {
+      "id": "shared-owner",
+      "folderId": "shared-folder",
+      "rev": 1,
+      "ciphertext": {
+        "iv": "fC6o+wIuK+Yq2kS9",
+        "ct": "niH8jlAMub3b3OQjEvxLIdjYjDmdeaI0gkBIb2J9B0SgokbnfmBeCGiIpOhBtfu93/eIm57zTbMrd/ZPN5I5yHosfN3GpWc2G9llDvl7W0jN+iaq42rZWO/Psg6Z+S07IxFIkdatU8rGEKELHX3hoKe0fwo32Oeg8K3JVH2TXHpy839Y0XLIZKH+p68WdNYF3NBEha8xbdva81lxn4XXfUd95Q=="
+      },
+      "wrappedItemKey": {
+        "iv": "/BcxJ4ZkagDsPBsg",
+        "ct": "K3MdlRrhPwWVCWH1xRXvB864FKicxgY67BY+/5Z8upKh3Xe1zeQJixFectvUCdXU"
+      },
+      "folderWrappedItemKey": {
+        "iv": "G3JaYdJXxgeL7XpY",
+        "ct": "yxoFT0f0FoA2yynphsQR4nr8snbr0I0vrgVl1JB1GlO2mZyyC+2i9+VynpTBwpp7"
+      }
+    },
+    "sharedRecipient": {
+      "id": "shared-recipient",
+      "folderId": "shared-folder",
+      "rev": 1,
+      "ciphertext": {
+        "iv": "7GjXIb7O3Sv8VoAE",
+        "ct": "iOLipvxuUfMW1bj7wUHPZVLuU+CwpGV6nFXoptzmdTlypkv7deeU0Z5Sd9s+uPPQEH3GiDeirZ/373EF9sWgV8xNtT5TGpylKJCjewYhIKqPz2MGY+UscgQtHlBfUFvJ3SSr1SFhS65PI3EwE+dqZrv4i6mBlj9Fb7/L+aBAhknpu8hKwLUbCkUEXqhL4Q+/okyHrAIZAadcbRlvBYSbyejyMjnwO8A4n6QTuOR166m9J1YDSPA="
+      },
+      "wrappedItemKey": null,
+      "folderWrappedItemKey": {
+        "iv": "3KDlCtREO3cGkrwJ",
+        "ct": "gcKR577hIBXQcrFoL04v3cnlAEWuMKycpCqgNYJPi2wcsKMXchlWWJBxHlzrjSBP"
+      }
+    }
+  },
+  "folders": {
+    "ordinary": {
+      "id": "ordinary-folder",
+      "parentId": null,
+      "rev": 1,
+      "ciphertext": {
+        "iv": "iRePQ0QySLS+naGa",
+        "ct": "CNLLfl8pMCYC1ZQhjY4LNZY4VbjylL8DREv7D0L7m7HIQHYWnlf+JZQ="
+      }
+    },
+    "shared": {
+      "id": "shared-folder",
+      "parentId": null,
+      "rev": 1,
+      "ciphertext": {
+        "iv": "Gl64jBWP0O/vA2tg",
+        "ct": "/iV4rvEuJGZ2ckCKeUZgsENlcYR9aXCFZqJPCRdvPj0DXUQNDW6i3Q=="
+      },
+      "sharedName": {
+        "iv": "nz0FwBPwM3JuXTmR",
+        "ct": "STqT3v1cWBlY46MAvNDm6VcleB/AZQfrnGjHW5YrmYJo6XHOJg3ikA=="
+      },
+      "wrappedFolderKey": {
+        "iv": "X2oR360xw+k7Ylk8",
+        "ct": "IhI75zN9gU44tJLPKtWLXn6k0aA+jf1aCDiELlkFxcmMtiAR2Ttkiti4HsGwyWC5"
+      }
+    }
+  },
+  "expected": {
+    "ordinary": {
+      "title": "Legacy Bank",
+      "username": "fixture@example.test",
+      "password": "fixture-secret-ordinary",
+      "url": "https://example.test/login",
+      "notes": "Synthetic private note"
+    },
+    "sharedOwner": {
+      "title": "Shared Owner",
+      "username": "owner@example.test",
+      "password": "fixture-secret-owner",
+      "url": "https://shared.example.test",
+      "notes": "Owner note"
+    },
+    "sharedRecipient": {
+      "title": "Shared Recipient",
+      "username": "recipient@example.test",
+      "password": "fixture-secret-recipient",
+      "url": "https://recipient.example.test",
+      "notes": "Recipient note"
+    }
+  }
+}

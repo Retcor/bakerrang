@@ -68,7 +68,7 @@ class FakeCollectionReference {
         new FakeDocumentReference(this.database, path),
         value
       ))
-    return { docs, size: docs.length }
+    return { docs, size: docs.length, empty: docs.length === 0 }
   }
 }
 
@@ -131,7 +131,7 @@ class FakeQuery {
       new FakeDocumentReference(this.database, path),
       value
     ))
-    return { docs, size: docs.length }
+    return { docs, size: docs.length, empty: docs.length === 0 }
   }
 }
 

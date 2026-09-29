@@ -4,8 +4,8 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, ...deploy },
+  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, ...ci },
+  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, ...deploy },
   unknown: []
 })
 
@@ -45,6 +45,11 @@ test('classifies Budget source for Budget CI and deployment only', () => {
   assert.deepEqual(classifyChanges(['web/apps/budget/src/App.jsx']), expected({ 'web-budget': true }))
 })
 
+test('classifies Passwords source and nginx config for Passwords only', () => {
+  assert.deepEqual(classifyChanges(['web/apps/passwords/src/App.jsx']), expected({ 'web-passwords': true }))
+  assert.deepEqual(classifyChanges(['web/nginx/apps/passwords.conf']), expected({ 'web-passwords': true }))
+})
+
 test('fans shared consumer packages and workspace infrastructure out to all web apps', () => {
   for (const repositoryPath of [
     'web/packages/web-tokens/src/tokens.css',
@@ -57,7 +62,7 @@ test('fans shared consumer packages and workspace infrastructure out to all web 
   ]) {
     assert.deepEqual(
       classifyChanges([repositoryPath]),
-      expected({ 'web-launcher': true, 'web-storybook': true, 'web-polyglot': true, 'web-sign': true, 'web-budget': true }),
+      expected({ 'web-launcher': true, 'web-storybook': true, 'web-polyglot': true, 'web-sign': true, 'web-budget': true, 'web-passwords': true }),
       repositoryPath
     )
   }

@@ -41,6 +41,9 @@ validateServerRuntimeConfig()
 
 const app = express()
 
+// Place this before parsing and CSRF so even rejected vault requests cannot be cached.
+app.use('/vault', noStore)
+
 // Trust the upstream proxy so req.secure reflects X-Forwarded-Proto behind
 // TLS termination (used by the 'auto' secure-cookie setting below).
 app.set('trust proxy', 1)
@@ -120,7 +123,7 @@ app.use('/supermarket', isAuthenticated, superMarketRouter)
 app.use('/budget', noStore, budgetLimiter, isAuthenticated, budgetRouter)
 app.use('/storybook', isAuthenticated, storybookRouter)
 app.use('/wow', isAuthenticated, wowRouter)
-app.use('/vault', vaultLimiter, isAuthenticated, vaultRouter)
+app.use('/vault', noStore, vaultLimiter, isAuthenticated, vaultRouter)
 app.use('/tenants', tenantLimiter, isAuthenticated, tenantRouter)
 
 app.get('/health', (req, res) => {

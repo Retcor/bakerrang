@@ -116,8 +116,8 @@ export const Launcher = () => {
               <a className='vault' href={passwords.url} style={{ '--accent': passwords.accent }}>
                 <div className='vault__emblem'><ProductEmblem id='passwords' /></div>
                 <div>
-                  <div className='vault__name'>Passwords <span>Zero-knowledge</span></div>
-                  <div className='vault__description'>A private vault that encrypts on your device. We store the locked bytes and never see your passwords. <b>••••••••</b></div>
+                  <div className='vault__name'>Passwords <span>Encrypted on your device</span></div>
+                  <div className='vault__description'>Keep logins in folders, encrypted in your browser with a master password only you know. BakerRang stores the encrypted copy and can't read it. <b>••••••••</b></div>
                 </div>
                 <span className='vault__arrow'><Arrow /></span>
               </a>

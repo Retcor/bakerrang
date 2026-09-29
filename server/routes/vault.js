@@ -1,5 +1,7 @@
 import express from 'express'
 import * as vault from '../services/vaultService.js'
+import { validVaultId } from '../domain/vaultShapes.js'
+import { vaultLookupLimiter } from '../middleware/security.js'
 
 const router = express.Router()
 
@@ -7,14 +9,23 @@ const router = express.Router()
 // the user id always comes from the authenticated session, never the body.
 // Expected client errors (4xx, e.g. a 404 when the vault isn't initialized yet)
 // are normal control flow and are not logged; only 5xx server faults are.
-const handle = (fn) => async (req, res) => {
+const handle = (fn, successStatus = 200) => async (req, res) => {
   try {
-    res.json(await fn(req))
+    res.status(successStatus).json(await fn(req))
   } catch (error) {
     const status = error.status || 500
-    if (status >= 500) console.error(error)
-    res.status(status).json({ error: error.message || 'Vault operation failed' })
+    if (status >= 500) console.error(`[vault] ${req.method.toLowerCase()} ${req.route?.path || '/'} failed`, { code: error.code, name: error.name })
+    res.status(status).json(status >= 500
+      ? { error: 'Vault operation failed' }
+      : { error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.current ? { current: error.current } : {}) })
   }
+}
+
+for (const param of ['id', 'ownerId', 'folderId', 'rootId']) {
+  router.param(param, (req, res, next, value) => {
+    if (!validVaultId(value)) return res.status(400).json({ error: 'Invalid id' })
+    next()
+  })
 }
 
 // Who is making this change — recorded in the audit log. Always from the session,
@@ -30,7 +41,7 @@ router.get('/', handle(async (req) => {
   return v
 }))
 
-router.post('/', handle((req) => vault.initVault(req.user.id, req.body)))
+router.post('/', handle((req) => vault.initVault(req.user.id, req.body), 201))
 router.put('/key', handle((req) => vault.rotateVaultKey(req.user.id, req.body)))
 
 // Non-secret vault preferences (auto-lock duration, inline-autofill toggle).
@@ -39,13 +50,15 @@ router.put('/settings', handle((req) => vault.updateSettings(req.user.id, req.bo
 // Sharing keypair: set on an existing vault (migration), and look up a
 // recipient's public key by email.
 router.post('/keys', handle((req) => vault.setVaultKeys(req.user.id, req.body)))
-router.get('/pubkey', handle((req) => vault.getPublicKeyByEmail(req.query && req.query.email)))
+router.post('/pubkey', vaultLookupLimiter, handle((req) => vault.getPublicKeyByEmail(req.body && req.body.email)))
+router.get('/pubkey', vaultLookupLimiter, handle((req) => vault.getPublicKeyByEmail(req.query && req.query.email)))
 
 // ---- Items ----
 
 router.get('/items', handle((req) => vault.listItems(req.user.id)))
 router.post('/items', handle((req) => vault.createItem(req.user.id, req.body, actorOf(req))))
 router.post('/items/bulk', handle((req) => vault.bulkCreateItems(req.user.id, req.body && req.body.items, actorOf(req))))
+router.post('/items/bulk-delete', handle((req) => vault.deleteItems(req.user.id, req.body && req.body.ids, actorOf(req))))
 // Must be declared before '/items/:id' so it isn't captured as an id.
 router.put('/items/move', handle((req) => vault.moveItems(
   req.user.id, req.body && req.body.ids, req.body && req.body.folderId, req.body && req.body.folderKeys, actorOf(req))))
