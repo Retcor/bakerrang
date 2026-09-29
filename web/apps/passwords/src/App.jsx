@@ -101,11 +101,37 @@ const SelectAll = ({ keys, selectedIds, setSelectedIds }) => {
   return <label className='pw-select-all'><input ref={ref} type='checkbox' checked={all} onChange={toggle} /><span>Select all</span></label>
 }
 
+// Dragging a finger (or mouse) down the rail scrubs through letters, like the iOS
+// contacts index. Pointer capture keeps the drag on the rail; touch-action: none
+// stops the drag from scrolling the page instead.
+const JumpRail = ({ letters, jump }) => {
+  const [active, setActive] = useState(null)
+  const dragging = useRef(false)
+  const last = useRef(null)
+  const fromPoint = (x, y) => {
+    const letter = document.elementFromPoint(x, y)?.closest('[data-letter]')?.dataset.letter
+    if (!letter || letter === last.current) return
+    last.current = letter
+    setActive(letter)
+    jump(letter)
+  }
+  const end = () => { dragging.current = false; last.current = null; setActive(null) }
+  return <nav className='pw-az' aria-label='Jump to letter' onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); dragging.current = true; last.current = null; fromPoint(event.clientX, event.clientY) }} onPointerMove={(event) => { if (dragging.current) fromPoint(event.clientX, event.clientY) }} onPointerUp={end} onPointerCancel={end}>{letters.map((letter) => <button key={letter} type='button' data-letter={letter} className={active === letter ? 'is-active' : ''} onClick={() => jump(letter)}>{letter}</button>)}</nav>
+}
+
 const EntryIndex = ({ entries, selected, choose, scope, query, setQuery, searchRef, selectedIds, setSelectedIds, canEdit }) => {
   const sorted = useMemo(() => [...entries].sort((a, b) => a.title.localeCompare(b.title)), [entries])
   const letters = [...new Set(sorted.map((entry) => entry.title[0]?.toUpperCase() || '#'))]
   const rowRefs = useRef(new Map())
-  return <section className='pw-index' aria-label='Entries'><div className='pw-index-head'><h2>{scope.name}</h2><span>{sorted.length}</span></div><div className='pw-search'><Icon name='search' /><input ref={searchRef} id='vault-search' className='pw-field' value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Search title, username, website' aria-label='Search title, username, website' />{query && <button aria-label='Clear search' onClick={() => setQuery('')}>×</button>}</div>{canEdit && sorted.length > 0 && <SelectAll keys={sorted.map((entry) => `${entry.source}:${entry.id}`)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />}<div className='pw-list-wrap'>{sorted.length ? <ul className='pw-entry-list'>{sorted.map((entry) => <li key={`${entry.source}:${entry.id}`} className={`pw-entry-row ${canEdit ? '' : 'pw-entry-row--read-only'} ${selected?.id === entry.id && selected?.source === entry.source ? 'is-open' : ''}`} ref={(node) => { if (node) rowRefs.current.set(`${entry.source}:${entry.id}`, node) }}>{canEdit && <input type='checkbox' aria-label={`Select ${entry.title}`} checked={selectedIds.has(`${entry.source}:${entry.id}`)} onChange={(event) => { const next = new Set(selectedIds); const key = `${entry.source}:${entry.id}`; event.target.checked ? next.add(key) : next.delete(key); setSelectedIds(next) }} />}<button onClick={() => choose(entry)} aria-describedby={`subtitle-${entry.source}-${entry.id}`}>{entry.title}</button><span id={`subtitle-${entry.source}-${entry.id}`}>{entry.username || entry.url}</span>{entry.title === "Can't open this entry" && <small>CAN'T OPEN</small>}</li>)}</ul> : <div className='pw-empty'><h3>{query ? `No entries match “${query}”.` : vaultEmptyTitle(scope)}</h3><p>{query ? 'Try a different title, username or website.' : 'Add a login with New entry, or bring passwords over from KeePass with Import.'}</p>{query && <div className='pw-actions'><button className='pw-button pw-button--ghost' onClick={() => setQuery('')}>Clear search</button></div>}</div>} {sorted.length >= 20 && <nav className='pw-az' aria-label='Jump to letter'>{letters.map((letter) => <button key={letter} onClick={() => { const entry = sorted.find((item) => (item.title[0]?.toUpperCase() || '#') === letter); rowRefs.current.get(`${entry.source}:${entry.id}`)?.scrollIntoView({ block: 'start' }) }}>{letter}</button>)}</nav>}</div></section>
+  const listRef = useRef(null)
+  // Scroll only the entry list (not the page) so the rail stays put while scrubbing.
+  const jumpTo = (letter) => {
+    const entry = sorted.find((item) => (item.title[0]?.toUpperCase() || '#') === letter)
+    const row = entry && rowRefs.current.get(`${entry.source}:${entry.id}`)
+    const list = listRef.current
+    if (row && list) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top
+  }
+  return <section className='pw-index' aria-label='Entries'><div className='pw-index-head'><h2>{scope.name}</h2><span>{sorted.length}</span></div><div className='pw-search'><Icon name='search' /><input ref={searchRef} id='vault-search' className='pw-field' value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Search title, username, website' aria-label='Search title, username, website' />{query && <button aria-label='Clear search' onClick={() => setQuery('')}>×</button>}</div>{canEdit && sorted.length > 0 && <SelectAll keys={sorted.map((entry) => `${entry.source}:${entry.id}`)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />}<div className='pw-list-wrap'>{sorted.length ? <ul ref={listRef} className='pw-entry-list'>{sorted.map((entry) => <li key={`${entry.source}:${entry.id}`} className={`pw-entry-row ${canEdit ? '' : 'pw-entry-row--read-only'} ${selected?.id === entry.id && selected?.source === entry.source ? 'is-open' : ''}`} ref={(node) => { if (node) rowRefs.current.set(`${entry.source}:${entry.id}`, node) }}>{canEdit && <input type='checkbox' aria-label={`Select ${entry.title}`} checked={selectedIds.has(`${entry.source}:${entry.id}`)} onChange={(event) => { const next = new Set(selectedIds); const key = `${entry.source}:${entry.id}`; event.target.checked ? next.add(key) : next.delete(key); setSelectedIds(next) }} />}<button onClick={() => choose(entry)} aria-describedby={`subtitle-${entry.source}-${entry.id}`}>{entry.title}</button><span id={`subtitle-${entry.source}-${entry.id}`}>{entry.username || entry.url}</span>{entry.title === "Can't open this entry" && <small>CAN'T OPEN</small>}</li>)}</ul> : <div className='pw-empty'><h3>{query ? `No entries match “${query}”.` : vaultEmptyTitle(scope)}</h3><p>{query ? 'Try a different title, username or website.' : 'Add a login with New entry, or bring passwords over from KeePass with Import.'}</p>{query && <div className='pw-actions'><button className='pw-button pw-button--ghost' onClick={() => setQuery('')}>Clear search</button></div>}</div>} {sorted.length >= 20 && <JumpRail letters={letters} jump={jumpTo} />}</div></section>
 }
 
 const vaultEmptyTitle = (scope) => scope.name === 'All entries' ? 'Your vault is empty.' : `Nothing in ${scope.name} yet.`

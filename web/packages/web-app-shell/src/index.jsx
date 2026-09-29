@@ -10,7 +10,7 @@ export const TOOL_DEFINITIONS = Object.freeze([
   { id: 'sign', name: 'Sign Language', shortName: 'Sign', accent: 'var(--accent-sign)', legacyPath: '/sign-language', liveUrl: 'https://sign.bakerrang.com', envKey: 'VITE_SIGN_URL' },
   { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', legacyPath: '/budget', liveUrl: 'https://budget.bakerrang.com', envKey: 'VITE_BUDGET_URL' },
   { id: 'wow', name: 'WoW Advisor', shortName: 'WoW', accent: 'var(--accent-wow)', legacyPath: '/wow', liveUrl: null, envKey: 'VITE_WOW_URL' },
-  { id: 'passwords', name: 'Passwords', shortName: 'Passwords', accent: 'var(--accent-passwords)', legacyPath: '/passwords', liveUrl: null, envKey: 'VITE_PASSWORDS_URL' }
+  { id: 'passwords', name: 'Passwords', shortName: 'Passwords', accent: 'var(--accent-passwords)', legacyPath: '/passwords', liveUrl: 'https://passwords.bakerrang.com', envKey: 'VITE_PASSWORDS_URL' }
 ])
 
 export const ACCOUNT_DEFINITION = Object.freeze({
