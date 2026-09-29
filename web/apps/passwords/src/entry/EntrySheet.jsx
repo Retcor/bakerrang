@@ -13,7 +13,18 @@ const safeUrl = (value) => {
   } catch { return null }
 }
 
-export const MaskedSecret = ({ value, announce, name = 'password' }) => {
+export const CopyButton = ({ value, label, copiedMessage, announce }) => {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => { if (!copied) return; const timer = window.setTimeout(() => setCopied(false), 2000); return () => window.clearTimeout(timer) }, [copied])
+  const copy = () => {
+    const failed = () => announce("Couldn't copy. Your browser blocked the clipboard.")
+    if (!navigator.clipboard?.writeText) { failed(); return }
+    navigator.clipboard.writeText(value || '').then(() => { setCopied(true); announce(copiedMessage) }, failed)
+  }
+  return <IconButton icon={copied ? 'check' : 'copy'} label={label} onClick={copy} />
+}
+
+export const MaskedSecret =({ value, announce, name = 'password' }) => {
   const [shown, setShown] = useState(false)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
@@ -107,7 +118,7 @@ export const EntrySheet = ({ entry, vault, folders, onClose, onRequestDiscard, o
     <section className='pw-sheet' aria-label={entry.title || 'New entry'}><header className='pw-sheet-head'><IconButton icon='back' label='Close entry' onClick={onClose} /><h2 ref={titleRef} tabIndex='-1'>{entry.title || 'New entry'}</h2>{entry.id && mode === 'view' && <><IconButton icon='clock' label='Version history' onClick={() => onHistory(entry)} />{permission === 'edit' && <IconButton icon='edit' label={`Edit ${entry.title}`} onClick={() => setMode('edit')} />}</>}</header>
       {problem && <div className='pw-inline-alert' role='alert'>{problem}</div>}
       {mode === 'edit' && (!entry.id || details) && <EditEntry details={details} selected={selected} folders={folders} onSave={save} onCancel={latest} onDelete={deleted} announce={announce} onDirtyChange={onDirtyChange} />}
-      {mode === 'view' && details && <div className='pw-sheet-body'><div className='pw-value-row'><span className='pw-label'>Username</span><div>{details.username || '—'}<IconButton icon='copy' label='Copy username' onClick={() => navigator.clipboard?.writeText(details.username || '').then(() => announce('Username copied'), () => announce("Couldn't copy. Your browser blocked the clipboard."))} /></div></div><div className='pw-value-row'><span className='pw-label'>Password</span><MaskedSecret value={details.password} announce={announce} /></div><div className='pw-value-row'><span className='pw-label'>Website</span><div>{safeUrl(details.url) ? <a href={safeUrl(details.url)} target='_blank' rel='noopener noreferrer'>{details.url}<Icon name='open' /></a> : (details.url || '—')}</div></div><div className='pw-value-row'><span className='pw-label'>Folder</span><div>{folders.find((folder) => folder.source === entry.source && folder.id === entry.folderId)?.name || 'Unfiled'}</div></div><div className='pw-value-row'><span className='pw-label'>Notes</span><p className='pw-note-value'>{details.notes || '—'}</p></div><small className='pw-meta'>Changed {new Date(details.record.updatedAt).toLocaleDateString()}</small></div>}
+      {mode === 'view' && details && <div className='pw-sheet-body'><div className='pw-value-row'><span className='pw-label'>Username</span><div>{details.username || '—'}<CopyButton value={details.username} label='Copy username' copiedMessage='Username copied' announce={announce} /></div></div><div className='pw-value-row'><span className='pw-label'>Password</span><MaskedSecret value={details.password} announce={announce} /></div><div className='pw-value-row'><span className='pw-label'>Website</span><div>{safeUrl(details.url) ? <a href={safeUrl(details.url)} target='_blank' rel='noopener noreferrer'>{details.url}<Icon name='open' /></a> : (details.url || '—')}</div></div><div className='pw-value-row'><span className='pw-label'>Folder</span><div>{folders.find((folder) => folder.source === entry.source && folder.id === entry.folderId)?.name || 'Unfiled'}</div></div><div className='pw-value-row'><span className='pw-label'>Notes</span><p className='pw-note-value'>{details.notes || '—'}</p></div><small className='pw-meta'>Changed {new Date(details.record.updatedAt).toLocaleDateString()}</small></div>}
     </section>
   )
 }
