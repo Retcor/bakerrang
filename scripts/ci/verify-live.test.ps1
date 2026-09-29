@@ -67,7 +67,8 @@ $storybook = @($Services | Where-Object { $_.Logical -ceq 'web-storybook' })
 $polyglot = @($Services | Where-Object { $_.Logical -ceq 'web-polyglot' })
 $sign = @($Services | Where-Object { $_.Logical -ceq 'web-sign' })
 $budget = @($Services | Where-Object { $_.Logical -ceq 'web-budget' })
-Assert-Equal $Services.Count 9 'Live verification must cover every production deployment target.'
+$passwords = @($Services | Where-Object { $_.Logical -ceq 'web-passwords' })
+Assert-Equal $Services.Count 10 'Live verification must cover every production deployment target.'
 Assert-Equal $launcher.Count 1 'Web Launcher must have exactly one live-service mapping.'
 Assert-Equal $launcher[0].Service 'bakerrang-web-launcher' 'Web Launcher physical service mapping is wrong.'
 Assert-Equal $launcher[0].Package 'web-launcher' 'Web Launcher Artifact Registry package mapping is wrong.'
@@ -88,6 +89,10 @@ Assert-Equal $budget.Count 1 'Web Budget must have exactly one live-service mapp
 Assert-Equal $budget[0].Service 'bakerrang-web-budget' 'Web Budget physical service mapping is wrong.'
 Assert-Equal $budget[0].Package 'web-budget' 'Web Budget Artifact Registry package mapping is wrong.'
 Assert-Equal $budget[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Budget runtime identity mapping is wrong.'
+Assert-Equal $passwords.Count 1 'Web Passwords must have exactly one live-service mapping.'
+Assert-Equal $passwords[0].Service 'bakerrang-web-passwords' 'Web Passwords physical service mapping is wrong.'
+Assert-Equal $passwords[0].Package 'web-passwords' 'Web Passwords Artifact Registry package mapping is wrong.'
+Assert-Equal $passwords[0].ExpectedSa 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' 'Web Passwords runtime identity mapping is wrong.'
 if ($source -notmatch "https://launch\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
     throw 'verify-live.ps1 is missing the fixed Web Launcher public SPA-shell check.'
 }
@@ -96,6 +101,9 @@ if ($source -notmatch "https://storybook\.bakerrang\.com/'; Assertion = 'ClientR
 }
 if ($source -notmatch "https://polyglot\.bakerrang\.com/'; Assertion = 'ClientRoot'") {
     throw 'verify-live.ps1 is missing the fixed Web Polyglot public SPA-shell check.'
+}
+if ($source -notmatch "https://passwords\.bakerrang\.com/'; Assertion = 'PasswordsHeaders'") {
+    throw 'verify-live.ps1 is missing the fixed Web Passwords header check.'
 }
 $forbiddenGcloudMutation = "'(?:update|deploy|delete|create|replace|set|add|remove|update-traffic)'"
 if ($source -match $forbiddenGcloudMutation) {

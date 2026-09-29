@@ -17,6 +17,7 @@ $Services = @(
     [pscustomobject]@{ Logical = 'web-polyglot'; Service = 'bakerrang-web-polyglot'; Package = 'web-polyglot'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
     [pscustomobject]@{ Logical = 'web-sign'; Service = 'bakerrang-web-sign'; Package = 'web-sign'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
     [pscustomobject]@{ Logical = 'web-budget'; Service = 'bakerrang-web-budget'; Package = 'web-budget'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
+    [pscustomobject]@{ Logical = 'web-passwords'; Service = 'bakerrang-web-passwords'; Package = 'web-passwords'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
 )
 
 function Get-PropertyValue {
@@ -203,7 +204,7 @@ function Test-PublicEndpoint {
     param(
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$Url,
-        [ValidateSet('Healthy', 'UserAgent', 'ClientRoot', 'StatusOnly')][string]$Assertion
+        [ValidateSet('Healthy', 'UserAgent', 'ClientRoot', 'StatusOnly', 'PasswordsHeaders')][string]$Assertion
     )
 
     try {
@@ -222,6 +223,12 @@ function Test-PublicEndpoint {
                     'Healthy' { $valid = $body.Trim() -eq 'Healthy' }
                     'UserAgent' { $valid = $body -match '(?i)User-agent' }
                     'ClientRoot' { $valid = $body.Contains('<div id="root"') }
+                    'PasswordsHeaders' {
+                        $csp = @($response.Headers.GetValues('Content-Security-Policy')) -join ' '
+                        $frame = @($response.Headers.GetValues('X-Frame-Options')) -join ' '
+                        $nosniff = @($response.Headers.GetValues('X-Content-Type-Options')) -join ' '
+                        $valid = $body.Contains('<div id="root"') -and $csp.Contains("frame-ancestors 'none'") -and $frame -ceq 'DENY' -and $nosniff -ceq 'nosniff'
+                    }
                 }
             }
             $result = if ($valid) { 'PASS' } else { 'FAIL' }
@@ -345,7 +352,8 @@ function Invoke-VerifyLive {
         @{ Name = 'Client'; Url = 'https://bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Launcher'; Url = 'https://launch.bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Story Book'; Url = 'https://storybook.bakerrang.com/'; Assertion = 'ClientRoot' },
-        @{ Name = 'Web Polyglot'; Url = 'https://polyglot.bakerrang.com/'; Assertion = 'ClientRoot' }
+        @{ Name = 'Web Polyglot'; Url = 'https://polyglot.bakerrang.com/'; Assertion = 'ClientRoot' },
+        @{ Name = 'Web Passwords'; Url = 'https://passwords.bakerrang.com/'; Assertion = 'PasswordsHeaders' }
     )
     if ($DeepCheck) {
         $checks += @{ Name = 'Custom domain'; Url = 'https://custom.bakerrang.com/'; Assertion = 'StatusOnly' }

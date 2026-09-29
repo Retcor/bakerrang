@@ -913,6 +913,18 @@ automated tests · manual verification.** Each product-extraction phase also car
 > Completed phases keep their names: **Phase E = Sign, Phase F = Budget.** Budget was re-scoped as an honest
 > paycheck-to-bills planner (not "budget tracking").
 
+> **Superseded sequencing (2026-09-27):** **WoW Advisor is retired from migration.** The product owner found it isn't
+> working properly and it won't be kept. It stays live in legacy `client/` only until the final decommission. There will
+> be no WoW app, no Cloud Run service, no `wow.` subdomain, no data migration, no fixes, no redesign and no Impeccable
+> cycle, and the legacy implementation isn't deleted yet. Its code, route, backend router (`/wow`, RAG service) and data
+> join the decommission inventory alongside Supermarket's. The orchestrator then ran the next extraction as
+> **"Phase G — Passwords"** (`passwords.bakerrang.com`, [PhaseG-Passwords.md](PhaseG-Passwords.md)): security architecture
+> audited and locked first, legacy UI as the primary visual inspiration. Completed phases keep their names: **Phase E =
+> Sign, Phase F = Budget, Phase G = Passwords.** Remaining consumer work: **Phase H — Account**, then legacy/decommission
+> cleanup (the apex cutover, `client/` retirement, and the Supermarket and WoW backend and data removal). The Account
+> phase must **not** port the legacy Account page's "Password Vault" settings, which now live in Passwords
+> ([PhaseG §9](PhaseG-Passwords.md)).
+
 ### Phase E — Stand up **Account** → `account.bakerrang.com`
 - **Scope:** Account app owns profile/security/global prefs + canonical theme write
   (`GET/PUT /account/preferences` or reuse of the settings pattern); other apps link to it.

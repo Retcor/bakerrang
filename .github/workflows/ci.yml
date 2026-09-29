@@ -26,6 +26,7 @@ jobs:
       web_polyglot: ${{ steps.classify.outputs.web_polyglot }}
       web_sign: ${{ steps.classify.outputs.web_sign }}
       web_budget: ${{ steps.classify.outputs.web_budget }}
+      web_passwords: ${{ steps.classify.outputs.web_passwords }}
       deploy_api: ${{ steps.classify.outputs.deploy_api }}
       deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
       deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
@@ -35,6 +36,7 @@ jobs:
       deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
       deploy_web_sign: ${{ steps.classify.outputs.deploy_web_sign }}
       deploy_web_budget: ${{ steps.classify.outputs.deploy_web_budget }}
+      deploy_web_passwords: ${{ steps.classify.outputs.deploy_web_passwords }}
     steps:
       - name: Check out PR head
         uses: actions/checkout@v7
@@ -180,7 +182,7 @@ jobs:
   web-ci:
     name: Shared Web CI
     needs: changes
-    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true' || needs.changes.outputs.web_polyglot == 'true' || needs.changes.outputs.web_sign == 'true' || needs.changes.outputs.web_budget == 'true'
+    if: needs.changes.outputs.web_launcher == 'true' || needs.changes.outputs.web_storybook == 'true' || needs.changes.outputs.web_polyglot == 'true' || needs.changes.outputs.web_sign == 'true' || needs.changes.outputs.web_budget == 'true' || needs.changes.outputs.web_passwords == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -220,6 +222,9 @@ jobs:
       - name: Build Budget
         if: needs.changes.outputs.web_budget == 'true'
         run: npm run build -w @bakerrang/web-budget
+      - name: Build Passwords
+        if: needs.changes.outputs.web_passwords == 'true'
+        run: npm run build -w @bakerrang/web-passwords
 
       - name: Validate Sign Docker packaging
         if: needs.changes.outputs.deploy_web_sign == 'true'
@@ -242,6 +247,26 @@ jobs:
             --build-arg VITE_OAUTH_TARGET=budget \
             --tag bakerrang-web-budget:pr-${{ github.event.pull_request.head.sha }} \
             .
+
+      - name: Validate Passwords Docker packaging and headers
+        if: needs.changes.outputs.deploy_web_passwords == 'true'
+        run: |
+          docker build \
+            --file Dockerfile \
+            --build-arg APP=passwords \
+            --build-arg VITE_API_BASE_URL=https://api.bakerrang.com \
+            --build-arg VITE_OAUTH_TARGET=passwords \
+            --tag bakerrang-web-passwords:pr-${{ github.event.pull_request.head.sha }} \
+            .
+          container="$(docker run -d -p 127.0.0.1:18580:8080 bakerrang-web-passwords:pr-${{ github.event.pull_request.head.sha }})"
+          trap 'docker rm -f "$container"' EXIT
+          for attempt in {1..12}; do curl -fsS http://127.0.0.1:18580/ >/dev/null && break; sleep 1; done
+          for path in / /nope; do
+            headers="$(curl -fsSI "http://127.0.0.1:18580$path")"
+            grep -qi '^content-security-policy:.*frame-ancestors '\''none'\''' <<< "$headers"
+            grep -qi '^x-frame-options: DENY' <<< "$headers"
+            grep -qi '^x-content-type-options: nosniff' <<< "$headers"
+          done
 
       - name: Validate Launcher Docker packaging
         if: needs.changes.outputs.deploy_web_launcher == 'true'

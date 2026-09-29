@@ -43,6 +43,9 @@ colors:
   finder-line: "rgba(255,255,255,0.13)"
   finder-edge: "rgba(255,255,255,0.08)"
   finder-overlay: "rgba(255,255,255,0.78)"
+  h-created: "#6fcf97"
+  h-edited: "#f2a93b"
+  h-moved: "#8ab4d8"
 typography:
   display:
     fontFamily: "Archivo Expanded, Archivo, sans-serif"
@@ -332,6 +335,91 @@ typography:
     fontWeight: 800
     lineHeight: 1
     letterSpacing: "-0.035em"
+  pass-index-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.3rem"
+    fontWeight: 800
+    lineHeight: 1.15
+    letterSpacing: "-0.025em"
+  pass-sheet-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.32rem"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  pass-row-title:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 500
+    lineHeight: 1.3
+  pass-row-sub:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.3
+  pass-field-label:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "11px"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "0.12em"
+  pass-field-value:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 500
+    lineHeight: 1.4
+  pass-tag:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0.12em"
+  pass-mask:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "19px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "0.12em"
+  pass-secret:
+    fontFamily: "ui-monospace, SF Mono, Cascadia Mono, Consolas, Roboto Mono, monospace"
+    fontSize: "16px"
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: "0.04em"
+  pass-az:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: 1
+  pass-dialog-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.12rem"
+    fontWeight: 800
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
+  pass-gate-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(1.7rem, 3vw, 2.1rem)"
+    fontWeight: 800
+    lineHeight: 1.1
+    letterSpacing: "-0.03em"
+  pass-welcome:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(2.2rem, 4.4vw, 3.5rem)"
+    fontWeight: 800
+    lineHeight: 1.02
+    letterSpacing: "-0.035em"
+  pass-history-action:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "11px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "0.12em"
+  pass-history-entry:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "14.5px"
+    fontWeight: 600
+    lineHeight: 1.35
 rounded:
   control-inner: "3px"
   control: "4px"
@@ -343,6 +431,7 @@ spacing:
   lg: "22px"
   gutter: "clamp(1rem, 4vw, 2.5rem)"
   poly-gutter: "clamp(16px, 4vw, 32px)"
+  pass-gutter: "clamp(16px, 2.4vw, 28px)"
 components:
   button-primary:
     backgroundColor: "{colors.gold}"
@@ -617,6 +706,154 @@ components:
     textColor: "{colors.ink-2}"
     rounded: "{rounded.panel}"
     padding: "6px"
+  pass-folder-rail:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink-2}"
+    padding: "16px 10px 24px"
+    width: "248px"
+  pass-folder-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.control}"
+    height: "36px"
+  pass-folder-row-selected:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+  pass-entry-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.pass-row-title}"
+    padding: "0 12px 0 clamp(16px, 2.4vw, 28px)"
+    height: "46px"
+  pass-entry-row-hover:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+  pass-entry-row-phone:
+    height: "60px"
+  pass-jump-rail:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-3}"
+    typography: "{typography.pass-az}"
+    width: "30px"
+  pass-jump-letter-current:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.gold-text}"
+    rounded: "{rounded.control-inner}"
+  pass-entry-sheet:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink}"
+    padding: "4px 24px 24px"
+    width: "440px"
+  pass-entry-sheet-tablet:
+    width: "400px"
+  pass-mask:
+    textColor: "{colors.ink-3}"
+    typography: "{typography.pass-mask}"
+  pass-secret:
+    textColor: "{colors.ink}"
+    typography: "{typography.pass-secret}"
+  pass-drain-rule:
+    backgroundColor: "{colors.gold-text}"
+    height: "1px"
+  pass-icon-tool:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.control}"
+    height: "40px"
+    width: "40px"
+  pass-icon-tool-hover:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.gold-text}"
+  pass-icon-tool-on:
+    textColor: "{colors.gold-text}"
+  pass-icon-tool-danger:
+    textColor: "{colors.danger}"
+  pass-icon-tool-phone:
+    height: "44px"
+    width: "44px"
+  pass-tooltip:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "4px 8px"
+  pass-new-entry:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control}"
+    padding: "9px 15px"
+    height: "40px"
+  pass-save:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control}"
+    padding: "9px 15px"
+    height: "40px"
+  pass-save-hover:
+    backgroundColor: "{colors.gold-hover}"
+    textColor: "{colors.ink-on-gold}"
+  pass-field:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "10px 12px"
+    height: "44px"
+  pass-field-phone:
+    height: "48px"
+  pass-unchanged:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-3}"
+    rounded: "{rounded.control}"
+    padding: "0 4px 0 12px"
+    height: "44px"
+  pass-switch-on:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control}"
+    height: "20px"
+    width: "34px"
+  pass-check-on:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control-inner}"
+    height: "20px"
+    width: "20px"
+  pass-folder-bar:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "48px"
+  pass-bulk-bar:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.panel}"
+    padding: "8px 8px 8px 16px"
+    width: "min(620px, calc(100vw - 32px))"
+  pass-dialog:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.panel}"
+    width: "min(540px, 100%)"
+  pass-history-event:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "12px 14px"
+  pass-history-action-created:
+    textColor: "{colors.h-created}"
+    typography: "{typography.pass-history-action}"
+  pass-history-action-edited:
+    textColor: "{colors.h-edited}"
+    typography: "{typography.pass-history-action}"
+  pass-history-action-moved:
+    textColor: "{colors.h-moved}"
+    typography: "{typography.pass-history-action}"
+  pass-history-changed-row:
+    backgroundColor: "color-mix(in srgb, #f2a93b 14%, transparent)"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control-inner}"
+    padding: "5px 8px"
+    height: "36px"
 ---
 
 # Design System: BakerRang Consumer Ecosystem
@@ -1718,3 +1955,397 @@ under the coin.
 - **Don't** mark validation or problems in Danger red, a toast or a coloured alert box.
 - **Don't** use a native `<select>` for "Paid from" or the month.
 - **Don't** bring Literata, Story Book's desk, Polyglot's dock or Sign's finder into Budget.
+
+## Product layer: Passwords
+
+This layer applies **only** inside the Passwords app (`web/apps/passwords`, passwords.bakerrang.com).
+Everything above still holds there. Passwords is **the legacy three-pane vault, re-cut in the BakerRang
+workbench**: a folder rail | a dense entry index with its A–Z rail | an entry sheet that opens in View.
+The three panes are ruled columns printed flat on the world ground, never cards. Passwords adds no new
+colour token and no new font file. It refuses a card grid of site logos with a "security score", and
+it refuses security theatre: no shields, no padlock heroes, no neon. The product's copy says
+"Encrypted on your device" and never "zero-knowledge" (the world's Vault component above still
+describes the Launcher's current tag until the Launcher copy changes). Evidence:
+`web/.impeccable/mocks/passwords-comp.html` (finish verdict: ship after one fix round and a regression
+pass; states via `?state=…`), `web/.impeccable/mocks/passwords-icon.svg` and
+`web/.impeccable/review/passwords/*.png` (the `legacy-*.png` captures are the incumbent legacy UI this
+layer inherits from). Direction: `web/.impeccable/surfaces/passwords.md`.
+
+### Colors
+
+- **Ground, Line and Ink** (world tokens): the index sits on the world ground (`bg`), with a Line
+  hairline under every row. Titles and values use Ink. Usernames, counts, kind tags, field labels,
+  hints and the "Changed …" line use Ink 3.
+- **Ground 2** (`bg-2`): the folder rail and the entry sheet, each separated from the index by a
+  `line-strong` rule. Also the tablet and phone folder bar and the sticky editor foot.
+- **Plane** (`plane`): a hovered entry row, the open entry's row and every checked row. Also the
+  selected and hovered folder row, the bulk bar, dialogs, menus and the floating folder panel.
+- **Plane 2** (`plane-2`): each event section in Version history and Activity, the A–Z rail's
+  hovered and current letter, the checked segment in the
+  Share dialog's Can edit | View only control, and quiet-button, icon-tool and menu-item hover.
+- **Line / Line strong:** Line rules entry rows, the sheet's View rows, dialog heads and foots, the
+  history list and the toolbar's bottom edge, and draws the rail group heads' trailing rule. Line
+  strong draws the history timeline's spine, the pane edges, the rule over the list, the sheet head's bottom edge, notice rules,
+  field and ghost-button borders, and the dashed "Unchanged" box.
+- **Secrets:** the 12-bullet mask is Ink 3; the draining rule under a revealed password is Gold Text.
+
+**The Slate Underlines Rule.** Passwords Slate (`accent-pass`: `#AEB8C2` dark / `#4d5867` light;
+"Vault Steel" in the sidecar) has two roles. It draws the Passwords emblem (the switcher cell, the
+48px emblem tile on the Create, Unlock and Couldn't-reach views, and the app icon). It is also the 1px
+underline under an entry row's title while that row is hovered or open, and under a website link on
+hover. It never sets text, a fill, a rule, a tag or a button.
+
+**The Gold Marks Action Rule (scoped exception).** This is a named, explicit exception to The
+Reserved Gold Rule, and it applies **only inside `web/apps/passwords`**. The owner decided on
+2026-09-27 that the surface read "a little too black and white" and asked for more gold on the buttons
+and switches, so in Passwords gold marks action. Everywhere else the world rule is unchanged.
+- **Gold fills:** **New entry** at the toolbar's left. In an empty vault the toolbar New entry is a
+  ghost button, so the empty state's "New entry" is the gold one. In a view-only shared folder it stays
+  gold but is `aria-disabled` (45% opacity) and described as view-only. Every sheet and dialog commit
+  is gold too: **Save**, **Add entry**, **Use latest**, **Remove from view**, **Share**, **Import N
+  entries**, **Export N entries**, **Move** and Vault settings' **Done**. Each gate view has one gold
+  primary: **Sign in with Google**, **Create vault** or **Unlock**. All of these carry Ink on Gold
+  text.
+- **Gold controls:** a switch that is on has a gold track with an Ink-on-Gold thumb. A checked or
+  mixed checkbox is a gold fill with an Ink-on-Gold tick. In light mode both take a Gold Text edge.
+- **Gold Text:** the draining rule, the A–Z rail's current letter, the selected folder's count (700),
+  the Generate icon, a pressed Show, the Copied check, icon-tool hover, the focus outline and the
+  caret.
+- **Still quiet or ghost:** Cancel, Close, Lock, the toolbar's Import, Export, Activity and Vault
+  settings, Replace password, the Generate button itself, Move to…, Clear, Revoke, Repair access, Try
+  again, Keep it and the top-bar Sign in.
+- Gold never fills a row, a pane, a tag, a tool or a notice. Each sheet or dialog foot still has only
+  one gold commit.
+
+**The History Status Colours Rule (scoped).** Like The Gold Marks Action Rule, this is a Passwords-only
+exception, requested by the owner on 2026-09-27 to restore the legacy history's green-for-created and
+amber-for-edited reading. Five status colours appear **only in Version history and Activity**, never
+as UI fills, buttons, tags, rows or rules anywhere else:
+- **Created** `h-created` (`#6fcf97` dark / `#1e7a45` light).
+- **Edited** `h-edited` (`#f2a93b` / `#8a4a00`). "Renamed" uses it too. The light value is pushed
+  toward orange so it stays distinct from Gold Text (`#8a6300`).
+- **Moved** `h-moved` (`#8ab4d8` / `#2f6690`).
+- **Deleted** `h-deleted`, which is Danger (`#e88a8a` / `#c0362b`).
+- **Vault** events `h-vault`, which is Ink 3.
+
+They colour the timeline node, the small-caps action word, the legend dots and the CHANGED tag. The
+amber changed-row tint is `h-edited` at 14% over Plane 2. **The action word always carries the
+meaning** ("Created", "Edited", "Moved", "Deleted", "Renamed", "Vault", and "Changed" on a row), so
+colour is never the only signal.
+
+**The Danger Is Destruction Rule.** Danger is kept for **Delete** (the trash icon tool in the editor
+foot and the bulk bar), the inline delete confirm's text **Delete**, and **Sign out**. **Revoke** is a
+quiet button.
+Conflicts, deletions elsewhere, copy failures, offline and load failures are written in Ink with a
+drawn icon and an Ink 3 line, never in red.
+
+### Typography
+
+**Archivo, with Archivo Expanded for naming, plus the system monospace for secrets only.** Expanded
+sets the "Passwords" wordmark (800, 15px; 14px on phone), the index context title, the sheet title,
+dialog titles, the gate and Welcome headings, the empty-state headings and the Not found heading.
+Everything else is plain Archivo. Literata never appears.
+
+- **Index context title** (`pass-index-title`: Expanded 800 1.3rem, lh 1.15, `-0.025em`): "All
+  entries", a folder path ("Personal › Banking"), a shared folder's name, or "Search". A 500 14px Ink 3
+  count follows it, or a scope line such as "all folders · 3 results". At 641–1099px it is
+  screen-reader only (the folder bar carries it), except in search and in shared folders.
+- **Sheet title** (`pass-sheet-title`: Expanded 800 1.32rem, lh 1.2, `-0.025em`; 1.28rem on phone).
+  Long titles wrap anywhere and are never truncated.
+- **Entry row** (`pass-row-title`: 500 15px, lh 1.3; 16px on phone), then the username, or the website
+  host, in `pass-row-sub` (400 14px Ink 3; 13.5px on phone). In search the second line is the entry's
+  folder path instead. Both ellipsize.
+- **Folder row:** 500 14px Ink 2; 600 Ink when selected. The count is 500 12.5px Ink 3, tabular; the
+  selected folder's count is 700 Gold Text.
+- **Field labels** (`pass-field-label`: 700 11px, lh 1.2, `0.12em`, uppercase, Ink 3): USERNAME,
+  PASSWORD, WEBSITE, FOLDER and NOTES in View, and the rail's FOLDERS and SHARED WITH ME group heads.
+- **Values** (`pass-field-value`: 500 16px, lh 1.4). "None" and the folder path are 400 Ink 2. Notes
+  are 400 15px, lh 1.55, Ink 2, keeping their line breaks.
+- **Kind tags** (`pass-tag`: 700 10.5px, lh 1.3, `0.12em`, uppercase, Ink 3): CAN EDIT, VIEW ONLY,
+  CAN'T OPEN, and VIEW in the rail. They are text, never chips.
+- **Editor:** labels 600 13px Ink 2 with "(optional)" in 400 Ink 3; fields 500 15px (16px on phone);
+  hints 400 12.5px Ink 3; errors 500 13px Ink.
+- **Dialog title** (`pass-dialog-title`: Expanded 800 1.12rem, lh 1.25, `-0.02em`); the lead is 400
+  14.5px Ink 2.
+- **Gate heading** (`pass-gate-title`: Expanded 800 `clamp(1.7rem, 3vw, 2.1rem)`, lh 1.1, `-0.03em`):
+  "Create your vault", "Unlock Passwords".
+- **Welcome masthead** (`pass-welcome`: Expanded 800 `clamp(2.2rem, 4.4vw, 3.5rem)`, lh 1.02,
+  `-0.035em`, max 13ch): "Your passwords, locked before they leave this device.", set entirely in Ink.
+- **A–Z letters** (`pass-az`: 700 10.5px, lh 1; 11px on phone), Ink 3.
+
+**The Mono-for-Secrets Rule (scoped).** A revealed password (`pass-secret`) and the new-password field
+while it is shown are set in the **system** monospace stack, `ui-monospace, "SF Mono", "Cascadia Mono",
+Consolas, "Roboto Mono", monospace`, at 500 16px, lh 1.4, `0.04em`, wrapping anywhere. Mono tells
+look-alike characters apart. It is a system stack: no font file, no network request and no CSP change.
+It sets secrets and nothing else: never usernames, websites, notes or UI.
+
+### Layout
+
+- **Bar:** 58px and sticky, as in the other apps: the logo mark (30px), a 1px `line-strong` rule and
+  the Expanded wordmark on the left; the switcher and avatar on the right.
+- **App shell:** the rest of the viewport is one grid: the toolbar, an optional notice strip, then the
+  panes. **The page never scrolls.** Each pane scrolls on its own, and the columns run full height.
+  The gutter is `pass-gutter` (`clamp(16px, 2.4vw, 28px)`).
+- **Toolbar** (60px, a Line bottom rule): gold **New entry** at the left, then quiet Import, Export
+  and Activity, a spacer, quiet Vault settings, and a labelled ghost **Lock** alone at the far right.
+  The quiet tools show their labels at **≥1280px** and are named icon buttons below that. Activity is
+  hidden in shared folders.
+- **Three panes (≥1100px):** rail **248px** · index `1fr` · sheet **440px**. With no entry open, the
+  index takes the sheet's width.
+- **Index:** the context title, then a search row (the select-all checkbox, then a search field with
+  its icon, a "/" key hint and a clear button), then the list under a `line-strong` rule, with the A–Z
+  rail on its right edge. Rows are a `36px / auto / 1fr / auto` grid (checkbox, title, second line,
+  tag), at least 46px tall, with 14px between columns. The list keeps 96px of bottom padding so the
+  bulk bar never covers the last row.
+- **A–Z rail:** 30px wide with a Line left rule, letters on 26 × 21px buttons. It shows only when a
+  list has **20 or more entries** and more than one initial letter, and it lists only letters in use.
+- **641–1099px:** the rail collapses into the **folder bar** above the search (48px, Ground 2, a
+  `line-strong` border, 4px radius: a folder icon, the current folder, its count and a chevron). The
+  bar opens the tree as a floating panel (8px radius, resting shadow, max 420px wide, max 64dvh tall).
+  The panes become list | sheet, with the sheet at **400px**.
+- **Sheet:** a sticky head (Back · title · Version history · Edit) with a `line-strong` bottom rule,
+  a body padded 24px, and ruled View rows with 14px of padding. In Edit the foot is sticky at the
+  sheet's bottom, inside the safe area.
+- **Gate views:** one 440px column starting `clamp(40px, 12vh, 120px)` down. **Welcome:** max 1180px,
+  two columns (`0.92fr / 1.08fr`, gap `clamp(32px, 5vw, 72px)`): the copy, the gold Sign in and a
+  ruled facts list, then the example vault. **Not found:** a 560px column.
+
+**The Phone Layer (≤640px).**
+- **One pane at a time.** The toolbar holds gold **New entry**, **Activity** (icon only), a **⋯ More**
+  menu (Import from KeePass, Export to KeePass, Vault settings) and a **Lock** that keeps its label.
+- Below it come the folder bar, a 48px search, then the list with the A–Z rail (letters on 28 × 24px
+  targets).
+- Rows become **two lines** (the title at 16px, then the second line at 13.5px), at least 60px tall;
+  the checkbox spans both lines and the kind tag sits at the right of the first line.
+- **An entry opens as a full-screen sheet** under the bar with a labelled "‹ Back". The head wraps:
+  Back at the left with History and Edit at the right on the first line, and the title on its own line
+  below.
+- Every button, icon button and icon tool is **44px**, including Copy, Show, Open, History, Edit and
+  Delete. Fields are 48px at 16px so iOS doesn't zoom.
+- The new-password field has its own full-width row with Show inside it, and **Generate** sits below.
+- The editor foot is sticky with the safe-area inset, and Save widens to fill it.
+- The bulk bar docks to the bottom edge at full width with the safe-area inset.
+- Dialogs become **full-height sheets** with a sticky foot whose buttons share the width.
+- In Version history and Activity, each field's label stacks over its value, the time wraps to its own
+  line under the action, and a per-version Show grows to 44px.
+- Welcome collapses to one column, and the example shows only its list.
+
+**The Full-Height Columns Rule.** The vault is an app shell, not a page: the toolbar never scrolls
+away, each pane scrolls on its own, and the rail and sheet run to the bottom of the viewport.
+
+### Elevation & Depth
+
+The panes are flat: Ground 2 bands and the ground, separated only by `line-strong` rules. Rows are
+flat at rest and fill Plane on hover and selection. **There are no cards and no raised panes.** The
+world **resting shadow** is used only by things that float: the bulk bar, the folder panel, menus and
+dialogs. New entry and the icon-tool tooltips carry the world contact shadow. Dialogs sit over a flat scrim
+(`rgba(8,8,7,.62)` dark / `rgba(30,26,20,.36)` light). The Welcome example is the one framed object
+(`line-strong` border, 8px radius, resting shadow) because it depicts the app itself. It is not a
+container pattern.
+
+**The One Level of Sections exception.** Version history and Activity are the one place Passwords nests
+a surface inside a surface, and the owner asked for it on 2026-09-27 so each change reads as its own
+section. It is a deliberate exception to "no card-in-card": **one flat level** of Plane 2 sections
+inside the Plane dialog, with a 1px Line border, the 4px radius and **no shadow**. Nothing nests
+deeper. The amber changed rows are highlight fills inside a section, not cards.
+
+**The Ruled Columns Rule.** The folder rail and the entry sheet are Ground 2 columns, each with one
+`line-strong` edge toward the index. They have no radius, no shadow and no inner card.
+
+### Shapes
+
+World radii are unchanged. The panes, rows, View rows, notices and the sheet head have **no radius**.
+Buttons, icon tools, tooltips, fields, the folder bar, the stepper, the switch track and folder rows
+use the 4px control radius. Checkboxes, A–Z letters, the "/" key hint, the switch thumb and focus outlines use the 3px
+inner radius. Dialogs, menus, the bulk bar, the folder panel and the Welcome example use 8px. The
+Symbols switch is **squared** (a 4px track and a 3px thumb), never a pill. Drawn icons are 20px (16px
+in small buttons and the stepper) at the world's 1.75 stroke.
+
+### Components
+
+- **Folder rail:** the FOLDERS group head (the world's Label rule: small caps in Ink 3 with a trailing
+  1px Line rule), **All entries** and **Unfiled** with counts, a short Line rule, the folder tree, a
+  quiet "+ New folder", and a SHARED WITH ME group head over the folders shared with you (a VIEW tag
+  on view-only ones). In an empty vault the tree and the shared group are not rendered.
+- **Folder row** (36px): a drag grip (visible on hover or focus only), a chevron that turns 90° when
+  expanded (a 22px spacer when there are no children), the name, the count at the right, and a ⋮
+  folder-actions button at 55% opacity (full on hover, focus or open). Children indent 14px per level.
+  A folder you share leads with a 15px Ink 3 people mark. Selected: Plane, Ink, 600.
+- **Entry row:** checkbox · title · username · tag, with a Line rule beneath. The title is the row's
+  button, and the second line is its description. **Hover:** the row fills Plane and the title gains
+  the 1px Slate underline at a 5px offset. **Open:** Plane plus the underline. **Checked:** Plane.
+  **Can't open:** the title reads "Can't open this entry" with a CAN'T OPEN tag. Rows have no hover
+  trash.
+- **A–Z rail:** letter buttons that jump the list to the first entry with that letter. **While the
+  list scrolls, the letter of the top visible row is marked** (Gold Text on Plane 2, `aria-current`).
+- **Entry sheet, View:** a definition list of ruled rows, each a small-caps label over a value with
+  its icon tools at the right: **Username** (Copy), **Password** (the mask, Show, Copy), **Website** (the
+  host as a link with a `line-strong` underline, plus Open; values that aren't http(s) are plain
+  text), **Folder** (the path, or the shared folder's name with its permission tag) and **Notes**. An
+  Ink 3 foot line follows: "Changed Sep 26, 2026", plus "Shared by … · you can edit" for shared
+  entries. Opening an entry focuses its title, never a field.
+- **Icon tools:** Copy, Show/Hide, Open, Version history, Edit, Delete (the editor foot and the bulk
+  bar) and the history's "Show the old password" are **icon-only**: a 40px box (44px on phone) with a
+  20px drawn icon in Ink 2, a transparent 1px border and the 4px radius. Each has an `aria-label` that
+  names the action and its object ("Copy password", "Open bank.example.test in a new tab", "Edit
+  Example Bank", "Delete 3 selected entries"). A **tooltip** repeats the short verb on `:hover` and
+  `:focus-visible`: 600 12px Ink on Plane, a `line-strong` border, the 4px radius and the contact
+  shadow, 6px from the box, fading in over 120ms. It sits above the tool by default, **below** it in
+  the sticky sheet head (History, Edit), and **end-aligned** at a row's right edge (Copy, Open, Edit).
+  **Hover:** Plane 2, a Line border and a Gold Text icon. **Pressed Show:** a Gold Text eye-off icon
+  with a "Hide" tip. **Delete** is drawn in Danger. **Copied:** the icon becomes a Gold Text check and
+  the "Copied" tip stays pinned for 2 seconds. Because the box is fixed, nothing moves. The live region
+  says "Password copied", never the value. If the clipboard is blocked, an Ink message with a drawn
+  icon reads "Couldn't copy. Your browser blocked the clipboard." over "Show the password to copy it
+  by hand." Every other control keeps its visible label.
+- **Edit form:** Title · Username (optional) · Password · Website (optional) · Folder (a custom
+  listbox; hidden in shared folders) · Notes (optional). For an existing entry the Password row is a
+  44px dashed `line-strong` box reading **"Unchanged"** (Ink 3) with a ghost **Replace password** at
+  its right. The current password is never placed in a field.
+- **New-password field** (Replace or New): an empty field with **Show inside it** (an icon button at
+  its right edge) and a ghost **Generate** beside it (below it on phone) whose drawn icon is Gold Text.
+  Under it are the generator options: **Length**, a stepper with 34px buttons carrying drawn minus and
+  plus icons (1.75 stroke) and a tabular count (12–64, default 20), and a squared **Symbols** switch (a gold track
+  and an Ink-on-Gold thumb when on). A hint follows: "Leave it empty to keep the current password. Masking
+  is visual only." Hidden, the field is masked with `-webkit-text-security: disc`; shown, it is set in
+  the secret mono. Generate fills the field and shows it.
+- **Editor foot:** the **Delete** icon tool (Danger, owned existing entries only) at the left, then
+  **Cancel** (quiet) and **Save** (gold; "Add entry" for a new one). Delete confirms **inline** in the
+  foot: "Delete Example Bank?" with a consequence line, then **Keep it** (ghost) and a text **Delete**
+  (Danger text). **Conflict:** a ruled sheet notice explains the change, and a gold **Use latest**
+  replaces Save. **Deleted elsewhere:** a gold **Remove from view** replaces Save.
+- **Bulk bar:** appears when any row is checked. It floats at the bottom centre (Plane, `line-strong`
+  border, 8px radius, resting shadow, max 620px wide): "3 selected", a ghost **Move to…**, the
+  **Delete** icon tool (Danger; not in shared folders) and a quiet **Clear**.
+- **Dialogs** (Import from KeePass, Export to KeePass, Share, Version history, Activity, Vault
+  settings, Move folder): Plane, 8px radius, 540px wide (680px for Version history and Activity), an
+  Expanded title with a close button over a Line rule, and a foot ruled in Line with a quiet Cancel,
+  Close or Done and one gold commit. The Share dialog has an email field, a **Can edit | View only**
+  segmented radiogroup, a ruled people list (email · permission tag · quiet **Revoke**) and a ghost
+  **Repair access**. Version history and Activity use the history timeline below.
+- **Checkboxes:** drawn 20px squares (a 1.5px Ink 3 border, 3px radius) inside a 36px hit area. Checked
+  or mixed, they fill gold with an Ink-on-Gold tick or dash (a Gold Text edge in light mode).
+- **Version history and Activity (timeline):**
+  - **Lead and legend:** an Ink 2 lead ("Every saved change to **Example Bank**, newest first.
+    Changed fields are highlighted. Old passwords stay hidden until you show them."). Under it is a
+    legend of 9px status dots labelled Created, Edited, Moved and Deleted (600 12px Ink 2).
+  - **Activity additions:** a search field, "Search entries, folders, people", with its icon.
+  - **Timeline:** an ordered list on a **1px `line-strong` spine** 6px in from the left. Each event
+    has a **13px status-coloured node** ringed 4px in the dialog's Plane, 15px from the top, and sits
+    28px in and 12px below the one before.
+  - **Event section:** Plane 2, a 1px Line border, the 4px radius, and 12px/14px padding. It is an
+    `<article>` labelled by its action.
+  - **Section header:** the **action** in its status colour (`pass-history-action`: 700 11px, lh 1.3,
+    `0.12em`, uppercase). In Activity, the **entry** follows (`pass-history-entry`: 600 14.5px Ink)
+    and then its **folder** (400 13px Ink 3). A right-aligned `<time>` sits at the end (400 12.5px Ink
+    3, "Yesterday · Sep 26, 9:14 PM"), and below all of it is "by You" or "by partner@example.test"
+    (400 13px Ink 3).
+  - **Fields:** a definition list under a Line rule. Each row is an `88px / 1fr` grid, at least 36px
+    tall, with 5px 8px padding and the 3px radius. Labels are small caps (700 10.5px Ink 3) and values
+    are 500 14px Ink.
+  - **Changed rows:** the amber tint (`h-edited` at 14% over Plane 2). Labels, the struck-out old
+    value, the mask and the arrow go to Ink 2 so the row keeps AA contrast. The row shows old → new
+    with a 14px drawn chevron and a screen-reader "was … now …", plus a right-aligned **CHANGED** tag
+    (700 10px, `0.12em`, `h-edited`).
+  - **Closing line:** after the changed rows, an Ink 3 line (400 12.5px) names what didn't change:
+    "Title, username, website and notes didn't change."
+  - **By kind:**
+    - **Created** lists the entry's first fields (Title, Username, Password, Website).
+    - **Moved** shows Folder old → new, without the amber tint.
+    - **Renamed** shows Name old → new as a changed row.
+    - **Deleted** has a quiet "Show what it held" / "Hide what it held" disclosure with a chevron.
+    - **Vault** events (like "Vault key changed") are a header only.
+  - **Foot:** Activity ends with a ghost "Load earlier changes", and the dialog foot holds a quiet
+    Close.
+  - **Secrets in history:** an old password is the 12-bullet mask with a per-version Show icon tool
+    (34px; 44px on phone). Shown, it is set in the secret mono at 14px and carries the signature: a
+    Gold Text rule that drains over 30 seconds, or the reduced-motion hint. It hides when the rule
+    empties, and also on Hide, when its Deleted disclosure collapses, when the dialog closes (Close,
+    the scrim or Esc), on lock, on `visibilitychange` and on `pagehide`. Showing and hiding are
+    announced as "Password from this version shown" or "…hidden", never the value.
+- **Notices:** offline and "Changes from another person are ready." are ruled strips under the
+  toolbar (a `line-strong` bottom rule, a drawn Ink 2 icon, Ink text with an Ink 3 line, and a ghost
+  action). They are never coloured boxes.
+- **Gate views:** the 48px Slate emblem tile (Slate at a 12% fill with a 32% 1px border), an Expanded
+  heading, an Ink 2 lead, master-password fields that stay real `type="password"` with a Show toggle
+  inside, the acknowledgement checkbox on Create, the gold primary at full width (48px), and
+  an Ink 3 foot line. While working, the button shows a spinner with "Unlocking…" or "Creating your
+  vault…". Messages ("That master password didn't unlock the vault.", "Locked after 8 hours without
+  activity.") are Ink with a drawn icon.
+- **Empty states:** "Your vault is empty." (Expanded 800 1.45rem) with an Ink 2 line, the gold **New
+  entry** and a ghost **Import from KeePass**; "No entries match "…"." with a note that notes aren't
+  searched and a ghost **Clear search**; "Nothing in Banking yet."
+- **Welcome:** the masthead, a 17px Ink 2 lead, the gold **Sign in with Google**, and a ruled facts
+  list (a drawn icon, a 600 Ink title and an Ink 2 line: "Encrypted on your device", "A separate master
+  password", "No recovery"). Beside it is an **example vault** captioned "Example · Synthetic entries"
+  (`pass-tag`): a small rail, list and sheet with a masked password, which can't be used.
+
+**The Mask and the Draining Rule (signature).** While hidden, the password is a **fixed row of twelve
+Ink 3 bullets** (`pass-mask`: 700 19px, `0.12em`), whatever the password's length. The value is not in
+the DOM, an attribute or the accessibility tree, and the row is labelled "Password, hidden". **Show**
+swaps the bullets in place for the value in the secret mono, and the Show tool turns Gold Text. Under
+the value, a **1px Gold Text rule**, 7px below it and as wide as it, **drains from right to left over 30 seconds** (a linear `scaleX(1)` to
+`scaleX(0)` with a left origin). When it empties, the bullets return. The rule is the auto-hide timer.
+The password also hides when the sheet closes, another entry opens, Edit opens, the vault locks, or
+the page is hidden. **Reduced motion:** no drain; a static Ink 3 line (400 12.5px) reads "Hides after
+30 seconds". The live region says "Password shown" and "Password hidden", never the value.
+A password shown from an old version in Version history or Activity carries the same mask,
+mono and draining rule.
+
+**The View First Rule.** Opening an entry shows it; it never edits it. Edit is an explicit button, the
+current password never enters an input, and replacing it starts from an empty field.
+
+**Motion:** the sheet enters in 160ms with a 4px slide from the right (6px up on phone), and menus and
+dialogs rise 4px in 160ms, all on `cubic-bezier(.2,.8,.2,1)`. The folder chevron turns in 160ms, and
+tooltips fade in over 120ms. Under
+reduced motion all of these are instant, and the A–Z jump scrolls without smoothing. The drain is the
+only ambient motion.
+
+**Canonical behaviour vs the comp.** The comp takes shortcuts the app must not copy. It loads Archivo
+from Google Fonts (the app uses the self-hosted faces in `@bakerrang/web-tokens`). It re-renders
+`#root` with `innerHTML` (the app is React and never remounts a focused control). Its dialogs are
+`aria-modal` overlays (the app uses native `<dialog>` with `showModal()`, so focus is trapped, Esc
+closes and focus returns to the opener). Its listboxes (Folder, Lock after, Move to…) are triggers
+only (the app's `Listbox` opens a Plane list with an 8px radius and the resting shadow, and is
+**never a native `<select>`**). Its folder ⋮ opens Share directly (the app opens a folder menu). Where
+the comp and `docs/apps/PhaseG-Passwords.md` §§15 and 19–21 disagree on behaviour, that document wins.
+
+### Do's and Don'ts (Passwords)
+
+- **Do** set the vault as three full-height ruled columns: rail 248 · index · sheet 440; then the
+  folder bar over list | 400px sheet; then one pane at a time on phone.
+- **Do** keep entry rows flat and one line on desktop (two lines on phone), filling Plane on hover and
+  selection, with the 1px Slate underline on the title.
+- **Do** use gold to mark action, inside Passwords only: New entry (ghost in the empty vault's
+  toolbar), one gold commit per sheet or dialog, switches that are on and checked boxes.
+- **Do** hide the password behind twelve fixed Ink 3 bullets, show it in the system mono, and let the
+  1px Gold Text rule drain it back over 30 seconds (a static "Hides after 30 seconds" under reduced
+  motion).
+- **Do** open entries in View, make Edit explicit, and show "Unchanged · Replace password" instead of
+  the current password.
+- **Do** make Copy, Show, Open, History, Edit and Delete 40px icon tools (44px on phone), each with an
+  `aria-label` naming the action and object and a hover and focus tooltip. Copied becomes a Gold Text
+  check with a pinned tip for 2 seconds, announced by state, never by value.
+- **Do** write kinds as small-caps text (CAN EDIT, VIEW ONLY, CAN'T OPEN).
+- **Do** show Version history and Activity as a timeline of separate Plane 2 sections on a spine, each
+  with a status-coloured node and a small-caps action word, a legend under the lead, amber-tinted
+  changed rows with a CHANGED tag and old → new, and an "…didn't change." line.
+- **Do** mark the current letter on the A–Z rail as the list scrolls, and show the rail only for 20 or
+  more entries.
+- **Don't** put vault panes or rows in cards, rounded boxes or glass, or raise a pane on a shadow.
+- **Don't** build a site-logo grid, a security score, a strength meter, shields or padlock heroes.
+- **Don't** reveal a password's length, or put a hidden secret in the DOM, an attribute or a live
+  region.
+- **Don't** use the mono face for anything but secrets, or ship a font file for it.
+- **Don't** use Passwords Slate for text, fills, rules, tags or buttons.
+- **Don't** use the history status colours outside Version history and Activity, as a fill or a
+  button, or as the only signal. The action word always says what happened.
+- **Don't** nest deeper than one flat level of history sections, or give them a shadow.
+- **Don't** fill tools gold or use gold squares for them (gold on a tool is only its icon), put two
+  gold commits in one foot, or carry Passwords' gold into another app.
+- **Don't** use Danger red for Revoke, conflicts, validation or failures.
+- **Don't** add a row hover-trash, glyph icons, a tooltip-only name (`title`), or a native `<select>`
+  for folders or settings.
+- **Don't** say "zero-knowledge" in Passwords copy; say "Encrypted on your device".
+- **Don't** bring Literata, Story Book's desk, Polyglot's dock, Sign's finder or Budget's accounting
+  rules into Passwords.

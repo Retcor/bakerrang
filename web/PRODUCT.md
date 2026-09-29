@@ -52,14 +52,16 @@ while family resemblance comes from shared foundations, not from one universal p
 - Current products needing representation on the launcher (**6 tools + Account**): **Story Book** (AI
   story generation with narration), **Polyglot** (spoken translation in your own cloned voice; the
   legacy "Instant" experience *is* Polyglot — no separate mode), **Sign** ("Sign Language" in the registry: ASL handshape practice via the camera, read on-device; not an interpreter), **Budget** (a
-  paycheck-to-bills planner, not a spending tracker), **WoW Advisor** (World of Warcraft assistant), **Passwords** (a zero-knowledge,
-  client-side-encrypted password vault), and **Account** (cross-cutting, not a tool).
+  paycheck-to-bills planner, not a spending tracker), **WoW Advisor** (World of Warcraft assistant; **retired from
+  migration 2026-09-27**: legacy-only until decommission, never extracted or redesigned), **Passwords** (a password
+  vault encrypted in the browser with a separate master password), and **Account** (cross-cutting, not a tool).
 - **Supermarket is removed from the ecosystem (obsolete).** It was built for a game/use case no
   longer relevant and is being **deleted, not migrated** (no `supermarket.` subdomain, no app, no
   Account "licenses" carryover). Its decommission is scheduled in the migration plan; see
   `docs/apps/Phase0-EcosystemArchitecture.md`.
-- **Passwords is zero-knowledge**: the server never sees plaintext; nothing in a redesign may weaken
-  that or cache sensitive data. It is a distinct, high-trust product.
+- **Passwords encrypts on the device**: the server never sees entry contents or the master password. Nothing in
+  a redesign may weaken that or cache sensitive data. It is a distinct, high-trust product. Don't call it
+  "zero-knowledge" (BakerRang does see metadata; see Phase G).
 - Shared session/auth, CSRF, and API infrastructure already exist and are reused unchanged.
 - **Resolved (Phase D, 2026-09-25):** there is **one Polyglot** — neither a separate "Instant"
   destination nor a mode. Legacy normal Polyglot is retired; legacy Instant becomes Polyglot.
@@ -138,6 +140,30 @@ Full inventory, money/date contracts and architecture: `docs/apps/PhaseF-Budget.
   coexistence). Never claim encryption, bank-grade security or "private" beyond "saved to your BakerRang account".
 - **Not offered (don't imply):** spending tracking, categories of spending, budgets-vs-actuals, reminders or
   notifications, bank sync, CSV import/export, multiple currencies, sharing, savings goals, forecasts.
+
+## Product: Passwords (Phase G truth, 2026-09-27)
+
+Full inventory, security audit, crypto/API contracts and architecture: `docs/apps/PhaseG-Passwords.md`; surface brief:
+`.impeccable/surfaces/passwords.md`.
+
+- **What it does:** keeps logins (title, username, password, website, notes) in nested folders, encrypted in the browser
+  with a **master password that is separate from Google sign-in**. Unlock, find an entry, copy the username, show or
+  copy the password, open the site. Edit, file, bulk-move, import from and export to KeePass (`.kdbx`, in the browser),
+  share a folder with another BakerRang user (edit or view only), and see version history.
+- **Real scene:** mid-login on another site or app (often on a phone), or tidying the vault at a desk.
+- **Security truth (claims):** entries are encrypted on the device before they're saved (AES-256-GCM, Argon2id), and
+  BakerRang stores the encrypted copy and can't read entries. **No recovery:** a forgotten master password can't be
+  recovered. BakerRang **does** see metadata (account email, entry and folder counts and arrangement, change times, who
+  you share with), and the vault relies on the app code the browser loads. Say "Encrypted on your device". **Never** say
+  zero-knowledge, end-to-end encrypted, bank-grade, military-grade or unhackable, and never claim the clipboard is cleared.
+- **Search** matches title, username and website only. Notes are treated like passwords: never kept in the list or search,
+  held only while their entry is open. (Unlocking briefly decrypts each whole entry to build the list; never claim passwords
+  or notes are "decrypted only when opened".)
+- **Legacy design is the inspiration (owner):** the three-pane vault (folders | dense list + A–Z rail | entry sheet)
+  carries forward. Entries open in View, with an explicit Edit.
+- **Not offered (don't imply):** password recovery, changing the master password (deferred), TOTP/2FA codes,
+  attachments, favorites, tags, breach or "health" checks, autofill from the web app (the browser extension does that),
+  offline access, a password score.
 
 ## Brand Commitments
 

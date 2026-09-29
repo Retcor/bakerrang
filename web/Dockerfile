@@ -8,6 +8,7 @@ COPY apps/storybook/package.json apps/storybook/package.json
 COPY apps/polyglot/package.json apps/polyglot/package.json
 COPY apps/sign/package.json apps/sign/package.json
 COPY apps/budget/package.json apps/budget/package.json
+COPY apps/passwords/package.json apps/passwords/package.json
 COPY packages/web-tokens/package.json packages/web-tokens/package.json
 COPY packages/web-theme/package.json packages/web-theme/package.json
 COPY packages/web-auth/package.json packages/web-auth/package.json
@@ -30,7 +31,8 @@ RUN npm run build -w @bakerrang/web-$APP
 
 FROM nginx:stable-alpine AS runner
 ARG APP
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/ /tmp/nginx/
+RUN if [ -f "/tmp/nginx/apps/$APP.conf" ]; then cp "/tmp/nginx/apps/$APP.conf" /etc/nginx/conf.d/default.conf; else cp /tmp/nginx/nginx.conf /etc/nginx/conf.d/default.conf; fi && rm -rf /tmp/nginx && nginx -t
 COPY --from=build /app/apps/$APP/dist /usr/share/nginx/html
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

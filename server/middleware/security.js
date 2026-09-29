@@ -41,6 +41,14 @@ const limiter = (max, message) => rateLimit({
 
 export const authLimiter = limiter(100)
 export const vaultLimiter = limiter(300)
+export const vaultLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `u:${req.user.id}`,
+  message: { error: 'Too many lookups. Please wait a moment.' }
+})
 export const budgetLimiter = limiter(300, { error: 'Too many requests. Please wait a moment.' })
 export const tenantLimiter = limiter(300)
 export const chatbotLimiter = limiter(60)

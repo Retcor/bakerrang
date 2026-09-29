@@ -2,6 +2,7 @@ import React, { createContext, useContext, useCallback, useEffect, useRef, useSt
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
 import { DEFAULT_SETTINGS, withSettingDefaults } from '../utils/vaultSettings.js'
+import { ensureKeypairWith } from '../utils/vaultKeypair.js'
 import {
   createVault as cryptoCreateVault,
   unlockVault,
@@ -87,6 +88,7 @@ export const VaultProvider = ({ children }) => {
   const folderKeysRef = useRef(new Map()) // folderId -> CryptoKey (owner side)
   const sharedKeysRef = useRef(new Map()) // folderId -> CryptoKey (shared with me)
   const sharedTreesRef = useRef({}) // mirrors sharedTrees so openSharedFolder reads the latest
+  const epochRef = useRef(0)
 
   const jsonOrThrow = async (res) => {
     if (!res.ok) {
@@ -97,16 +99,20 @@ export const VaultProvider = ({ children }) => {
   }
 
   const lock = useCallback(() => {
+    epochRef.current += 1
     vaultKeyRef.current = null
     privateKeyRef.current = null
     rawItemsRef.current = []
+    rawFoldersRef.current = []
     folderKeysRef.current = new Map()
     sharedKeysRef.current = new Map()
+    sharedTreesRef.current = {}
     setItems([])
     setFolders([])
     setSharedFolders([])
     setSharedItems([])
     setSharedTreeFolders([])
+    setSharedTrees({})
     setMyShares([])
     setError(null)
     // Reset the real-time sync baseline so a re-unlock starts fresh.
@@ -119,16 +125,21 @@ export const VaultProvider = ({ children }) => {
   // Ensures the sharing keypair exists: unwraps the private key when present, or
   // generates one and persists it (migration for pre-Phase-2 vaults).
   const ensureKeypair = useCallback(async (vaultKey) => {
-    const meta = metaRef.current || {}
-    if (meta.publicKey && meta.protectedPrivateKey) {
-      privateKeyRef.current = await unwrapPrivateKey(vaultKey, meta.protectedPrivateKey)
-      return
-    }
-    const { publicKey, protectedPrivateKey } = await createKeyPair(vaultKey)
-    await request(`${VAULT_URL}/keys`, 'POST', { 'Content-Type': 'application/json' },
-      JSON.stringify({ publicKey, protectedPrivateKey })).then(jsonOrThrow)
-    metaRef.current = { ...meta, publicKey, protectedPrivateKey }
-    privateKeyRef.current = await unwrapPrivateKey(vaultKey, protectedPrivateKey)
+    const epoch = epochRef.current
+    const result = await ensureKeypairWith({
+      meta: metaRef.current || {},
+      vaultKey,
+      createKeyPair,
+      unwrapPrivateKey,
+      postKeys: async (pair) => {
+        const res = await request(`${VAULT_URL}/keys`, 'POST', { 'Content-Type': 'application/json' }, JSON.stringify(pair))
+        return { status: res.status, body: await res.json().catch(() => ({})) }
+      },
+      getMeta: () => request(VAULT_URL, 'GET').then(jsonOrThrow)
+    })
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
+    metaRef.current = result.meta
+    privateKeyRef.current = result.privateKey
   }, [VAULT_URL])
 
   // Load vault metadata once to decide initial status.
@@ -174,16 +185,19 @@ export const VaultProvider = ({ children }) => {
     if (cached) return cached
     const raw = await unwrapFolderKeyFromVault(vaultKey, folderRecord.wrappedFolderKey)
     const key = await importFolderKey(raw)
+    if (vaultKeyRef.current !== vaultKey) return null
     folderKeysRef.current.set(folderRecord.id, key)
     return key
   }, [])
 
   // Decrypt everything for the open vault into local state.
   const loadEntries = useCallback(async (vaultKey) => {
+    const epoch = epochRef.current
     const [rawItems, rawFolders] = await Promise.all([
       request(`${VAULT_URL}/items`, 'GET').then(jsonOrThrow),
       request(`${VAULT_URL}/folders`, 'GET').then(jsonOrThrow)
     ])
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
     rawItemsRef.current = rawItems
     rawFoldersRef.current = rawFolders
 
@@ -232,6 +246,7 @@ export const VaultProvider = ({ children }) => {
       return { ...base, title: '(unreadable entry)', username: '', password: '', url: '', notes: '' }
     }))
 
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
     setItems(decItems)
     setFolders(decFolders)
   }, [ownerFolderKey])
@@ -317,7 +332,9 @@ export const VaultProvider = ({ children }) => {
   // Shares I have granted (used to badge shared folders and list recipients).
   // Defined before unlock() so it can be referenced in its dependency list.
   const loadMyShares = useCallback(async () => {
+    const epoch = epochRef.current
     const shares = await request(`${VAULT_URL}/shares`, 'GET').then(jsonOrThrow)
+    if (epoch !== epochRef.current || !vaultKeyRef.current) return []
     setMyShares(shares)
     return shares
   }, [])
@@ -325,6 +342,7 @@ export const VaultProvider = ({ children }) => {
   // Folders shared WITH me: unwrap each folder key with my private key so I can
   // read the folder name (and later its entries).
   const loadSharedWithMe = useCallback(async () => {
+    const epoch = epochRef.current
     const priv = privateKeyRef.current
     if (!priv) return []
     const shares = await request(`${VAULT_URL}/shared`, 'GET').then(jsonOrThrow)
@@ -333,11 +351,13 @@ export const VaultProvider = ({ children }) => {
       try {
         const raw = await unwrapKeyFromSender(s.wrappedFolderKey, priv)
         const folderKey = await importFolderKey(raw)
+        if (epoch !== epochRef.current || privateKeyRef.current !== priv) return []
         sharedKeysRef.current.set(s.folderId, folderKey)
         const meta = s.sharedName ? await decryptFolderName(folderKey, s.sharedName) : { name: 'Shared folder' }
         out.push({ ...s, name: meta.name })
       } catch (err) { /* can't decrypt (e.g. stale share) — skip it */ }
     }
+    if (epoch !== epochRef.current || privateKeyRef.current !== priv) return []
     setSharedFolders(out)
     return out
   }, [])
@@ -372,6 +392,9 @@ export const VaultProvider = ({ children }) => {
   // Prefetch every share's subtree so the sidebar can render counts/subfolders/
   // carets up front. Non-blocking at unlock; failures per-share are skipped.
   const loadSharedTrees = useCallback(async (shares) => {
+    const epoch = epochRef.current
+    const vaultKey = vaultKeyRef.current
+    if (!vaultKey) return {}
     const list = shares || []
     const entries = await Promise.all(list.map(async (s) => {
       try {
@@ -380,6 +403,7 @@ export const VaultProvider = ({ children }) => {
     }))
     const map = {}
     for (const e of entries) { if (e) map[e[0]] = e[1] }
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return {}
     sharedTreesRef.current = map
     setSharedTrees(map)
     return map
@@ -389,6 +413,9 @@ export const VaultProvider = ({ children }) => {
   // Received-side changes → refresh the shared-with-me folders + their subtrees;
   // owned-side changes (a recipient edited a folder I own) → reload my own tree.
   const applyUpdates = useCallback(async () => {
+    const epoch = epochRef.current
+    const vaultKey = vaultKeyRef.current
+    if (!vaultKey) return
     const changed = changedRef.current
     const hasReceived = changed.received.size > 0
     const hasOwned = changed.owned.size > 0
@@ -397,31 +424,42 @@ export const VaultProvider = ({ children }) => {
     try {
       if (hasReceived) {
         const shares = await loadSharedWithMe()
+        if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
         await loadSharedTrees(shares)
       }
-      if (hasOwned && vaultKeyRef.current) await loadEntries(vaultKeyRef.current)
+      if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
+      if (hasOwned) await loadEntries(vaultKey)
     } catch (err) { /* leave it; the next poll will re-flag */ }
   }, [loadSharedWithMe, loadSharedTrees, loadEntries])
 
   const createVault = useCallback(async (masterPassword) => {
+    const epoch = epochRef.current
     const { kdf, protectedVaultKey, vaultKey, publicKey, protectedPrivateKey } = await cryptoCreateVault(masterPassword)
+    if (epoch !== epochRef.current) return
     await request(VAULT_URL, 'POST', { 'Content-Type': 'application/json' },
       JSON.stringify({ kdf, protectedVaultKey, publicKey, protectedPrivateKey })).then(jsonOrThrow)
+    if (epoch !== epochRef.current) return
     metaRef.current = { kdf, protectedVaultKey, publicKey, protectedPrivateKey }
     vaultKeyRef.current = vaultKey
     privateKeyRef.current = await unwrapPrivateKey(vaultKey, protectedPrivateKey)
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
     setItems([])
     setFolders([])
     setStatus('unlocked')
   }, [VAULT_URL])
 
   const unlock = useCallback(async (masterPassword) => {
+    const epoch = epochRef.current
     if (!metaRef.current) await refreshMeta()
+    if (epoch !== epochRef.current) return
     // Throws on wrong password (GCM tag failure) — no server round-trip needed.
     const vaultKey = await unlockVault(masterPassword, metaRef.current)
+    if (epoch !== epochRef.current) return
     vaultKeyRef.current = vaultKey
     await ensureKeypair(vaultKey)
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
     await loadEntries(vaultKey)
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return
     setStatus('unlocked')
     // Sharing data is non-critical to unlocking — don't block or fail the unlock.
     loadMyShares().catch(() => {})
@@ -684,8 +722,12 @@ export const VaultProvider = ({ children }) => {
   // when available (no re-fetch) and falls back to a fresh fetch otherwise,
   // refreshing the cache so the sidebar reflects the latest.
   const openSharedFolder = useCallback(async (shared) => {
+    const epoch = epochRef.current
+    const vaultKey = vaultKeyRef.current
+    if (!vaultKey) return null
     const cached = sharedTreesRef.current[shared.shareId]
     const tree = cached || await fetchSharedTree(shared)
+    if (epoch !== epochRef.current || vaultKeyRef.current !== vaultKey) return null
     if (!cached) {
       setSharedTrees((prev) => {
         const next = { ...prev, [shared.shareId]: tree }

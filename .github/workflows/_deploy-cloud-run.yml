@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, or web-budget)
+        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, web-budget, or web-passwords)
         required: true
         type: string
       environment:
@@ -47,6 +47,7 @@ jobs:
       WEB_POLYGLOT_SERVICE: ${{ vars.WEB_POLYGLOT_SERVICE }}
       WEB_SIGN_SERVICE: ${{ vars.WEB_SIGN_SERVICE }}
       WEB_BUDGET_SERVICE: ${{ vars.WEB_BUDGET_SERVICE }}
+      WEB_PASSWORDS_SERVICE: ${{ vars.WEB_PASSWORDS_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
       NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
       NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
@@ -59,6 +60,7 @@ jobs:
       POLYGLOT_BASE_URL: ${{ vars.POLYGLOT_BASE_URL }}
       SIGN_BASE_URL: ${{ vars.SIGN_BASE_URL }}
       BUDGET_BASE_URL: ${{ vars.BUDGET_BASE_URL }}
+      PASSWORDS_BASE_URL: ${{ vars.PASSWORDS_BASE_URL }}
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
     steps:
       - name: Check out triggering commit
@@ -194,6 +196,12 @@ jobs:
               smoke_path="/"
               smoke_url="${BUDGET_BASE_URL%/}/"
               ;;
+            web-passwords)
+              service_name="$WEB_PASSWORDS_SERVICE"
+              image_name="web-passwords"
+              smoke_path="/"
+              smoke_url="${PASSWORDS_BASE_URL%/}/"
+              ;;
             *) echo "Unsupported service: $LOGICAL_SERVICE" >&2; exit 1 ;;
           esac
           if [[ -z "$service_name" ]]; then echo "Cloud Run service name is not configured for $LOGICAL_SERVICE." >&2; exit 1; fi
@@ -314,6 +322,15 @@ jobs:
                   --build-arg VITE_OAUTH_TARGET=budget \
                   web
                 ;;
+              web-passwords)
+                [[ "$VITE_API_BASE_URL" == "https://api.bakerrang.com" ]]
+                docker build "${common_args[@]}" \
+                  --file web/Dockerfile \
+                  --build-arg APP=passwords \
+                  --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                  --build-arg VITE_OAUTH_TARGET=passwords \
+                  web
+                ;;
             esac
             docker push "$tagged_image"
             digest=""
@@ -411,13 +428,18 @@ jobs:
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
                 portal) valid=true ;;
                 renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client|web-launcher|web-storybook|web-polyglot|web-sign|web-budget) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                client|web-launcher|web-storybook|web-polyglot|web-sign|web-budget|web-passwords) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then
               if [[ "$LOGICAL_SERVICE" == "web-sign" ]]; then
                 vendor_headers="$(curl --silent --show-error --head --max-time 20 "${SMOKE_URL%/}/vendor/hand_landmarker-f16-v1.task")"
                 grep -qi '^cache-control:.*immutable' <<< "$vendor_headers" || valid=false
+              fi
+              if [[ "$LOGICAL_SERVICE" == "web-passwords" ]]; then
+                headers="$(curl --silent --show-error --head --max-time 20 "$SMOKE_URL")"
+                grep -qi '^content-security-policy:.*frame-ancestors '\''none'\''' <<< "$headers" || valid=false
+                grep -qi '^x-frame-options: DENY' <<< "$headers" || valid=false
               fi
             fi
             if [[ "$valid" == "true" ]]; then

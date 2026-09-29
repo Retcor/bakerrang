@@ -17,6 +17,7 @@ on:
           - web-polyglot
           - web-sign
           - web-budget
+          - web-passwords
       mechanism:
         description: Image keeps current config; revision pins historical code and config
         required: true

@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto'
-import { db, FieldValue } from '../client/firestoreClient.js'
+import { db as firestoreDb, FieldValue } from '../client/firestoreClient.js'
+import { cleanVaultKdf } from '../domain/vaultKdf.js'
+import { cleanCipherBlob, validVaultId } from '../domain/vaultShapes.js'
+
+let db = firestoreDb
+export const _setDb = (testDb) => { db = testDb || firestoreDb }
 
 // Zero-knowledge vault storage. The server only ever stores opaque ciphertext
 // produced client-side; it never sees plaintext passwords or the master
@@ -23,10 +28,21 @@ const assert = (cond, message) => {
 
 // A ciphertext blob is { iv, ct } — both base64 strings. Cap sizes so a caller
 // can't stuff arbitrarily large payloads into Firestore.
-const isCipher = (c) =>
-  c && typeof c.iv === 'string' && typeof c.ct === 'string' &&
-  c.iv.length > 0 && c.iv.length <= 256 &&
-  c.ct.length > 0 && c.ct.length <= 200000
+const isCipher = (c) => Boolean(cleanCipherBlob(c))
+const cipher = (c, field) => {
+  const value = cleanCipherBlob(c)
+  assert(value, `Invalid ${field}`)
+  return value
+}
+const revision = (data) => Number.isInteger(data?.rev) ? data.rev : 0
+const expectedRevision = (body) => {
+  if (body && Object.hasOwn(body, 'expectedRev')) {
+    assert(Number.isInteger(body.expectedRev) && body.expectedRev >= 0, 'Invalid expectedRev')
+    return body.expectedRev
+  }
+  return null
+}
+const conflict = (message, current) => Object.assign(httpError(409, message), { code: 'conflict', current })
 
 // ---- Audit log (version history) ----
 //
@@ -88,11 +104,13 @@ export const logAudit = async (ownerId, entries, actor) => {
 // NOTE: the targetId/folderId + orderBy(createdAt) combination needs a Firestore
 // composite index; the first such query errors with a one-click create link.
 export const listAudit = async (ownerId, { targetId, folderId, limit, before } = {}) => {
+  if (limit !== undefined) assert(/^\d+$/.test(String(limit)) && Number(limit) >= 1 && Number(limit) <= 200, 'Invalid query')
+  if (before !== undefined) assert(/^\d+$/.test(String(before)) && Number(before) > 0, 'Invalid query')
   let q = auditRef(ownerId).orderBy('createdAt', 'desc')
   if (targetId) q = q.where('targetId', '==', targetId)
   else if (folderId) q = q.where('folderId', '==', folderId)
   if (before) q = q.where('createdAt', '<', Number(before))
-  const capped = Math.min(Number(limit) || 50, 200)
+  const capped = limit === undefined ? 50 : Number(limit)
   const snap = await q.limit(capped).get()
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
@@ -112,7 +130,8 @@ export const getVault = async (userId) => {
     // toggle). Deliberately readable without unlocking so the browser extension
     // and the web app can honor them; never holds anything derived from a secret.
     settings: data.settings || {},
-    createdAt: data.createdAt
+    createdAt: data.createdAt,
+    keyRev: Number.isInteger(data.keyRev) ? data.keyRev : 0
   }
 }
 
@@ -147,48 +166,60 @@ export const updateSettings = async (userId, settings = {}) => {
 
 export const initVault = async (userId, body = {}) => {
   const { kdf, protectedVaultKey, publicKey, protectedPrivateKey } = body
-  assert(kdf && typeof kdf.algo === 'string' && typeof kdf.salt === 'string', 'Invalid kdf parameters')
-  assert(isCipher(protectedVaultKey), 'Invalid protectedVaultKey')
+  const cleanKdf = cleanVaultKdf(kdf)
+  assert(cleanKdf, 'Invalid kdf parameters')
+  const protectedKey = cipher(protectedVaultKey, 'protectedVaultKey')
+  assert((publicKey == null) === (protectedPrivateKey == null), 'Invalid sharing keys')
+  if (publicKey != null) {
+    assert(typeof publicKey === 'string' && publicKey.length >= 300 && publicKey.length <= 800, 'Invalid publicKey')
+  }
+  const privateKey = protectedPrivateKey == null ? null : cipher(protectedPrivateKey, 'protectedPrivateKey')
 
   const ref = vaultRef(userId)
-  const existing = await ref.get()
-  if (existing.exists) throw httpError(409, 'Vault already exists')
-
   const now = Date.now()
-  const record = { userId, kdf, protectedVaultKey, createdAt: now, updatedAt: now }
-  // Sharing keypair (optional on older clients).
-  if (typeof publicKey === 'string' && isCipher(protectedPrivateKey)) {
+  const record = { userId, kdf: cleanKdf, protectedVaultKey: protectedKey, keyRev: 0, createdAt: now, updatedAt: now }
+  if (privateKey) {
     record.publicKey = publicKey
-    record.protectedPrivateKey = protectedPrivateKey
+    record.protectedPrivateKey = privateKey
   }
-  await ref.set(record)
-  return { kdf, protectedVaultKey, publicKey: record.publicKey || null, createdAt: now }
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref)
+    if (existing.exists) throw httpError(409, 'Vault already exists')
+    tx.set(ref, record)
+  })
+  return { kdf: cleanKdf, protectedVaultKey: protectedKey, publicKey: record.publicKey || null, createdAt: now, keyRev: 0 }
 }
 
 // Adds/updates the sharing keypair on an existing vault (migration for vaults
 // created before Phase 2). The private key is client-encrypted with the vault key.
 export const setVaultKeys = async (userId, body = {}) => {
   const { publicKey, protectedPrivateKey } = body
-  assert(typeof publicKey === 'string' && publicKey.length > 0 && publicKey.length <= 4096, 'Invalid publicKey')
-  assert(isCipher(protectedPrivateKey), 'Invalid protectedPrivateKey')
+  assert(typeof publicKey === 'string' && publicKey.length >= 300 && publicKey.length <= 800, 'Invalid publicKey')
+  const privateKey = cipher(protectedPrivateKey, 'protectedPrivateKey')
   const ref = vaultRef(userId)
-  const existing = await ref.get()
-  if (!existing.exists) throw httpError(404, 'Vault not found')
-  await ref.update({ publicKey, protectedPrivateKey, updatedAt: Date.now() })
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref)
+    if (!existing.exists) throw httpError(404, 'Vault not found')
+    if (existing.data().publicKey) {
+      if (existing.data().publicKey === publicKey) return
+      throw Object.assign(httpError(409, 'Sharing keys already set'), { code: 'keys_exist' })
+    }
+    tx.set(ref, { publicKey, protectedPrivateKey: privateKey, updatedAt: Date.now() }, { merge: true })
+  })
   return { publicKey }
 }
 
 // Resolves a Gmail address to that user's sharing public key. Requires the
 // recipient to already have a vault with a keypair.
 export const getPublicKeyByEmail = async (email) => {
-  assert(typeof email === 'string' && email.includes('@'), 'Invalid email')
+  assert(typeof email === 'string' && email.trim().length <= 254 && email.trim().includes('@'), 'Invalid email')
   const normalized = email.trim().toLowerCase()
   const snap = await db.collection('users').where('emailLower', '==', normalized).limit(1).get()
-  if (snap.empty) throw httpError(404, 'No user with that email')
+  if (snap.empty) throw httpError(404, 'No BakerRang user with that email')
   const recipientId = snap.docs[0].id
   const vaultDoc = await vaultRef(recipientId).get()
   if (!vaultDoc.exists || !vaultDoc.data().publicKey) {
-    throw httpError(409, 'That user has not set up their password vault yet')
+    throw httpError(409, "That person hasn't set up Passwords yet")
   }
   return { userId: recipientId, email: normalized, publicKey: vaultDoc.data().publicKey }
 }
@@ -197,16 +228,25 @@ export const getPublicKeyByEmail = async (email) => {
 // Item ciphertext is unaffected because items are encrypted with the vault key,
 // not the master key.
 export const rotateVaultKey = async (userId, body = {}) => {
-  const { kdf, protectedVaultKey } = body
-  assert(kdf && typeof kdf.algo === 'string' && typeof kdf.salt === 'string', 'Invalid kdf parameters')
-  assert(isCipher(protectedVaultKey), 'Invalid protectedVaultKey')
+  const { kdf, protectedVaultKey, expectedKeyRev } = body
+  const cleanKdf = cleanVaultKdf(kdf)
+  assert(cleanKdf, 'Invalid kdf parameters')
+  const protectedKey = cipher(protectedVaultKey, 'protectedVaultKey')
+  assert(Number.isInteger(expectedKeyRev) && expectedKeyRev >= 0, 'Invalid expectedKeyRev')
 
   const ref = vaultRef(userId)
-  const existing = await ref.get()
-  if (!existing.exists) throw httpError(404, 'Vault not found')
-
-  await ref.update({ kdf, protectedVaultKey, updatedAt: Date.now() })
-  return { kdf, protectedVaultKey }
+  let keyRev
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref)
+    if (!existing.exists) throw httpError(404, 'Vault not found')
+    const prior = Number.isInteger(existing.data().keyRev) ? existing.data().keyRev : 0
+    if (prior !== expectedKeyRev) throw conflict('Vault key changed')
+    keyRev = prior + 1
+    const now = Date.now()
+    tx.set(ref, { kdf: cleanKdf, protectedVaultKey: protectedKey, keyRev, updatedAt: now }, { merge: true })
+    tx.set(auditRef(userId).doc(randomUUID()), auditDoc({ action: 'vault.key-change', targetType: 'vault', targetId: userId, snapshot: null }, null, now))
+  })
+  return { kdf: cleanKdf, protectedVaultKey: protectedKey, keyRev }
 }
 
 // ---- Items ----
@@ -214,7 +254,7 @@ export const rotateVaultKey = async (userId, body = {}) => {
 const validateItem = (item = {}) => {
   assert(isCipher(item.ciphertext), 'Invalid item ciphertext')
   assert(isCipher(item.wrappedItemKey), 'Invalid wrappedItemKey')
-  assert(item.folderId == null || typeof item.folderId === 'string', 'Invalid folderId')
+  assert(item.folderId == null || validVaultId(item.folderId), 'Invalid folderId')
   // Items in a shared folder also carry a copy of their content key wrapped to
   // the folder key, so recipients can open them.
   if (item.folderWrappedItemKey != null) {
@@ -226,52 +266,104 @@ const itemRecord = (item, { withCreatedAt } = {}) => {
   const now = Date.now()
   const record = {
     folderId: item.folderId || null,
-    wrappedItemKey: item.wrappedItemKey,
-    ciphertext: item.ciphertext,
-    folderWrappedItemKey: item.folderWrappedItemKey || null,
+    wrappedItemKey: cipher(item.wrappedItemKey, 'wrappedItemKey'),
+    ciphertext: cipher(item.ciphertext, 'item ciphertext'),
+    folderWrappedItemKey: item.folderWrappedItemKey ? cipher(item.folderWrappedItemKey, 'folderWrappedItemKey') : null,
     updatedAt: now
   }
-  if (withCreatedAt) record.createdAt = now
+  if (withCreatedAt) { record.createdAt = now; record.rev = 1 }
   return record
 }
 
+const itemView = (id, r) => ({
+  id,
+  folderId: r.folderId || null,
+  ciphertext: r.ciphertext,
+  wrappedItemKey: r.wrappedItemKey || null,
+  folderWrappedItemKey: r.folderWrappedItemKey || null,
+  createdAt: r.createdAt,
+  updatedAt: r.updatedAt,
+  rev: revision(r)
+})
+
 export const listItems = async (userId) => {
   const snap = await itemsRef(userId).get()
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  return snap.docs.map((d) => itemView(d.id, d.data()))
 }
 
 export const createItem = async (userId, item, actor) => {
   validateItem(item)
-  const id = item.id || randomUUID()
+  const id = randomUUID()
   const record = itemRecord(item, { withCreatedAt: true })
   await itemsRef(userId).doc(id).set(record)
   bumpShareRevs(userId, [record.folderId], userId).catch(() => {})
   logAudit(userId, { action: 'item.create', targetType: 'item', targetId: id, folderId: record.folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
-  return { id, ...record }
+  return itemView(id, record)
 }
 
 export const updateItem = async (userId, id, item, actor) => {
   validateItem(item)
+  const expectedRev = expectedRevision(item)
   const ref = itemsRef(userId).doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw httpError(404, 'Item not found')
   const record = itemRecord(item)
-  await ref.update(record)
+  let prior
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref)
+    if (!existing.exists) throw httpError(404, 'Entry not found')
+    prior = existing.data()
+    if (expectedRev !== null && expectedRev !== revision(prior)) throw conflict('Entry changed', itemView(id, prior))
+    record.rev = revision(prior) + 1
+    tx.set(ref, record, { merge: true })
+  })
   // Old + new folder: an edit may also re-file the entry across a shared boundary.
-  bumpShareRevs(userId, [existing.data().folderId, record.folderId], userId).catch(() => {})
+  bumpShareRevs(userId, [prior.folderId, record.folderId], userId).catch(() => {})
   logAudit(userId, { action: 'item.update', targetType: 'item', targetId: id, folderId: record.folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
-  return { id, ...record }
+  return itemView(id, { ...prior, ...record })
 }
 
 export const deleteItem = async (userId, id, actor) => {
   // Read the folder before deleting so participants of its shared subtree get notified.
-  const doc = await itemsRef(userId).doc(id).get()
-  const data = doc.exists ? doc.data() : null
+  const ref = itemsRef(userId).doc(id)
+  let data = null
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref)
+    if (!doc.exists) throw httpError(404, 'Entry not found')
+    data = doc.data()
+    tx.delete(ref)
+  })
   const folderId = data ? data.folderId : null
-  await itemsRef(userId).doc(id).delete()
   bumpShareRevs(userId, [folderId], userId).catch(() => {})
   // Snapshot the last state so a deleted entry stays identifiable in history.
   if (data) logAudit(userId, { action: 'item.delete', targetType: 'item', targetId: id, folderId, snapshot: itemSnapshot(data) }, actor).catch(() => {})
+}
+
+// Bulk delete (multi-select "Delete"). Entries already gone are skipped, so a
+// retry after a partial failure is safe. Each deletion is audited like deleteItem.
+export const deleteItems = async (userId, ids, actor) => {
+  assert(Array.isArray(ids) && ids.length > 0, 'Expected a non-empty array of item ids')
+  assert(ids.length <= 2000, 'Too many items in one delete')
+  ids.forEach((id) => assert(validVaultId(id), 'Invalid item id'))
+  assert(new Set(ids).size === ids.length, 'Duplicate item id')
+  const removed = []
+  for (let i = 0; i < ids.length; i += 400) {
+    const chunk = ids.slice(i, i + 400)
+    await db.runTransaction(async (tx) => {
+      const refs = chunk.map((id) => itemsRef(userId).doc(id))
+      const docs = await Promise.all(refs.map((ref) => tx.get(ref)))
+      docs.forEach((doc, n) => {
+        if (!doc.exists) return
+        removed.push({ id: chunk[n], data: doc.data() })
+        tx.delete(refs[n])
+      })
+    })
+  }
+  if (removed.length) {
+    bumpShareRevs(userId, removed.map((r) => r.data.folderId || null), userId).catch(() => {})
+    logAudit(userId, removed.map((r) => ({
+      action: 'item.delete', targetType: 'item', targetId: r.id, folderId: r.data.folderId || null, snapshot: itemSnapshot(r.data)
+    })), actor).catch(() => {})
+  }
+  return { deleted: removed.length }
 }
 
 // Bulk-moves items to a folder (or to no folder when folderId is null). Only the
@@ -281,31 +373,34 @@ export const deleteItem = async (userId, id, actor) => {
 export const moveItems = async (userId, ids, folderId, folderKeys = null, actor) => {
   assert(Array.isArray(ids) && ids.length > 0, 'Expected a non-empty array of item ids')
   assert(ids.length <= 2000, 'Too many items in one move')
-  ids.forEach((id) => assert(typeof id === 'string', 'Invalid item id'))
-  assert(folderId == null || typeof folderId === 'string', 'Invalid folderId')
+  ids.forEach((id) => assert(validVaultId(id), 'Invalid item id'))
+  assert(folderId == null || validVaultId(folderId), 'Invalid folderId')
   if (folderKeys != null) {
     assert(typeof folderKeys === 'object', 'Invalid folderKeys')
     Object.values(folderKeys).forEach((c) => assert(isCipher(c), 'Invalid folderWrappedItemKey'))
   }
-
-  // Capture the source folders before the move so a move OUT of a shared subtree
-  // notifies that subtree's participants too (not just the destination's).
-  const sourceDocs = await db.getAll(...ids.map((id) => itemsRef(userId).doc(id)))
-  const sourceFolderIds = sourceDocs.map((d) => (d.exists ? d.data().folderId : null))
-
+  assert(new Set(ids).size === ids.length, 'Duplicate item id')
+  const sourceById = new Map()
+  const revs = {}
   const now = Date.now()
   for (let i = 0; i < ids.length; i += 400) {
-    const batch = db.batch()
-    for (const id of ids.slice(i, i + 400)) {
-      const update = { folderId: folderId || null, updatedAt: now }
-      // Moving into a shared folder: attach the folder-key copy. Moving out of
-      // one: drop it so it isn't readable through a stale key.
-      if (folderKeys && folderKeys[id]) update.folderWrappedItemKey = folderKeys[id]
-      else if (folderKeys) update.folderWrappedItemKey = null
-      batch.update(itemsRef(userId).doc(id), update)
-    }
-    await batch.commit()
+    const chunk = ids.slice(i, i + 400)
+    await db.runTransaction(async (tx) => {
+      const refs = chunk.map((id) => itemsRef(userId).doc(id))
+      const docs = await Promise.all(refs.map((ref) => tx.get(ref)))
+      if (docs.some((doc) => !doc.exists)) throw httpError(404, 'Entry not found')
+      docs.forEach((doc, n) => {
+        const id = chunk[n]
+        sourceById.set(id, doc.data().folderId || null)
+        const update = { folderId: folderId || null, updatedAt: now, rev: revision(doc.data()) + 1 }
+        if (folderKeys && folderKeys[id]) update.folderWrappedItemKey = cipher(folderKeys[id], 'folderWrappedItemKey')
+        else if (folderKeys) update.folderWrappedItemKey = null
+        revs[id] = update.rev
+        tx.set(refs[n], update, { merge: true })
+      })
+    })
   }
+  const sourceFolderIds = ids.map((id) => sourceById.get(id))
   bumpShareRevs(userId, [folderId, ...sourceFolderIds], userId).catch(() => {})
   // One move record per item so per-entry history stays complete.
   logAudit(userId, ids.map((id, idx) => ({
@@ -315,7 +410,7 @@ export const moveItems = async (userId, ids, folderId, folderKeys = null, actor)
     folderId: folderId || null,
     meta: { fromFolderId: sourceFolderIds[idx] != null ? sourceFolderIds[idx] : null, toFolderId: folderId || null }
   })), actor).catch(() => {})
-  return { success: true }
+  return { success: true, revs }
 }
 
 // Bulk create for KeePass import. Firestore batches cap at 500 writes.
@@ -329,10 +424,10 @@ export const bulkCreateItems = async (userId, items, actor) => {
     const chunk = items.slice(i, i + 400)
     const batch = db.batch()
     for (const item of chunk) {
-      const id = item.id || randomUUID()
+      const id = randomUUID()
       const record = itemRecord(item, { withCreatedAt: true })
       batch.set(itemsRef(userId).doc(id), record)
-      created.push({ id, ...record })
+      created.push(itemView(id, record))
     }
     await batch.commit()
   }
@@ -347,36 +442,50 @@ export const bulkCreateItems = async (userId, items, actor) => {
 
 const validateFolder = (folder = {}) => {
   assert(isCipher(folder.ciphertext), 'Invalid folder ciphertext')
-  assert(folder.parentId == null || typeof folder.parentId === 'string', 'Invalid parentId')
+  assert(folder.parentId == null || validVaultId(folder.parentId), 'Invalid parentId')
 }
+
+const folderView = (id, r) => ({
+  id,
+  parentId: r.parentId || null,
+  position: typeof r.position === 'number' ? r.position : null,
+  ciphertext: r.ciphertext || null,
+  sharedName: r.sharedName || null,
+  shared: r.shared === true,
+  wrappedFolderKey: r.wrappedFolderKey || null,
+  createdAt: r.createdAt,
+  updatedAt: r.updatedAt,
+  rev: revision(r)
+})
 
 export const listFolders = async (userId) => {
   const snap = await foldersRef(userId).get()
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  return snap.docs.map((d) => folderView(d.id, d.data()))
 }
 
 export const createFolder = async (userId, folder, actor) => {
   validateFolder(folder)
-  const id = folder.id || randomUUID()
+  const id = randomUUID()
   const now = Date.now()
   const record = {
     parentId: folder.parentId || null,
-    ciphertext: folder.ciphertext,
+    ciphertext: cipher(folder.ciphertext, 'folder ciphertext'),
     position: typeof folder.position === 'number' ? folder.position : null,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    rev: 1
   }
   // Folders inside a shared subtree also carry a folder-key-encrypted name so
   // recipients can read them.
   if (folder.sharedName != null) {
     assert(isCipher(folder.sharedName), 'Invalid sharedName')
-    record.sharedName = folder.sharedName
+    record.sharedName = cipher(folder.sharedName, 'sharedName')
   }
   await foldersRef(userId).doc(id).set(record)
   // New subfolder under a shared folder → recipients should see it appear.
   bumpShareRevs(userId, [id, record.parentId], userId).catch(() => {})
   logAudit(userId, { action: 'folder.create', targetType: 'folder', targetId: id, folderId: id, snapshot: folderSnapshot(record) }, actor).catch(() => {})
-  return { id, ...record }
+  return folderView(id, record)
 }
 
 // Batch-updates the parent and ordering of folders (used for drag-and-drop
@@ -386,21 +495,25 @@ export const reorderFolders = async (userId, updates, actor) => {
   assert(Array.isArray(updates) && updates.length > 0, 'Expected a non-empty array of folder updates')
   assert(updates.length <= 1000, 'Too many folder updates')
   updates.forEach((u) => {
-    assert(u && typeof u.id === 'string', 'Invalid folder id')
-    assert(u.parentId == null || typeof u.parentId === 'string', 'Invalid parentId')
+    assert(u && validVaultId(u.id), 'Invalid folder id')
+    assert(u.parentId == null || validVaultId(u.parentId), 'Invalid parentId')
     assert(typeof u.position === 'number', 'Invalid position')
   })
+  assert(new Set(updates.map((u) => u.id)).size === updates.length, 'Duplicate folder id')
   const now = Date.now()
   for (let i = 0; i < updates.length; i += 400) {
-    const batch = db.batch()
-    for (const u of updates.slice(i, i + 400)) {
-      batch.update(foldersRef(userId).doc(u.id), {
+    const chunk = updates.slice(i, i + 400)
+    await db.runTransaction(async (tx) => {
+      const refs = chunk.map((u) => foldersRef(userId).doc(u.id))
+      const docs = await Promise.all(refs.map((ref) => tx.get(ref)))
+      if (docs.some((doc) => !doc.exists)) throw httpError(404, 'Folder not found')
+      chunk.forEach((u, n) => tx.set(refs[n], {
         parentId: u.parentId || null,
         position: u.position,
-        updatedAt: now
-      })
-    }
-    await batch.commit()
+        updatedAt: now,
+        rev: revision(docs[n].data()) + 1
+      }, { merge: true }))
+    })
   }
   const touched = updates.flatMap((u) => [u.id, u.parentId])
   bumpShareRevs(userId, touched, userId).catch(() => {})
@@ -416,19 +529,26 @@ export const reorderFolders = async (userId, updates, actor) => {
 
 export const updateFolder = async (userId, id, folder, actor) => {
   validateFolder(folder)
+  const expectedRev = expectedRevision(folder)
   const ref = foldersRef(userId).doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw httpError(404, 'Folder not found')
-  const record = { parentId: folder.parentId || null, ciphertext: folder.ciphertext, updatedAt: Date.now() }
+  const record = { parentId: folder.parentId || null, ciphertext: cipher(folder.ciphertext, 'folder ciphertext'), updatedAt: Date.now() }
   if (folder.sharedName != null) {
     assert(isCipher(folder.sharedName), 'Invalid sharedName')
-    record.sharedName = folder.sharedName
+    record.sharedName = cipher(folder.sharedName, 'sharedName')
   }
-  await ref.update(record)
+  let prior
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref)
+    if (!existing.exists) throw httpError(404, 'Folder not found')
+    prior = existing.data()
+    if (expectedRev !== null && expectedRev !== revision(prior)) throw conflict('Folder changed', folderView(id, prior))
+    record.rev = revision(prior) + 1
+    tx.set(ref, record, { merge: true })
+  })
   // Rename or re-parent: notify shares on the folder itself and on its old + new parent.
-  bumpShareRevs(userId, [id, existing.data().parentId, record.parentId], userId).catch(() => {})
+  bumpShareRevs(userId, [id, prior.parentId, record.parentId], userId).catch(() => {})
   logAudit(userId, { action: 'folder.update', targetType: 'folder', targetId: id, folderId: id, snapshot: folderSnapshot(record) }, actor).catch(() => {})
-  return { id, ...record }
+  return folderView(id, { ...prior, ...record })
 }
 
 // Deleting a folder removes it and all of its descendant folders. Items in any
@@ -460,11 +580,11 @@ export const deleteFolder = async (userId, id, actor) => {
   await bumpShareRevs(userId, [...subtree], userId).catch(() => {})
 
   const itemsSnap = await itemsRef(userId).get()
-  const ops = []
+  const detached = []
   const auditEntries = []
   itemsSnap.docs.forEach((d) => {
     if (subtree.has(d.data().folderId)) {
-      ops.push((b) => b.update(d.ref, { folderId: null, updatedAt: Date.now() }))
+      detached.push(d.ref)
       // Entries aren't deleted — they're detached to "no folder". Record that move.
       auditEntries.push({
         action: 'item.move',
@@ -480,11 +600,21 @@ export const deleteFolder = async (userId, id, actor) => {
       auditEntries.push({ action: 'folder.delete', targetType: 'folder', targetId: d.id, folderId: d.id, snapshot: folderSnapshot(d.data()) })
     }
   })
-  subtree.forEach((fid) => ops.push((b) => b.delete(foldersRef(userId).doc(fid))))
-
-  for (let i = 0; i < ops.length; i += 400) {
+  for (let i = 0; i < detached.length; i += 400) {
+    const refs = detached.slice(i, i + 400)
+    await db.runTransaction(async (tx) => {
+      const docs = await Promise.all(refs.map((ref) => tx.get(ref)))
+      docs.forEach((doc, index) => {
+        if (doc.exists && subtree.has(doc.data().folderId)) {
+          tx.set(refs[index], { folderId: null, updatedAt: Date.now(), rev: revision(doc.data()) + 1 }, { merge: true })
+        }
+      })
+    })
+  }
+  const folderIds = [...subtree]
+  for (let i = 0; i < folderIds.length; i += 400) {
     const batch = db.batch()
-    ops.slice(i, i + 400).forEach((op) => op(batch))
+    folderIds.slice(i, i + 400).forEach((fid) => batch.delete(foldersRef(userId).doc(fid)))
     await batch.commit()
   }
   logAudit(userId, auditEntries, actor).catch(() => {})
@@ -506,6 +636,25 @@ const commitOps = async (ops) => {
     const batch = db.batch()
     ops.slice(i, i + 400).forEach((op) => op(batch))
     await batch.commit()
+  }
+}
+
+const commitVersionedUpdates = async (updates) => {
+  const merged = new Map()
+  updates.forEach(({ ref, fields }) => {
+    const prior = merged.get(ref.path)
+    merged.set(ref.path, { ref, fields: { ...(prior?.fields || {}), ...fields } })
+  })
+  const values = [...merged.values()]
+  for (let i = 0; i < values.length; i += 400) {
+    const chunk = values.slice(i, i + 400)
+    await db.runTransaction(async (tx) => {
+      const docs = await Promise.all(chunk.map(({ ref }) => tx.get(ref)))
+      if (docs.some((doc) => !doc.exists)) throw httpError(404, 'Entry or folder not found')
+      chunk.forEach(({ ref, fields }, index) => {
+        tx.set(ref, { ...fields, updatedAt: Date.now(), rev: revision(docs[index].data()) + 1 }, { merge: true })
+      })
+    })
   }
 }
 
@@ -577,19 +726,19 @@ export const getShareRevisions = async (userId) => {
 // Sharing is recursive, so EVERY folder in the subtree needs a folder-key
 // encrypted name (so recipients can read it) and every entry in the subtree
 // needs its content key wrapped to the folder key.
-const subtreeSetupOps = (ownerId, setup, now) => {
+const subtreeSetupOps = (ownerId, setup) => {
   const folderNames = Array.isArray(setup.folderNames) ? setup.folderNames : []
   const itemKeys = Array.isArray(setup.itemKeys) ? setup.itemKeys : []
   assert(folderNames.length <= 2000, 'Too many folders to share at once')
   assert(itemKeys.length <= 2000, 'Too many entries to share at once')
   const ops = []
   folderNames.forEach((fn) => {
-    assert(fn && typeof fn.id === 'string' && isCipher(fn.sharedName), 'Invalid folder name entry')
-    ops.push((b) => b.update(foldersRef(ownerId).doc(fn.id), { sharedName: fn.sharedName, updatedAt: now }))
+    assert(fn && validVaultId(fn.id) && isCipher(fn.sharedName), 'Invalid folder name entry')
+    ops.push({ ref: foldersRef(ownerId).doc(fn.id), fields: { sharedName: cipher(fn.sharedName, 'sharedName') } })
   })
   itemKeys.forEach((ik) => {
-    assert(ik && typeof ik.id === 'string' && isCipher(ik.folderWrappedItemKey), 'Invalid item key entry')
-    ops.push((b) => b.update(itemsRef(ownerId).doc(ik.id), { folderWrappedItemKey: ik.folderWrappedItemKey, updatedAt: now }))
+    assert(ik && validVaultId(ik.id) && isCipher(ik.folderWrappedItemKey), 'Invalid item key entry')
+    ops.push({ ref: itemsRef(ownerId).doc(ik.id), fields: { folderWrappedItemKey: cipher(ik.folderWrappedItemKey, 'folderWrappedItemKey') } })
   })
   return ops
 }
@@ -599,8 +748,8 @@ const subtreeSetupOps = (ownerId, setup, now) => {
 export const updateShareSetup = async (ownerId, folderId, body = {}) => {
   const folderDoc = await foldersRef(ownerId).doc(folderId).get()
   if (!folderDoc.exists) throw httpError(404, 'Folder not found')
-  const ops = subtreeSetupOps(ownerId, body, Date.now())
-  if (ops.length) await commitOps(ops)
+  const ops = subtreeSetupOps(ownerId, body)
+  if (ops.length) await commitVersionedUpdates(ops)
   bumpShareRevs(ownerId, [folderId], ownerId).catch(() => {})
   return { updated: ops.length }
 }
@@ -615,7 +764,7 @@ const shareView = (s) => ({
 
 export const createShare = async (ownerId, body = {}) => {
   const { folderId, recipientEmail, permission, wrappedFolderKey, folderSetup } = body
-  assert(typeof folderId === 'string' && folderId.length > 0, 'Invalid folderId')
+  assert(validVaultId(folderId), 'Invalid folderId')
   assert(permission === 'edit' || permission === 'view', "permission must be 'edit' or 'view'")
   assert(typeof wrappedFolderKey === 'string' && wrappedFolderKey.length > 0 && wrappedFolderKey.length <= 8192, 'Invalid wrappedFolderKey')
 
@@ -641,14 +790,16 @@ export const createShare = async (ownerId, body = {}) => {
   if (folderSetup) {
     assert(isCipher(folderSetup.wrappedFolderKey), 'Invalid folderSetup.wrappedFolderKey')
     assert(isCipher(folderSetup.sharedName), 'Invalid folderSetup.sharedName')
-    const ops = [(b) => b.update(foldersRef(ownerId).doc(folderId), {
-      shared: true,
-      wrappedFolderKey: folderSetup.wrappedFolderKey,
-      sharedName: folderSetup.sharedName,
-      updatedAt: now
-    })]
-    ops.push(...subtreeSetupOps(ownerId, folderSetup, now))
-    await commitOps(ops)
+    const ops = [{
+      ref: foldersRef(ownerId).doc(folderId),
+      fields: {
+        shared: true,
+        wrappedFolderKey: cipher(folderSetup.wrappedFolderKey, 'wrappedFolderKey'),
+        sharedName: cipher(folderSetup.sharedName, 'sharedName')
+      }
+    }]
+    ops.push(...subtreeSetupOps(ownerId, folderSetup))
+    await commitVersionedUpdates(ops)
   }
 
   const id = randomUUID()
@@ -776,12 +927,13 @@ export const listSharedTree = async (userId, ownerId, rootId) => {
         id: d.id,
         parentId: x.parentId || null,
         position: typeof x.position === 'number' ? x.position : null,
-        sharedName: x.sharedName || null
+        sharedName: x.sharedName || null,
+        rev: revision(x)
       }
     })
   const items = iSnap.docs
     .filter((d) => subtree.has(d.data().folderId))
-    .map((d) => ({ id: d.id, ...d.data() }))
+    .map((d) => itemView(d.id, d.data()))
   return { rootId, permission: share.permission, folders, items }
 }
 
@@ -789,45 +941,53 @@ export const listSharedTree = async (userId, ownerId, rootId) => {
 export const updateSharedItem = async (userId, ownerId, itemId, body = {}, actor) => {
   const ref = itemsRef(ownerId).doc(itemId)
   const doc = await ref.get()
-  if (!doc.exists) throw httpError(404, 'Item not found')
+  if (!doc.exists) throw httpError(404, 'Entry not found')
   await requireShareForFolder(userId, ownerId, doc.data().folderId, true)
-
-  assert(isCipher(body.ciphertext), 'Invalid item ciphertext')
-  const record = { ciphertext: body.ciphertext, updatedAt: Date.now() }
+  const expectedRev = expectedRevision(body)
+  const record = { ciphertext: cipher(body.ciphertext, 'item ciphertext'), updatedAt: Date.now() }
   if (body.folderWrappedItemKey) {
-    assert(isCipher(body.folderWrappedItemKey), 'Invalid folderWrappedItemKey')
-    record.folderWrappedItemKey = body.folderWrappedItemKey
+    record.folderWrappedItemKey = cipher(body.folderWrappedItemKey, 'folderWrappedItemKey')
     // The recipient re-encrypted with a NEW content key, so the owner's
     // vault-key copy no longer matches the ciphertext — drop it rather than
     // leave a stale key the owner would try (and fail) to decrypt with.
     record.wrappedItemKey = null
   }
-  await ref.update(record)
-  bumpShareRevs(ownerId, [doc.data().folderId], userId).catch(() => {})
+  let prior
+  await db.runTransaction(async (tx) => {
+    const current = await tx.get(ref)
+    if (!current.exists) throw httpError(404, 'Entry not found')
+    prior = current.data()
+    if (prior.folderId !== doc.data().folderId) throw conflict('Entry changed', itemView(itemId, prior))
+    if (expectedRev !== null && expectedRev !== revision(prior)) throw conflict('Entry changed', itemView(itemId, prior))
+    record.rev = revision(prior) + 1
+    tx.set(ref, record, { merge: true })
+  })
+  bumpShareRevs(ownerId, [prior.folderId], userId).catch(() => {})
   // Recorded under the OWNER's vault, attributed to the recipient (actor).
-  logAudit(ownerId, { action: 'item.update', targetType: 'item', targetId: itemId, folderId: doc.data().folderId, snapshot: itemSnapshot({ ...doc.data(), ...record }) }, actor).catch(() => {})
-  return { id: itemId, ...record }
+  logAudit(ownerId, { action: 'item.update', targetType: 'item', targetId: itemId, folderId: prior.folderId, snapshot: itemSnapshot({ ...prior, ...record }) }, actor).catch(() => {})
+  return itemView(itemId, { ...prior, ...record })
 }
 
 // Add an entry anywhere inside a shared subtree (requires 'edit'). Stored under
 // the OWNER's vault, keyed to the folder key so the owner can read it too.
 export const createSharedItem = async (userId, ownerId, folderId, item = {}, actor) => {
   await requireShareForFolder(userId, ownerId, folderId, true)
-  assert(isCipher(item.ciphertext), 'Invalid item ciphertext')
-  assert(isCipher(item.folderWrappedItemKey), 'Invalid folderWrappedItemKey')
+  const ciphertext = cipher(item.ciphertext, 'item ciphertext')
+  const folderWrappedItemKey = cipher(item.folderWrappedItemKey, 'folderWrappedItemKey')
   const id = randomUUID()
   const now = Date.now()
   const record = {
     folderId,
-    ciphertext: item.ciphertext,
-    folderWrappedItemKey: item.folderWrappedItemKey,
+    ciphertext,
+    folderWrappedItemKey,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    rev: 1
   }
   await itemsRef(ownerId).doc(id).set(record)
   bumpShareRevs(ownerId, [folderId], userId).catch(() => {})
   logAudit(ownerId, { action: 'item.create', targetType: 'item', targetId: id, folderId, snapshot: itemSnapshot(record) }, actor).catch(() => {})
-  return { id, ...record }
+  return itemView(id, record)
 }
 
 // Bulk-add entries to a shared subtree (KeePass import by a recipient).
@@ -848,13 +1008,14 @@ export const bulkCreateSharedItems = async (userId, ownerId, items, actor) => {
     const id = randomUUID()
     const record = {
       folderId: i.folderId,
-      ciphertext: i.ciphertext,
-      folderWrappedItemKey: i.folderWrappedItemKey,
+      ciphertext: cipher(i.ciphertext, 'item ciphertext'),
+      folderWrappedItemKey: cipher(i.folderWrappedItemKey, 'folderWrappedItemKey'),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      rev: 1
     }
     ops.push((b) => b.set(itemsRef(ownerId).doc(id), record))
-    created.push({ id, ...record })
+    created.push(itemView(id, record))
   }
   await commitOps(ops)
   bumpShareRevs(ownerId, folderIds, userId).catch(() => {})
@@ -877,11 +1038,12 @@ export const moveSharedItems = async (userId, ownerId, updates, actor) => {
   for (const fid of folderIds) await requireShareForFolder(userId, ownerId, fid, true)
 
   const now = Date.now()
-  const ops = []
+  const revs = {}
   const touched = [...folderIds] // destinations
   const auditEntries = []
+  const authorizedSources = new Map()
   for (const u of updates) {
-    assert(u && typeof u.id === 'string', 'Invalid item id')
+    assert(u && validVaultId(u.id) && validVaultId(u.folderId), 'Invalid item id')
     // The same folder key covers the whole subtree, so a move within it doesn't
     // need a new wrapped key — only supply one when it actually changes.
     if (u.folderWrappedItemKey != null) {
@@ -889,24 +1051,41 @@ export const moveSharedItems = async (userId, ownerId, updates, actor) => {
     }
     // The item must already be somewhere I can edit.
     const doc = await itemsRef(ownerId).doc(u.id).get()
-    if (!doc.exists) throw httpError(404, 'Item not found')
+    if (!doc.exists) throw httpError(404, 'Entry not found')
     await requireShareForFolder(userId, ownerId, doc.data().folderId, true)
-    touched.push(doc.data().folderId) // source
-    const update = { folderId: u.folderId, updatedAt: now }
-    if (u.folderWrappedItemKey != null) update.folderWrappedItemKey = u.folderWrappedItemKey
-    ops.push((b) => b.update(itemsRef(ownerId).doc(u.id), update))
-    auditEntries.push({
-      action: 'item.move',
-      targetType: 'item',
-      targetId: u.id,
-      folderId: u.folderId,
-      meta: { fromFolderId: doc.data().folderId, toFolderId: u.folderId }
+    authorizedSources.set(u.id, doc.data().folderId)
+  }
+  for (let i = 0; i < updates.length; i += 400) {
+    const chunk = updates.slice(i, i + 400)
+    const committed = await db.runTransaction(async (tx) => {
+      const refs = chunk.map((u) => itemsRef(ownerId).doc(u.id))
+      const docs = await Promise.all(refs.map((ref) => tx.get(ref)))
+      if (docs.some((doc) => !doc.exists)) throw httpError(404, 'Entry not found')
+      const changes = chunk.map((u, n) => {
+        const prior = docs[n].data()
+        if (prior.folderId !== authorizedSources.get(u.id)) throw httpError(409, 'Entry changed')
+        const update = { folderId: u.folderId, updatedAt: now, rev: revision(prior) + 1 }
+        if (u.folderWrappedItemKey != null) update.folderWrappedItemKey = cipher(u.folderWrappedItemKey, 'folderWrappedItemKey')
+        tx.set(refs[n], update, { merge: true })
+        return { id: u.id, rev: update.rev, source: prior.folderId, destination: u.folderId }
+      })
+      return changes
+    })
+    committed.forEach(({ id, rev, source, destination }) => {
+      revs[id] = rev
+      touched.push(source)
+      auditEntries.push({
+        action: 'item.move',
+        targetType: 'item',
+        targetId: id,
+        folderId: destination,
+        meta: { fromFolderId: source, toFolderId: destination }
+      })
     })
   }
-  await commitOps(ops)
   bumpShareRevs(ownerId, touched, userId).catch(() => {})
   logAudit(ownerId, auditEntries, actor).catch(() => {})
-  return { success: true }
+  return { success: true, revs }
 }
 
 // Version history for a single entry inside a folder shared WITH me. Owner-only
