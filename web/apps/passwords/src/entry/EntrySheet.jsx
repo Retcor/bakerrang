@@ -24,7 +24,7 @@ export const CopyButton = ({ value, label, copiedMessage, announce }) => {
   return <IconButton icon={copied ? 'check' : 'copy'} label={label} onClick={copy} />
 }
 
-export const MaskedSecret =({ value, announce, name = 'password' }) => {
+export const MaskedSecret = ({ value, announce, name = 'password' }) => {
   const [shown, setShown] = useState(false)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
