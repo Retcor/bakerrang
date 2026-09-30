@@ -90,11 +90,12 @@ describe('legacy Account (LH-1)', () => {
 describe('Account is registered as a shared destination, not a tool', () => {
   const shell = readFileSync(path.join(repoRoot, 'web/packages/web-app-shell/src/index.jsx'), 'utf8')
 
-  it('keeps the pre-cutover registry entry: legacy route, env key, and liveUrl null', () => {
+  // The live URL itself is asserted by the registry test in web-app-shell, which the cutover
+  // PR updates. This guard covers what must hold before and after the flip.
+  it('keeps the legacy route and env key in the registry entry', () => {
     const definition = shell.slice(shell.indexOf('export const ACCOUNT_DEFINITION'), shell.indexOf('export const LAUNCHER_DEFINITION'))
     expect(definition).toContain("legacyPath: '/account'")
     expect(definition).toContain("envKey: 'VITE_ACCOUNT_URL'")
-    expect(definition).toContain('liveUrl: null')
   })
 
   it('does not put Account in the tool grid', () => {
