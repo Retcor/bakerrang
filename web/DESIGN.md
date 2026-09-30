@@ -420,6 +420,63 @@ typography:
     fontSize: "14.5px"
     fontWeight: 600
     lineHeight: 1.35
+  account-page-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(1.55rem, 3vw, 2.05rem)"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "-0.03em"
+  account-section-head:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.1rem"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.02em"
+  account-rail-link:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: 1.3
+  account-row-label:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    lineHeight: 1.4
+  account-plate-name:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1.2rem"
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
+  account-monogram:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "17px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.01em"
+  account-voice-name:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 500
+    lineHeight: 1.35
+  account-tag:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "0.12em"
+  account-editor-title:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 800
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
+  account-welcome:
+    fontFamily: "Archivo Expanded, Archivo, sans-serif"
+    fontSize: "clamp(2.2rem, 4.6vw, 3.6rem)"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.035em"
 rounded:
   control-inner: "3px"
   control: "4px"
@@ -853,6 +910,127 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.control-inner}"
     padding: "5px 8px"
+    height: "36px"
+  account-rail:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-3}"
+    typography: "{typography.account-rail-link}"
+    width: "200px"
+  account-rail-link:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-3}"
+    rounded: "{rounded.control}"
+    padding: "0 12px 0 18px"
+    height: "40px"
+  account-rail-link-hover:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+  account-rail-link-current:
+    textColor: "{colors.ink}"
+  account-rail-current-rule:
+    backgroundColor: "{colors.accent-account}"
+    width: "1px"
+  account-section-head:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.account-section-head}"
+    padding: "0 0 12px"
+    height: "44px"
+  account-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    padding: "16px 0"
+  account-row-label:
+    textColor: "{colors.ink-2}"
+    typography: "{typography.account-row-label}"
+    width: "172px"
+  account-monogram:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    typography: "{typography.account-monogram}"
+    rounded: "{rounded.control}"
+    height: "52px"
+    width: "52px"
+  account-tag:
+    textColor: "{colors.ink-3}"
+    typography: "{typography.account-tag}"
+  account-theme-choice:
+    backgroundColor: "{colors.bg-2}"
+    textColor: "{colors.ink-3}"
+    rounded: "{rounded.control}"
+    padding: "3px"
+    width: "420px"
+  account-theme-choice-selected:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control-inner}"
+    height: "44px"
+  account-relay-tile:
+    backgroundColor: "{colors.plane}"
+    rounded: "{rounded.control}"
+    height: "36px"
+    width: "36px"
+  account-relay-tile-small-phone:
+    height: "40px"
+    width: "40px"
+  account-add-voice:
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.ink-on-gold}"
+    rounded: "{rounded.control}"
+    padding: "10px 16px"
+    height: "44px"
+  account-add-voice-hover:
+    backgroundColor: "{colors.gold-hover}"
+    textColor: "{colors.ink-on-gold}"
+  account-add-voice-phone:
+    height: "48px"
+    width: "100%"
+  account-commit:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.bg}"
+    rounded: "{rounded.control}"
+    padding: "10px 16px"
+    height: "44px"
+  account-commit-hover:
+    backgroundColor: "{colors.ink-2}"
+    textColor: "{colors.bg}"
+  account-voice-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.account-voice-name}"
+    padding: "16px 0"
+  account-voice-row-hover:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+  account-voice-action:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.control}"
+    padding: "7px 10px"
+    height: "36px"
+  account-voice-action-hover:
+    backgroundColor: "{colors.plane-2}"
+    textColor: "{colors.ink}"
+  account-voice-action-danger:
+    backgroundColor: "transparent"
+    textColor: "{colors.danger}"
+  account-voice-action-phone:
+    height: "44px"
+  account-editor:
+    backgroundColor: "{colors.plane}"
+    textColor: "{colors.ink}"
+    padding: "20px 12px 16px"
+  account-field:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "10px 12px"
+    height: "44px"
+  account-sign-out:
+    backgroundColor: "transparent"
+    textColor: "{colors.danger}"
+    rounded: "{rounded.control}"
+    padding: "7px 10px"
     height: "36px"
 ---
 
@@ -2349,3 +2527,256 @@ the comp and `docs/apps/PhaseG-Passwords.md` §§15 and 19–21 disagree on beha
 - **Don't** say "zero-knowledge" in Passwords copy; say "Encrypted on your device".
 - **Don't** bring Literata, Story Book's desk, Polyglot's dock, Sign's finder or Budget's accounting
   rules into Passwords.
+
+## Product layer: Account
+
+This layer applies **only** inside the Account app (`web/apps/account`, account.bakerrang.com). Everything
+above still holds there. Account is BakerRang's own settings page, the quietest app in the family: **one ruled
+sheet with a section rail**. A quiet index of four sections (Profile, Appearance, Voices, Session) sits beside
+one column of labelled rows on hairline rules, like a specification page. It has no desk, no dock, no finder, no
+ledger and no three-pane vault. Account adds no new colour token and no new font. It refuses a giant avatar hero
+over a grid of settings cards, and a tabbed settings dashboard. Evidence:
+`web/.impeccable/mocks/account-comp.html` (finish verdict: ship; states via `?state=…`),
+`web/.impeccable/mocks/account-icon.svg` and `web/.impeccable/review/account/*.png` (the `legacy-*.png` captures are
+the incumbent legacy Account page this layer replaces). Direction: `web/.impeccable/surfaces/account.md`.
+
+### Colors
+
+- **Ground, Line and Ink** (world tokens): the sheet is printed on the world ground (`bg`), never on a Plane slab.
+  Values use Ink. Row labels use Ink 2. Hints, counts, kind tags, the rail's links at rest, the rail note and the
+  theme status line use Ink 3.
+- **Ground 2** (`bg-2`): the theme choice's track. It is the only tinted strip on the sheet.
+- **Plane** (`plane`): a hovered voice row, the in-place editors (Add a voice, Rename) and the inline delete
+  confirm, a hovered rail link, the nameplate monogram and each Relay tile in the resolved theme. Also the world menus.
+- **Plane 2** (`plane-2`): the theme choice's selected segment, quiet- and ghost-button hover, and the loading
+  skeleton lines.
+- **Line / Line strong:** Line separates rows, voice rows and samples, rules the editor foot and the rail note, and
+  edges each Relay tile. Line strong draws every section head's rule, the rule that sets Signed in apart, an
+  editor's bottom edge, notice rules, field and ghost-button borders, the monogram's border and the Welcome facts
+  list's top rule.
+
+**The Grey Marks Place Rule.** Account Grey (`accent-account`: `#A5A59C` dark / `#63625a` light; "Account Stone" in
+the sidecar) has two roles. It draws the Account emblem (the switcher's Account item and the app icon). It is also
+the **1px rule** beside the rail's current section, which tells you where you are on the sheet. It never sets text,
+a fill, a tag, a button, a row underline or a border.
+
+**The One Gold Rule.** Account keeps the world's Reserved Gold Rule with no exception. The only gold fill on the
+sheet is **Add voice**, at the right of the Voices head. It isn't rendered while voices load, after they fail to
+load, or while the Add editor is open. Offline, it stays but is `aria-disabled` at 50%. Signed out, the only gold
+fill is **Sign in with Google**, and the top-bar Sign in is a ghost button. **Commits are ink-filled** (Create voice,
+Save, Refresh voices, and the recorder's Stop): an Ink fill with ground-coloured text, Ink 2 on hover. Gold Text
+appears only in the world's focus outline and the caret. The Launcher tile in the Relay carries the BakerRang logo
+mark, which is the world's brand mark, not a gold accent.
+
+**The Danger Is Delete and Sign Out Rule.** Danger text is kept for a voice's **Delete**, the inline confirm's
+**Delete**, and **Sign out** (on the sheet and in the avatar menu). Validation, a theme that couldn't be saved,
+a voice that couldn't be created, a blocked microphone, offline and load failures are written in Ink with a drawn
+icon and an Ink 3 line (the Budget Ink-Not-Red Rule), never in red.
+
+### Typography
+
+**Archivo only, with Archivo Expanded for naming.** Expanded sets the "Account" wordmark (800, 15px; 14px on phone),
+the page head, the section heads, the nameplate name and monogram, editor titles, the Welcome masthead and the Not
+found heading. Every row, label, tag, value and control is plain Archivo. Literata and the secret mono never appear.
+
+- **Page head** (`account-page-title`: Expanded 800 `clamp(1.55rem, 3vw, 2.05rem)`, lh 1.05, `-0.03em`): "Account",
+  with a 400 15px Ink 2 lead under it.
+- **Section head** (`account-section-head`: Expanded 800 1.1rem, lh 1.2, `-0.02em`): Profile, Appearance, Voices,
+  Session. Voices carries a 14px tabular Ink 3 count beside its name.
+- **Rail link** (`account-rail-link`: 500 14px Ink 3; 600 Ink when current). The rail note under it is 12.5px Ink 3.
+- **Row label** (`account-row-label`: 600 13px, lh 1.4, Ink 2): Theme, Applies to, App settings, Your data, Signed in.
+  Values are the body size in Ink; hints are 400 13px Ink 3, max 58ch; a section lead is 14.5px Ink 2, max 62ch.
+- **Nameplate:** the name in `account-plate-name` (Expanded 700 1.2rem, lh 1.25, `-0.02em`), the email in 400 15px
+  Ink 2, and the initials in `account-monogram` (Expanded 800 17px, `-0.01em`).
+- **Voice row:** the name in `account-voice-name` (500 16px, lh 1.35), the description in 400 14px Ink 3. The voice
+  actions are 600 13px text buttons.
+- **Kind tags** (`account-tag`: 700 10.5px, lh 1.4, `0.12em`, uppercase, Ink 3): FROM GOOGLE after the email, PRIMARY
+  after a voice's name. They are text set in small caps, never chips.
+- **Editors:** the title in `account-editor-title` (Expanded 800 1rem, lh 1.25, `-0.02em`), an intro line in 13px Ink 3,
+  labels 600 13px Ink 2 with "(optional)" or "(up to 3)" in 400 Ink 3, fields 500 15px, errors 500 13px Ink.
+- **Welcome masthead** (`account-welcome`: Expanded 800 `clamp(2.2rem, 4.6vw, 3.6rem)`, lh 1, `-0.035em`, max 14ch):
+  "Your BakerRang account.", set entirely in Ink, over a 16.5px Ink 2 lead.
+
+### Layout
+
+- **Bar:** 58px and sticky, as in the other apps: the logo mark (30px), a 1px `line-strong` rule and the Expanded
+  wordmark on the left; the switcher and avatar on the right. In Account the avatar menu omits the theme control
+  (the sheet has one).
+- **Column:** one centred column, max **920px**, with a `clamp(16px, 4vw, 32px)` gutter (the `poly-gutter` value).
+  The page head (30px above, 26px below) spans it.
+- **Rail + sheet (≥1061px):** a **200px** rail and a sheet of at most **680px**, 40px apart, left-aligned in the
+  column. The rail is sticky (82px from the top): four links, each at least 40px tall, then the rail note ("Settings
+  that belong to one app live in that app.") under a Line rule. The current section follows the scroll.
+- **Sections:** 46px apart. Each opens with its head (44px tall, 12px under it) over the `line-strong` rule.
+- **Rows:** a `172px / 1fr` grid (label | value or control), 20px between the columns, 16px of padding, and a Line
+  rule beneath (none on a section's last row).
+- **Nameplate:** a `52px / 1fr` grid, 16px apart: the monogram, then the name, the email with its FROM GOOGLE tag,
+  and the "Manage your Google account" link. The explanatory hint sits under it, aligned with the name.
+- **Appearance:** Theme (the three-way choice, at most 420px wide, with a one-line hint), then Applies to (the Relay
+  and its status line).
+- **Voices:** Add voice at the right of the head, a lead under the rule, then the voice list, primary first and then
+  by name. Each voice row is `1fr / auto`: name, tag and description, then its actions at the right.
+- **Session:** App settings (a link to Passwords' Vault settings), Your data (a plain statement that deletion and
+  export aren't available yet), then **Signed in** with Sign out at the right.
+- **761–1060px:** the rail narrows to 168px, the label column to 150px, and the gap to 28px.
+- **Welcome:** a single **680px** column: the masthead, the lead, the gold Sign in with Google, a ruled facts list
+  (Profile, Voices, Theme as label | line), then a working Appearance section (theme is saved in this browser).
+  **Checking sign-in:** "Opening Account…" with a spinner, centred. **Not found:** a 560px column.
+
+**The Phone Layer (≤760px).**
+- **No rail.** Sections flow in one column, 30px apart, and the page head tightens (16px above, 12px below).
+- Rows stack the **label over the value** (12px padding, 8px gap). The nameplate hint drops its indent.
+- The theme choice spans the width, with three 44px segments.
+- **Add voice** leaves the head's right and goes **full width (48px)** on its own line under the Voices head.
+- Voice rows go to one column: the actions wrap **under** the name at 44px each.
+- The editor becomes one column, its foot buttons share the width, and its status line takes a line of its own. The
+  delete confirm's buttons share the width.
+- Every button, icon button, link and the avatar is at least **44px**; fields stay 44px.
+- At ≤430px the Relay tiles grow to 40px with 6px between them.
+- Welcome's facts stack label over line, and Sign in with Google goes full width at 52px.
+
+**The Ruled Sheet Rule.** Account is one sheet of labelled rows on hairlines, beside a quiet rail. Sections are an
+Expanded name over a `line-strong` rule, never a card, a panel or a tab. No section has a border, a radius, a fill or
+a shadow.
+
+### Elevation & Depth
+
+The sheet is flat. Sections and rows are printed on the ground and separated only by rules. **There are no cards and
+no raised panels.** The in-place editors and the delete confirm are flat Plane bands that close with a `line-strong`
+bottom edge. The world **resting shadow** is used only by the switcher and avatar menus. Add voice and the theme
+choice's selected segment carry the world contact shadow. The nameplate monogram and the Relay tiles are flat.
+
+**The Unified Bleed Rule.** Every Plane band on the sheet (a hovered voice row, the Add and Rename editors and the
+inline delete confirm) extends **12px past the sheet's edge on both sides**, so its text stays on the column's line
+while its fill reads as a band across the rule. One bleed, the same everywhere.
+
+### Shapes
+
+World radii are unchanged, and the sheet itself is square. Sections, rows, voice rows, the editors, the confirm and
+notices have **no radius**. Buttons, fields, the theme choice's track, the monogram and the Relay tiles use the 4px
+control radius. The selected segment, checkboxes, skeleton lines and focus outlines use the 3px inner radius. Menus
+use 8px. The recording dot (10px, Ink) is the one round mark. Drawn icons are 20px (18px in buttons and the theme
+choice, 16px in status lines, 15px in errors and links) at the world's 1.75 stroke.
+
+### Components
+
+- **Section rail:** a `nav` labelled "Account sections" with four links. **Rest:** 500 14px Ink 3. **Hover:** Ink on
+  Plane. **Current** (`aria-current="location"`): 600 Ink with a 1px Account Grey rule 6px in from the link's left
+  edge, inset 11px top and bottom. The current section is the last one whose top has passed the bar (at the page
+  bottom, the last one in the upper half of the viewport).
+- **Nameplate (Profile):** a **52px initials monogram** (Plane, a 1px `line-strong` border, the 4px radius, the
+  initials in Ink), **never a photo**. Beside it: the name, the email followed by a **FROM GOOGLE** tag, and **Manage
+  your Google account** as a 500 Ink 2 link with a `line-strong` underline (4px offset) and a 15px drawn external-link
+  icon, opening in a new tab with a screen-reader "(opens in a new tab)". Under it, an Ink 3 hint says the name and
+  email are changed at Google. There is no user id, no "member since" and no edit control.
+- **Theme choice:** a `radiogroup` labelled Theme with three native radios (Light, Dark, System), each with an 18px
+  drawn icon (sun, moon, screen). The track is Ground 2 with a 1px Line border, the 4px radius and 3px padding;
+  segments are 44px, 600 14px Ink 3, and turn Ink on hover. **Selected:** see The Selected-Is-Not-Just-Tone Rule.
+  Focus is the gold-text outline around the segment (2px offset). Under it, an Ink 3 hint: "Every BakerRang app on
+  this browser uses it.", or on System "Follows this device. It's dark right now."
+- **Relay status line:** a 16px drawn icon and 13px Ink 3 text under the tiles. **Saved:** a check and "Saved to your
+  account. Your other devices pick it up the next time they open BakerRang." **Saving:** a spinner and "Saving to your
+  account…". **Couldn't save:** Ink, an alert icon, "Changed on this browser, but not saved to your account." with an
+  Ink 3 line and a quiet **Try again** (a `role="alert"`). **Signed out:** an info icon and "Saved in this browser. Sign
+  in to keep it on every device."
+- **Voice row:** name · PRIMARY tag · description, with its actions at the right and a Line rule beneath. **Hover:**
+  the row fills Plane with the 12px bleed. The actions are **text buttons, never icons**: **Make primary** (not on the
+  primary voice), **Rename** (both quiet, Ink 2, Ink on Plane 2 on hover) and **Delete** (Danger text). Each has an
+  `aria-label` naming its voice ("Rename Storyteller"). Make primary is immediate and announced ("Storyteller is now
+  your primary voice."). With no primary, an Ink 3 line with a drawn info icon names the voice the apps start with.
+- **Add a voice (in-place editor):** a Plane band at the top of the Voices list, with the 12px bleed and a
+  `line-strong` bottom edge. The title "Add a voice", an Ink 3 intro, then a 6-column field grid (one column on phone,
+  14px by 18px gaps): **Name** and **Description (optional)** side by side; **Samples (up to 3)** with a hint, a ghost
+  **Record a sample** (drawn mic) and a ghost **Add audio files** (drawn upload), then a Line-ruled sample list (a drawn
+  wave or upload icon, the name, a 12.5px tabular Ink 3 meta line, and 40px Play/Pause and Remove icon buttons); the
+  consent checkbox ("This is my voice, or I have permission from the person speaking to clone it."); and an Ink 3 note
+  with an info icon that samples go to ElevenLabs. The foot, over a Line rule: a status line, then **Cancel** (quiet) and
+  **Create voice** (ink). **Creating:** the form is `aria-busy`, the commit reads "Creating voice…" with a spinner, and
+  the status says "This can take up to a minute." **Couldn't confirm:** a ruled notice inside the editor, and the ink
+  commit becomes **Refresh voices**.
+- **Recording:** a Line-ruled row: a 10px Ink dot, "Recording · 0:42 of 5:00" in 600 14px tabular type over a 1px Line
+  rule that fills in Ink 2 as time passes, and an ink **Stop** (small) at the right.
+- **Rename (in-place editor):** the same Plane band, replacing the row: "Rename Storyteller", an Ink 3 intro, Name and
+  Description (optional), and a foot of **Cancel** (quiet) and **Save** (ink; "Saving…" while busy).
+- **Delete confirm (inline):** replaces the row as a Plane band with the 12px bleed and a `line-strong` bottom edge:
+  "Delete Storyteller?" (600 15px), a consequence line in Ink 2 (it's removed from ElevenLabs too, and can't be
+  undone), then **Keep it** (ghost) and **Delete** (Danger text), right-aligned.
+- **Fields:** 44px, a 1px `line-strong` border, the ground as fill, the 4px radius. **Hover:** an Ink 3 border.
+  **Focus:** an Ink border plus a 1px Ink ring (gold stays on Add voice). **Invalid:** see The Ink Validation Rule.
+- **Checkbox:** a drawn 20px square (a 1.5px Ink 3 border, 3px radius) inside a 44px label. **Checked:** an Ink fill
+  with a ground-coloured tick. **Invalid:** an Ink border and a 1px Ink ring.
+- **Session:** see The Sign Out Last Rule. **Signed in** reads "<email> on this browser", with **Sign out** (Danger text,
+  a drawn sign-out icon) at the right and an Ink 3 hint that it signs you out of every BakerRang app in this browser.
+- **States:** **Voices loading:** two skeletons of Plane 2 lines (3px radius) and a screen-reader "Loading your
+  voices…". **No voices yet:** a 600 16px Ink line and an Ink 3 sentence. **Couldn't load:** a drawn Ink 2 alert icon, a
+  600 16px Ink message, an Ink 3 line and a ghost **Try again** (Add voice isn't rendered). **Offline:** a ruled notice
+  under the page head (a `line-strong` rule above and below, a drawn Ink 2 icon, Ink text with an Ink 3 line), never a
+  coloured box.
+- **Not found:** "That page isn't in Account." (Expanded 800 1.6rem), an Ink 2 line and a ghost **Back to Account**.
+
+**The Relay (signature).** Under the theme choice, the Applies to row holds a `<ul>` of **six 36px tiles**: the
+Launcher (the BakerRang logo mark), Story Book, Polyglot, Sign, Budget and Passwords (each app's drawn emblem in its
+own accent, 22px). Each tile is the resolved theme's Plane with a 1px **Line** hairline and the 4px radius, and carries
+its app's name for assistive tech. The tiles are ground samples, not buttons: they have no hover and no focus. **When
+the theme changes, the sheet repaints at once**, with no page cross-fade. The tiles alone hold the previous ground and
+then take the new one **left to right, 40ms apart, 160ms each** (background, hairline and emblem colour, on the world
+ease `cubic-bezier(.2,.8,.2,1)`). **Under reduced motion,** they change together, instantly. The change is announced
+once through a polite live region ("Theme set to Dark. Saved to your account."). The app icon repeats the Relay as
+three small ground tiles beside the emblem.
+
+**The Selected-Is-Not-Just-Tone Rule (Account-scoped).** In the theme choice, the checked segment is **Plane 2, 700
+weight, Ink, with a 1px Ink 3 border** and the world contact shadow, so selection doesn't rest on tone alone. This
+rule applies inside Account only. The world Segmented Control above and the shared `ThemeControl` in other apps'
+avatar menus still show their pressed segment by tone; bringing them in line is a logged follow-up (PhaseH R9), not
+part of this layer.
+
+**The Sign Out Last Rule.** Session ends with **Signed in** and its **Sign out**, set apart by 12px of space and a
+single `line-strong` rule. The row above drops its own Line rule, so the two rules never double. Nothing follows Sign
+out on the sheet.
+
+**The One Editor Rule (Account).** As in Budget, edits happen **in place**, one at a time: Add a voice opens at the top
+of the list; Rename and the delete confirm replace their row. Nothing opens a modal, a side panel or a new page. Theme
+is immediate, Make primary is a single immediate action, and there's no page-level Save. The editors rise 4px over
+160ms on the world ease (instant under reduced motion). Cancel and Keep it return focus to the control that opened
+them; after a save or create, focus goes to the voice's Rename.
+
+**The Ink Validation Rule.** A field that fails validation keeps its Ink border and gains a 3px inset Ink bar on its
+leading edge. Beneath it sits an Ink message (500 13px) with a 15px drawn alert icon: "Give the voice a name.", "Add at
+least one recording or audio file.", "Confirm you have the right to clone this voice." Focus moves to the first
+invalid control, and "Check the highlighted fields." is announced once. In Rename, the field is marked the same
+way and the message sits in the foot's status line.
+
+**Canonical behaviour vs the comp.** The comp takes shortcuts the app must not copy. It loads Archivo from Google
+Fonts (the app uses the self-hosted faces in `@bakerrang/web-tokens`). It re-renders `#main` with `innerHTML` (the app
+is React and never remounts a focused control). Its `?slowmo=N` parameter stretches the Relay for review captures, and
+its review panel is scaffolding. Every name, email and voice in it is synthetic. Where the comp and
+`docs/apps/PhaseH-Account.md` §§14–18 disagree on behaviour, that document wins.
+
+### Do's and Don'ts (Account)
+
+- **Do** set Account as one ruled sheet beside a 200px section rail: Expanded section heads over a `line-strong` rule,
+  and label | value rows on Line rules.
+- **Do** mark the rail's current section with a 1px Account Grey rule and 600 Ink, and follow the scroll.
+- **Do** show identity as a nameplate: a 52px initials monogram, the name, the email with a FROM GOOGLE tag, and a
+  Manage your Google account link.
+- **Do** keep Add voice the only gold fill (Sign in with Google when signed out), and make every commit ink-filled.
+- **Do** mark the selected theme with Plane 2, 700 weight and a 1px Ink 3 border, not tone alone.
+- **Do** play the Relay on a theme change: the sheet repaints at once, then six 36px hairline tiles take the new
+  ground left to right, 40ms apart and 160ms each, instantly under reduced motion, announced once.
+- **Do** open Add a voice, Rename and Delete in place, one at a time, as Plane bands with the one 12px bleed.
+- **Do** label voice actions in words: Make primary, Rename, Delete.
+- **Do** write kinds as small-caps text tags (PRIMARY, FROM GOOGLE).
+- **Do** end Session with Signed in and Sign out, behind 12px and one `line-strong` rule that never doubles.
+- **Do** on phones drop the rail, stack labels over values, put Add voice full width under its head, and keep every
+  target at least 44px.
+- **Don't** build an avatar hero, a grid of settings cards, a tabbed settings dashboard, or put a section in a panel.
+- **Don't** show a profile photo, a user id, a "member since" line or an edit control for Google identity.
+- **Don't** use Account Grey for text, fills, tags, buttons, borders or row underlines; it is the emblem and the rail's
+  current-section rule only.
+- **Don't** make Create voice or Save gold, or put a second gold fill on the sheet.
+- **Don't** cross-fade the page on a theme change, or make the Relay tiles interactive.
+- **Don't** replace the voice actions with icon-only buttons or a hover-trash.
+- **Don't** mark validation or problems in Danger red, a toast or a coloured alert box.
+- **Don't** give Account app-specific settings; point to the app that owns them (Vault settings live in Passwords).
+- **Don't** bring Literata, Story Book's desk, Polyglot's dock, Sign's finder, Budget's accounting rules or Passwords'
+  gold-marks-action exception into Account.

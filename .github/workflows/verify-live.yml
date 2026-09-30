@@ -76,6 +76,15 @@ jobs:
                         grep -qi '^x-content-type-options: nosniff' <<< "$headers" && return 0
                     fi
                     ;;
+                  account-headers)
+                    if grep -Fq '<div id="root"' "$body_file"; then
+                      local headers="$(curl --silent --show-error --head --max-time 20 "$url")"
+                      grep -qi '^content-security-policy:.*frame-ancestors '\''none'\''' <<< "$headers" &&
+                        grep -qi '^x-frame-options: DENY' <<< "$headers" &&
+                        grep -qi '^x-content-type-options: nosniff' <<< "$headers" &&
+                        grep -qi '^permissions-policy:.*microphone=(self)' <<< "$headers" && return 0
+                    fi
+                    ;;
                   status-only) return 0 ;;
                 esac
               fi
@@ -97,6 +106,7 @@ jobs:
           check_endpoint sign https://sign.bakerrang.com/ client-root || failed=1
           check_endpoint budget https://budget.bakerrang.com/ client-root || failed=1
           check_endpoint passwords https://passwords.bakerrang.com/ passwords-headers || failed=1
+          check_endpoint account https://account.bakerrang.com/ account-headers || failed=1
           if [[ "$DEEP" == "true" ]]; then
             check_endpoint custom https://custom.bakerrang.com/ status-only || failed=1
           fi

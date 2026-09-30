@@ -4,8 +4,8 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, ...deploy },
+  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...ci },
+  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...deploy },
   unknown: []
 })
 
@@ -50,6 +50,20 @@ test('classifies Passwords source and nginx config for Passwords only', () => {
   assert.deepEqual(classifyChanges(['web/nginx/apps/passwords.conf']), expected({ 'web-passwords': true }))
 })
 
+test('classifies Account source and nginx config for Account only', () => {
+  assert.deepEqual(classifyChanges(['web/apps/account/src/App.jsx']), expected({ 'web-account': true }))
+  assert.deepEqual(classifyChanges(['web/apps/account/package.json']), expected({ 'web-account': true }))
+  assert.deepEqual(classifyChanges(['web/nginx/apps/account.conf']), expected({ 'web-account': true }))
+  assert.deepEqual(classifyChanges(['web/nginx/apps/passwords.conf']), expected({ 'web-passwords': true }))
+})
+
+test('keeps server, legacy client, and Account design-record changes from crossing into Account', () => {
+  assert.deepEqual(classifyChanges(['server/routes/account.js', 'server/routes/textToSpeech.js']), expected({ api: true }))
+  assert.deepEqual(classifyChanges(['client/src/components/Account.jsx']), expected({ client: true }))
+  assert.deepEqual(classifyChanges(['docs/apps/PhaseH-Account.md', 'docs/apps/Account-PhaseH-Runbook.md']), expected({}))
+  assert.deepEqual(classifyChanges(['web/.impeccable/mocks/account-comp.html', 'web/.impeccable/surfaces/account.md']), expected({}))
+})
+
 test('fans shared consumer packages and workspace infrastructure out to all web apps', () => {
   for (const repositoryPath of [
     'web/packages/web-tokens/src/tokens.css',
@@ -62,9 +76,21 @@ test('fans shared consumer packages and workspace infrastructure out to all web 
   ]) {
     assert.deepEqual(
       classifyChanges([repositoryPath]),
-      expected({ 'web-launcher': true, 'web-storybook': true, 'web-polyglot': true, 'web-sign': true, 'web-budget': true, 'web-passwords': true }),
+      expected({ 'web-launcher': true, 'web-storybook': true, 'web-polyglot': true, 'web-sign': true, 'web-budget': true, 'web-passwords': true, 'web-account': true }),
       repositoryPath
     )
+  }
+})
+
+test('a shared theme or shell change redeploys all seven consumer apps, Account included', () => {
+  for (const repositoryPath of ['web/packages/web-theme/src/index.jsx', 'web/packages/web-app-shell/src/index.jsx', 'web/apps/launcher/src/Launcher.jsx']) {
+    const result = classifyChanges([repositoryPath])
+    const deployed = Object.entries(result.deploy).filter(([, value]) => value).map(([name]) => name)
+    if (repositoryPath.startsWith('web/packages/')) {
+      assert.deepEqual(deployed, ['web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords', 'web-account'], repositoryPath)
+    } else {
+      assert.deepEqual(deployed, ['web-launcher'], repositoryPath)
+    }
   }
 })
 

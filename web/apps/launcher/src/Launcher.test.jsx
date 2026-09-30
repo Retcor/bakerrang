@@ -48,6 +48,8 @@ describe('Launcher', () => {
     expect(screen.getByRole('link', { name: 'Polyglot' }).getAttribute('href')).toBe('https://polyglot.bakerrang.com')
     expect(screen.getByRole('heading', { name: 'Your account' })).not.toBeNull()
     expect(screen.getByRole('link', { name: 'Account' })).not.toBeNull()
+    expect(screen.getByText(/Your profile, theme and voices for every BakerRang tool/)).not.toBeNull()
+    expect(screen.queryByText(/security/i)).toBeNull()
   })
 
   it('renders the signed-in state and six-tool app switcher with Account separated', async () => {

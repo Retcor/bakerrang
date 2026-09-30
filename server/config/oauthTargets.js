@@ -6,7 +6,8 @@ const TARGET_ENV_KEYS = Object.freeze({
   polyglot: 'POLYGLOT_DOMAIN',
   sign: 'SIGN_DOMAIN',
   budget: 'BUDGET_DOMAIN',
-  passwords: 'PASSWORDS_DOMAIN'
+  passwords: 'PASSWORDS_DOMAIN',
+  account: 'ACCOUNT_DOMAIN'
 })
 
 const httpError = (status, message) => {

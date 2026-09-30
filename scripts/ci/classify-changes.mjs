@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const BOTH_PLATFORM_SERVICES = ['portal', 'renderer']
-const ALL_WEB_SERVICES = ['web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords']
+const ALL_WEB_SERVICES = ['web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords', 'web-account']
 
 // This is the single repository-path policy used by CI and future deployment
 // workflows. Keep CI-only inputs distinct from deploy/build inputs.
@@ -22,6 +22,7 @@ const PATH_RULES = [
   { prefix: 'web/apps/sign/', ci: ['web-sign'], deploy: ['web-sign'] },
   { prefix: 'web/apps/budget/', ci: ['web-budget'], deploy: ['web-budget'] },
   { prefix: 'web/apps/passwords/', ci: ['web-passwords'], deploy: ['web-passwords'] },
+  { prefix: 'web/apps/account/', ci: ['web-account'], deploy: ['web-account'] },
   { prefix: 'web/packages/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
 
   { exact: 'platform/package.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
@@ -40,6 +41,7 @@ const PATH_RULES = [
   { exact: 'web/eslint.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/vitest.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/nginx/apps/passwords.conf', ci: ['web-passwords'], deploy: ['web-passwords'] },
+  { exact: 'web/nginx/apps/account.conf', ci: ['web-account'], deploy: ['web-account'] },
   { prefix: 'web/nginx/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { prefix: 'web/.impeccable/', ci: [], deploy: [] },
   { exact: 'web/PRODUCT.md', ci: [], deploy: [] },
@@ -109,7 +111,8 @@ export function classifyChanges (repositoryPaths) {
       'web-polyglot': ci.has('web-polyglot'),
       'web-sign': ci.has('web-sign'),
       'web-budget': ci.has('web-budget'),
-      'web-passwords': ci.has('web-passwords')
+      'web-passwords': ci.has('web-passwords'),
+      'web-account': ci.has('web-account')
     },
     deploy: {
       api: deploy.has('api'),
@@ -121,7 +124,8 @@ export function classifyChanges (repositoryPaths) {
       'web-polyglot': deploy.has('web-polyglot'),
       'web-sign': deploy.has('web-sign'),
       'web-budget': deploy.has('web-budget'),
-      'web-passwords': deploy.has('web-passwords')
+      'web-passwords': deploy.has('web-passwords'),
+      'web-account': deploy.has('web-account')
     },
     unknown: unknown.sort()
   }
@@ -145,6 +149,7 @@ function writeGitHubOutputs (outputPath, result) {
     web_sign: result.ci['web-sign'],
     web_budget: result.ci['web-budget'],
     web_passwords: result.ci['web-passwords'],
+    web_account: result.ci['web-account'],
     deploy_api: result.deploy.api,
     deploy_portal: result.deploy.portal,
     deploy_renderer: result.deploy.renderer,
@@ -154,7 +159,8 @@ function writeGitHubOutputs (outputPath, result) {
     deploy_web_polyglot: result.deploy['web-polyglot'],
     deploy_web_sign: result.deploy['web-sign'],
     deploy_web_budget: result.deploy['web-budget'],
-    deploy_web_passwords: result.deploy['web-passwords']
+    deploy_web_passwords: result.deploy['web-passwords'],
+    deploy_web_account: result.deploy['web-account']
   }
   fs.appendFileSync(outputPath, Object.entries(outputs).map(([name, value]) => `${name}=${value}\n`).join(''))
 }

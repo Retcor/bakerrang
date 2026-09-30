@@ -172,3 +172,33 @@ test('Google strategy uses Passport OAuth2 session-backed state protection', () 
   assert.equal(options.state, true)
   assert.equal(options.callbackURL, 'http://localhost:8080/auth/google/callback')
 })
+
+test('the account target resolves only to ACCOUNT_DOMAIN and fails safely when unset', async () => {
+  const accountEnv = { ...env, ACCOUNT_DOMAIN: 'https://account.bakerrang.com' }
+  assert.equal(isValidOAuthTarget('account'), true)
+  assert.equal(oauthTargetFromQuery('account'), 'account')
+  assert.equal(resolveOAuthTarget('account', accountEnv), 'https://account.bakerrang.com')
+  assert.throws(() => resolveOAuthTarget('account', env), { status: 500, message: 'ACCOUNT_DOMAIN is not configured' })
+  assert.equal(isValidOAuthTarget('accounts'), false)
+  assert.equal(isValidOAuthTarget('https://account.bakerrang.com'), false)
+
+  const session = { oauthTarget: 'account', save (callback) { callback() } }
+  const res = response()
+  await createOAuthCallbackHandler({ env: accountEnv, storeUser: async () => {} })({ user: { id: 'u' }, session }, res, () => {})
+  assert.equal(res.redirectUrl, 'https://account.bakerrang.com')
+  assert.equal(session.oauthTarget, undefined)
+
+  const login = response()
+  let continued = false
+  await rememberOAuthTarget(accountEnv)({ query: { target: 'account' }, session: { save (callback) { callback() } } }, login, () => { continued = true })
+  assert.equal(continued, true)
+  const unset = response()
+  const originalError = console.error
+  console.error = () => {}
+  try {
+    await rememberOAuthTarget(env)({ query: { target: 'account' }, session: { save (callback) { callback() } } }, unset, () => {})
+  } finally {
+    console.error = originalError
+  }
+  assert.equal(unset.statusCode, 500)
+})

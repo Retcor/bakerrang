@@ -129,7 +129,7 @@ export const Launcher = () => {
                 <div className='tool-row__emblem'><ProductEmblem id='account' /></div>
                 <div className='tool-row__copy'>
                   <a className='tool-row__name' href={destinations.account.url}>Account</a>
-                  <div className='tool-row__description'>Profile, security and preferences for every BakerRang tool. Also in your avatar menu, top-right.</div>
+                  <div className='tool-row__description'>Your profile, theme and voices for every BakerRang tool. Also in your avatar menu, top-right.</div>
                 </div>
                 <span className='tool-row__arrow'><Arrow /></span>
               </div>

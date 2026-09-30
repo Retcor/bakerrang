@@ -2,6 +2,7 @@ import express from 'express'
 import passport from 'passport'
 import { checkAndStoreUser } from '../services/authService.js'
 import { generateCsrfToken } from '../middleware/security.js'
+import { noStore } from '../middleware/contentSecurity.js'
 import {
   consumeOAuthTarget,
   oauthTargetFromQuery,
@@ -97,13 +98,13 @@ router.get('/google/callback',
   createOAuthCallbackHandler()
 )
 
-router.get('/check', isAuthenticated, (req, res) => {
+router.get('/check', noStore, isAuthenticated, (req, res) => {
   res.json({ isAuthenticated: true, user: req.user })
 })
 
 // Issues a CSRF token (and sets the paired cookie) for the client to attach
 // as the `x-csrf-token` header on state-changing requests.
-router.get('/csrf', (req, res) => {
+router.get('/csrf', noStore, (req, res) => {
   res.json({ csrfToken: generateCsrfToken(req, res) })
 })
 

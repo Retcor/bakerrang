@@ -230,3 +230,13 @@ test('custom-domain CORS is exact-route scoped, tenant-bound, and preserves stat
     await new Promise((resolve, reject) => scopedServer.close((error) => error ? reject(error) : resolve()))
   }
 })
+
+test('CORS allows exactly the configured ACCOUNT_DOMAIN and no lookalike origin', () => {
+  const origins = buildAllowedOrigins({ ACCOUNT_DOMAIN: 'https://account.bakerrang.com', PASSWORDS_DOMAIN: 'https://passwords.bakerrang.com' })
+  assert.deepEqual(origins, ['https://passwords.bakerrang.com', 'https://account.bakerrang.com'])
+  assert.equal(isOriginAllowed('https://account.bakerrang.com', origins), true)
+  assert.equal(isOriginAllowed('https://account.bakerrang.com.evil.example', origins), false)
+  assert.equal(isOriginAllowed('http://account.bakerrang.com', origins), false)
+  assert.equal(isOriginAllowed('https://evil-account.bakerrang.com', origins), false)
+  assert.deepEqual(buildAllowedOrigins({}), [])
+})
