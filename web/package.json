@@ -16,6 +16,7 @@
     "dev:sign": "npm run dev -w @bakerrang/web-sign",
     "dev:budget": "npm run dev -w @bakerrang/web-budget",
     "dev:passwords": "npm run dev -w @bakerrang/web-passwords",
+    "dev:account": "npm run dev -w @bakerrang/web-account",
     "build": "npm run build --workspaces --if-present",
     "lint": "standard \"apps/**/*.{js,jsx}\" \"packages/**/*.{js,jsx}\" \"*.js\"",
     "test": "vitest run",

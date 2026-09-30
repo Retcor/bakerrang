@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#161514" />
+<title>Account — comp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Expanded:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+/* =========================================================
+   Account comp — BakerRang consumer world, "Section rail + one ruled sheet".
+   Archivo only (Expanded for naming). Rows are label | value on 1px rules; no panels.
+   Gold = Add voice only (Sign in with Google when signed out). Commits are ink.
+   Account Grey = emblem + the rail's current-section rule only.
+   Every name, email and voice here is synthetic.
+   ========================================================= */
+:root {
+  color-scheme: dark;
+  --gold: #ffd500; --gold-hover: #f0c400; --gold-press: #ddba00; --gold-text: #ffd500; --ink-on-gold: #1a1a1a;
+  --bg: #161514; --bg-2: #1c1b1a; --plane: #201f1d; --plane-2: #262523;
+  --line: rgba(255,255,255,.10); --line-strong: rgba(255,255,255,.18);
+  --ink: #f2efe9; --ink-2: #c3bfb6; --ink-3: #928d83;
+  --danger: #e88a8a;
+  --account: #a5a59c;
+  --acc-story: #f08a5d; --acc-polyglot: #58c0c9; --acc-sign: #b79ce0; --acc-budget: #7fb0e8; --acc-passwords: #aeb8c2;
+  --shadow-resting: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --shadow-contact: 0 1px 2px rgba(0,0,0,.4);
+  --r-inner: 3px; --r: 4px; --r-panel: 8px;
+  --col: 920px; --rail: 200px; --sheet: 680px; --label: 172px;
+  --gut: clamp(16px, 4vw, 32px);
+  --sans: "Archivo", system-ui, "Noto Sans", "Segoe UI", sans-serif;
+  --expanded: "Archivo Expanded", "Archivo", sans-serif;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --gold-text: #8a6300;
+  --bg: #efece6; --bg-2: #e7e3db; --plane: #ffffff; --plane-2: #f6f4ef;
+  --line: rgba(20,18,16,.12); --line-strong: rgba(20,18,16,.22);
+  --ink: #1b1a18; --ink-2: #4f4b44; --ink-3: #6b665e;
+  --danger: #c0362b;
+  --account: #63625a;
+  --acc-story: #c25a34; --acc-polyglot: #1f7d86; --acc-sign: #6e4fb4; --acc-budget: #235f9e; --acc-passwords: #4d5867;
+  --shadow-resting: 0 1px 2px rgba(30,26,20,.10), 0 12px 28px rgba(30,26,20,.10);
+  --shadow-contact: 0 1px 2px rgba(30,26,20,.10);
+}
+*,*::before,*::after { box-sizing: border-box; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; scroll-padding-top: 82px; }
+body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--sans); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+a { color: inherit; text-underline-offset: 3px; }
+::selection { background: var(--gold); color: var(--ink-on-gold); }
+:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; border-radius: var(--r-inner); }
+input { caret-color: var(--gold-text); }
+* { scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 12px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid var(--bg); border-radius: 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.tnum { font-variant-numeric: tabular-nums lining-nums; }
+[hidden] { display: none !important; }
+
+/* ---------- shared controls ---------- */
+.btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: 10px 16px; border-radius: var(--r); border: 1px solid transparent; font: 600 14px/1.2 var(--sans); cursor: pointer; background: transparent; transition: background .16s, border-color .16s, color .16s, transform .06s; white-space: nowrap; text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
+.btn--gold { background: var(--gold); color: var(--ink-on-gold); box-shadow: var(--shadow-contact); }
+.btn--gold:hover { background: var(--gold-hover); }
+.btn--gold:active { background: var(--gold-press); }
+.btn--ink { background: var(--ink); color: var(--bg); }
+.btn--ink:hover { background: var(--ink-2); }
+.btn--ghost { border-color: var(--line-strong); color: var(--ink); }
+.btn--ghost:hover { background: var(--plane-2); }
+.btn--quiet { color: var(--ink-2); padding-inline: 10px; }
+.btn--quiet:hover { color: var(--ink); background: var(--plane-2); }
+.btn--danger { color: var(--danger); padding-inline: 10px; }
+.btn--danger:hover { background: var(--plane-2); }
+.btn--sm { min-height: 36px; padding: 7px 12px; font-size: 13px; }
+.btn svg.i { width: 18px; height: 18px; }
+.ibtn { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: var(--r); border: 1px solid transparent; background: transparent; color: var(--ink-2); cursor: pointer; transition: background .16s, color .16s, border-color .16s; flex: none; }
+.ibtn:hover { background: var(--plane); color: var(--ink); border-color: var(--line); }
+.ibtn[aria-expanded="true"] { background: var(--plane); border-color: var(--line-strong); color: var(--ink); }
+.avatar { width: 36px; height: 36px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--plane); color: var(--ink); font: 700 12px var(--sans); cursor: pointer; letter-spacing: .02em; }
+.avatar:hover, .avatar[aria-expanded="true"] { border-color: var(--ink-3); }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.link { color: var(--ink-2); font-weight: 500; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; }
+.link:hover { color: var(--ink); text-decoration-color: currentColor; }
+.link svg.i { width: 15px; height: 15px; }
+.tag { font: 700 10.5px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+
+/* ---------- bar ---------- */
+.bar { position: sticky; top: 0; height: 58px; border-bottom: 1px solid var(--line); background: var(--bg); z-index: 40; }
+.bar__in { height: 100%; max-width: 1240px; margin: 0 auto; padding: 0 clamp(10px, 3vw, 28px); display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; text-decoration: none; }
+.brand__mark { width: 30px; height: 30px; display: block; }
+.brand__rule { width: 1px; height: 22px; background: var(--line-strong); }
+.brand__name { font: 800 15px/1 var(--expanded); letter-spacing: -.02em; color: var(--ink); white-space: nowrap; }
+.bar__sp { flex: 1; }
+.bar__right { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- popovers / menus (world) ---------- */
+.menu { position: relative; }
+.pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 240px; background: var(--plane); border: 1px solid var(--line-strong); border-radius: var(--r-panel); box-shadow: var(--shadow-resting); padding: 6px; z-index: 60; display: none; }
+.menu.is-open > .pop { display: block; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.pop__head { font: 700 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 6px; }
+.pop__item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r); border: 0; background: none; color: var(--ink-2); font: 500 14px var(--sans); text-align: left; cursor: pointer; text-decoration: none; }
+.pop__item:hover, .pop__item:focus-visible { background: var(--plane-2); color: var(--ink); }
+.pop__item[aria-current="page"] { color: var(--ink); }
+.pop__item svg.i { width: 18px; height: 18px; }
+.pop__danger, .pop__danger:hover { color: var(--danger); }
+.pop__sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop__who { padding: 8px 10px 10px; display: grid; gap: 1px; }
+.pop__who strong { font: 600 14px var(--sans); color: var(--ink); }
+.pop__who span { font-size: 13px; color: var(--ink-3); }
+.switcher { width: 292px; }
+.switcher__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.switcher__cell { display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: var(--r); font: 600 11.5px var(--sans); color: var(--ink-2); text-decoration: none; }
+.switcher__cell:hover { background: var(--plane-2); color: var(--ink); }
+.switcher__cell svg { width: 26px; height: 26px; color: var(--acc); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- page frame ---------- */
+.main { padding: 0 var(--gut) 96px; }
+.col { max-width: var(--col); margin: 0 auto; }
+.pagehead { padding: 30px 0 26px; display: grid; gap: 6px; }
+.pagehead h1 { margin: 0; font: 800 clamp(1.55rem, 3vw, 2.05rem)/1.05 var(--expanded); letter-spacing: -.03em; }
+.pagehead p { margin: 0; max-width: 60ch; color: var(--ink-2); font-size: 15px; }
+@media (min-width: 1061px) { .pagehead p { max-width: none; } }
+.layout { display: grid; grid-template-columns: var(--rail) minmax(0, var(--sheet)); gap: 40px; justify-content: start; }
+
+/* rail */
+.rail { position: sticky; top: 82px; align-self: start; }
+.rail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.rail a { position: relative; display: flex; align-items: center; min-height: 40px; padding: 0 12px 0 18px; border-radius: var(--r); color: var(--ink-3); font: 500 14px var(--sans); text-decoration: none; transition: color .16s, background .16s; }
+.rail a:hover { color: var(--ink); background: var(--plane); }
+.rail a[aria-current="location"] { color: var(--ink); font-weight: 600; }
+.rail a[aria-current="location"]::before { content: ""; position: absolute; left: 6px; top: 11px; bottom: 11px; width: 1px; background: var(--account); }
+.rail__note { margin: 18px 0 0; padding: 14px 12px 0 18px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
+
+/* sheet */
+.sheet { min-width: 0; }
+.sec { padding-top: 6px; }
+.sec + .sec { margin-top: 46px; }
+.sec__head { display: flex; align-items: center; min-height: 44px; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); }
+.sec__head h2 { margin: 0; font: 800 1.1rem/1.2 var(--expanded); letter-spacing: -.02em; }
+.sec__count { color: var(--ink-3); font-size: 14px; font-variant-numeric: tabular-nums; }
+.sec__head .btn { margin-left: auto; }
+.sec__lead { margin: 14px 0 2px; color: var(--ink-2); font-size: 14.5px; max-width: 62ch; }
+.row { display: grid; grid-template-columns: var(--label) minmax(0, 1fr); gap: 8px 20px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.row:last-child { border-bottom: 0; }
+.row__label { font: 600 13px/1.4 var(--sans); color: var(--ink-2); padding-top: 3px; }
+.row__value { min-width: 0; }
+.row__value p { margin: 0; }
+.hint { color: var(--ink-3); font-size: 13px; line-height: 1.5; margin: 6px 0 0; max-width: 58ch; }
+.row__line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: -4px; }
+.choice + .hint { margin-top: 10px; }
+
+/* nameplate */
+.plate { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 16px; align-items: start; padding: 20px 0 8px; }
+.plate .link { margin-top: 2px; }
+.plate__hint { margin: 0 0 0 68px; padding-bottom: 16px; }
+@media (max-width: 760px) { .plate__hint { margin-left: 0; } }
+.mono { width: 52px; height: 52px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--plane); display: grid; place-items: center; font: 800 17px/1 var(--expanded); letter-spacing: -.01em; color: var(--ink); }
+.plate__name { margin: 0; font: 700 1.2rem/1.25 var(--expanded); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.plate__mail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--ink-2); font-size: 15px; overflow-wrap: anywhere; }
+
+/* theme choice */
+.choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 3px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); max-width: 420px; }
+.choice label { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: var(--r-inner); color: var(--ink-3); font: 600 14px var(--sans); cursor: pointer; transition: color .16s, background .16s; }
+.choice label:hover { color: var(--ink); }
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice label { border: 1px solid transparent; }
+.choice label:has(input:checked) { background: var(--plane-2); color: var(--ink); font-weight: 700; border-color: var(--ink-3); box-shadow: var(--shadow-contact); }
+.choice label:has(input:focus-visible) { outline: 2px solid var(--gold-text); outline-offset: 2px; }
+.choice svg.i { width: 18px; height: 18px; }
+
+/* the relay (signature) */
+.relay { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.relay li { width: 36px; height: 36px; border-radius: var(--r); display: grid; place-items: center; background: var(--tile-bg, var(--plane)); border: 1px solid var(--tile-line, var(--line)); color: var(--tile-acc, var(--acc)); transition: background-color .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease); }
+.relay li svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.relay li img { width: 20px; height: 20px; display: block; }
+.status { display: grid; grid-template-columns: 16px minmax(0,1fr); align-items: start; gap: 4px 8px; margin: 10px 0 0; color: var(--ink-3); font-size: 13px; line-height: 1.45; min-height: 22px; }
+.status svg.i, .status .spin { width: 16px; height: 16px; margin-top: 1px; }
+.status > .btn { grid-column: 2; justify-self: start; margin-left: -10px; }
+.status--problem { color: var(--ink); }
+.status--problem span.sub { color: var(--ink-3); }
+.status .btn { min-height: 36px; }
+
+/* voices */
+.voices { list-style: none; margin: 0; padding: 0; }
+.voice { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); transition: background .16s, box-shadow .16s; }
+.voice:hover { background: var(--plane); box-shadow: -12px 0 0 var(--plane), 12px 0 0 var(--plane); }
+.voice:last-child { border-bottom: 0; }
+.voice__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font: 500 16px/1.35 var(--sans); overflow-wrap: anywhere; }
+.voice__desc { color: var(--ink-3); font-size: 14px; margin: 2px 0 0; overflow-wrap: anywhere; }
+.voice__acts { display: flex; align-items: center; gap: 2px; }
+.voice.is-busy { opacity: .7; }
+.nopri { margin: 12px 0 0; color: var(--ink-3); font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+.nopri svg.i { width: 16px; height: 16px; margin-top: 2px; }
+
+/* in-place editors (Add voice, rename, delete confirm) */
+.editor { background: var(--plane); border-bottom: 1px solid var(--line-strong); padding: 20px 12px 16px; margin: 0 -12px; animation: rise .16s var(--ease); }
+.editor--top { border-top: 0; margin-top: 0; }
+@keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+.editor h3 { margin: 0 0 4px; font: 800 1rem/1.25 var(--expanded); letter-spacing: -.02em; }
+.editor__intro { margin: 0 0 16px; color: var(--ink-3); font-size: 13px; }
+.fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 18px; }
+.f { display: grid; gap: 6px; align-content: start; }
+.f--3 { grid-column: span 3; } .f--6 { grid-column: 1 / -1; }
+.f label:not(.btn):not(.check), .f legend { font: 600 13px/1.3 var(--sans); color: var(--ink-2); padding: 0; }
+.f label:not(.btn) small, .f legend small { font-weight: 400; color: var(--ink-3); }
+.in { width: 100%; min-height: 44px; padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); font: 500 15px/1.3 var(--sans); transition: border-color .16s, box-shadow .16s; }
+.in::placeholder { color: var(--ink-3); opacity: 1; }
+.in:hover { border-color: var(--ink-3); }
+.in:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.in[aria-invalid="true"] { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
+.err { display: flex; gap: 6px; align-items: flex-start; color: var(--ink); font: 500 13px/1.4 var(--sans); }
+.err svg.i { width: 15px; height: 15px; margin-top: 1px; }
+fieldset.f { border: 0; margin: 0; padding: 0; min-width: 0; }
+.samples__tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.samples { list-style: none; margin: 4px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.samples:empty { display: none; }
+.sample { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.sample__icon { color: var(--ink-3); display: grid; place-items: center; width: 28px; }
+.sample__name { font: 500 14px/1.35 var(--sans); overflow-wrap: anywhere; }
+.sample__meta { color: var(--ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sample__acts { display: flex; gap: 2px; }
+.rec { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.rec__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); margin: 0 9px; }
+.rec__time { font: 600 14px var(--sans); font-variant-numeric: tabular-nums; }
+.rec__rule { height: 1px; background: var(--line); position: relative; margin-top: 6px; overflow: hidden; }
+.rec__rule i { position: absolute; inset: 0 auto 0 0; background: var(--ink-2); width: 14%; }
+.check { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 10px 0 0; cursor: pointer; font-size: 14.5px; line-height: 1.45; color: var(--ink); }
+.check input { appearance: none; -webkit-appearance: none; margin: 1px 0 0; width: 20px; height: 20px; flex: none; border: 1.5px solid var(--ink-3); border-radius: var(--r-inner); background: var(--bg); display: grid; place-items: center; cursor: pointer; }
+.check input:checked { background: var(--ink); border-color: var(--ink); }
+.check input:checked::after { content: ""; width: 10px; height: 6px; border: 2px solid var(--bg); border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+.check input[aria-invalid="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.note { margin: 0; color: var(--ink-3); font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+.note svg.i { width: 16px; height: 16px; margin-top: 1px; }
+.row--last { margin-top: 12px; border-top: 1px solid var(--line-strong); }
+.row:has(+ .row--last) { border-bottom: 0; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.foot__status { flex: 1; min-width: 12ch; color: var(--ink-3); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.foot__status.is-problem { color: var(--ink); }
+.foot__status svg.i { width: 16px; height: 16px; flex: none; }
+.confirm { display: grid; gap: 4px; padding: 16px 0; background: var(--plane); box-shadow: -12px 0 0 var(--plane), 12px 0 0 var(--plane); border-bottom: 1px solid var(--line-strong); animation: rise .16s var(--ease); }
+.confirm strong { font: 600 15px/1.35 var(--sans); }
+.confirm p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 58ch; }
+.confirm__acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.empty { padding: 22px 0 6px; }
+.empty strong { display: block; font: 600 16px var(--sans); }
+.empty p { margin: 4px 0 0; color: var(--ink-3); font-size: 14px; max-width: 52ch; }
+.problem { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 12px; padding: 20px 0 6px; }
+.problem svg.i { color: var(--ink-2); margin-top: 2px; }
+.problem strong { font: 600 16px var(--sans); }
+.problem p { margin: 0; color: var(--ink-3); font-size: 14px; grid-column: 2; }
+.problem .btn { grid-column: 2; justify-self: start; margin-top: 8px; }
+.skel { display: grid; gap: 4px; padding: 18px 0; }
+.skel i { display: block; height: 12px; border-radius: var(--r-inner); background: var(--plane-2); }
+.skel i:nth-child(2) { width: 42%; }
+
+/* notices */
+.notice { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 2px 12px; padding: 12px 0; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); margin: 0 0 22px; }
+.notice svg.i { color: var(--ink-2); margin-top: 2px; }
+.notice strong { font: 600 14.5px var(--sans); }
+.notice span { color: var(--ink-3); font-size: 13.5px; grid-column: 2; }
+
+/* signed out / quiet / not found */
+.welcome { max-width: var(--sheet); margin: 0 auto; }
+.welcome .pagehead { padding-top: 48px; }
+.welcome h1 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); line-height: 1; letter-spacing: -.035em; max-width: 14ch; }
+.welcome .pagehead p { font-size: 16.5px; margin-top: 8px; }
+.welcome .cta { margin-top: 18px; }
+.welcome .facts { list-style: none; margin: 26px 0 0; padding: 0; border-top: 1px solid var(--line-strong); }
+.welcome .facts li { display: grid; grid-template-columns: var(--label) minmax(0,1fr); gap: 4px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; color: var(--ink-2); }
+.welcome .facts b { font: 600 13px/1.4 var(--sans); color: var(--ink); padding-top: 2px; }
+.welcome .sec { margin-top: 44px; }
+.quiet { min-height: calc(100dvh - 58px); display: grid; place-items: center; color: var(--ink-3); font-size: 14px; }
+.quiet span { display: inline-flex; gap: 10px; align-items: center; }
+.nf { max-width: 560px; margin: 0 auto; padding: 72px 0; }
+.nf h1 { margin: 0 0 8px; font: 800 1.6rem/1.1 var(--expanded); letter-spacing: -.03em; }
+.nf p { margin: 0 0 18px; color: var(--ink-2); }
+.gicon { width: 18px; height: 18px; }
+
+.live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 1060px) { :root { --rail: 168px; --label: 150px; } .layout { gap: 28px; } }
+/* ---------- phone layer ---------- */
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .rail { display: none; }
+  .pagehead { padding: 16px 0 12px; }
+  .sec + .sec { margin-top: 30px; }
+  .row { padding: 12px 0; }
+  .plate { padding: 14px 0 10px; }
+  .sec__lead { margin-top: 10px; }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .row__label { padding-top: 0; }
+  .choice { max-width: none; }
+  .sec__head { flex-wrap: wrap; }
+  .sec__head .btn--gold { order: 3; width: 100%; margin: 8px 0 0; min-height: 48px; }
+  .voice { grid-template-columns: minmax(0,1fr); padding: 14px 0 8px; }
+  .row__line .btn--danger { margin-left: -10px !important; }
+  .voice__acts { margin-left: -10px; flex-wrap: wrap; }
+  .voice__acts .btn--sm { min-height: 44px; }
+  .fields { grid-template-columns: minmax(0,1fr); }
+  .f--3, .f--6 { grid-column: 1 / -1; }
+  .editor { padding: 18px 12px 14px; }
+  .foot .btn { flex: 1; }
+  .foot__status { flex-basis: 100%; }
+  .confirm__acts .btn { flex: 1; }
+  .samples__tools .btn { flex: 1; }
+  .sample__acts .ibtn { width: 44px; height: 44px; }
+  .welcome .facts li { grid-template-columns: minmax(0,1fr); }
+  .welcome .cta { width: 100%; min-height: 52px; }
+  .ibtn, .avatar { width: 44px; height: 44px; }
+  .btn--sm { min-height: 44px; }
+  .link { min-height: 44px; }
+  .brand__name { font-size: 14px; }
+}
+@media (max-width: 430px) { .relay { gap: 6px; } .relay li { width: 40px; height: 40px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+:root[data-motion="reduced"] *, :root[data-motion="reduced"] *::before { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+
+/* ---------- review controls (comp scaffolding only) ---------- */
+.review { position: fixed; left: 12px; bottom: 12px; z-index: 200; width: 278px; max-height: calc(100dvh - 24px); overflow: auto; background: #0d0c0b; color: #d7d2c8; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 12px; font: 500 12px/1.4 "Archivo", sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.review h4 { margin: 0 0 8px; font: 700 11px "Archivo"; letter-spacing: .1em; text-transform: uppercase; color: #8f897f; }
+.review label { display: block; margin: 8px 0 4px; color: #8f897f; }
+.review select, .review button { width: 100%; background: #1c1b1a; color: #f2efe9; border: 1px solid rgba(255,255,255,.18); border-radius: 4px; padding: 6px; font: 500 12px "Archivo"; cursor: pointer; }
+.review .row2 { display: flex; gap: 6px; } .review .row2 button { flex: 1; }
+.review .row2 button[aria-pressed="true"] { background: #f2efe9; color: #161514; }
+.review .note { margin: 10px 0 0; color: #8f897f; font-size: 11px; display: block; }
+.review__x { position: absolute; top: 6px; right: 8px; width: auto !important; border: 0 !important; background: none !important; font-size: 15px !important; color: #8f897f !important; }
+.review.collapsed > :not(.review__x):not(h4) { display: none; }
+.review.collapsed { width: auto; }
+@media (max-width: 760px) { .review { left: auto; right: 8px; top: 64px; bottom: auto; width: 236px; } .review.collapsed { top: 64px; } }
+</style>
+</head>
+<body>
+
+<aside class="review collapsed" id="review" aria-label="Comp review controls">
+  <button class="review__x" id="rvX" aria-label="Expand or collapse review controls">+</button>
+  <h4>Account comp</h4>
+  <label for="rvState">State</label>
+  <select id="rvState">
+    <option value="default">Signed in · two voices</option>
+    <option value="welcome">Signed out (Welcome + Appearance)</option>
+    <option value="loading">Checking sign-in</option>
+    <option value="voices-loading">Voices loading</option>
+    <option value="voices-empty">No voices yet</option>
+    <option value="voices-error">Voices couldn't load</option>
+    <option value="no-primary">No primary voice</option>
+    <option value="add">Add voice · empty</option>
+    <option value="add-filled">Add voice · two samples</option>
+    <option value="add-invalid">Add voice · validation</option>
+    <option value="recording">Add voice · recording</option>
+    <option value="mic-denied">Add voice · microphone blocked</option>
+    <option value="creating">Add voice · creating</option>
+    <option value="create-failed">Add voice · create failed</option>
+    <option value="create-unknown">Add voice · couldn't confirm</option>
+    <option value="rename">Rename a voice</option>
+    <option value="delete">Delete a voice (confirm)</option>
+    <option value="theme-saving">Theme · saving</option>
+    <option value="theme-error">Theme · couldn't save to account</option>
+    <option value="offline">Offline</option>
+    <option value="notfound">Not found</option>
+  </select>
+  <label>Theme</label>
+  <div class="row2"><button id="rvDark" aria-pressed="true">Dark</button><button id="rvLight" aria-pressed="false">Light</button></div>
+  <label>Motion</label>
+  <div class="row2"><button id="rvMotionFull" aria-pressed="true">Full</button><button id="rvMotionReduced" aria-pressed="false">Reduced</button></div>
+  <p class="note">Every name, email and voice is synthetic. Pick a theme on the sheet to see the Relay. URL: ?state=…&amp;theme=light&amp;motion=reduced&amp;review=open</p>
+</aside>
+
+<header class="bar">
+  <div class="bar__in">
+    <a class="brand" href="#" aria-label="Account — BakerRang"><img class="brand__mark" src="bakerrang-logo.png" alt="BakerRang" width="30" height="30"><span class="brand__rule" aria-hidden="true"></span><span class="brand__name">Account</span></a>
+    <span class="bar__sp"></span>
+    <div class="bar__right" id="barRight"></div>
+  </div>
+</header>
+
+<main class="main" id="main" tabindex="-1"></main>
+<div class="live" role="status" aria-live="polite" id="live"></div>
+
+<script>
+/* ============ icons (drawn, 1.75 stroke) ============ */
+const P = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>',
+  system: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
+  ext: '<path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/>',
+  wave: '<path d="M4 12h1.5M7.5 8v8M11 5v14M14.5 9v6M18 7v10M20.5 12H20"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+  pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+  stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.1"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.1"/>',
+  offline: '<path d="M3 3l18 18M8.5 8.8A8.9 8.9 0 0 0 3.5 11.5M20.5 11.5a8.9 8.9 0 0 0-5.3-2.7M6.8 14.8a5.3 5.3 0 0 1 3-1.7M14.4 13.2a5.4 5.4 0 0 1 2.8 1.6M12 19h.01"/>',
+  signout: '<path d="M15 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M18 15l3-3-3-3M10 12h11"/>',
+  grid: '',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  google: ''
+}
+const I = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`
+const GRID = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">' + [5,12,19].flatMap(y => [5,12,19].map(x => `<circle cx="${x}" cy="${y}" r="2"/>`)).join('') + '</svg>'
+const GOOGLE = '<svg class="gicon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1-.8 2.6-2.3 3.6l3.6 2.8c2.1-2 3.7-4.9 3.7-8.3zM12 24c3.2 0 5.9-1.1 7.9-2.9l-3.6-2.8c-1 .7-2.3 1.2-4.3 1.2-3.3 0-6.1-2.2-7.1-5.2l-3.7 2.9C3.2 21.3 7.3 24 12 24zM4.9 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.8C.4 8.3 0 10.1 0 12s.4 3.7 1.2 5.2l3.7-2.9zM12 4.8c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.9 14.4.9 12 .9 7.3.9 3.2 3.6 1.2 6.8l3.7 2.9C5.9 6.7 8.7 4.8 12 4.8z"/></svg>'
+
+/* shared ProductEmblem paths (web-app-shell) */
+const EMB = {
+  storybook: '<path d="M16 8c-2-1.6-4.4-2.4-7-2.4-1.2 0-2.4.2-3 .4v16c.6-.2 1.8-.4 3-.4 2.6 0 5 .8 7 2.4M16 8c2-1.6 4.4-2.4 7-2.4 1.2 0 2.4.2 3 .4v16c-.6-.2-1.8-.4-3-.4-2.6 0-5 .8-7 2.4M16 8v16"/>',
+  polyglot: '<path d="M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5"/><path d="M17 26l4.5-10L26 26M18.7 22h5.6"/>',
+  sign: '<path vector-effect="non-scaling-stroke" transform="translate(3.1 2.1) scale(1.05)" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317"/>',
+  budget: '<circle cx="16" cy="16" r="11"/><path d="M16 9.4v13.2"/><path d="M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7"/>',
+  passwords: '<rect x="7" y="14" width="18" height="12" rx="2.5"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><circle cx="16" cy="20" r="1.6"/>',
+  account: '<circle cx="16" cy="12" r="5"/><path d="M6 26c1.8-4.4 5.6-6.5 10-6.5S24.2 21.6 26 26"/>'
+}
+const APPS = [
+  { id: 'launcher', name: 'Launcher' },
+  { id: 'storybook', name: 'Story Book', acc: 'story' },
+  { id: 'polyglot', name: 'Polyglot', acc: 'polyglot' },
+  { id: 'sign', name: 'Sign', acc: 'sign' },
+  { id: 'budget', name: 'Budget', acc: 'budget' },
+  { id: 'passwords', name: 'Passwords', acc: 'passwords' }
+]
+const THEMEVALS = {
+  dark: { plane: '#201f1d', line: 'rgba(255,255,255,.10)', story: '#f08a5d', polyglot: '#58c0c9', sign: '#b79ce0', budget: '#7fb0e8', passwords: '#aeb8c2' },
+  light: { plane: '#ffffff', line: 'rgba(20,18,16,.12)', story: '#c25a34', polyglot: '#1f7d86', sign: '#6e4fb4', budget: '#235f9e', passwords: '#4d5867' }
+}
+
+/* ============ state ============ */
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const user = { name: 'Sam Example', email: 'sam.example@example.test' }
+const baseVoices = () => [
+  { id: 'v1', name: 'My voice', description: 'Recorded at my desk', isPrimary: true },
+  { id: 'v2', name: 'Storyteller', description: 'Slower, warmer read for bedtime stories', isPrimary: false }
+]
+const S = {
+  auth: 'in', // in | out | loading
+  pref: 'dark', systemDark: true,
+  themeStatus: 'saved', // saved | saving | error | local
+  voicesStatus: 'ready', voices: baseVoices(),
+  editor: null, // null | { kind:'add' } | { kind:'rename', id } | { kind:'delete', id }
+  add: null, // add form model
+  offline: false, notFound: false, busy: null
+}
+const resolved = () => S.pref === 'system' ? (S.systemDark ? 'dark' : 'light') : S.pref
+const say = (t) => { const l = document.getElementById('live'); l.textContent = ''; setTimeout(() => { l.textContent = t }, 30) }
+
+/* ============ bar ============ */
+function renderBar () {
+  const r = document.getElementById('barRight')
+  if (S.auth === 'loading') { r.innerHTML = ''; return }
+  if (S.auth === 'out') { r.innerHTML = '<button class="btn btn--ghost btn--sm" data-act="signin">Sign in</button>'; return }
+  const cells = [['storybook', 'Story Book', 'story'], ['polyglot', 'Polyglot', 'polyglot'], ['sign', 'Sign', 'sign'], ['budget', 'Budget', 'budget'], ['wow', 'WoW', null], ['passwords', 'Passwords', 'passwords']]
+  r.innerHTML = `
+    <div class="menu" id="mSwitch"><button class="ibtn" aria-label="Switch app" aria-haspopup="true" aria-expanded="false" data-menu="mSwitch">${GRID}</button>
+      <div class="pop switcher" role="menu" aria-label="Your tools"><div class="pop__head">Jump to a tool</div><div class="switcher__grid">
+      ${cells.map(([id, n, a]) => `<a class="switcher__cell" role="menuitem" href="#" style="--acc:${a ? `var(--acc-${a})` : '#d69a4c'}"><svg viewBox="0 0 32 32" aria-hidden="true">${EMB[id] || '<path d="M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z"/><path d="M16 10v9M12.5 13.5L16 11l3.5 2.5"/>'}</svg><span>${n}</span></a>`).join('')}
+      </div><div class="pop__sep"></div><a class="pop__item" role="menuitem" href="#" aria-current="page"><svg class="i" viewBox="0 0 32 32" aria-hidden="true" style="color:var(--account)">${EMB.account}</svg>Account</a><a class="pop__item" role="menuitem" href="#">${I('back')}All tools — Launcher</a></div></div>
+    <div class="menu" id="mAcct"><button class="avatar" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" data-menu="mAcct">SE</button>
+      <div class="pop" role="menu" aria-label="Account"><div class="pop__who"><strong>${esc(user.name)}</strong><span>${esc(user.email)}</span></div><div class="pop__sep"></div>
+      <a class="pop__item" role="menuitem" href="#" aria-current="page"><svg class="i" viewBox="0 0 32 32" aria-hidden="true">${EMB.account}</svg>Account</a><div class="pop__sep"></div>
+      <button class="pop__item pop__danger" role="menuitem" data-act="signout">${I('signout')}Sign out</button></div></div>`
+}
+
+/* ============ sections ============ */
+const themeOption = (v, label, icon) => `<label><input type="radio" name="theme" value="${v}" ${S.pref === v ? 'checked' : ''}>${I(icon)}${label}</label>`
+function appearanceSection () {
+  const signedIn = S.auth === 'in'
+  const sysLine = S.pref === 'system' ? `<p class="hint" id="themeHint">Follows this device. It's ${S.systemDark ? 'dark' : 'light'} right now.</p>` : `<p class="hint" id="themeHint">Every BakerRang app on this browser uses it.</p>`
+  let status
+  if (!signedIn) status = `<p class="status" id="themeStatus">${I('info')}Saved in this browser. Sign in to keep it on every device.</p>`
+  else if (S.themeStatus === 'saving') status = `<p class="status" id="themeStatus"><span class="spin" aria-hidden="true"></span>Saving to your account…</p>`
+  else if (S.themeStatus === 'error') status = `<div class="status status--problem" id="themeStatus" role="alert">${I('alert')}<span>Changed on this browser, but not saved to your account. <span class="sub">Your other devices won't pick it up yet.</span></span><button class="btn btn--quiet btn--sm" data-act="theme-retry">Try again</button></div>`
+  else status = `<p class="status" id="themeStatus">${I('check')}Saved to your account. Your other devices pick it up the next time they open BakerRang.</p>`
+  return `<section class="sec" id="appearance" aria-labelledby="h-appearance">
+    <div class="sec__head"><h2 id="h-appearance">Appearance</h2></div>
+    <div class="row"><div class="row__label" id="lbl-theme">Theme</div><div class="row__value">
+      <div class="choice" role="radiogroup" aria-labelledby="lbl-theme">${themeOption('light', 'Light', 'sun')}${themeOption('dark', 'Dark', 'moon')}${themeOption('system', 'System', 'system')}</div>
+      ${sysLine}
+    </div></div>
+    <div class="row"><div class="row__label" id="lbl-relay">Applies to</div><div class="row__value">
+      <ul class="relay" id="relay" aria-labelledby="lbl-relay">${APPS.map((a) => `<li data-app="${a.id}" style="--acc:${a.acc ? `var(--acc-${a.acc})` : 'var(--ink)'}">${a.id === 'launcher' ? '<img src="bakerrang-logo.png" alt="">' : `<svg viewBox="0 0 32 32" aria-hidden="true">${EMB[a.id]}</svg>`}<span class="sr">${a.name}</span></li>`).join('')}</ul>
+      ${status}
+    </div></div>
+  </section>`
+}
+
+function profileSection () {
+  return `<section class="sec" id="profile" aria-labelledby="h-profile">
+    <div class="sec__head"><h2 id="h-profile">Profile</h2></div>
+    <div class="plate"><div class="mono" aria-hidden="true">SE</div><div><p class="plate__name">${esc(user.name)}</p><div class="plate__mail"><span>${esc(user.email)}</span><span class="tag">From Google</span></div>
+      <a class="link" href="https://myaccount.google.com/" target="_blank" rel="noopener noreferrer">Manage your Google account${I('ext')}<span class="sr"> (opens in a new tab)</span></a></div></div>
+    <p class="hint plate__hint">You sign in with Google. Change your name and email there; BakerRang picks them up the next time you sign in.</p>
+  </section>`
+}
+
+function voiceRow (v) {
+  const ed = S.editor
+  if (ed && ed.kind === 'delete' && ed.id === v.id) {
+    return `<li class="confirm" id="del-${v.id}" role="group" aria-labelledby="delq-${v.id}"><strong id="delq-${v.id}" tabindex="-1">Delete ${esc(v.name)}?</strong><p>It's removed from ElevenLabs too, so Story Book and Polyglot can't speak in it anymore. This can't be undone.</p>
+      <div class="confirm__acts"><button class="btn btn--ghost" data-act="keep">Keep it</button><button class="btn btn--danger" data-act="delete-yes" data-id="${v.id}">${S.busy === 'delete' ? '<span class="spin" aria-hidden="true"></span>Deleting…' : 'Delete'}</button></div></li>`
+  }
+  if (ed && ed.kind === 'rename' && ed.id === v.id) {
+    return `<li class="editor" id="ren-${v.id}"><form data-form="rename" data-id="${v.id}" aria-labelledby="renh-${v.id}" novalidate ${S.busy === 'rename' ? 'aria-busy="true"' : ''}>
+      <h3 id="renh-${v.id}">Rename ${esc(v.name)}</h3><p class="editor__intro">The new name shows in Story Book and Polyglot.</p>
+      <div class="fields"><div class="f f--3"><label for="rn-name">Name</label><input class="in" id="rn-name" maxlength="60" value="${esc(v.name)}" autocomplete="off"></div>
+      <div class="f f--3"><label for="rn-desc">Description <small>(optional)</small></label><input class="in" id="rn-desc" maxlength="200" value="${esc(v.description || '')}" autocomplete="off"></div></div>
+      <div class="foot"><span class="foot__status" id="rn-status"></span><button type="button" class="btn btn--quiet" data-act="cancel">Cancel</button><button class="btn btn--ink" type="submit">${S.busy === 'rename' ? '<span class="spin" aria-hidden="true"></span>Saving…' : 'Save'}</button></div>
+    </form></li>`
+  }
+  return `<li class="voice" id="voice-${v.id}"><div><div class="voice__name"><span>${esc(v.name)}</span>${v.isPrimary ? '<span class="tag">Primary</span>' : ''}</div>${v.description ? `<p class="voice__desc">${esc(v.description)}</p>` : ''}</div>
+    <div class="voice__acts">${v.isPrimary ? '' : `<button class="btn btn--quiet btn--sm" data-act="primary" data-id="${v.id}" aria-label="Make ${esc(v.name)} your primary voice">Make primary</button>`}<button class="btn btn--quiet btn--sm" data-act="rename" data-id="${v.id}" aria-label="Rename ${esc(v.name)}">Rename</button><button class="btn btn--danger btn--sm" data-act="delete" data-id="${v.id}" aria-label="Delete ${esc(v.name)}">Delete</button></div></li>`
+}
+
+function addEditor () {
+  const a = S.add
+  const e = a.errors || {}
+  const creating = a.phase === 'creating'
+  const dis = creating ? 'disabled' : ''
+  const samples = a.samples.map((s, i) => `<li class="sample"><span class="sample__icon">${I(s.kind === 'rec' ? 'wave' : 'upload')}</span><div><div class="sample__name">${esc(s.name)}</div><div class="sample__meta">${s.meta}</div></div>
+    <div class="sample__acts"><button type="button" class="ibtn" data-act="play" data-i="${i}" aria-label="${s.playing ? 'Pause' : 'Play'} ${esc(s.name)}" aria-pressed="${s.playing ? 'true' : 'false'}" ${dis}>${I(s.playing ? 'pause' : 'play')}</button><button type="button" class="ibtn" data-act="rm-sample" data-i="${i}" aria-label="Remove ${esc(s.name)}" ${dis}>${I('x')}</button></div></li>`).join('')
+  const rec = a.recording ? `<div class="rec" role="group" aria-label="Recording"><span class="rec__dot" aria-hidden="true"></span><div><div class="rec__time"><span class="sr">Recording, </span>Recording · <span class="tnum" id="recT">0:42</span> <span class="sample__meta">of 5:00</span></div><div class="rec__rule" aria-hidden="true"><i id="recRule"></i></div></div><button type="button" class="btn btn--ink btn--sm" data-act="rec-stop">${I('stop')}Stop</button></div>` : ''
+  let footStatus = ''
+  if (creating) footStatus = '<span class="foot__status"><span class="spin" aria-hidden="true"></span>This can take up to a minute.</span>'
+  else if (a.phase === 'failed') footStatus = `<span class="foot__status is-problem" role="alert">${I('alert')}ElevenLabs couldn't create the voice. Nothing was saved. Try again.</span>`
+  else footStatus = '<span class="foot__status"></span>'
+  const full = a.samples.length + (a.recording ? 1 : 0) >= 3
+  return `<div class="editor editor--top" id="addEditor"><form data-form="add" aria-labelledby="addh" novalidate ${creating ? 'aria-busy="true"' : ''}>
+    <h3 id="addh" tabindex="-1">Add a voice</h3><p class="editor__intro">Clone a voice from a few minutes of speech or less. Story Book and Polyglot can then read aloud in it.</p>
+    ${a.phase === 'unknown' ? `<div class="notice" role="alert">${I('alert')}<strong>Account couldn't confirm the new voice.</strong><span>It may still have been created. Refresh your voices to check before you try again, so you don't clone it twice.</span></div>` : ''}
+    <div class="fields">
+      <div class="f f--3"><label for="av-name">Name</label><input class="in" id="av-name" maxlength="60" placeholder="e.g. My voice" autocomplete="off" value="${esc(a.name)}" ${e.name ? 'aria-invalid="true" aria-describedby="av-name-err"' : ''} ${dis}>${e.name ? `<span class="err" id="av-name-err">${I('alert')}Give the voice a name.</span>` : ''}</div>
+      <div class="f f--3"><label for="av-desc">Description <small>(optional)</small></label><input class="in" id="av-desc" maxlength="200" placeholder="e.g. Recorded at my desk" autocomplete="off" value="${esc(a.desc)}" ${dis}></div>
+      <fieldset class="f f--6" ${e.samples ? 'aria-describedby="av-s-err"' : 'aria-describedby="av-s-hint"'}><legend>Samples <small>(up to 3)</small></legend>
+        <p class="hint" id="av-s-hint" style="margin:0 0 6px">One or two minutes of clear speech in a quiet room works best. Recordings or audio files, 10 MB each.</p>
+        ${a.micDenied ? `<p class="note" role="alert" style="color:var(--ink);margin-bottom:8px">${I('alert')}<span>Account can't use your microphone. Allow it in your browser's site settings, or add audio files instead.</span></p>` : ''}
+        <div class="samples__tools"><button type="button" class="btn btn--ghost" data-act="rec-start" ${full || a.recording || creating ? 'aria-disabled="true"' : ''}>${I('mic')}Record a sample</button><label class="btn btn--ghost" ${full || creating ? 'aria-disabled="true"' : ''}>${I('upload')}Add audio files<input type="file" accept="audio/*" multiple class="sr" data-act="files" ${full || creating ? 'disabled' : ''}></label></div>
+        <ul class="samples" aria-label="Samples">${samples}</ul>${rec}
+        ${e.samples ? `<span class="err" id="av-s-err" style="margin-top:6px">${I('alert')}Add at least one recording or audio file.</span>` : ''}
+      </fieldset>
+      <div class="f f--6"><label class="check"><input type="checkbox" id="av-consent" ${a.consent ? 'checked' : ''} ${e.consent ? 'aria-invalid="true" aria-describedby="av-c-err"' : ''} ${dis}><span>This is my voice, or I have permission from the person speaking to clone it.</span></label>${e.consent ? `<span class="err" id="av-c-err">${I('alert')}Confirm you have the right to clone this voice.</span>` : ''}</div>
+      <p class="note f--6">${I('info')}<span>Samples go to ElevenLabs, which creates and stores the voice. BakerRang keeps the name and description, not the audio.</span></p>
+    </div>
+    <div class="foot">${footStatus}<button type="button" class="btn btn--quiet" data-act="cancel" ${creating ? 'aria-disabled="true"' : ''}>Cancel</button><button class="btn btn--ink" type="submit" ${creating ? 'aria-disabled="true"' : ''}>${creating ? '<span class="spin" aria-hidden="true"></span>Creating voice…' : a.phase === 'unknown' ? 'Refresh voices' : 'Create voice'}</button></div>
+  </form></div>`
+}
+
+function voicesSection () {
+  const n = S.voicesStatus === 'ready' ? S.voices.length : null
+  const canAdd = S.voicesStatus === 'ready' && !(S.editor && S.editor.kind === 'add')
+  let body = ''
+  if (S.voicesStatus === 'loading') body = '<div class="skel" aria-hidden="true"><i></i><i></i></div><div class="skel" aria-hidden="true"><i></i><i></i></div><p class="sr">Loading your voices…</p>'
+  else if (S.voicesStatus === 'error') body = `<div class="problem" role="alert">${I('alert')}<strong>Account couldn't load your voices.</strong><p>Nothing was changed. Check your connection, then try again.</p><button class="btn btn--ghost" data-act="voices-retry">Try again</button></div>`
+  else {
+    const editor = S.editor && S.editor.kind === 'add' ? addEditor() : ''
+    if (!S.voices.length) body = editor + (editor ? '' : '<div class="empty"><strong>No voices yet.</strong><p>Clone your voice from a short recording, and Story Book and Polyglot can read aloud in it.</p></div>')
+    else {
+      const pri = S.voices.find((v) => v.isPrimary)
+      const ordered = [...S.voices].sort((a, b) => (b.isPrimary - a.isPrimary) || a.name.localeCompare(b.name))
+      body = editor + `<ul class="voices" aria-label="Your voices">${ordered.map(voiceRow).join('')}</ul>` + (pri ? '' : `<p class="nopri">${I('info')}<span>No primary voice. Story Book and Polyglot start with ${esc(ordered[0].name)} until you choose one.</span></p>`)
+    }
+  }
+  return `<section class="sec" id="voices" aria-labelledby="h-voices">
+    <div class="sec__head"><h2 id="h-voices">Voices</h2>${n !== null ? `<span class="sec__count" aria-label="${n} voice${n === 1 ? '' : 's'}">${n}</span>` : ''}${canAdd ? `<button class="btn btn--gold" data-act="add" ${S.offline ? 'aria-disabled="true"' : ''}>${I('plus')}Add voice</button>` : ''}</div>
+    <p class="sec__lead">Story Book and Polyglot can read aloud in a voice you clone here. They start with your primary voice unless you pick another on that device.</p>
+    ${body}
+  </section>`
+}
+
+function sessionSection () {
+  return `<section class="sec" id="session" aria-labelledby="h-session">
+    <div class="sec__head"><h2 id="h-session">Session</h2></div>
+    <div class="row"><div class="row__label">App settings</div><div class="row__value">
+      <p>Vault lock timing and browser-extension autofill are in Passwords.</p>
+      <a class="link" href="#">Open Vault settings in Passwords${I('arrow')}</a>
+    </div></div>
+    <div class="row"><div class="row__label">Your data</div><div class="row__value">
+      <p style="color:var(--ink-2)">Deleting your BakerRang account or downloading a copy of your data isn't available yet.</p>
+    </div></div>
+    <div class="row row--last"><div class="row__label">Signed in</div><div class="row__value">
+      <div class="row__line"><span style="overflow-wrap:anywhere">${esc(user.email)} on this browser</span><button class="btn btn--danger btn--sm" data-act="signout" style="margin-left:auto">${I('signout')}Sign out</button></div>
+      <p class="hint">Signing out here signs you out of every BakerRang app in this browser. Other devices stay signed in.</p>
+    </div></div>
+  </section>`
+}
+
+/* ============ page ============ */
+function render () {
+  applyTheme()
+  renderBar()
+  const m = document.getElementById('main')
+  if (S.notFound) { m.innerHTML = `<div class="nf"><h1>That page isn't in Account.</h1><p>Your profile, theme, voices and session are all on one page.</p><a class="btn btn--ghost" href="#" data-act="home">${I('back')}Back to Account</a></div>`; return }
+  if (S.auth === 'loading') { m.innerHTML = '<div class="quiet"><span><span class="spin" aria-hidden="true"></span>Opening Account…</span></div>'; return }
+  if (S.auth === 'out') {
+    m.innerHTML = `<div class="welcome"><div class="pagehead"><h1>Your BakerRang account.</h1><p>Sign in to see which Google account you're using, manage the voices Story Book and Polyglot speak in, and keep your theme on every device.</p>
+      <div><button class="btn btn--gold cta" data-act="signin">${GOOGLE}Sign in with Google</button></div>
+      <ul class="facts"><li><b>Profile</b><span>Your name and email, straight from Google.</span></li><li><b>Voices</b><span>Clone your voice once, then Story Book and Polyglot can use it.</span></li><li><b>Theme</b><span>Light, dark or system, for every BakerRang app.</span></li></ul></div>
+      ${appearanceSection()}</div>`
+    return
+  }
+  const offline = S.offline ? `<div class="notice" role="status">${I('offline')}<strong>You're offline.</strong><span>You can look around, but changes can't be saved until you're back.</span></div>` : ''
+  m.innerHTML = `<div class="col"><div class="pagehead"><h1 id="top">Account</h1><p>Who you're signed in as, how every BakerRang app looks, and the voices Story Book and Polyglot speak in.</p></div>
+    ${offline}
+    <div class="layout">
+      <nav class="rail" aria-label="Account sections"><ul>
+        <li><a href="#profile" data-sec="profile">Profile</a></li><li><a href="#appearance" data-sec="appearance">Appearance</a></li><li><a href="#voices" data-sec="voices">Voices</a></li><li><a href="#session" data-sec="session">Session</a></li></ul>
+        <p class="rail__note">Settings that belong to one app live in that app.</p></nav>
+      <div class="sheet">${profileSection()}${appearanceSection()}${voicesSection()}${sessionSection()}</div>
+    </div></div>`
+  spy()
+}
+
+/* rail scroll-spy: the current section is the last one whose top has passed the bar; at the page bottom,
+   the last section whose top is in the upper half of the viewport. */
+let spyBound = false
+function spy () {
+  const links = [...document.querySelectorAll('.rail a')]
+  if (!links.length) return
+  const update = () => {
+    const secs = [...document.querySelectorAll('.sheet .sec[id]')]
+    const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2
+    let cur = secs[0].id
+    for (const sec of secs) {
+      const top = sec.getBoundingClientRect().top
+      if (top <= 120 || (atBottom && top < innerHeight * 0.5)) cur = sec.id
+    }
+    links.forEach((l) => { if (l.dataset.sec === cur) l.setAttribute('aria-current', 'location'); else l.removeAttribute('aria-current') })
+  }
+  update()
+  if (!spyBound) { spyBound = true; let raf = 0; addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => document.querySelector('.rail a') && spy.update()) }, { passive: true }) }
+  spy.update = update
+}
+
+/* ============ the Relay ============ */
+/* The sheet repaints at once; the six tiles hold the previous ground and take the new one left to right,
+   40ms apart, 160ms each. ?slowmo=N stretches the timing for review captures only (comp scaffolding). */
+const SLOW = Math.max(1, Number(new URLSearchParams(location.search).get('slowmo')) || 1)
+const reducedMotion = () => document.documentElement.dataset.motion === 'reduced' || matchMedia('(prefers-reduced-motion: reduce)').matches
+function relayHold (fromTheme) {
+  const f = THEMEVALS[fromTheme]
+  const tiles = [...document.querySelectorAll('#relay li')]
+  tiles.forEach((t) => {
+    const a = APPS.find((x) => x.id === t.dataset.app)
+    t.style.transition = 'none'
+    t.style.setProperty('--tile-bg', f.plane); t.style.setProperty('--tile-line', f.line)
+    if (a.acc) t.style.setProperty('--tile-acc', f[a.acc])
+  })
+  return tiles
+}
+function relayRelease (tiles) {
+  void document.body.offsetHeight
+  tiles.forEach((t, i) => setTimeout(() => {
+    t.style.transition = `background-color ${160 * SLOW}ms var(--ease), border-color ${160 * SLOW}ms var(--ease), color ${160 * SLOW}ms var(--ease)`
+    t.style.removeProperty('--tile-bg'); t.style.removeProperty('--tile-line'); t.style.removeProperty('--tile-acc')
+  }, i * 40 * SLOW))
+}
+function applyTheme () {
+  document.documentElement.dataset.theme = resolved()
+  document.querySelector('meta[name="theme-color"]').content = resolved() === 'dark' ? '#161514' : '#efece6'
+}
+function refreshAppearanceBits () {
+  const tmp = document.createElement('div'); tmp.innerHTML = appearanceSection()
+  for (const id of ['themeHint', 'themeStatus']) { const cur = document.getElementById(id); const next = tmp.querySelector('#' + id); if (cur && next) cur.replaceWith(next) }
+}
+function setTheme (v) {
+  const from = resolved()
+  S.pref = v
+  if (S.auth === 'in') S.themeStatus = 'saving'
+  const moving = resolved() !== from && !reducedMotion()
+  const tiles = moving ? relayHold(from) : null
+  applyTheme()
+  refreshAppearanceBits()
+  if (tiles) relayRelease(tiles)
+  const name = v[0].toUpperCase() + v.slice(1)
+  if (S.auth !== 'in') { say(`Theme set to ${name}. Saved in this browser.`); return }
+  setTimeout(() => { S.themeStatus = S.failTheme ? 'error' : 'saved'; refreshAppearanceBits(); say(S.themeStatus === 'error' ? `Theme set to ${name} on this browser. It couldn't be saved to your account.` : `Theme set to ${name}. Saved to your account.`) }, 700 * SLOW)
+}
+
+/* ============ interactions ============ */
+const focusSoon = (sel) => setTimeout(() => { const el = document.querySelector(sel); if (el) el.focus() }, 20)
+function newAdd () { return { name: '', desc: '', samples: [], consent: false, errors: {}, phase: 'edit', recording: false, micDenied: false } }
+document.addEventListener('click', (ev) => {
+  if (ev.target.closest('.review')) return
+  const menuBtn = ev.target.closest('[data-menu]')
+  document.querySelectorAll('.menu.is-open').forEach((m) => { if (!menuBtn || m.id !== menuBtn.dataset.menu) { m.classList.remove('is-open'); m.querySelector('[data-menu]').setAttribute('aria-expanded', 'false') } })
+  if (menuBtn) { const m = document.getElementById(menuBtn.dataset.menu); const open = !m.classList.contains('is-open'); m.classList.toggle('is-open', open); menuBtn.setAttribute('aria-expanded', String(open)); return }
+  const b = ev.target.closest('[data-act]')
+  if (!b || b.getAttribute('aria-disabled') === 'true') { if (b) ev.preventDefault(); return }
+  const act = b.dataset.act; const id = b.dataset.id
+  if (act === 'files') return
+  if (b.tagName === 'A' || act === 'signin') ev.preventDefault()
+  if (act === 'signin') { S.auth = 'in'; S.themeStatus = 'saved'; render(); focusSoon('#top'); return }
+  if (act === 'signout') { S.auth = 'out'; S.editor = null; S.add = null; render(); say('Signed out.'); focusSoon('.welcome h1'); return }
+  if (act === 'home') { S.notFound = false; render(); return }
+  if (act === 'theme-retry') { S.failTheme = false; setTheme(S.pref); return }
+  if (act === 'voices-retry') { S.voicesStatus = 'loading'; render(); setTimeout(() => { S.voicesStatus = 'ready'; render() }, 700); return }
+  if (act === 'add') { S.editor = { kind: 'add' }; S.add = newAdd(); render(); focusSoon('#av-name'); return }
+  if (act === 'cancel') { const was = S.editor; S.editor = null; S.add = null; render(); focusSoon(was && was.id ? `#voice-${was.id} [data-act="rename"]` : '[data-act="add"]'); return }
+  if (act === 'rename') { S.editor = { kind: 'rename', id }; render(); focusSoon('#rn-name'); return }
+  if (act === 'delete') { S.editor = { kind: 'delete', id }; render(); focusSoon(`#delq-${id}`); return }
+  if (act === 'keep') { const was = S.editor.id; S.editor = null; render(); focusSoon(`#voice-${was} [data-act="delete"]`); return }
+  if (act === 'delete-yes') { S.busy = 'delete'; render(); setTimeout(() => { const v = S.voices.find((x) => x.id === id); S.voices = S.voices.filter((x) => x.id !== id); S.editor = null; S.busy = null; render(); say(`Deleted ${v.name}.`); focusSoon('#h-voices') }, 700); return }
+  if (act === 'primary') { const v = S.voices.find((x) => x.id === id); S.voices = S.voices.map((x) => ({ ...x, isPrimary: x.id === id })); render(); say(`${v.name} is now your primary voice.`); focusSoon(`#voice-${id} [data-act="rename"]`); return }
+  if (act === 'rec-start') { S.add.micDenied = false; if (S.denyMic) { S.add.micDenied = true; render(); return } S.add.recording = true; syncAdd(); render(); say('Recording started.'); tickRec(); return }
+  if (act === 'rec-stop') { S.add.recording = false; clearInterval(S.recT); S.add.samples.push({ kind: 'rec', name: `Recording ${S.add.samples.filter((s) => s.kind === 'rec').length + 1}`, meta: `${fmt(S.recS || 42)} · WebM audio` }); syncAdd(); render(); say('Recording added.'); return }
+  if (act === 'rm-sample') { syncAdd(); const s = S.add.samples.splice(Number(b.dataset.i), 1)[0]; render(); say(`Removed ${s.name}.`); return }
+  if (act === 'play') { syncAdd(); const s = S.add.samples[Number(b.dataset.i)]; S.add.samples.forEach((x) => { if (x !== s) x.playing = false }); s.playing = !s.playing; render(); return }
+})
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const open = document.querySelector('.menu.is-open'); if (open) { open.classList.remove('is-open'); const t = open.querySelector('[data-menu]'); t.setAttribute('aria-expanded', 'false'); t.focus() } } })
+document.addEventListener('change', (e) => {
+  if (e.target.name === 'theme') setTheme(e.target.value)
+  if (e.target.dataset.act === 'files') { syncAdd(); const room = 3 - S.add.samples.length; [...e.target.files].slice(0, room).forEach((f) => S.add.samples.push({ kind: 'file', name: f.name, meta: `${(f.size / 1048576).toFixed(1)} MB` })); render() }
+})
+function syncAdd () { if (!S.add) return; const n = document.getElementById('av-name'); const d = document.getElementById('av-desc'); const c = document.getElementById('av-consent'); if (n) S.add.name = n.value; if (d) S.add.desc = d.value; if (c) S.add.consent = c.checked }
+const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+function tickRec () { S.recS = 42; clearInterval(S.recT); S.recT = setInterval(() => { S.recS++; const t = document.getElementById('recT'); const r = document.getElementById('recRule'); if (!t) return clearInterval(S.recT); t.textContent = fmt(S.recS); r.style.width = `${(S.recS / 300) * 100}%` }, 1000) }
+document.addEventListener('submit', (e) => {
+  e.preventDefault()
+  const f = e.target
+  if (f.dataset.form === 'rename') {
+    const id = f.dataset.id; const name = document.getElementById('rn-name').value.trim(); const desc = document.getElementById('rn-desc').value.trim()
+    if (!name) { const st = document.getElementById('rn-status'); st.className = 'foot__status is-problem'; st.innerHTML = I('alert') + 'Give the voice a name.'; document.getElementById('rn-name').setAttribute('aria-invalid', 'true'); document.getElementById('rn-name').focus(); return }
+    S.busy = 'rename'; render()
+    setTimeout(() => { S.voices = S.voices.map((v) => v.id === id ? { ...v, name, description: desc } : v); S.editor = null; S.busy = null; render(); say(`Saved ${name}.`); focusSoon(`#voice-${id} [data-act="rename"]`) }, 700)
+    return
+  }
+  if (f.dataset.form === 'add') {
+    syncAdd(); const a = S.add
+    if (a.phase === 'unknown') { S.editor = null; S.add = null; S.voicesStatus = 'loading'; render(); setTimeout(() => { S.voicesStatus = 'ready'; render() }, 700); return }
+    a.errors = { name: !a.name.trim(), samples: !a.samples.length, consent: !a.consent }
+    if (a.errors.name || a.errors.samples || a.errors.consent) { render(); focusSoon(a.errors.name ? '#av-name' : a.errors.samples ? '[data-act="rec-start"]' : '#av-consent'); say('Check the highlighted fields.'); return }
+    a.phase = 'creating'; render(); say('Creating voice.')
+    setTimeout(() => {
+      if (S.failCreate) { a.phase = 'failed'; render(); return }
+      const nv = { id: 'v' + Date.now(), name: a.name.trim(), description: a.desc.trim(), isPrimary: !S.voices.length }
+      S.voices.push(nv); S.editor = null; S.add = null; render(); say(`Voice created: ${nv.name}.`); focusSoon(`#voice-${nv.id} [data-act="rename"]`)
+    }, 1400)
+  }
+})
+
+/* ============ preset states (review panel) ============ */
+function preset (name) {
+  Object.assign(S, { auth: 'in', themeStatus: 'saved', voicesStatus: 'ready', voices: baseVoices(), editor: null, add: null, offline: false, notFound: false, busy: null, failTheme: false, failCreate: false, denyMic: false })
+  clearInterval(S.recT)
+  const add = () => { S.editor = { kind: 'add' }; S.add = newAdd() }
+  const filled = () => { add(); Object.assign(S.add, { name: 'Reading voice', desc: 'Kitchen table, evening', consent: true, samples: [{ kind: 'rec', name: 'Recording 1', meta: '1:12 · WebM audio' }, { kind: 'file', name: 'desk-take.m4a', meta: '2.4 MB' }] }) }
+  switch (name) {
+    case 'welcome': S.auth = 'out'; break
+    case 'loading': S.auth = 'loading'; break
+    case 'voices-loading': S.voicesStatus = 'loading'; break
+    case 'voices-empty': S.voices = []; break
+    case 'voices-error': S.voicesStatus = 'error'; break
+    case 'no-primary': S.voices = baseVoices().map((v) => ({ ...v, isPrimary: false })); break
+    case 'add': add(); break
+    case 'add-filled': filled(); break
+    case 'add-invalid': add(); S.add.errors = { name: true, samples: true, consent: true }; break
+    case 'recording': filled(); S.add.samples = S.add.samples.slice(0, 1); S.add.recording = true; break
+    case 'mic-denied': add(); S.add.micDenied = true; S.denyMic = true; break
+    case 'creating': filled(); S.add.phase = 'creating'; break
+    case 'create-failed': filled(); S.add.phase = 'failed'; S.failCreate = true; break
+    case 'create-unknown': filled(); S.add.phase = 'unknown'; break
+    case 'rename': S.editor = { kind: 'rename', id: 'v2' }; break
+    case 'delete': S.editor = { kind: 'delete', id: 'v2' }; break
+    case 'theme-saving': S.themeStatus = 'saving'; break
+    case 'theme-error': S.themeStatus = 'error'; S.failTheme = true; break
+    case 'offline': S.offline = true; break
+    case 'notfound': S.notFound = true; break
+  }
+  render()
+  if (name === 'recording') tickRec()
+  if (['add', 'add-filled', 'add-invalid', 'recording', 'mic-denied', 'creating', 'create-failed', 'create-unknown'].includes(name)) setTimeout(() => { const el = document.getElementById('voices'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 70) }, 30)
+  if (name === 'rename' || name === 'delete') setTimeout(() => { const el = document.getElementById('voices'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 70) }, 30)
+}
+
+/* ============ review panel ============ */
+const rv = document.getElementById('review')
+document.getElementById('rvX').onclick = () => { rv.classList.toggle('collapsed'); document.getElementById('rvX').textContent = rv.classList.contains('collapsed') ? '+' : '–' }
+const rs = document.getElementById('rvState')
+rs.onchange = () => preset(rs.value)
+const setRvTheme = (t) => { S.pref = t; render(); document.getElementById('rvDark').setAttribute('aria-pressed', String(t === 'dark')); document.getElementById('rvLight').setAttribute('aria-pressed', String(t === 'light')) }
+document.getElementById('rvDark').onclick = () => setRvTheme('dark')
+document.getElementById('rvLight').onclick = () => setRvTheme('light')
+const setMotion = (m) => { document.documentElement.dataset.motion = m; document.getElementById('rvMotionFull').setAttribute('aria-pressed', String(m === 'full')); document.getElementById('rvMotionReduced').setAttribute('aria-pressed', String(m === 'reduced')) }
+document.getElementById('rvMotionFull').onclick = () => setMotion('full')
+document.getElementById('rvMotionReduced').onclick = () => setMotion('reduced')
+const q = new URLSearchParams(location.search)
+if (q.get('theme') === 'light') { S.pref = 'light'; document.getElementById('rvDark').setAttribute('aria-pressed', 'false'); document.getElementById('rvLight').setAttribute('aria-pressed', 'true') }
+if (q.get('motion') === 'reduced') setMotion('reduced')
+const st0 = q.get('state') || 'default'
+rs.value = st0
+const pref0 = S.pref
+preset(st0); S.pref = pref0; render()
+if (st0 === 'recording') tickRec()
+if (q.get('review') === 'open') { rv.classList.remove('collapsed'); document.getElementById('rvX').textContent = '–' }
+</script>
+</body>
+</html>

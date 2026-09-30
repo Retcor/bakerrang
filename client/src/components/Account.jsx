@@ -1,68 +1,22 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { AddVoiceModal, ContentWrapper, LoadingSpinner } from './index.js'
 import { useTheme } from '../providers/ThemeProvider.jsx'
 import { useAppContext } from '../providers/AppProvider.jsx'
-import { useVault } from '../providers/VaultProvider.jsx'
 import VoiceRow from './VoiceRow.jsx'
-import FolderSelect from './FolderSelect.jsx'
 import { request } from '../utils/index.js'
 import { SERVER_PREFIX } from '../App.jsx'
-import { productLicenses } from '../constants/index.js'
-import { AUTO_LOCK_OPTIONS } from '../utils/vaultSettings.js'
-import ProductLicense from './ProductLicense.jsx'
+
+const PASSWORDS_URL = import.meta.env.VITE_PASSWORDS_URL || 'https://passwords.bakerrang.com'
 
 const Account = () => {
   const { isDark } = useTheme()
   const { voices, setVoices } = useAppContext()
-  const { status: vaultStatus, settings: vaultSettings, updateSettings } = useVault()
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const [licenses, setLicenses] = useState([])
-  const [isLicenseSaving, setIsLicenseSaving] = useState(false)
   const [isVoicesUpdating, setIsVoicesUpdating] = useState(false)
-  const [settingsError, setSettingsError] = useState(null)
-
-  // The vault must exist before its settings can be saved (GET/PUT /vault 404 otherwise).
-  const vaultReady = vaultStatus === 'locked' || vaultStatus === 'unlocked'
-
-  // Map the auto-lock options to string values so FolderSelect (which keys on
-  // value) never sees a null key; 'never' round-trips to null.
-  const autoLockSelectOptions = AUTO_LOCK_OPTIONS.map((o) => ({
-    value: o.value === null ? 'never' : String(o.value),
-    label: o.label
-  }))
-  const autoLockValue = vaultSettings.autoLockMs === null ? 'never' : String(vaultSettings.autoLockMs)
-
-  const saveSetting = async (partial) => {
-    setSettingsError(null)
-    try {
-      await updateSettings(partial)
-    } catch (err) {
-      setSettingsError(err.message || 'Could not save settings.')
-    }
-  }
-
-  const onAutoLockChange = (v) => saveSetting({ autoLockMs: v === 'never' ? null : Number(v) })
-  const onToggleInlineAutofill = () => saveSetting({ inlineAutofill: !vaultSettings.inlineAutofill })
-
-  useEffect(() => {
-    const getLicenses = async () => {
-      const res = await request(`${SERVER_PREFIX}/supermarket/licenses`, 'GET')
-      const licenses = await res.json()
-      setLicenses(licenses)
-    }
-
-    getLicenses() // Call immediately upon page load
-  }, [])
 
   const addVoiceSuccess = voice => {
     setVoices([...voices, voice])
     setAddModalOpen(false)
-  }
-
-  const saveLicenses = async () => {
-    setIsLicenseSaving(true)
-    await request(`${SERVER_PREFIX}/supermarket/licenses`, 'POST', { 'Content-Type': 'application/json' }, JSON.stringify({ licenses }))
-    setIsLicenseSaving(false)
   }
 
   const updateVoices = async () => {
@@ -140,137 +94,12 @@ const Account = () => {
           </div>
         </section>
 
-        {/* SuperMarket Licenses Section */}
-        <section className={`rounded-2xl transition-all duration-300 overflow-hidden ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-          {/* Section Header */}
-          <div className={`px-8 py-6 border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-4'>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                  <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill='currentColor' viewBox='0 0 20 20'>
-                    <path fillRule='evenodd' d='M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5zM6 9a1 1 0 112 0v6H6V9zm6 0a1 1 0 112 0v6h-2V9z' clipRule='evenodd' />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className={`text-xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
-                    SuperMarket Licenses
-                  </h2>
-                  <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                    Configure product licenses for SuperMarket Simulator
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => saveLicenses()}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-lg ${isDark ? 'btn-primary-dark' : 'btn-primary-light'}`}
-              >
-                {isLicenseSaving ? <LoadingSpinner svgClassName='!h-4 !w-4' /> : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-
-          {/* Licenses Content */}
-          <div className='p-8'>
-            {productLicenses && productLicenses.length > 0
-              ? (
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {productLicenses.map(pl => (
-                    <div key={pl.licenseId} className={`p-4 rounded-xl transition-all duration-200 ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
-                      <ProductLicense licenses={licenses} setLicenses={setLicenses} productLicense={pl} />
-                    </div>
-                  ))}
-                </div>
-                )
-              : (
-                <div className='text-center py-12'>
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDark ? 'bg-white/10' : 'bg-black/10'}`}>
-                    <svg className={`w-8 h-8 ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' />
-                    </svg>
-                  </div>
-                  <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>No licenses configured</h3>
-                  <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                    Product licenses will appear here when available
-                  </p>
-                </div>
-                )}
-          </div>
-        </section>
-
-        {/* Password Vault Settings Section */}
-        <section className={`rounded-2xl transition-all duration-300 overflow-hidden ${isDark ? 'glass-card-dark' : 'glass-card-light'} border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-          {/* Section Header */}
-          <div className={`px-8 py-6 border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
-            <div className='flex items-center space-x-4'>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-dark' : 'bg-accent-light'}`}>
-                <svg className={`w-6 h-6 ${isDark ? 'text-gray-900' : 'text-gray-900'}`} fill='currentColor' viewBox='0 0 20 20'>
-                  <path fillRule='evenodd' d='M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z' clipRule='evenodd' />
-                </svg>
-              </div>
-              <div>
-                <h2 className={`text-xl font-bold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>
-                  Password Vault
-                </h2>
-                <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                  Auto-lock timing and browser-extension autofill
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Settings Content */}
-          <div className='p-8'>
-            {!vaultReady
-              ? (
-                <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                  Set up your password vault on the Passwords page first, then these settings will appear here.
-                </p>
-                )
-              : (
-                <div className='space-y-6 max-w-lg'>
-                  {/* Auto-lock duration */}
-                  <div className='flex items-center justify-between gap-4'>
-                    <div>
-                      <h3 className={`text-sm font-semibold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Auto-lock after inactivity</h3>
-                      <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                        How long before the vault locks and asks for your master password again.
-                      </p>
-                    </div>
-                    <div className='w-40 flex-shrink-0'>
-                      <FolderSelect
-                        isDark={isDark}
-                        value={autoLockValue}
-                        options={autoLockSelectOptions}
-                        onChange={onAutoLockChange}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Inline autofill toggle */}
-                  <div className='flex items-center justify-between gap-4'>
-                    <div>
-                      <h3 className={`text-sm font-semibold ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Inline autofill (browser extension)</h3>
-                      <p className={`text-xs ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
-                        Show a fill icon next to login fields so you don't have to open the extension popup.
-                      </p>
-                    </div>
-                    <button
-                      type='button'
-                      role='switch'
-                      aria-checked={vaultSettings.inlineAutofill}
-                      onClick={onToggleInlineAutofill}
-                      className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors duration-200 ${vaultSettings.inlineAutofill ? (isDark ? 'bg-accent-dark' : 'bg-accent-light') : (isDark ? 'bg-white/20' : 'bg-black/20')}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${vaultSettings.inlineAutofill ? 'translate-x-5' : ''}`} />
-                    </button>
-                  </div>
-
-                  {settingsError && (
-                    <p className='text-sm text-red-500'>{settingsError}</p>
-                  )}
-                </div>
-                )}
-          </div>
+        {/* Vault settings moved to Passwords (Phase H). */}
+        <section className={`rounded-2xl px-8 py-6 ${isDark ? 'glass-card-dark border border-white/10' : 'glass-card-light border border-black/10'}`}>
+          <p className={`text-sm ${isDark ? 'text-theme-secondary-dark' : 'text-theme-secondary-light'}`}>
+            Vault settings moved to Passwords.{' '}
+            <a href={PASSWORDS_URL} className={`underline font-medium ${isDark ? 'text-theme-dark' : 'text-theme-light'}`}>Open Passwords</a>
+          </p>
         </section>
 
         <AddVoiceModal open={addModalOpen} cancel={() => setAddModalOpen(false)} success={addVoiceSuccess} />

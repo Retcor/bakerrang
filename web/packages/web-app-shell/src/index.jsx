@@ -18,7 +18,7 @@ export const ACCOUNT_DEFINITION = Object.freeze({
   name: 'Account',
   accent: 'var(--accent-account)',
   legacyPath: '/account',
-  liveUrl: null,
+  liveUrl: 'https://account.bakerrang.com',
   envKey: 'VITE_ACCOUNT_URL'
 })
 
@@ -129,7 +129,7 @@ export const AppSwitcher = ({ destinations, current, showLauncher = true }) => {
           ))}
         </div>
         <div className='br-popover__separator' />
-        <a className='br-popover__item' role='menuitem' href={destinations.account.url}><ProductEmblem id='account' />Account</a>
+        <a className='br-popover__item' role='menuitem' href={destinations.account.url} aria-current={current === 'account' ? 'page' : undefined}><ProductEmblem id='account' />Account</a>
         {showLauncher && <a className='br-popover__item' role='menuitem' href={destinations.launcher.url}><LauncherIcon />All tools — Launcher</a>}
       </div>
     </div>

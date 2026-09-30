@@ -165,6 +165,28 @@ Full inventory, security audit, crypto/API contracts and architecture: `docs/app
   attachments, favorites, tags, breach or "health" checks, autofill from the web app (the browser extension does that),
   offline access, a password score.
 
+## Product: Account (Phase H truth, 2026-09-29)
+
+Full inventory, ownership decisions, API contracts and architecture: `docs/apps/PhaseH-Account.md`; surface brief:
+`.impeccable/surfaces/account.md`.
+
+- **What it is:** the control room for BakerRang itself, not a product app. One page: **Profile** (your name and email,
+  read-only, from Google), **Appearance** (light / dark / system for every BakerRang app), **Voices** (the cloned voices
+  Story Book and Polyglot speak in) and **Session** (sign out).
+- **Real scene:** a short, purposeful visit from an avatar menu or from Story Book / Polyglot ("Set up a voice in
+  Account"): check which account you're signed in with, change the theme, add or tidy a voice, sign out. Then leave.
+- **Theme:** the shared `web-theme` behavior (the `br_theme` cookie + the account preference) owns the logic. Account is
+  one place to change it, not the only one. It works signed out too (saved in this browser).
+- **Voices (owner, 2026-09-29):** add (record in the browser or upload up to 3 audio files, with a consent confirmation),
+  rename, make primary, delete. Samples go to ElevenLabs, which creates and stores the voice; BakerRang keeps the name and
+  description, not the audio. Story Book and Polyglot only choose among them per device.
+- **Identity is Google's:** name and email can't be edited in BakerRang, and no photo, user id, "member since" or sign-in
+  history is shown (none of the last two is stored).
+- **Owns no app-specific settings:** vault lock timing and extension autofill live in Passwords. **Supermarket is gone
+  from Account** (new and legacy).
+- **Not offered (don't imply):** deleting your account, downloading your data, signing out other devices, changing email,
+  notifications, security settings, billing. Account says plainly that deletion and export aren't available yet.
+
 ## Brand Commitments
 
 - Keep the **BakerRang** name.

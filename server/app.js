@@ -6,7 +6,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
-import { csrfProtection, authLimiter, vaultLimiter, budgetLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
+import { csrfProtection, authLimiter, accountLimiter, vaultLimiter, budgetLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
 import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 import { validateServerRuntimeConfig } from './config/runtimeConfig.js'
@@ -43,6 +43,8 @@ const app = express()
 
 // Place this before parsing and CSRF so even rejected vault requests cannot be cached.
 app.use('/vault', noStore)
+// Cloned-voice management is account-private too, including its 401 responses.
+app.use(['/text/to/speech/v1/voices', '/text/to/speech/v1/voice'], noStore)
 
 // Trust the upstream proxy so req.secure reflects X-Forwarded-Proto behind
 // TLS termination (used by the 'auto' secure-cookie setting below).
@@ -116,7 +118,7 @@ app.use('/public', publicSiteRouter)
 // Cloud Scheduler calls this with Authorization: Bearer $INTERNAL_DRAIN_TOKEN.
 app.use('/internal', internalLeadNotificationRouter)
 app.use('/auth', authLimiter, authRouter)
-app.use('/account', isAuthenticated, accountRouter)
+app.use('/account', noStore, accountLimiter, isAuthenticated, accountRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
 app.use('/supermarket', isAuthenticated, superMarketRouter)

@@ -76,14 +76,14 @@ test('only MAIN deployment callers receive OIDC and all use production', () => {
   assert.doesNotMatch(job(main, 'live-deploy-passed'), /id-token/)
   assert.doesNotMatch(pr, /id-token/)
 
-  for (const id of ['deploy-api', 'deploy-portal', 'deploy-renderer', 'deploy-client', 'deploy-web-launcher', 'deploy-web-storybook', 'deploy-web-polyglot', 'deploy-web-sign', 'deploy-web-budget', 'deploy-web-passwords', 'deploy-selected-service']) {
+  for (const id of ['deploy-api', 'deploy-portal', 'deploy-renderer', 'deploy-client', 'deploy-web-launcher', 'deploy-web-storybook', 'deploy-web-polyglot', 'deploy-web-sign', 'deploy-web-budget', 'deploy-web-passwords', 'deploy-web-account', 'deploy-selected-service']) {
     const deployment = job(main, id)
     assert.match(deployment, /id-token: write/)
     assert.match(deployment, /uses: \.\/\.github\/workflows\/_deploy-cloud-run\.yml/)
     assert.match(deployment, /environment: production/)
     assert.match(deployment, /smoke_via_service_url: true/)
   }
-  assert.equal((main.match(/id-token: write/g) ?? []).length, 11)
+  assert.equal((main.match(/id-token: write/g) ?? []).length, 12)
 })
 
 test('no active workflow contains a DEV deployment path or development Environment', () => {
@@ -107,6 +107,7 @@ test('public verification workflow is credential-free and uses fixed hosts only'
 
   const urls = [...new Set(verify.match(/https:\/\/[^\s"']+/g) ?? [])].sort()
   assert.deepEqual(urls, [
+    'https://account.bakerrang.com/',
     'https://api.bakerrang.com/health',
     'https://bakerrang.com/',
     'https://budget.bakerrang.com/',
@@ -192,8 +193,8 @@ test('Step 2.6b exact changed paths classify as no-service without broadening ru
     'docs/CI-CD.md'
   ]
   assert.deepEqual(classifyChanges(paths), {
-    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
-    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
     unknown: []
   })
   assert.deepEqual(classifyChanges(['scripts/deploy-dev.ps1']).unknown, [])
@@ -211,9 +212,10 @@ test('each classifier output independently controls its MAIN service deployment'
     'web-polyglot': 'validate-web',
     'web-sign': 'validate-web',
     'web-budget': 'validate-web',
-    'web-passwords': 'validate-web'
+    'web-passwords': 'validate-web',
+    'web-account': 'validate-web'
   }
-  for (const service of ['api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords']) {
+  for (const service of ['api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords', 'web-account']) {
     const deployment = job(main, `deploy-${service}`)
     const outputName = service.replace('-', '_')
     assert.match(deployment, new RegExp(`needs\\.changes\\.outputs\\.deploy_${outputName} == 'true'`))
@@ -237,8 +239,8 @@ test('Phase B changed paths classify as no-service with no unknown paths', () =>
     'docs/marketing-site/Step2/Step2.5e-DecommissionDevInfra-Plan.md'
   ]
   assert.deepEqual(classifyChanges(phaseBPaths), {
-    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
-    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
     unknown: []
   })
 })
@@ -256,8 +258,8 @@ test('Step 2.6a changed paths classify as no-service with no unknown paths', () 
     'docs/marketing-site/Step2/Step2.6-DeployHardening-Plan.md'
   ]
   assert.deepEqual(classifyChanges(step26aPaths), {
-    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
-    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false },
+    ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
+    deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false },
     unknown: []
   })
 })
@@ -284,6 +286,8 @@ test('aggregate status handles manual, affected, skipped, and no-service paths',
   assert.match(aggregate, /"\$WEB_BUDGET_RESULT" != "success"/)
   assert.match(aggregate, /"\$DEPLOY_WEB_PASSWORDS" == "true"/)
   assert.match(aggregate, /"\$WEB_PASSWORDS_RESULT" != "success"/)
+  assert.match(aggregate, /"\$DEPLOY_WEB_ACCOUNT" == "true"/)
+  assert.match(aggregate, /"\$WEB_ACCOUNT_RESULT" != "success"/)
   assert.match(aggregate, /All affected MAIN\/live validations and deployments passed/)
 })
 
@@ -308,7 +312,7 @@ test('MAIN deployment smoke resolves and validates Cloud Run status.url', () => 
   assert.equal((reusable.match(/tr -d '\\r\\n'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -qi 'User-agent'/g) ?? []).length, 1)
   assert.equal((reusable.match(/grep -Fq '<div id="root"'/g) ?? []).length, 1)
-  assert.match(reusable, /client\|web-launcher\|web-storybook\|web-polyglot\|web-sign\|web-budget\|web-passwords\) grep -Fq '<div id="root"'/)
+  assert.match(reusable, /client\|web-launcher\|web-storybook\|web-polyglot\|web-sign\|web-budget\|web-passwords\|web-account\) grep -Fq '<div id="root"'/)
   assert.match(reusable, /WEB_LAUNCHER_SERVICE: \$\{\{ vars\.WEB_LAUNCHER_SERVICE \}\}/)
   assert.match(reusable, /web-launcher\)\n\s+service_name="\$WEB_LAUNCHER_SERVICE"\n\s+image_name="web-launcher"/)
   assert.match(reusable, /--build-arg APP=launcher/)
@@ -329,4 +333,32 @@ test('MAIN deployment smoke resolves and validates Cloud Run status.url', () => 
   assert.match(reusable, /web-passwords\)\n\s+service_name="\$WEB_PASSWORDS_SERVICE"\n\s+image_name="web-passwords"/)
   assert.match(reusable, /--build-arg APP=passwords/)
   assert.match(reusable, /--build-arg VITE_OAUTH_TARGET=passwords/)
+  assert.match(reusable, /WEB_ACCOUNT_SERVICE: \$\{\{ vars\.WEB_ACCOUNT_SERVICE \}\}/)
+  assert.match(reusable, /ACCOUNT_BASE_URL: \$\{\{ vars\.ACCOUNT_BASE_URL \}\}/)
+  assert.match(reusable, /web-account\)\n\s+service_name="\$WEB_ACCOUNT_SERVICE"\n\s+image_name="web-account"/)
+  assert.match(reusable, /smoke_url="\$\{ACCOUNT_BASE_URL%\/\}\/"/)
+  assert.match(reusable, /--build-arg APP=account/)
+  assert.match(reusable, /--build-arg VITE_OAUTH_TARGET=account/)
+})
+
+test('Account is built against the production API the CSP allows, and every check asserts the microphone policy', async () => {
+  const conf = await readFile(new URL('../../web/nginx/apps/account.conf', import.meta.url), 'utf8')
+  const connect = conf.match(/connect-src 'self' (https:\/\/[^;\s]+)/)[1]
+  assert.equal(connect, 'https://api.bakerrang.com')
+  assert.match(reusable, /web-account\)\n\s+\[\[ "\$VITE_API_BASE_URL" == "https:\/\/api\.bakerrang\.com" \]\]/)
+  assert.match(reusable, /"\$LOGICAL_SERVICE" == "web-account"[\s\S]*?permissions-policy:\.\*microphone=\(self\)/)
+  assert.match(pr, /Validate Account Docker packaging and headers/)
+  assert.match(pr, /--build-arg APP=account/)
+  assert.match(pr, /--build-arg VITE_API_BASE_URL=https:\/\/api\.bakerrang\.com/)
+  assert.match(pr, /permissions-policy:\.\*microphone=\(self\)/)
+  assert.match(pr, /Build Account[\s\S]*?npm run build -w @bakerrang\/web-account/)
+  assert.match(main, /Build Account[\s\S]*?npm run build -w @bakerrang\/web-account/)
+})
+
+test('Account joins rollback and public verification without touching the other services', () => {
+  assert.match(rollback, /- web-passwords\n\s+- web-account/)
+  assert.match(verify, /check_endpoint account https:\/\/account\.bakerrang\.com\/ account-headers/)
+  assert.match(verify, /account-headers\)[\s\S]*?permissions-policy:\.\*microphone=\(self\)/)
+  assert.match(main, /web-account\n/)
+  assert.match(main, /deploy_web_account: \$\{\{ steps\.classify\.outputs\.deploy_web_account \}\}/)
 })

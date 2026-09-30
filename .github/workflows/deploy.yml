@@ -21,6 +21,7 @@ on:
           - web-sign
           - web-budget
           - web-passwords
+          - web-account
 
 permissions:
   contents: read
@@ -43,6 +44,7 @@ jobs:
       deploy_web_sign: ${{ steps.classify.outputs.deploy_web_sign }}
       deploy_web_budget: ${{ steps.classify.outputs.deploy_web_budget }}
       deploy_web_passwords: ${{ steps.classify.outputs.deploy_web_passwords }}
+      deploy_web_account: ${{ steps.classify.outputs.deploy_web_account }}
     steps:
       - name: Check out pushed commit
         uses: actions/checkout@v7
@@ -148,7 +150,7 @@ jobs:
   validate-web:
     name: Validate Shared Web
     needs: changes
-    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true' || needs.changes.outputs.deploy_web_sign == 'true' || needs.changes.outputs.deploy_web_budget == 'true' || needs.changes.outputs.deploy_web_passwords == 'true'
+    if: needs.changes.outputs.deploy_web_launcher == 'true' || needs.changes.outputs.deploy_web_storybook == 'true' || needs.changes.outputs.deploy_web_polyglot == 'true' || needs.changes.outputs.deploy_web_sign == 'true' || needs.changes.outputs.deploy_web_budget == 'true' || needs.changes.outputs.deploy_web_passwords == 'true' || needs.changes.outputs.deploy_web_account == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -183,6 +185,9 @@ jobs:
       - name: Build Passwords
         if: needs.changes.outputs.deploy_web_passwords == 'true'
         run: npm run build -w @bakerrang/web-passwords
+      - name: Build Account
+        if: needs.changes.outputs.deploy_web_account == 'true'
+        run: npm run build -w @bakerrang/web-account
 
   deploy-api:
     name: Deploy API
@@ -324,6 +329,20 @@ jobs:
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
 
+  deploy-web-account:
+    name: Deploy Web Account
+    needs: [changes, validate-web]
+    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_web_account == 'true' && needs.validate-web.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_deploy-cloud-run.yml
+    with:
+      service: web-account
+      environment: production
+      image_tag: git-${{ github.sha }}
+      smoke_via_service_url: true
+
   guard-main:
     name: Require main branch
     if: github.event_name == 'workflow_dispatch'
@@ -375,6 +394,7 @@ jobs:
       - deploy-web-sign
       - deploy-web-budget
       - deploy-web-passwords
+      - deploy-web-account
       - guard-main
       - deploy-selected-service
     runs-on: ubuntu-latest
@@ -396,6 +416,7 @@ jobs:
           DEPLOY_WEB_SIGN: ${{ needs.changes.outputs.deploy_web_sign }}
           DEPLOY_WEB_BUDGET: ${{ needs.changes.outputs.deploy_web_budget }}
           DEPLOY_WEB_PASSWORDS: ${{ needs.changes.outputs.deploy_web_passwords }}
+          DEPLOY_WEB_ACCOUNT: ${{ needs.changes.outputs.deploy_web_account }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
           VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
           VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
@@ -410,6 +431,7 @@ jobs:
           WEB_SIGN_RESULT: ${{ needs.deploy-web-sign.result }}
           WEB_BUDGET_RESULT: ${{ needs.deploy-web-budget.result }}
           WEB_PASSWORDS_RESULT: ${{ needs.deploy-web-passwords.result }}
+          WEB_ACCOUNT_RESULT: ${{ needs.deploy-web-account.result }}
           GUARD_RESULT: ${{ needs.guard-main.result }}
           SELECTED_RESULT: ${{ needs.deploy-selected-service.result }}
         run: |
@@ -477,6 +499,10 @@ jobs:
           fi
           if [[ "$DEPLOY_WEB_PASSWORDS" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_PASSWORDS_RESULT" != "success" ) ]]; then
             echo "Affected Web Passwords validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_PASSWORDS_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_WEB_ACCOUNT" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_ACCOUNT_RESULT" != "success" ) ]]; then
+            echo "Affected Web Account validation/deployment did not succeed: validation=$VALIDATE_WEB_RESULT deployment=$WEB_ACCOUNT_RESULT" >&2
             exit 1
           fi
           echo "All affected MAIN/live validations and deployments passed."

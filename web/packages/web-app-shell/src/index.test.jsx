@@ -27,7 +27,7 @@ describe('destination registry', () => {
       wow: 'https://bakerrang.com/wow',
       passwords: 'https://passwords.bakerrang.com'
     })
-    expect(destinations.account.url).toBe('https://bakerrang.com/account')
+    expect(destinations.account.url).toBe('https://account.bakerrang.com')
     expect(destinations.launcher.url).toBe('https://launch.bakerrang.com')
   })
 
@@ -50,4 +50,15 @@ it('marks the current app and keeps Account and Launcher separate from the tool 
   expect(screen.getByRole('menuitem', { name: 'Story Book' }).getAttribute('aria-current')).toBe('page')
   expect(screen.getByRole('menuitem', { name: 'Account' })).not.toBeNull()
   expect(screen.getByRole('menuitem', { name: 'All tools — Launcher' })).not.toBeNull()
+})
+
+it('marks the separated Account item current when the current app is Account, and only then', async () => {
+  render(<AppSwitcher destinations={resolveDestinations({})} current='account' />)
+  await userEvent.click(screen.getByRole('button', { name: 'Switch app' }))
+  expect(screen.getByRole('menuitem', { name: 'Account' }).getAttribute('aria-current')).toBe('page')
+  for (const tool of resolveDestinations({}).tools) expect(screen.getByRole('menuitem', { name: tool.shortName }).getAttribute('aria-current')).toBeNull()
+  cleanup()
+  render(<AppSwitcher destinations={resolveDestinations({})} current='budget' />)
+  await userEvent.click(screen.getByRole('button', { name: 'Switch app' }))
+  expect(screen.getByRole('menuitem', { name: 'Account' }).getAttribute('aria-current')).toBeNull()
 })

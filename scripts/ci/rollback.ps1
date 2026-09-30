@@ -12,8 +12,8 @@ param(
 function Get-RollbackRequest {
     param([string]$LogicalService, [string]$Method, [string]$Value)
 
-    if (@('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords') -cnotcontains $LogicalService) {
-        throw 'Select exactly one supported service: api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, web-budget, web-passwords.'
+    if (@('api', 'portal', 'renderer', 'client', 'web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords', 'web-account') -cnotcontains $LogicalService) {
+        throw 'Select exactly one supported service: api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, web-budget, web-passwords, web-account.'
     }
     if (@('image', 'revision') -cnotcontains $Method) { throw 'Mechanism must be image or revision.' }
     $config = $Services | Where-Object { $_.Logical -ceq $LogicalService }
@@ -165,6 +165,7 @@ function Invoke-RollbackSmoke {
         'web-sign' = @{ Path = '/'; Public = 'https://sign.bakerrang.com/'; Assertion = 'ClientRoot' }
         'web-budget' = @{ Path = '/'; Public = 'https://budget.bakerrang.com/'; Assertion = 'ClientRoot' }
         'web-passwords' = @{ Path = '/'; Public = 'https://passwords.bakerrang.com/'; Assertion = 'PasswordsHeaders' }
+        'web-account' = @{ Path = '/'; Public = 'https://account.bakerrang.com/'; Assertion = 'AccountHeaders' }
     }
     $uri = $null
     if (-not [uri]::TryCreate($ServiceUrl, [UriKind]::Absolute, [ref]$uri) -or

@@ -24,3 +24,22 @@ export const speechLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many speech requests. Please wait a moment.' }
 })
+
+// Voice management (Account). Per authenticated user, mounted after isAuthenticated.
+export const voiceCreateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  keyGenerator: userKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait a moment.' }
+})
+
+export const voiceEditLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyGenerator: userKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait a moment.' }
+})

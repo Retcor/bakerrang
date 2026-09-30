@@ -18,6 +18,7 @@ on:
           - web-sign
           - web-budget
           - web-passwords
+          - web-account
       mechanism:
         description: Image keeps current config; revision pins historical code and config
         required: true

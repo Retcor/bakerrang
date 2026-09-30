@@ -925,6 +925,21 @@ automated tests · manual verification.** Each product-extraction phase also car
 > phase must **not** port the legacy Account page's "Password Vault" settings, which now live in Passwords
 > ([PhaseG §9](PhaseG-Passwords.md)).
 
+> **Superseded sequencing (2026-09-29):** **Phase G — Passwords is complete** (extracted, accepted and cut over to
+> `passwords.bakerrang.com`). The orchestrator ran the Account phase as **"Phase H — Account"**
+> (`account.bakerrang.com`, [PhaseH-Account.md](PhaseH-Account.md)). It's the last consumer extraction; **final
+> legacy/decommission cleanup follows it** (the apex cutover, `client/` retirement, and the Supermarket and WoW backend and
+> data removal). Scope, as audited from repository truth:
+> - **Voices are in Account** (owner): cloned-voice management moves from legacy Account (Phases C/D already made voices
+>   Account-owned).
+> - **Supermarket settings are removed from Account only**, in the new app and legacy Account. The legacy `/supermarket`
+>   page, `/supermarket/licenses` and the `licenses` data wait for the final cleanup.
+> - **Vault settings stay in Passwords.** Legacy Account's copy is removed.
+> - **Theme behavior stays in the shared `web-theme` package**, with Account as one UX surface.
+> - **Account deletion and data export are deferred** (no deterministic cross-app semantics exist).
+>
+> The section below keeps its original scope text; where the two differ, the Phase H document wins.
+
 ### Phase E — Stand up **Account** → `account.bakerrang.com`
 - **Scope:** Account app owns profile/security/global prefs + canonical theme write
   (`GET/PUT /account/preferences` or reuse of the settings pattern); other apps link to it.
