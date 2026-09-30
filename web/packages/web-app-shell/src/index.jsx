@@ -18,7 +18,7 @@ export const ACCOUNT_DEFINITION = Object.freeze({
   name: 'Account',
   accent: 'var(--accent-account)',
   legacyPath: '/account',
-  liveUrl: null,
+  liveUrl: 'https://account.bakerrang.com',
   envKey: 'VITE_ACCOUNT_URL'
 })
 

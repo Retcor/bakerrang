@@ -27,7 +27,7 @@ describe('destination registry', () => {
       wow: 'https://bakerrang.com/wow',
       passwords: 'https://passwords.bakerrang.com'
     })
-    expect(destinations.account.url).toBe('https://bakerrang.com/account')
+    expect(destinations.account.url).toBe('https://account.bakerrang.com')
     expect(destinations.launcher.url).toBe('https://launch.bakerrang.com')
   })
 
