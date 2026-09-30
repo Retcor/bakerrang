@@ -31,12 +31,11 @@ describe('Account PWA', () => {
     expect(ACCOUNT_PWA_OPTIONS.workbox.globPatterns).toEqual(['**/*.{html,css,js,woff2,png,ico,webmanifest}'])
   })
 
-  it('ships a dedicated icon set generated from the approved master', () => {
+  it('ships the shared BakerRang favicon set, byte-for-byte, like every other web app', () => {
+    const repoRoot = path.resolve(appRoot, '../../..')
     for (const file of ['android-chrome-192x192.png', 'android-chrome-512x512.png', 'apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png', 'favicon.ico']) {
-      expect(readFileSync(path.join(appRoot, 'public', file)).length).toBeGreaterThan(100)
+      expect(readFileSync(path.join(appRoot, 'public', file)).equals(readFileSync(path.join(repoRoot, 'client/public', file))), file).toBe(true)
     }
-    expect(read('scripts', 'generate-icons.cjs')).toContain('web/.impeccable/mocks/account-icon.svg')
-    expect(read('ASSETS.md')).toContain('account-icon.svg')
   })
 })
 
