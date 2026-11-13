@@ -22,7 +22,7 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 ## Architecture
 
 - MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api` plus the consumer web apps `bakerrang-web-{launcher,storybook,polyglot,sign,budget,passwords,account}`. **Every public host — including the apex `bakerrang.com` / `www.` and `api.` — uses a direct Cloud Run domain mapping** (see [Public ingress](#public-ingress-cloud-run-domain-mappings)).
-- **Retired 2026-11-12:** `bakerrang-client` (legacy SPA), `bakerrang-portal` and `bakerrang-site-renderer` (marketing-site platform). See [Retirement cutover](#retirement-cutover-2026-11) for the one-time manual teardown.
+- **Retired 2026-11-12:** `bakerrang-client` (legacy SPA), `bakerrang-portal` and `bakerrang-site-renderer` (marketing-site platform). Their teardown was completed the same day; see [Retirement cutover](#retirement-cutover-2026-11-completed).
 - Local data backing: `bakerrang-dev` retains only Firestore `(default)`, `bakerrang-dev-media-marketing`, and the developer IAM needed for ADC. Its former Cloud Run/LB/WIF deployment stack is historical inventory below.
 - Live images use the `bakerrang` Artifact Registry repository. The former global external Application Load Balancer (static IPv4 `34.8.236.85`, `bakerrang-web-ip`) has been **decommissioned**: no URL maps, backends, NEGs, forwarding rules, or reserved global addresses remain (verified 2026-11-12).
 
@@ -65,7 +65,7 @@ All public hosts are Cloud Run domain mappings in `us-west1` (Google-managed cer
 | Host | Cloud Run service |
 |---|---|
 | `api.bakerrang.com` | `bakerrang-api` |
-| `bakerrang.com`, `www.bakerrang.com` | `bakerrang-web-launcher` (target; see below) — `web/nginx/apps/launcher.conf` answers these hosts with a 301 to `https://launch.bakerrang.com/`, old paths going to their subdomain |
+| `bakerrang.com`, `www.bakerrang.com` | `bakerrang-web-launcher` — `web/nginx/apps/launcher.conf` answers these hosts with a 301 to `https://launch.bakerrang.com/`, old paths going to their subdomain |
 | `launch.` / `storybook.` / `polyglot.` / `sign.` / `budget.` / `passwords.` / `account.bakerrang.com` | `bakerrang-web-<app>` |
 
 Cloud Run domain mappings pass the original `Host` header to the container, which is what lets the Launcher's nginx tell the apex apart from `launch.`.
@@ -74,11 +74,27 @@ Cloud Run domain mappings pass the original `Host` header to the container, whic
 gcloud beta run domain-mappings list --project $ProjectId --region $Region
 ```
 
-Unrelated services share the project and zone (`danbaker.info`, `claude-exam.`, `plex-requests.`); leave them alone.
+Unrelated services share the project and zone (`danbaker.info`, `claude-exam.`, `plex-requests.`, `enshrouded.`); leave them alone.
 
-### Retirement cutover (2026-11)
+### Retirement cutover (2026-11, completed)
 
-Before the cutover `bakerrang.com` and `www.` were mapped to `bakerrang-client`, `portal.` to `bakerrang-portal`, and `sites.` / `custom.` to `bakerrang-site-renderer`. One-time, operator-run, live-impact order — **only after the merge has deployed the Launcher image containing `launcher.conf`**:
+> **Completed 2026-11-12**, after PR #37 (`c45a178`) deployed. Do not re-run; this section is the historical record.
+>
+> - `bakerrang.com` and `www.` were recreated pointing at `bakerrang-web-launcher`. Certificates were issued about 6 minutes
+>   later. For roughly 15 more minutes, requests flapped between 404 and 301 while the routing change propagated. After that, 20 consecutive
+>   all-301 rounds passed and `Verify live public ingress` went green.
+> - Deleted the `portal.`, `sites.` and `custom.` mappings, their CNAMEs, and the `_bakerrang-verification.custom` TXT; the
+>   `bakerrang-client`, `bakerrang-portal` and `bakerrang-site-renderer` services; the four secrets listed below; the
+>   (empty) `gs://bakerrang-media-marketing` bucket; the Resend `notifications.bakerrang.com` DNS records; the API's
+>   retired env vars/secret refs (API revision `bakerrang-api-00049`); and the eight retired GitHub `production` variables.
+>   There was no Scheduler job to remove.
+> - **Left in place:** Artifact Registry packages `client`, `portal` and `site-renderer`. The `bakerrang` repository has tag
+>   immutability enabled, which blocks deleting them. Removing them would mean temporarily disabling immutability;
+>   that wasn't done, to keep the rollback-integrity guarantee.
+> - Dormant Firestore data (`tenants/*`, `wow_*`, SuperMarket `licenses/*`, `users.platformRole`) and the deployed
+>   retired Firestore indexes were not pruned.
+
+Before the cutover `bakerrang.com` and `www.` were mapped to `bakerrang-client`, `portal.` to `bakerrang-portal`, and `sites.` / `custom.` to `bakerrang-site-renderer`. The procedure that was run (only after the merge had deployed the Launcher image containing `launcher.conf`):
 
 ```powershell
 $P = "avian-cable-379805"; $R = "us-west1"
@@ -104,7 +120,7 @@ foreach ($svc in "bakerrang-client", "bakerrang-portal", "bakerrang-site-rendere
 }
 ```
 
-Also retire: the media bucket `gs://bakerrang-media-marketing`, the Secret Manager secrets for `PREVIEW_TOKEN_SECRET`, `RESEND_API_KEY`, `INTERNAL_DRAIN_TOKEN` and `BLIZZARD_CLIENT_SECRET`, any lead-notification Cloud Scheduler job, the now-unused API env vars (`CLIENT_DOMAIN`, `PORTAL_DOMAIN`, `SITE_RENDERER_DOMAIN`, `MEDIA_BUCKET_NAME`, `LEAD_NOTIFICATION_FROM`, `BLIZZARD_CLIENT_ID`, plus the secret-backed ones above — remove with `--remove-env-vars` / `--remove-secrets`, never a replacing update), and the GitHub `production` variables `CLIENT_*`, `PORTAL_*`, `RENDERER_SERVICE`, `NEXT_PUBLIC_SITE_*`, `CUSTOM_DOMAIN_IPV4_ADDRESS`. Optionally prune the deployed Firestore indexes with `firebase deploy --only firestore:indexes --force`.
+Also retired: the media bucket `gs://bakerrang-media-marketing`, the Secret Manager secrets for `PREVIEW_TOKEN_SECRET`, `RESEND_API_KEY`, `INTERNAL_DRAIN_TOKEN` and `BLIZZARD_CLIENT_SECRET`, any lead-notification Cloud Scheduler job, the now-unused API env vars (`CLIENT_DOMAIN`, `PORTAL_DOMAIN`, `SITE_RENDERER_DOMAIN`, `MEDIA_BUCKET_NAME`, `LEAD_NOTIFICATION_FROM`, `BLIZZARD_CLIENT_ID`, plus the secret-backed ones above — remove with `--remove-env-vars` / `--remove-secrets`, never a replacing update), and the GitHub `production` variables `CLIENT_*`, `PORTAL_*`, `RENDERER_SERVICE`, `NEXT_PUBLIC_SITE_*`, `CUSTOM_DOMAIN_IPV4_ADDRESS`. (Not yet done, optional: prune the deployed Firestore indexes with `firebase deploy --only firestore:indexes --force`.)
 
 ## Frontend runtime service account
 
