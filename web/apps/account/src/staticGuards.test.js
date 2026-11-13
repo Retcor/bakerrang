@@ -55,46 +55,14 @@ describe('Account owns only global concerns', () => {
     }
     expect(bad).toEqual([])
   })
-
-  it('never reaches into the B2B platform workspace', () => {
-    expect(offenders(/platform\//)).toEqual([])
-  })
-})
-
-describe('legacy Account (LH-1)', () => {
-  const legacy = readFileSync(path.join(repoRoot, 'client/src/components/Account.jsx'), 'utf8')
-
-  it('no longer offers Supermarket licences or vault settings', () => {
-    for (const forbidden of [/supermarket/i, /productLicenses/, /ProductLicense/, /useVault/, /FolderSelect/, /AUTO_LOCK_OPTIONS/, /licenses/, /autoLock/, /inlineAutofill/]) {
-      expect(legacy).not.toMatch(forbidden)
-    }
-  })
-
-  it('points to Passwords for vault settings', () => {
-    expect(legacy).toContain('Vault settings moved to Passwords.')
-    expect(legacy).toContain("import.meta.env.VITE_PASSWORDS_URL || 'https://passwords.bakerrang.com'")
-  })
-
-  it('keeps cloned-voice management working until the final cleanup', () => {
-    expect(legacy).toContain('Cloned Voices')
-    expect(legacy).toContain('AddVoiceModal')
-    expect(legacy).toContain('/text/to/speech/v1/voices')
-  })
-
-  it('leaves the legacy Supermarket page itself in place (owner decision 2)', () => {
-    expect(statSync(path.join(repoRoot, 'client/src/components/SuperMarket.jsx')).isFile()).toBe(true)
-    expect(statSync(path.join(repoRoot, 'server/routes/superMarket.js')).isFile()).toBe(true)
-  })
 })
 
 describe('Account is registered as a shared destination, not a tool', () => {
   const shell = readFileSync(path.join(repoRoot, 'web/packages/web-app-shell/src/index.jsx'), 'utf8')
 
-  // The live URL itself is asserted by the registry test in web-app-shell, which the cutover
-  // PR updates. This guard covers what must hold before and after the flip.
-  it('keeps the legacy route and env key in the registry entry', () => {
+  // The live URL itself is asserted by the registry test in web-app-shell.
+  it('keeps the env key in the registry entry', () => {
     const definition = shell.slice(shell.indexOf('export const ACCOUNT_DEFINITION'), shell.indexOf('export const LAUNCHER_DEFINITION'))
-    expect(definition).toContain("legacyPath: '/account'")
     expect(definition).toContain("envKey: 'VITE_ACCOUNT_URL'")
   })
 

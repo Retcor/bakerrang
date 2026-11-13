@@ -15,10 +15,10 @@ const seedUser = () => ({
   email: 'baker@example.test',
   emailLower: 'baker@example.test',
   photo: 'https://example.test/photo.png',
-  platformRole: 'PLATFORM_ADMIN',
+  internalFlag: true,
   preferences: { locale: 'en' }
 })
-const vaultSettings = () => ({ settings: { autoLockMs: 900000, inlineAutofill: true }, kdf: { algo: 'argon2id' } })
+const vaultSettings = () => ({ settings: { autoLockMs: 900000 }, kdf: { algo: 'argon2id' } })
 
 const firestore = new FakeDb()
   .seed('users/user-1', seedUser())
@@ -141,7 +141,7 @@ test('concurrent theme writes from two apps leave one valid choice and every sib
   const stored = firestore.data('users/user-3')
   assert.ok(['light', 'dark', 'system'].includes(stored.preferences.theme))
   assert.equal(stored.preferences.locale, 'en')
-  assert.equal(stored.platformRole, 'PLATFORM_ADMIN')
+  assert.equal(stored.internalFlag, true)
 })
 
 test('5xx answers a fixed body and logs only {code, name}', async (t) => {

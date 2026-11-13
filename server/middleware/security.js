@@ -1,4 +1,4 @@
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
+import rateLimit from 'express-rate-limit'
 import { doubleCsrf } from 'csrf-csrf'
 
 // Local dev runs over plain http where Secure/__Host- cookies won't stick, so
@@ -51,14 +51,4 @@ export const vaultLookupLimiter = rateLimit({
 })
 export const accountLimiter = limiter(300, { error: 'Too many requests. Please wait a moment.' })
 export const budgetLimiter = limiter(300, { error: 'Too many requests. Please wait a moment.' })
-export const tenantLimiter = limiter(300)
 export const chatbotLimiter = limiter(60)
-export const previewReadLimiter = limiter(120)
-
-export const publicLeadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => `${req.params.tenantId}:${ipKeyGenerator(req.ip)}`
-})

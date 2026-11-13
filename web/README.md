@@ -1,6 +1,6 @@
 # BakerRang consumer web workspace
 
-This workspace contains independently deployable Vite + React 18 consumer applications and their narrowly shared `@bakerrang/web-*` foundations. It is intentionally independent from `platform/`; packages must never cross-import between those workspaces.
+This workspace contains independently deployable Vite + React 18 consumer applications and their narrowly shared `@bakerrang/web-*` foundations.
 
 ## Install and dependency changes
 

@@ -123,17 +123,3 @@ test('access log sanitizer keeps route and query names while redacting values an
   assert.equal(sanitizeLogUrl('/health'), '/health')
   assert.ok(sanitizeLogUrl(`/${'x'.repeat(300)}`).length <= 200)
 })
-
-test('ElevenLabs-shaped provider errors cannot reach voice responses or logs', async t => {
-  const secret = 'elevenlabs-super-secret-key'
-  const logs = []
-  t.mock.method(console, 'error', (...args) => logs.push(JSON.stringify(args)))
-  _setHttpClient(async () => { throw Object.assign(new Error('provider request failed'), { response: { status: 401 }, config: { headers: { 'xi-api-key': secret }, data: { text: 'private phrase' } } }) })
-  const response = await fetch(`${baseUrl}/text/to/speech/v1/languages`, { headers: { 'x-test-user': 'voice-user' } })
-  assert.equal(response.status, 500)
-  const body = await response.text()
-  assert.equal(body.includes(secret), false)
-  assert.equal(body.includes('private phrase'), false)
-  assert.equal(logs.join('').includes(secret), false)
-  assert.deepEqual(JSON.parse(body), { error: 'Languages failed' })
-})

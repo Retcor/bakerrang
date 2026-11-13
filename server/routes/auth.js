@@ -18,7 +18,7 @@ export const GOOGLE_AUTH_OPTIONS = Object.freeze({
 })
 
 export const GOOGLE_CALLBACK_AUTH_OPTIONS = Object.freeze({
-  failureRedirect: `${process.env.CLIENT_DOMAIN}/login`,
+  failureRedirect: `${process.env.LAUNCHER_DOMAIN || ''}/`,
   keepSessionInfo: true
 })
 
@@ -117,9 +117,6 @@ export const logoutHandler = (req, res) => {
   })
 }
 
-// GET remains temporarily for the existing BakerRang client. New consumers
-// use the CSRF-protected POST route.
-router.get('/logout', logoutHandler)
 router.post('/logout', logoutHandler)
 
 export default router

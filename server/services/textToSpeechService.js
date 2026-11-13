@@ -135,14 +135,14 @@ export const createVoice = async (userId, { name, description, consent = false }
 }
 
 // Edits the provider copy first (it requires a name), then merge-writes only the
-// approved fields. `fields.isPrimary` is honored solely for the legacy "Update All".
-export const updateVoice = async (userId, voiceId, { name, description, isPrimary }, files = [], now = Date.now()) => {
+// approved fields.
+export const updateVoice = async (userId, voiceId, { name, description }, now = Date.now()) => {
   const current = await readOwnedVoice(userId, voiceId)
   if (!current) throw new VoiceNotFoundError()
   const nextName = name ?? toVoiceRecord(voiceId, current).name
   const nextDescription = description ?? toVoiceRecord(voiceId, current).description
   try {
-    await providerPost(`/v1/voices/${voiceId}/edit`, sampleForm(nextName, nextDescription, files), 30000)
+    await providerPost(`/v1/voices/${voiceId}/edit`, sampleForm(nextName, nextDescription, []), 30000)
   } catch (error) {
     throw new VoiceProviderError(error)
   }
@@ -154,7 +154,6 @@ export const updateVoice = async (userId, voiceId, { name, description, isPrimar
     const data = snapshot.exists ? snapshot.data() : null
     if (!data || data.userId !== userId) throw new VoiceNotFoundError()
     const changes = { name: nextName, description: nextDescription, updatedAt: now }
-    if (typeof isPrimary === 'boolean') changes.isPrimary = isPrimary
     transaction.set(ref, changes, { merge: true })
     record = { ...data, ...changes }
   })
@@ -192,23 +191,6 @@ export const deleteVoice = async (userId, voiceId) => {
     if (!isProviderGone(error)) throw new VoiceProviderError(error)
   }
   await voices().doc(voiceId).delete()
-}
-
-export const getLanguages = async () => {
-  const url = `${baseUrl}/v1/models`
-  const options = {
-    method: 'GET',
-    headers: {
-      accept: 'application/json',
-      'xi-api-key': apiKey
-    }
-  }
-
-  const response = await httpClient(url, options)
-  if (response.data) {
-    const multiLingualModel = response.data.filter(model => model.model_id === modelId)[0]
-    return multiLingualModel.languages.map(language => language.name)
-  }
 }
 
 export const getDeepgramTranscription = async (audioBase64, lang) => {

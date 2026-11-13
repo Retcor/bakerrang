@@ -117,6 +117,14 @@ export const listAudit = async (ownerId, { targetId, folderId, limit, before } =
 
 // ---- Vault metadata ----
 
+// Only these plaintext preferences are ever returned. Older vault docs may still
+// hold retired keys (e.g. the browser extension's inlineAutofill); they are ignored.
+const knownSettings = (settings) => {
+  const out = {}
+  if (settings && 'autoLockMs' in settings) out.autoLockMs = settings.autoLockMs
+  return out
+}
+
 export const getVault = async (userId) => {
   const doc = await vaultRef(userId).get()
   if (!doc.exists) return null
@@ -126,10 +134,10 @@ export const getVault = async (userId) => {
     protectedVaultKey: data.protectedVaultKey,
     publicKey: data.publicKey || null,
     protectedPrivateKey: data.protectedPrivateKey || null,
-    // Plaintext, non-secret preferences (auto-lock duration, inline-autofill
-    // toggle). Deliberately readable without unlocking so the browser extension
-    // and the web app can honor them; never holds anything derived from a secret.
-    settings: data.settings || {},
+    // Plaintext, non-secret preferences (auto-lock duration). Deliberately
+    // readable without unlocking so the app can honor them before unlock; never
+    // holds anything derived from a secret.
+    settings: knownSettings(data.settings),
     createdAt: data.createdAt,
     keyRev: Number.isInteger(data.keyRev) ? data.keyRev : 0
   }
@@ -137,7 +145,7 @@ export const getVault = async (userId) => {
 
 // Persists non-secret vault preferences. Partial updates merge into the existing
 // settings map. autoLockMs is null (never lock) or a duration in ms bounded to a
-// sane range; inlineAutofill is a boolean.
+// sane range. Unknown keys are ignored.
 export const updateSettings = async (userId, settings = {}) => {
   assert(settings && typeof settings === 'object', 'Invalid settings')
   const clean = {}
@@ -150,16 +158,12 @@ export const updateSettings = async (userId, settings = {}) => {
     )
     clean.autoLockMs = v
   }
-  if ('inlineAutofill' in settings) {
-    assert(typeof settings.inlineAutofill === 'boolean', 'Invalid inlineAutofill')
-    clean.inlineAutofill = settings.inlineAutofill
-  }
 
   const ref = vaultRef(userId)
   const existing = await ref.get()
   if (!existing.exists) throw httpError(404, 'Vault not found')
 
-  const merged = { ...(existing.data().settings || {}), ...clean }
+  const merged = { ...knownSettings(existing.data().settings), ...clean }
   await ref.set({ settings: merged, updatedAt: Date.now() }, { merge: true })
   return merged
 }
@@ -816,13 +820,6 @@ export const createShare = async (ownerId, body = {}) => {
   }
   await sharesRef().doc(id).set(record)
   return shareView(record)
-}
-
-// Recipients of one specific folder I own.
-export const listSharesForFolder = async (ownerId, folderId) => {
-  assert(typeof folderId === 'string' && folderId.length > 0, 'Invalid folderId')
-  const snap = await sharesRef().where('ownerId', '==', ownerId).where('folderId', '==', folderId).get()
-  return snap.docs.map((d) => shareView(d.data()))
 }
 
 // Every share I have granted (lets the UI badge which folders are shared).

@@ -10,7 +10,7 @@ import { buildIndexEntry } from '../vault/index.js'
 import { ensureKeypair } from '../vault/keypair.js'
 import { UnsupportedKdfError } from '../vault/kdf.js'
 
-const defaultSettings = { autoLockMs: 28800000, inlineAutofill: true }
+const defaultSettings = { autoLockMs: 28800000 }
 const entryKey = (entry) => `${entry.source}:${entry.id}`
 const IMPORT_CHUNK = 500
 

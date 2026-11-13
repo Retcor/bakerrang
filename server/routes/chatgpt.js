@@ -1,5 +1,5 @@
 import express from 'express'
-import { image, prompt, promptStory, translate, translateUtterance } from '../services/chatgptService.js'
+import { image, promptStory, translateUtterance } from '../services/chatgptService.js'
 import { POLYGLOT_LANGUAGES } from '../domain/polyglotLanguages.js'
 import { noStore, translateLimiter } from '../middleware/contentSecurity.js'
 import { logProviderError } from '../logging/providerError.js'
@@ -9,42 +9,6 @@ const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && 
 const codePointLength = (value) => [...value].length
 
 const invalid = (res, scope, field) => res.status(400).json({ error: `Invalid ${scope} request`, field })
-
-router.get('/prompt', async (req, res, next) => {
-  try {
-    res.send(await prompt(req.query.prompt))
-  } catch (error) {
-    logProviderError('prompt', error)
-    res.status(500).json({ error: 'Prompt failed' })
-  }
-})
-
-router.get('/prompt/story', async (req, res, next) => {
-  try {
-    res.send(await promptStory(req.query.prompt))
-  } catch (error) {
-    logProviderError('story', error)
-    res.status(500).json({ error: 'Story failed' })
-  }
-})
-
-router.get('/translate', async (req, res, next) => {
-  try {
-    res.send(await translate(req.query.language, req.query.prompt))
-  } catch (error) {
-    logProviderError('translate-legacy', error)
-    res.status(500).json({ error: 'Translation failed' })
-  }
-})
-
-router.get('/image/prompt', async (req, res, next) => {
-  try {
-    res.send(await image(req.query.prompt))
-  } catch (error) {
-    logProviderError('image-legacy', error)
-    res.status(500).json({ error: 'Image failed' })
-  }
-})
 
 router.post('/translate', noStore, translateLimiter, async (req, res) => {
   if (!isPlainObject(req.body)) return invalid(res, 'translation', 'body')

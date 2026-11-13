@@ -22,7 +22,6 @@ colors:
   accent-poly: "#58C0C9"
   accent-sign: "#B79CE0"
   accent-budget: "#7FB0E8"
-  accent-wow: "#D69A4C"
   accent-pass: "#AEB8C2"
   accent-account: "#A5A59C"
   desk: "#161514"
@@ -1050,8 +1049,7 @@ every tool emblem so the set reads as a matched kit rather than a grab-bag of st
 This is the **shared consumer world**, reused across the launcher and every future per-product app.
 Family resemblance lives in the foundations documented here — charcoal ground, reserved gold,
 Archivo/Archivo Expanded, flat planes and 1px rules — while each product keeps its own muted accent
-and its own drawn emblem. It is deliberately distinct from the platform's "Business Workshop" world;
-do not cross-pollinate tokens between the two. Dark is the signature, default front-door look; a
+and its own drawn emblem. Dark is the signature, default front-door look; a
 fully designed warm light mode is a first-class peer, not an afterthought.
 
 The world explicitly refuses the category default: the AI-app hero-over-a-uniform-grid-of-cards. It
@@ -1092,9 +1090,9 @@ Each product owns one muted accent, applied only to its drawn emblem tile and it
 (the row arrow, chip border on hover, vault border). Never used as confetti, never neon. Dark-mode
 values (light-mode values in parens):
 - **Story** `#F08A5D` (`#C25A34`) · **Polyglot** `#58C0C9` (`#1f7d86`) · **Sign** `#B79CE0`
-  (`#6E4FB4`) · **Budget** `#7FB0E8` (`#235f9e`) · **WoW** `#D69A4C` (`#8a5c15`) · **Passwords**
-  `#AEB8C2` (`#4d5867`) · **Account** `#A5A59C` (`#63625a`). *(Six tool accents + Account; the
-  retired Supermarket accent has been removed.)*
+  (`#6E4FB4`) · **Budget** `#7FB0E8` (`#235f9e`) · **Passwords**
+  `#AEB8C2` (`#4d5867`) · **Account** `#A5A59C` (`#63625a`). *(Five tool accents + Account; the
+  retired Supermarket and WoW accents have been removed.)*
 
 ### Neutral
 - **Ground** (`#161514` dark / `#efece6` light): The page background; the charcoal is the world.

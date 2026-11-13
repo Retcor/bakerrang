@@ -44,14 +44,13 @@ router.get('/', handle(async (req) => {
 router.post('/', handle((req) => vault.initVault(req.user.id, req.body), 201))
 router.put('/key', handle((req) => vault.rotateVaultKey(req.user.id, req.body)))
 
-// Non-secret vault preferences (auto-lock duration, inline-autofill toggle).
+// Non-secret vault preferences (auto-lock duration).
 router.put('/settings', handle((req) => vault.updateSettings(req.user.id, req.body && req.body.settings)))
 
 // Sharing keypair: set on an existing vault (migration), and look up a
 // recipient's public key by email.
 router.post('/keys', handle((req) => vault.setVaultKeys(req.user.id, req.body)))
 router.post('/pubkey', vaultLookupLimiter, handle((req) => vault.getPublicKeyByEmail(req.body && req.body.email)))
-router.get('/pubkey', vaultLookupLimiter, handle((req) => vault.getPublicKeyByEmail(req.query && req.query.email)))
 
 // ---- Items ----
 
@@ -82,7 +81,6 @@ router.get('/shares', handle((req) => vault.listMyShares(req.user.id)))
 // Change counters for every share I participate in — clients poll this to detect
 // shared-folder updates. Non-secret integers only (no plaintext).
 router.get('/revisions', handle((req) => vault.getShareRevisions(req.user.id)))
-router.get('/shares/folder/:folderId', handle((req) => vault.listSharesForFolder(req.user.id, req.params.folderId)))
 router.delete('/shares/:id', handle((req) => vault.deleteShare(req.user.id, req.params.id)))
 
 // Folders shared WITH me, and access to the entries inside them. Every one of

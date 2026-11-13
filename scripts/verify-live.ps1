@@ -1,7 +1,3 @@
-param(
-    [switch]$Deep
-)
-
 $ErrorActionPreference = 'Stop'
 
 $Project = 'avian-cable-379805'
@@ -9,9 +5,6 @@ $Region = 'us-west1'
 $ArtifactRoot = 'us-west1-docker.pkg.dev/avian-cable-379805/bakerrang'
 $Services = @(
     [pscustomobject]@{ Logical = 'api'; Service = 'bakerrang-api'; Package = 'api'; ExpectedSa = 'bakerrang-api@avian-cable-379805.iam.gserviceaccount.com' },
-    [pscustomobject]@{ Logical = 'portal'; Service = 'bakerrang-portal'; Package = 'portal'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
-    [pscustomobject]@{ Logical = 'renderer'; Service = 'bakerrang-site-renderer'; Package = 'site-renderer'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
-    [pscustomobject]@{ Logical = 'client'; Service = 'bakerrang-client'; Package = 'client'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-launcher'; Service = 'bakerrang-web-launcher'; Package = 'web-launcher'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-storybook'; Service = 'bakerrang-web-storybook'; Package = 'web-storybook'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' },
     [pscustomobject]@{ Logical = 'web-polyglot'; Service = 'bakerrang-web-polyglot'; Package = 'web-polyglot'; ExpectedSa = 'bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com' }
@@ -255,7 +248,6 @@ function Test-PublicEndpoint {
 }
 
 function Invoke-VerifyLive {
-    param([switch]$DeepCheck)
 
     $script:GcloudCommand = Get-Command gcloud -ErrorAction SilentlyContinue
     if ($null -eq $script:GcloudCommand) {
@@ -355,18 +347,14 @@ function Invoke-VerifyLive {
     Write-Host 'Public ingress checks'
     $checks = @(
         @{ Name = 'API'; Url = 'https://api.bakerrang.com/health'; Assertion = 'Healthy' },
-        @{ Name = 'Portal'; Url = 'https://portal.bakerrang.com/'; Assertion = 'StatusOnly' },
-        @{ Name = 'Renderer'; Url = 'https://sites.bakerrang.com/robots.txt'; Assertion = 'UserAgent' },
-        @{ Name = 'Client'; Url = 'https://bakerrang.com/'; Assertion = 'ClientRoot' },
+        # The retired legacy client's apex redirects; the check follows it to the Launcher.
+        @{ Name = 'Apex redirect'; Url = 'https://bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Launcher'; Url = 'https://launch.bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Story Book'; Url = 'https://storybook.bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Polyglot'; Url = 'https://polyglot.bakerrang.com/'; Assertion = 'ClientRoot' },
         @{ Name = 'Web Passwords'; Url = 'https://passwords.bakerrang.com/'; Assertion = 'PasswordsHeaders' },
         @{ Name = 'Web Account'; Url = 'https://account.bakerrang.com/'; Assertion = 'AccountHeaders' }
     )
-    if ($DeepCheck) {
-        $checks += @{ Name = 'Custom domain'; Url = 'https://custom.bakerrang.com/'; Assertion = 'StatusOnly' }
-    }
     foreach ($check in $checks) {
         if (-not (Test-PublicEndpoint @check)) { $failures.Add("$($check.Name) public check failed.") }
     }
@@ -382,5 +370,5 @@ function Invoke-VerifyLive {
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
-    exit (Invoke-VerifyLive -DeepCheck:$Deep)
+    exit (Invoke-VerifyLive)
 }

@@ -69,7 +69,7 @@ $sign = @($Services | Where-Object { $_.Logical -ceq 'web-sign' })
 $budget = @($Services | Where-Object { $_.Logical -ceq 'web-budget' })
 $passwords = @($Services | Where-Object { $_.Logical -ceq 'web-passwords' })
 $account = @($Services | Where-Object { $_.Logical -ceq 'web-account' })
-Assert-Equal $Services.Count 11 'Live verification must cover every production deployment target.'
+Assert-Equal $Services.Count 8 'Live verification must cover every production deployment target.'
 Assert-Equal $launcher.Count 1 'Web Launcher must have exactly one live-service mapping.'
 Assert-Equal $launcher[0].Service 'bakerrang-web-launcher' 'Web Launcher physical service mapping is wrong.'
 Assert-Equal $launcher[0].Package 'web-launcher' 'Web Launcher Artifact Registry package mapping is wrong.'

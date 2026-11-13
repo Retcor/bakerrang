@@ -21,7 +21,8 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 
 ## Architecture
 
-- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api`, `bakerrang-client`, `bakerrang-portal`, `bakerrang-site-renderer`, and the Launcher bootstrap target `bakerrang-web-launcher`.
+- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api` plus the consumer web apps `bakerrang-web-{launcher,storybook,polyglot,sign,budget,passwords,account}`. The web apps (other than the apex) use direct Cloud Run domain mappings (see each `docs/apps/*-Runbook.md`).
+- **Retired 2026-11-12:** `bakerrang-client` (legacy SPA), `bakerrang-portal` and `bakerrang-site-renderer` (marketing-site platform). See [Retirement cutover](#retirement-cutover-2026-11) for the one-time manual teardown.
 - Local data backing: `bakerrang-dev` retains only Firestore `(default)`, `bakerrang-dev-media-marketing`, and the developer IAM needed for ADC. Its former Cloud Run/LB/WIF deployment stack is historical inventory below.
 - Live images use the `bakerrang` Artifact Registry repository. The global external Application Load Balancer uses static IPv4 `34.8.236.85` (`bakerrang-web-ip`).
 
@@ -62,22 +63,20 @@ gcloud compute addresses create bakerrang-web-ip --project $ProjectId --global -
 gcloud compute addresses describe bakerrang-web-ip --project $ProjectId --global --format="value(address)"
 ```
 
-The current address is `34.8.236.85`. Reserve it before the Portal build because `CUSTOM_DOMAIN_IPV4_ADDRESS` is baked into that artifact.
+The current address is `34.8.236.85`.
 
 ## MAIN global external Application Load Balancer
 
-The MAIN load balancer is live on `34.8.236.85`. It uses four regional serverless NEGs and four global `EXTERNAL_MANAGED` backend services:
+The MAIN load balancer is live on `34.8.236.85`. Target topology (after the 2026-11 retirement cutover) is two regional serverless NEGs and two global `EXTERNAL_MANAGED` backend services:
 
 | Cloud Run service | Serverless NEG | Backend service |
 |---|---|---|
 | `bakerrang-api` | `bakerrang-api-neg` | `bakerrang-api-backend` |
-| `bakerrang-client` | `bakerrang-client-neg` | `bakerrang-client-backend` |
-| `bakerrang-portal` | `bakerrang-portal-neg` | `bakerrang-portal-backend` |
-| `bakerrang-site-renderer` | `bakerrang-renderer-neg` | `bakerrang-renderer-backend` |
+| `bakerrang-web-launcher` | `bakerrang-launcher-neg` | `bakerrang-launcher-backend` |
 
-The URL map `bakerrang-web-urlmap` routes `bakerrang.com` and `www.bakerrang.com` to Client, `api.bakerrang.com` to API, `portal.bakerrang.com` to Portal, and `sites.bakerrang.com` to Renderer. Its default backend is Renderer, so unmatched hosts—including verified customer domains—reach the multi-tenant renderer without a per-tenant URL-map rule.
+The URL map `bakerrang-web-urlmap` routes `api.bakerrang.com` to API and `bakerrang.com` / `www.bakerrang.com` to the Launcher, whose nginx config (`web/nginx/apps/launcher.conf`) answers those two hosts with a 301 to `https://launch.bakerrang.com/` (old `/passwords`, `/budget`, … paths go to the matching subdomain). The default backend is the Launcher. `launch.bakerrang.com` itself keeps its direct Cloud Run domain mapping.
 
-These are the reconstruction commands for the NEG, backend, and host-routing topology. They are not idempotent; describe existing resources before using them and do not run them as an update procedure.
+Reconstruction commands for the target topology. They are not idempotent; describe existing resources before using them and do not run them as an update procedure.
 
 ```powershell
 $P = "avian-cable-379805"
@@ -85,9 +84,7 @@ $R = "us-west1"
 
 foreach ($m in @(
   @{neg="bakerrang-api-neg";      svc="bakerrang-api"},
-  @{neg="bakerrang-client-neg";   svc="bakerrang-client"},
-  @{neg="bakerrang-portal-neg";   svc="bakerrang-portal"},
-  @{neg="bakerrang-renderer-neg"; svc="bakerrang-site-renderer"})) {
+  @{neg="bakerrang-launcher-neg"; svc="bakerrang-web-launcher"})) {
   gcloud compute network-endpoint-groups create $($m.neg) `
     --project=$P --region=$R --network-endpoint-type=serverless `
     --cloud-run-service=$($m.svc)
@@ -95,9 +92,7 @@ foreach ($m in @(
 
 foreach ($m in @(
   @{be="bakerrang-api-backend";      neg="bakerrang-api-neg"},
-  @{be="bakerrang-client-backend";   neg="bakerrang-client-neg"},
-  @{be="bakerrang-portal-backend";   neg="bakerrang-portal-neg"},
-  @{be="bakerrang-renderer-backend"; neg="bakerrang-renderer-neg"})) {
+  @{be="bakerrang-launcher-backend"; neg="bakerrang-launcher-neg"})) {
   gcloud compute backend-services create $($m.be) `
     --project=$P --global --load-balancing-scheme=EXTERNAL_MANAGED
   gcloud compute backend-services add-backend $($m.be) `
@@ -106,20 +101,46 @@ foreach ($m in @(
 }
 
 gcloud compute url-maps create bakerrang-web-urlmap `
-  --project=$P --global --default-service=bakerrang-renderer-backend
+  --project=$P --global --default-service=bakerrang-launcher-backend
 gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
-  --path-matcher-name=client-matcher --default-service=bakerrang-client-backend `
+  --path-matcher-name=apex-matcher --default-service=bakerrang-launcher-backend `
   --new-hosts="bakerrang.com,www.bakerrang.com"
 gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
   --path-matcher-name=api-matcher --default-service=bakerrang-api-backend `
   --new-hosts="api.bakerrang.com"
-gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
-  --path-matcher-name=portal-matcher --default-service=bakerrang-portal-backend `
-  --new-hosts="portal.bakerrang.com"
-gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
-  --path-matcher-name=sites-matcher --default-service=bakerrang-renderer-backend `
-  --new-hosts="sites.bakerrang.com"
 ```
+
+### Retirement cutover (2026-11)
+
+Before the cutover the URL map sent the apex to `bakerrang-client-backend`, `portal.` to `bakerrang-portal-backend`, `sites.` to `bakerrang-renderer-backend`, and **unmatched hosts (customer domains) to the Renderer by default**. One-time, operator-run, live-impact order — deploy the Launcher image containing `launcher.conf` first:
+
+```powershell
+# 1. Launcher behind the LB.
+gcloud compute network-endpoint-groups create bakerrang-launcher-neg --project=$P --region=$R `
+  --network-endpoint-type=serverless --cloud-run-service=bakerrang-web-launcher
+gcloud compute backend-services create bakerrang-launcher-backend --project=$P --global `
+  --load-balancing-scheme=EXTERNAL_MANAGED
+gcloud compute backend-services add-backend bakerrang-launcher-backend --project=$P --global `
+  --network-endpoint-group=bakerrang-launcher-neg --network-endpoint-group-region=$R
+
+# 2. Repoint the apex and the default away from the retired backends (edit, then import).
+gcloud compute url-maps export bakerrang-web-urlmap --project=$P --global --destination=urlmap.yaml
+#    In urlmap.yaml: defaultService and the client-matcher defaultService -> bakerrang-launcher-backend;
+#    delete the portal-matcher and sites-matcher path matchers and their hostRules.
+gcloud compute url-maps import bakerrang-web-urlmap --project=$P --global --source=urlmap.yaml
+curl.exe -sI https://bakerrang.com/passwords   # expect 301 -> https://passwords.bakerrang.com/
+
+# 3. Only then delete the retired backends, NEGs, and services.
+foreach ($b in "client","portal","renderer") {
+  gcloud compute backend-services delete "bakerrang-$b-backend" --project=$P --global
+  gcloud compute network-endpoint-groups delete "bakerrang-$b-neg" --project=$P --region=$R
+}
+foreach ($svc in "bakerrang-client","bakerrang-portal","bakerrang-site-renderer") {
+  gcloud run services delete $svc --project=$P --region=$R
+}
+```
+
+Also retire: the media bucket `gs://bakerrang-media-marketing`, the Secret Manager secrets `bakerrang-preview-token-secret`, `bakerrang-resend-api-key`, `bakerrang-internal-drain-token` (and any Blizzard secret), the lead-notification Cloud Scheduler job, any customer-domain certificate-map entries, and the API env vars `PORTAL_DOMAIN`, `SITE_RENDERER_DOMAIN`, `CLIENT_DOMAIN`, `MEDIA_BUCKET_NAME`, `PREVIEW_TOKEN_SECRET`, `RESEND_API_KEY`, `LEAD_NOTIFICATION_FROM`, `INTERNAL_DRAIN_TOKEN`, `BLIZZARD_CLIENT_*` (remove with `--remove-env-vars` / `--remove-secrets`, never a replacing update). Optionally prune the deployed Firestore indexes with `firebase deploy --only firestore:indexes --force`.
 
 ### MAIN TLS and frontends
 
@@ -159,15 +180,12 @@ gcloud compute forwarding-rules describe bakerrang-web-http --project=$P --globa
 
 ### Public DNS cutover
 
-Public DNS now points `portal.bakerrang.com`, `sites.bakerrang.com`, `custom.bakerrang.com` (the BakerRang-owned custom-domain test path), `api.bakerrang.com`, and apex `bakerrang.com` to `34.8.236.85`. The API's former Cloud Run domain-mapping CNAME and the former apex target were replaced during controlled DNS transactions. The apex has no AAAA record because this frontend is IPv4-only.
+Public DNS points `api.bakerrang.com` and apex `bakerrang.com` to `34.8.236.85`. (`portal.`, `sites.` and `custom.bakerrang.com` also pointed here until the 2026-11 retirement; delete those A records once their LB host rules are gone.) The API's former Cloud Run domain-mapping CNAME and the former apex target were replaced during controlled DNS transactions. The apex has no AAAA record because this frontend is IPv4-only.
 
 For reconstruction in a fresh zone, the desired A records are:
 
 ```powershell
 foreach ($HostName in @(
-  "portal.bakerrang.com.",
-  "sites.bakerrang.com.",
-  "custom.bakerrang.com.",
   "api.bakerrang.com.",
   "bakerrang.com.")) {
   gcloud dns record-sets create $HostName --zone=bakerrang-client --project=$P `
@@ -175,81 +193,19 @@ foreach ($HostName in @(
 }
 ```
 
-Against an existing zone, use a reviewed `gcloud dns record-sets transaction` that removes the exact current record and adds the desired A record atomically; do not issue the fresh-zone commands blindly. Direct Cloud Run domain mappings are no longer the product ingress architecture. Retire a legacy mapping only after the corresponding LB path, certificate, DNS propagation, and rollback window have all been verified.
+Against an existing zone, use a reviewed `gcloud dns record-sets transaction` that removes the exact current record and adds the desired A record atomically; do not issue the fresh-zone commands blindly. The apex and API use the LB; the consumer web subdomains use direct Cloud Run domain mappings.
 
 Deployment smoke intentionally uses each Cloud Run service's `status.url`. Public hostname smoke is a separate ingress check for DNS, load balancer, certificate, and routing health.
 
-## Media bucket
-
-```powershell
-$MediaBucket = "gs://bakerrang-media-marketing"
-gcloud storage buckets create $MediaBucket --project $ProjectId --location $Region --uniform-bucket-level-access
-gcloud storage buckets update $MediaBucket --uniform-bucket-level-access
-gcloud storage buckets add-iam-policy-binding $MediaBucket --member="allUsers" --role="roles/storage.objectViewer"
-gcloud storage buckets add-iam-policy-binding $MediaBucket --member="serviceAccount:$ApiSa" --role="roles/storage.objectAdmin"
-```
-
-UBLA is required. Public `objectViewer` is intentional for published marketing media; never place private application data in this bucket. The API runtime identity has `storage.objectAdmin` on this bucket only.
-
 ## Frontend runtime service account
 
-`bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com` is intended for Client, Portal, and Site Renderer and deliberately has essentially no project permissions.
+`bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com` is the runtime identity of every consumer web app and deliberately has essentially no project permissions.
 
 ```powershell
 gcloud iam service-accounts create bakerrang-frontend --project $ProjectId --display-name="BakerRang frontend runtime"
 ```
 
-Client, Portal, and Site Renderer now use `bakerrang-frontend@avian-cable-379805.iam.gserviceaccount.com`. The Client migration from the default Compute service account is complete. Normal CI does not pass `--service-account`; its runtime-SA-unchanged assertion protects this state.
-
-## Preview token
-
-The Secret Manager resource is `bakerrang-preview-token-secret`. Generate a value without printing it, write it without a newline, and delete the temporary file:
-
-```powershell
-$bytes = New-Object byte[] 48
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$rng.GetBytes($bytes)
-$rng.Dispose()
-$previewToken = [Convert]::ToBase64String($bytes)
-
-$tokenFile = [System.IO.Path]::GetTempFileName()
-try {
-  [System.IO.File]::WriteAllBytes($tokenFile, [System.Text.Encoding]::UTF8.GetBytes($previewToken))
-  gcloud secrets create bakerrang-preview-token-secret --project $ProjectId --replication-policy automatic
-  gcloud secrets versions add bakerrang-preview-token-secret --project $ProjectId --data-file $tokenFile
-}
-finally {
-  Remove-Item -LiteralPath $tokenFile -Force
-  $previewToken = $null
-  $bytes = $null
-}
-
-gcloud secrets add-iam-policy-binding bakerrang-preview-token-secret `
-  --project $ProjectId `
-  --member="serviceAccount:$ApiSa" `
-  --role="roles/secretmanager.secretAccessor"
-```
-
-Never expose the value in source, logs, shell history, or GitHub variables. If an accidental bad version is created, disable and destroy that specific version after confirming a correct active version exists.
-
-## Cloud Run bootstrap
-
-Portal and Renderer were bootstrapped as service skeletons so IAM could be scoped before production CI. Their placeholder images were temporary and were later replaced by digest-pinned CI images. A reconstruction pattern is:
-
-```powershell
-$BootstrapImage = "us-docker.pkg.dev/cloudrun/container/hello"
-gcloud run deploy bakerrang-portal `
-  --project $ProjectId --region $Region --image $BootstrapImage `
-  --service-account $FrontendSa `
-  --set-env-vars "PORTAL_BASE_URL=https://portal.bakerrang.com" --quiet
-
-gcloud run deploy bakerrang-site-renderer `
-  --project $ProjectId --region $Region --image $BootstrapImage `
-  --service-account $FrontendSa `
-  --set-env-vars "SITE_API_BASE_URL=https://api.bakerrang.com,SITE_PUBLIC_ORIGIN=https://sites.bakerrang.com,SITE_PUBLIC_INDEXING_ENABLED=true" --quiet
-```
-
-Confirm the placeholder image is still available. Do not run these against existing services without a reviewed plan: `gcloud run deploy` changes live state. Normal CI updates only the image digest and asserts the runtime service account is unchanged.
+Normal CI does not pass `--service-account`; its runtime-SA-unchanged assertion protects this state.
 
 ## MAIN WIF
 
@@ -275,7 +231,7 @@ gcloud artifacts repositories add-iam-policy-binding $Repository `
   --project $ProjectId --location $Region `
   --member="serviceAccount:$DeployerSa" --role="roles/artifactregistry.writer"
 
-@("bakerrang-api", "bakerrang-client", "bakerrang-portal", "bakerrang-site-renderer", "bakerrang-web-launcher") | ForEach-Object {
+@("bakerrang-api", "bakerrang-web-launcher", "bakerrang-web-storybook", "bakerrang-web-polyglot", "bakerrang-web-sign", "bakerrang-web-budget", "bakerrang-web-passwords", "bakerrang-web-account") | ForEach-Object {
   gcloud run services add-iam-policy-binding $_ --project $ProjectId --region $Region `
     --member="serviceAccount:$DeployerSa" --role="roles/run.developer"
 }
@@ -290,7 +246,7 @@ gcloud iam service-accounts add-iam-policy-binding $DeployerSa --project $Projec
   --member=$RepoPrincipalSet --role="roles/iam.workloadIdentityUser"
 ```
 
-There are **no project-level deployer roles**. Grants are `artifactregistry.writer` on AR repository `bakerrang`; `run.developer` on exactly the five services; `serviceAccountUser` on `bakerrang-api@` and `bakerrang-frontend@`; and `workloadIdentityUser` for the repository-ID principal set. Provider trust additionally fixes owner ID `2282360`, repository ID `715929041`, and `refs/heads/main`.
+There are **no project-level deployer roles**. Grants are `artifactregistry.writer` on AR repository `bakerrang`; `run.developer` on exactly the API and web-app services (the retired Client/Portal/Renderer grants go away with those services); `serviceAccountUser` on `bakerrang-api@` and `bakerrang-frontend@`; and `workloadIdentityUser` for the repository-ID principal set. Provider trust additionally fixes owner ID `2282360`, repository ID `715929041`, and `refs/heads/main`.
 
 ## GitHub Environment
 
@@ -305,16 +261,8 @@ The Environment is `production`; there is no `production` branch. It contains on
 | `GCP_DEPLOYER_SA` | `bakerrang-github-deployer@avian-cable-379805.iam.gserviceaccount.com` |
 | `AR_REPOSITORY` | `bakerrang` |
 | `API_SERVICE` | `bakerrang-api` |
-| `PORTAL_SERVICE` | `bakerrang-portal` |
-| `RENDERER_SERVICE` | `bakerrang-site-renderer` |
-| `CLIENT_SERVICE` | `bakerrang-client` |
 | `WEB_LAUNCHER_SERVICE` | `bakerrang-web-launcher` |
-| `NEXT_PUBLIC_API_BASE_URL` | `https://api.bakerrang.com` |
-| `NEXT_PUBLIC_SITE_PREVIEW_ORIGIN` | `https://sites.bakerrang.com` |
-| `NEXT_PUBLIC_SITE_API_BASE_URL` | `https://api.bakerrang.com` |
-| `CUSTOM_DOMAIN_IPV4_ADDRESS` | `34.8.236.85` |
-| `PORTAL_BASE_URL` | `https://portal.bakerrang.com` |
-| `CLIENT_BASE_URL` | `https://bakerrang.com` |
+| `NEXT_PUBLIC_API_BASE_URL` | `https://api.bakerrang.com` (API deployment smoke URL) |
 | `LAUNCHER_BASE_URL` | `https://launch.bakerrang.com` |
 | `VITE_API_BASE_URL` | `https://api.bakerrang.com` |
 
@@ -323,7 +271,7 @@ service is `bakerrang-web-launcher`. `WEB_LAUNCHER_SERVICE` carries that physica
 name into the reusable deployment workflow, while classifier outputs, manual
 deployment, concurrency, and rollback selectors retain the logical key.
 
-`CUSTOM_DOMAIN_CNAME_TARGET` is intentionally unset. There are no GitHub GCP credential secrets; authentication is short-lived OIDC/WIF.
+There are no GitHub GCP credential secrets; authentication is short-lived OIDC/WIF.
 
 The Launcher staging service, direct domain mapping, API `LAUNCHER_DOMAIN`, and
 resource-scoped deployer grant are operator-controlled prerequisites documented
@@ -340,40 +288,15 @@ gcloud run services describe bakerrang-api --project $ProjectId --region $Region
 gcloud run services describe bakerrang-api --project $ProjectId --region $Region --format="value(spec.template.spec.containers[0].env[].name)"
 gcloud projects get-iam-policy $ProjectId --format="table(bindings.role,bindings.members)"
 gcloud secrets list --project $ProjectId
-gcloud secrets get-iam-policy bakerrang-preview-token-secret --project $ProjectId
 ```
 
-Do not read secret version data during an audit. Do not blindly replace existing `bakerrang-api` environment variables. Preserve legacy configuration while adding platform-required configuration during a separately reviewed cutover.
-
-## Step 3 incremental API configuration
-
-The existing `bakerrang-api` service requires `NODE_ENV=production`. Step 3 adds these runtime values:
-
-| Kind | Name | Purpose |
-|---|---|---|
-| Secret Manager secret | `RESEND_API_KEY` | Resend API authentication for lead-notification delivery |
-| Secret Manager secret | `INTERNAL_DRAIN_TOKEN` | Exact bearer token for the internal Scheduler drain endpoint |
-| Plain environment variable | `LEAD_NOTIFICATION_FROM` | Verified Resend sender address |
-
-`MEDIA_BUCKET_NAME` remains an existing required API environment variable. It is used by streamed tenant export and by tenant deletion's tenant-scoped media-prefix cleanup. The API service account already has `roles/storage.objectAdmin` on `gs://bakerrang-media-marketing`, which covers those media reads and deletes. Its existing `roles/datastore.user` Firestore runtime grant covers the document deletes required by tenant `recursiveDelete`; verify that grant before changing IAM rather than replacing it.
-
-For the existing service, use only additive Cloud Run updates so unrelated values remain intact:
-
-```powershell
-gcloud run services update bakerrang-api `
-  --project $ProjectId --region $Region `
-  --update-env-vars "NODE_ENV=production,LEAD_NOTIFICATION_FROM=<verified-resend-sender>" `
-  --update-secrets "RESEND_API_KEY=bakerrang-resend-api-key:latest,INTERNAL_DRAIN_TOKEN=bakerrang-internal-drain-token:latest" `
-  --timeout 300s --memory 512Mi
-```
-
-The incremental procedure, including secret creation, Firestore-index readiness, Scheduler setup, live verification, and rollback considerations, is in the [Step 3 release runbook](../operations/step3-release.md). Do not use a configuration-replacing update for this existing service.
+Do not read secret version data during an audit. Do not blindly replace existing `bakerrang-api` environment variables.
 
 ## Live-impact boundary
 
-**SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, bucket, WIF, service skeletons, and IP reservation. They are still infrastructure changes requiring operator review.
+**SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, WIF, service skeletons, and IP reservation. They are still infrastructure changes requiring operator review.
 
-**CURRENT LIVE PATH:** the global load balancer, DNS/TLS cutover, Client runtime-SA migration, and selective automatic MAIN deployment are complete. Future changes to Cloud Run configuration, runtime identities, load-balancer resources, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
+**CURRENT LIVE PATH:** the global load balancer, DNS/TLS, and selective automatic MAIN deployment are in place. Future changes to Cloud Run configuration, runtime identities, load-balancer resources, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
 
 ## Historical DEV deployment inventory
 

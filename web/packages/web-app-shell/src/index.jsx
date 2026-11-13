@@ -5,19 +5,17 @@ import { useTheme } from '@bakerrang/web-theme'
 import { Button, IconButton, useDismiss } from '@bakerrang/web-ui'
 
 export const TOOL_DEFINITIONS = Object.freeze([
-  { id: 'storybook', name: 'Story Book', shortName: 'Story Book', accent: 'var(--accent-story)', legacyPath: '/storybook', liveUrl: 'https://storybook.bakerrang.com', envKey: 'VITE_STORYBOOK_URL' },
-  { id: 'polyglot', name: 'Polyglot', shortName: 'Polyglot', accent: 'var(--accent-polyglot)', legacyPath: '/polyglot/instant', liveUrl: 'https://polyglot.bakerrang.com', envKey: 'VITE_POLYGLOT_URL' },
-  { id: 'sign', name: 'Sign Language', shortName: 'Sign', accent: 'var(--accent-sign)', legacyPath: '/sign-language', liveUrl: 'https://sign.bakerrang.com', envKey: 'VITE_SIGN_URL' },
-  { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', legacyPath: '/budget', liveUrl: 'https://budget.bakerrang.com', envKey: 'VITE_BUDGET_URL' },
-  { id: 'wow', name: 'WoW Advisor', shortName: 'WoW', accent: 'var(--accent-wow)', legacyPath: '/wow', liveUrl: null, envKey: 'VITE_WOW_URL' },
-  { id: 'passwords', name: 'Passwords', shortName: 'Passwords', accent: 'var(--accent-passwords)', legacyPath: '/passwords', liveUrl: 'https://passwords.bakerrang.com', envKey: 'VITE_PASSWORDS_URL' }
+  { id: 'storybook', name: 'Story Book', shortName: 'Story Book', accent: 'var(--accent-story)', liveUrl: 'https://storybook.bakerrang.com', envKey: 'VITE_STORYBOOK_URL' },
+  { id: 'polyglot', name: 'Polyglot', shortName: 'Polyglot', accent: 'var(--accent-polyglot)', liveUrl: 'https://polyglot.bakerrang.com', envKey: 'VITE_POLYGLOT_URL' },
+  { id: 'sign', name: 'Sign Language', shortName: 'Sign', accent: 'var(--accent-sign)', liveUrl: 'https://sign.bakerrang.com', envKey: 'VITE_SIGN_URL' },
+  { id: 'budget', name: 'Budget', shortName: 'Budget', accent: 'var(--accent-budget)', liveUrl: 'https://budget.bakerrang.com', envKey: 'VITE_BUDGET_URL' },
+  { id: 'passwords', name: 'Passwords', shortName: 'Passwords', accent: 'var(--accent-passwords)', liveUrl: 'https://passwords.bakerrang.com', envKey: 'VITE_PASSWORDS_URL' }
 ])
 
 export const ACCOUNT_DEFINITION = Object.freeze({
   id: 'account',
   name: 'Account',
   accent: 'var(--accent-account)',
-  legacyPath: '/account',
   liveUrl: 'https://account.bakerrang.com',
   envKey: 'VITE_ACCOUNT_URL'
 })
@@ -29,11 +27,10 @@ export const LAUNCHER_DEFINITION = Object.freeze({
   envKey: 'VITE_LAUNCHER_URL'
 })
 
-export const resolveDestinations = (env = {}, legacyBase = 'https://bakerrang.com') => {
-  const base = String(env.VITE_LEGACY_CLIENT_BASE_URL || legacyBase).replace(/\/$/, '')
+export const resolveDestinations = (env = {}) => {
   const withUrl = (definition) => ({
     ...definition,
-    url: env[definition.envKey] || definition.liveUrl || `${base}${definition.legacyPath}`
+    url: env[definition.envKey] || definition.liveUrl
   })
   return {
     tools: TOOL_DEFINITIONS.map(withUrl),
@@ -56,7 +53,6 @@ export const ProductEmblem = ({ id, className = '' }) => {
     polyglot: <><path d='M4 8h10M9 6v2M11.5 8c0 4-3 7-7.5 8.5M7 12c.8 2.2 3 3.8 5.5 4.5' /><path d='M17 26l4.5-10L26 26M18.7 22h5.6' /></>,
     sign: <path vectorEffect='non-scaling-stroke' transform='translate(3.1 2.1) scale(1.05)' d='M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m0 0a4.49 4.49 0 0 1 .186-1.317' />,
     budget: <><circle cx='16' cy='16' r='11' /><path d='M16 9.4v13.2' /><path d='M19.3 12.2c-.9-1-2.1-1.5-3.4-1.5-2 0-3.5 1-3.5 2.7 0 1.6 1.3 2.3 3.7 2.8 2.4.5 3.7 1.3 3.7 2.9 0 1.8-1.6 2.8-3.7 2.8-1.5 0-2.9-.6-3.8-1.7' /></>,
-    wow: <><path d='M16 4l9 3v7c0 6-4 9.6-9 11.6C11 22.6 7 19 7 13V7z' /><path d='M16 10v9M12.5 13.5L16 11l3.5 2.5' /></>,
     passwords: <><rect x='7' y='14' width='18' height='12' rx='2.5' /><path d='M11 14v-3a5 5 0 0 1 10 0v3' /><circle cx='16' cy='20' r='1.6' /></>,
     account: <><circle cx='16' cy='12' r='5' /><path d='M6 26c1.8-4.4 5.6-6.5 10-6.5S24.2 21.6 26 26' /></>
   }[id]

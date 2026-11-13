@@ -1,7 +1,7 @@
 import express from 'express'
 import {
-  convertTextToSpeech, createVoice, deleteVoice, getDeepgramTranscription, getLanguages,
-  listVoices, setPrimaryVoice, updateVoice, userOwnsVoice, VoiceNotFoundError
+  convertTextToSpeech, createVoice, deleteVoice, getDeepgramTranscription,
+  listVoices, setPrimaryVoice, updateVoice, VoiceNotFoundError
 } from '../services/textToSpeechService.js'
 import { voiceUpload } from '../multer.js'
 import { userCanAccess } from '../client/firestoreClient.js'
@@ -22,32 +22,6 @@ router.get('/v1/voices', async (req, res, next) => {
   } catch (error) {
     logProviderError('voices', error)
     res.status(500).json({ error: 'Voices failed' })
-  }
-})
-
-router.get('/v1/languages', async (req, res, next) => {
-  try {
-    res.send(await getLanguages())
-  } catch (error) {
-    logProviderError('languages', error)
-    res.status(500).json({ error: 'Languages failed' })
-  }
-})
-
-router.get('/v1/convert/:voiceId', async (req, res, next) => {
-  const canModify = await userCanAccess(req.user.id, req.params.voiceId, 'voices')
-  if (!canModify) {
-    return res.status(403).json({ error: 'Not authorized to access this voice record.' })
-  }
-
-  try {
-    const ttsResponse = await convertTextToSpeech(req.query.prompt, req.params.voiceId)
-    res.setHeader('Content-Type', 'audio/mpeg')
-    ttsResponse.data.pipe(res)
-  } catch (error) {
-    logProviderError('speech-legacy', error)
-    if (res.headersSent) return res.destroy()
-    res.status(500).json({ error: 'Speech failed' })
   }
 })
 
@@ -99,28 +73,14 @@ router.post('/google/transcribe', async (req, res, next) => {
   }
 })
 
-const LEGACY_FORBIDDEN = { error: 'Not authorized to access this voice record.' }
+// Foreign or missing voices answer 403 on delete (the Account app relies on it).
+const VOICE_FORBIDDEN = { error: 'Not authorized to access this voice record.' }
 
-// Create (no `id`) or, for the legacy client, edit-with-files (an `id` in the body).
-// Only name, description, consent and the sample files are read from the request.
+// Create a cloned voice. Only name, description, consent and the sample files
+// are read from the request.
 router.post('/v1/voice', voiceCreateLimiter, voiceUpload, async (req, res) => {
   const body = isPlainObject(req.body) ? req.body : {}
   const files = req.files || []
-
-  if (body.id !== undefined && body.id !== '') {
-    if (!validVoiceId(body.id)) return res.status(400).json({ error: 'Invalid voice', field: 'name' })
-    const name = cleanVoiceName(body.name)
-    const description = cleanVoiceDescription(body.description)
-    if (name === null) return res.status(400).json({ error: 'Invalid voice', field: 'name' })
-    if (description === null) return res.status(400).json({ error: 'Invalid voice', field: 'description' })
-    try {
-      return res.json(await updateVoice(req.user.id, body.id, { name, description }, files))
-    } catch (error) {
-      if (error instanceof VoiceNotFoundError) return res.status(403).json(LEGACY_FORBIDDEN)
-      logProviderError('voice-save', error.cause || error)
-      return res.status(500).json({ error: 'Voice save failed' })
-    }
-  }
 
   const name = cleanVoiceName(body.name)
   if (name === null) return res.status(400).json({ error: 'Invalid voice', field: 'name' })
@@ -168,40 +128,13 @@ router.put('/v1/voices/primary', voiceEditLimiter, async (req, res) => {
   }
 })
 
-// Legacy client only ("Update All"); removed at the final cleanup. Each voice is
-// ownership-checked and only name, description and isPrimary are ever stored.
-router.put('/v1/voices', voiceEditLimiter, async (req, res) => {
-  if (!req.body.voices || !Array.isArray(req.body.voices)) {
-    return res.status(400).json({ error: 'Invalid input, expected an array of voices.' })
-  }
-
-  const results = await Promise.allSettled(req.body.voices.map(voice => processVoiceUpdate(req.user.id, voice)))
-  const errors = results.filter(result => result.status === 'rejected').map(result => result.reason)
-  const successes = results.filter(result => result.status === 'fulfilled').map(result => result.value)
-
-  errors.forEach((error) => logProviderError('voice-update', error.cause || error))
-  res.json({
-    successes,
-    warnings: errors.length > 0 ? errors.map(() => ({ error: 'Voice update failed' })) : undefined
-  })
-})
-
-const processVoiceUpdate = async (userId, voice) => {
-  if (!isPlainObject(voice) || !validVoiceId(voice.id)) throw new Error('Voice record is missing an identifier.')
-  const name = cleanVoiceName(voice.name)
-  const description = cleanVoiceDescription(voice.description)
-  if (name === null || description === null) throw new Error('Voice record is invalid.')
-  if (!await userOwnsVoice(userId, voice.id)) throw new Error('Not authorized to access this voice record.')
-  return updateVoice(userId, voice.id, { name, description, isPrimary: voice.isPrimary === true })
-}
-
 router.delete('/v1/voice/:voiceId', voiceEditLimiter, async (req, res) => {
   if (!validVoiceId(req.params.voiceId)) return res.status(400).json({ error: 'Invalid voice' })
   try {
     await deleteVoice(req.user.id, req.params.voiceId)
     res.status(200).json({ success: true, message: `Successfully deleted voice ${req.params.voiceId}` })
   } catch (error) {
-    if (error instanceof VoiceNotFoundError) return res.status(403).json(LEGACY_FORBIDDEN)
+    if (error instanceof VoiceNotFoundError) return res.status(403).json(VOICE_FORBIDDEN)
     logProviderError('voice-delete', error.cause || error)
     res.status(502).json({ error: "Voice couldn't be deleted" })
   }

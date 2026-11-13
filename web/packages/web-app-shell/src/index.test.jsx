@@ -17,23 +17,21 @@ vi.mock('@bakerrang/web-theme', () => ({
 afterEach(cleanup)
 
 describe('destination registry', () => {
-  it('keeps unextracted product on its verified legacy route before cutover', () => {
+  it('points every tool at its own subdomain', () => {
     const destinations = resolveDestinations({})
     expect(Object.fromEntries(destinations.tools.map((tool) => [tool.id, tool.url]))).toEqual({
       storybook: 'https://storybook.bakerrang.com',
       polyglot: 'https://polyglot.bakerrang.com',
       sign: 'https://sign.bakerrang.com',
       budget: 'https://budget.bakerrang.com',
-      wow: 'https://bakerrang.com/wow',
       passwords: 'https://passwords.bakerrang.com'
     })
     expect(destinations.account.url).toBe('https://account.bakerrang.com')
     expect(destinations.launcher.url).toBe('https://launch.bakerrang.com')
   })
 
-  it('honors explicit local/test overrides and then the legacy-base override', () => {
+  it('honors explicit local/test overrides', () => {
     const destinations = resolveDestinations({
-      VITE_LEGACY_CLIENT_BASE_URL: 'http://localhost:5173/',
       VITE_STORYBOOK_URL: 'http://localhost:3010',
       VITE_POLYGLOT_URL: 'http://localhost:3020',
       VITE_LAUNCHER_URL: 'http://localhost:3000'

@@ -4,13 +4,8 @@ import {
   createBill,
   createPayday,
   deleteBill,
-  deleteItem,
   deleteNewPayday,
-  deletePayday,
-  getBudget,
   getPlan,
-  saveItem,
-  savePayday,
   updateBill,
   updatePayday
 } from '../services/budgetService.js'
@@ -86,53 +81,6 @@ router.delete('/bills/:id', async (req, res) => {
   } catch (error) {
     safeLog('delete bill', error)
     sendError(res, error, 'Failed to delete budget item')
-  }
-})
-
-router.get('/', async (req, res) => {
-  try {
-    res.json(await getBudget(req.user.id))
-  } catch (error) {
-    safeLog('legacy load', error)
-    res.status(500).json({ error: 'Failed to fetch budget data' })
-  }
-})
-
-router.post('/item', async (req, res) => {
-  try {
-    res.json(await saveItem(req.user.id, req.body))
-  } catch (error) {
-    safeLog('legacy save item', error)
-    res.status(500).json({ error: 'Failed to save budget item' })
-  }
-})
-
-router.delete('/item/:id', async (req, res) => {
-  try {
-    await deleteItem(req.user.id, req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    safeLog('legacy delete item', error)
-    res.status(500).json({ error: 'Failed to delete budget item' })
-  }
-})
-
-router.post('/payday', async (req, res) => {
-  try {
-    res.json(await savePayday(req.user.id, req.body))
-  } catch (error) {
-    safeLog('legacy save payday', error)
-    res.status(500).json({ error: 'Failed to save payday' })
-  }
-})
-
-router.delete('/payday/:id', async (req, res) => {
-  try {
-    await deletePayday(req.user.id, req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    safeLog('legacy delete payday', error)
-    res.status(500).json({ error: 'Failed to delete payday' })
   }
 })
 

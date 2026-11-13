@@ -12,9 +12,6 @@ on:
         type: choice
         options:
           - api
-          - portal
-          - renderer
-          - client
           - web-launcher
           - web-storybook
           - web-polyglot
@@ -35,9 +32,6 @@ jobs:
       contents: read
     outputs:
       deploy_api: ${{ steps.classify.outputs.deploy_api }}
-      deploy_portal: ${{ steps.classify.outputs.deploy_portal }}
-      deploy_renderer: ${{ steps.classify.outputs.deploy_renderer }}
-      deploy_client: ${{ steps.classify.outputs.deploy_client }}
       deploy_web_launcher: ${{ steps.classify.outputs.deploy_web_launcher }}
       deploy_web_storybook: ${{ steps.classify.outputs.deploy_web_storybook }}
       deploy_web_polyglot: ${{ steps.classify.outputs.deploy_web_polyglot }}
@@ -104,49 +98,6 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-  validate-platform:
-    name: Validate Platform
-    needs: changes
-    if: needs.changes.outputs.deploy_portal == 'true' || needs.changes.outputs.deploy_renderer == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: platform
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: platform/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-
-  validate-client:
-    name: Validate Client
-    needs: changes
-    if: needs.changes.outputs.deploy_client == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: client
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-
   validate-web:
     name: Validate Shared Web
     needs: changes
@@ -199,48 +150,6 @@ jobs:
     uses: ./.github/workflows/_deploy-cloud-run.yml
     with:
       service: api
-      environment: production
-      image_tag: git-${{ github.sha }}
-      smoke_via_service_url: true
-
-  deploy-portal:
-    name: Deploy Portal
-    needs: [changes, validate-platform]
-    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_portal == 'true' && needs.validate-platform.result == 'success'
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/_deploy-cloud-run.yml
-    with:
-      service: portal
-      environment: production
-      image_tag: git-${{ github.sha }}
-      smoke_via_service_url: true
-
-  deploy-renderer:
-    name: Deploy Renderer
-    needs: [changes, validate-platform]
-    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_renderer == 'true' && needs.validate-platform.result == 'success'
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/_deploy-cloud-run.yml
-    with:
-      service: renderer
-      environment: production
-      image_tag: git-${{ github.sha }}
-      smoke_via_service_url: true
-
-  deploy-client:
-    name: Deploy Client
-    needs: [changes, validate-client]
-    if: always() && github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.deploy_client == 'true' && needs.validate-client.result == 'success'
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/_deploy-cloud-run.yml
-    with:
-      service: client
       environment: production
       image_tag: git-${{ github.sha }}
       smoke_via_service_url: true
@@ -381,13 +290,8 @@ jobs:
     needs:
       - changes
       - validate-api
-      - validate-platform
-      - validate-client
       - validate-web
       - deploy-api
-      - deploy-portal
-      - deploy-renderer
-      - deploy-client
       - deploy-web-launcher
       - deploy-web-storybook
       - deploy-web-polyglot
@@ -407,9 +311,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           DEPLOY_API: ${{ needs.changes.outputs.deploy_api }}
-          DEPLOY_PORTAL: ${{ needs.changes.outputs.deploy_portal }}
-          DEPLOY_RENDERER: ${{ needs.changes.outputs.deploy_renderer }}
-          DEPLOY_CLIENT: ${{ needs.changes.outputs.deploy_client }}
           DEPLOY_WEB_LAUNCHER: ${{ needs.changes.outputs.deploy_web_launcher }}
           DEPLOY_WEB_STORYBOOK: ${{ needs.changes.outputs.deploy_web_storybook }}
           DEPLOY_WEB_POLYGLOT: ${{ needs.changes.outputs.deploy_web_polyglot }}
@@ -418,13 +319,8 @@ jobs:
           DEPLOY_WEB_PASSWORDS: ${{ needs.changes.outputs.deploy_web_passwords }}
           DEPLOY_WEB_ACCOUNT: ${{ needs.changes.outputs.deploy_web_account }}
           VALIDATE_API_RESULT: ${{ needs.validate-api.result }}
-          VALIDATE_PLATFORM_RESULT: ${{ needs.validate-platform.result }}
-          VALIDATE_CLIENT_RESULT: ${{ needs.validate-client.result }}
           VALIDATE_WEB_RESULT: ${{ needs.validate-web.result }}
           API_RESULT: ${{ needs.deploy-api.result }}
-          PORTAL_RESULT: ${{ needs.deploy-portal.result }}
-          RENDERER_RESULT: ${{ needs.deploy-renderer.result }}
-          CLIENT_RESULT: ${{ needs.deploy-client.result }}
           WEB_LAUNCHER_RESULT: ${{ needs.deploy-web-launcher.result }}
           WEB_STORYBOOK_RESULT: ${{ needs.deploy-web-storybook.result }}
           WEB_POLYGLOT_RESULT: ${{ needs.deploy-web-polyglot.result }}
@@ -459,22 +355,6 @@ jobs:
           fi
           if [[ "$DEPLOY_API" == "true" && ( "$VALIDATE_API_RESULT" != "success" || "$API_RESULT" != "success" ) ]]; then
             echo "Affected API validation/deployment did not succeed: validation=$VALIDATE_API_RESULT deployment=$API_RESULT" >&2
-            exit 1
-          fi
-          if [[ ( "$DEPLOY_PORTAL" == "true" || "$DEPLOY_RENDERER" == "true" ) && "$VALIDATE_PLATFORM_RESULT" != "success" ]]; then
-            echo "Affected Platform validation did not succeed: $VALIDATE_PLATFORM_RESULT" >&2
-            exit 1
-          fi
-          if [[ "$DEPLOY_PORTAL" == "true" && "$PORTAL_RESULT" != "success" ]]; then
-            echo "Affected Portal deployment did not succeed: $PORTAL_RESULT" >&2
-            exit 1
-          fi
-          if [[ "$DEPLOY_RENDERER" == "true" && "$RENDERER_RESULT" != "success" ]]; then
-            echo "Affected Renderer deployment did not succeed: $RENDERER_RESULT" >&2
-            exit 1
-          fi
-          if [[ "$DEPLOY_CLIENT" == "true" && ( "$VALIDATE_CLIENT_RESULT" != "success" || "$CLIENT_RESULT" != "success" ) ]]; then
-            echo "Affected Client validation/deployment did not succeed: validation=$VALIDATE_CLIENT_RESULT deployment=$CLIENT_RESULT" >&2
             exit 1
           fi
           if [[ "$DEPLOY_WEB_LAUNCHER" == "true" && ( "$VALIDATE_WEB_RESULT" != "success" || "$WEB_LAUNCHER_RESULT" != "success" ) ]]; then

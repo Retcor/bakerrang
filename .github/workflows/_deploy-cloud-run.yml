@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: Logical service (api, portal, renderer, client, web-launcher, web-storybook, web-polyglot, web-sign, web-budget, web-passwords, or web-account)
+        description: Logical service (api, web-launcher, web-storybook, web-polyglot, web-sign, web-budget, web-passwords, or web-account)
         required: true
         type: string
       environment:
@@ -39,9 +39,6 @@ jobs:
       DEPLOYER_SA: ${{ vars.GCP_DEPLOYER_SA }}
       AR_REPOSITORY: ${{ vars.AR_REPOSITORY }}
       API_SERVICE: ${{ vars.API_SERVICE }}
-      PORTAL_SERVICE: ${{ vars.PORTAL_SERVICE }}
-      RENDERER_SERVICE: ${{ vars.RENDERER_SERVICE }}
-      CLIENT_SERVICE: ${{ vars.CLIENT_SERVICE }}
       WEB_LAUNCHER_SERVICE: ${{ vars.WEB_LAUNCHER_SERVICE }}
       WEB_STORYBOOK_SERVICE: ${{ vars.WEB_STORYBOOK_SERVICE }}
       WEB_POLYGLOT_SERVICE: ${{ vars.WEB_POLYGLOT_SERVICE }}
@@ -50,12 +47,6 @@ jobs:
       WEB_PASSWORDS_SERVICE: ${{ vars.WEB_PASSWORDS_SERVICE }}
       WEB_ACCOUNT_SERVICE: ${{ vars.WEB_ACCOUNT_SERVICE }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-      NEXT_PUBLIC_SITE_PREVIEW_ORIGIN: ${{ vars.NEXT_PUBLIC_SITE_PREVIEW_ORIGIN }}
-      NEXT_PUBLIC_SITE_API_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_API_BASE_URL }}
-      CUSTOM_DOMAIN_IPV4_ADDRESS: ${{ vars.CUSTOM_DOMAIN_IPV4_ADDRESS }}
-      CUSTOM_DOMAIN_CNAME_TARGET: ${{ vars.CUSTOM_DOMAIN_CNAME_TARGET }}
-      PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
-      CLIENT_BASE_URL: ${{ vars.CLIENT_BASE_URL }}
       LAUNCHER_BASE_URL: ${{ vars.LAUNCHER_BASE_URL }}
       STORYBOOK_BASE_URL: ${{ vars.STORYBOOK_BASE_URL }}
       POLYGLOT_BASE_URL: ${{ vars.POLYGLOT_BASE_URL }}
@@ -150,24 +141,6 @@ jobs:
               smoke_path="/health"
               smoke_url="${NEXT_PUBLIC_API_BASE_URL%/}/health"
               ;;
-            portal)
-              service_name="$PORTAL_SERVICE"
-              image_name="portal"
-              smoke_path="/"
-              smoke_url="${PORTAL_BASE_URL%/}/"
-              ;;
-            renderer)
-              service_name="$RENDERER_SERVICE"
-              image_name="site-renderer"
-              smoke_path="/robots.txt"
-              smoke_url="${NEXT_PUBLIC_SITE_PREVIEW_ORIGIN%/}/robots.txt"
-              ;;
-            client)
-              service_name="$CLIENT_SERVICE"
-              image_name="client"
-              smoke_path="/"
-              smoke_url="${CLIENT_BASE_URL%/}/"
-              ;;
             web-launcher)
               service_name="$WEB_LAUNCHER_SERVICE"
               image_name="web-launcher"
@@ -261,29 +234,6 @@ jobs:
             case "$LOGICAL_SERVICE" in
               api)
                 docker build "${common_args[@]}" server
-                ;;
-              portal)
-                [[ -n "$NEXT_PUBLIC_API_BASE_URL" && -n "$NEXT_PUBLIC_SITE_PREVIEW_ORIGIN" && -n "$CUSTOM_DOMAIN_IPV4_ADDRESS" ]]
-                build_args=(
-                  --file platform/apps/portal/Dockerfile
-                  --build-arg "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
-                  --build-arg "NEXT_PUBLIC_SITE_PREVIEW_ORIGIN=$NEXT_PUBLIC_SITE_PREVIEW_ORIGIN"
-                  --build-arg "CUSTOM_DOMAIN_IPV4_ADDRESS=$CUSTOM_DOMAIN_IPV4_ADDRESS"
-                )
-                if [[ -n "$CUSTOM_DOMAIN_CNAME_TARGET" ]]; then
-                  build_args+=(--build-arg "CUSTOM_DOMAIN_CNAME_TARGET=$CUSTOM_DOMAIN_CNAME_TARGET")
-                fi
-                docker build "${common_args[@]}" "${build_args[@]}" platform
-                ;;
-              renderer)
-                [[ -n "$NEXT_PUBLIC_SITE_API_BASE_URL" ]]
-                docker build "${common_args[@]}" \
-                  --file platform/apps/site-renderer/Dockerfile \
-                  --build-arg "NEXT_PUBLIC_SITE_API_BASE_URL=$NEXT_PUBLIC_SITE_API_BASE_URL" \
-                  platform
-                ;;
-              client)
-                docker build "${common_args[@]}" client
                 ;;
               web-launcher)
                 [[ -n "$VITE_API_BASE_URL" ]]
@@ -443,9 +393,7 @@ jobs:
             if [[ "$status" == "200" ]]; then
               case "$LOGICAL_SERVICE" in
                 api) [[ "$(tr -d '\r\n' < "$body_file")" == "Healthy" ]] && valid=true ;;
-                portal) valid=true ;;
-                renderer) grep -qi 'User-agent' "$body_file" && valid=true ;;
-                client|web-launcher|web-storybook|web-polyglot|web-sign|web-budget|web-passwords|web-account) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
+                web-launcher|web-storybook|web-polyglot|web-sign|web-budget|web-passwords|web-account) grep -Fq '<div id="root"' "$body_file" && valid=true ;;
               esac
             fi
             if [[ "$valid" == "true" ]]; then

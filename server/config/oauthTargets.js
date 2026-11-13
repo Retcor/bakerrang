@@ -1,6 +1,4 @@
 const TARGET_ENV_KEYS = Object.freeze({
-  client: 'CLIENT_DOMAIN',
-  portal: 'PORTAL_DOMAIN',
   launcher: 'LAUNCHER_DOMAIN',
   storybook: 'STORYBOOK_DOMAIN',
   polyglot: 'POLYGLOT_DOMAIN',
@@ -16,18 +14,21 @@ const httpError = (status, message) => {
   return error
 }
 
+// Used when a login starts without ?target= (every web app passes one).
+export const DEFAULT_OAUTH_TARGET = 'launcher'
+
 export const isValidOAuthTarget = (target) =>
   Object.hasOwn(TARGET_ENV_KEYS, target)
 
 export const oauthTargetFromQuery = (target) => {
-  if (target === undefined) return 'client'
+  if (target === undefined) return DEFAULT_OAUTH_TARGET
   if (!isValidOAuthTarget(target)) {
     throw httpError(400, 'Invalid OAuth target')
   }
   return target
 }
 
-export const resolveOAuthTarget = (target = 'client', env = process.env) => {
+export const resolveOAuthTarget = (target = DEFAULT_OAUTH_TARGET, env = process.env) => {
   if (!isValidOAuthTarget(target)) {
     throw httpError(500, 'Invalid stored OAuth target')
   }
@@ -43,7 +44,7 @@ export const resolveOAuthTarget = (target = 'client', env = process.env) => {
 export const consumeOAuthTarget = (session, env = process.env) => {
   const target = session && session.oauthTarget !== undefined
     ? session.oauthTarget
-    : 'client'
+    : DEFAULT_OAUTH_TARGET
   if (session) delete session.oauthTarget
   return resolveOAuthTarget(target, env)
 }

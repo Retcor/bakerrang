@@ -9,9 +9,6 @@ on:
         type: choice
         options:
           - api
-          - portal
-          - renderer
-          - client
           - web-launcher
           - web-storybook
           - web-polyglot

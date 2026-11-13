@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../client/firestoreClient.js'
-import { MAX_BILLS, MAX_PAYDAYS, SERVER_OWNED_FIELDS, billToStored, normalizeBill, normalizePayday, normalizePlan, paydayToStored, stripServerOwned, validateBill, validatePayday } from '../domain/budgetPlan.js'
+import { MAX_BILLS, MAX_PAYDAYS, billToStored, normalizeBill, normalizePayday, normalizePlan, paydayToStored, validateBill, validatePayday } from '../domain/budgetPlan.js'
 
 const COLLECTION = 'budget'
 let firestore = db
@@ -11,11 +11,6 @@ const failure = (status, error, extra = {}) => Object.assign(new Error(error), {
 const arrays = (data = {}) => ({ items: Array.isArray(data.items) ? data.items : [], paydays: Array.isArray(data.paydays) ? data.paydays : [] })
 const refFor = (userId) => firestore.collection(COLLECTION).doc(userId)
 const normalizedByKind = (kind, stored, paydays) => kind === 'payday' ? normalizePayday(stored) : normalizeBill(stored, new Set(paydays.map(({ id }) => id)))
-
-export const getBudget = async (userId) => {
-  const doc = await refFor(userId).get()
-  return doc.exists ? arrays(doc.data()) : { items: [], paydays: [] }
-}
 
 export const getPlan = async (userId) => {
   const doc = await refFor(userId).get()
@@ -101,36 +96,3 @@ export const updatePayday = (userId, id, body) => updateEntry(userId, 'payday', 
 export const updateBill = (userId, id, body) => updateEntry(userId, 'bill', id, body)
 export const deleteNewPayday = (userId, id) => deleteEntry(userId, 'payday', id)
 export const deleteBill = (userId, id) => deleteEntry(userId, 'bill', id)
-
-const saveLegacy = async (userId, listName, body) => firestore.runTransaction(async (transaction) => {
-  const ref = refFor(userId)
-  const snapshot = await transaction.get(ref)
-  const data = arrays(snapshot.exists ? snapshot.data() : {})
-  const list = data[listName]
-  const clean = stripServerOwned(body)
-  const index = list.findIndex((entry) => entry.id === body?.id)
-  const next = [...list]
-  if (index >= 0) {
-    const existing = list[index]
-    const serverOwned = Object.fromEntries(SERVER_OWNED_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(existing, field)).map((field) => [field, existing[field]]))
-    next[index] = { ...clean, ...serverOwned, rev: (Number.isInteger(existing.rev) && existing.rev >= 0 ? existing.rev : 0) + 1 }
-  } else {
-    next.push({ ...clean, rev: 1 })
-  }
-  transaction.set(ref, { userId, items: listName === 'items' ? next : data.items, paydays: listName === 'paydays' ? next : data.paydays }, { merge: true })
-  return body
-})
-
-const deleteLegacy = async (userId, listName, id) => firestore.runTransaction(async (transaction) => {
-  const ref = refFor(userId)
-  const snapshot = await transaction.get(ref)
-  if (!snapshot.exists) return
-  const data = arrays(snapshot.data())
-  const next = data[listName].filter((entry) => entry.id !== id)
-  transaction.set(ref, { userId, items: listName === 'items' ? next : data.items, paydays: listName === 'paydays' ? next : data.paydays }, { merge: true })
-})
-
-export const saveItem = (userId, item) => saveLegacy(userId, 'items', item)
-export const savePayday = (userId, payday) => saveLegacy(userId, 'paydays', payday)
-export const deleteItem = (userId, id) => deleteLegacy(userId, 'items', id)
-export const deletePayday = (userId, id) => deleteLegacy(userId, 'paydays', id)

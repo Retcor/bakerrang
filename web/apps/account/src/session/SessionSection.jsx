@@ -14,7 +14,7 @@ export const SessionSection = ({ user, signOut, onSignOut }) => {
       <div className='ac-row'>
         <div className='ac-row__label'>App settings</div>
         <div className='ac-row__value'>
-          <p>Vault lock timing and browser-extension autofill are in Passwords.</p>
+          <p>Vault lock timing is in Passwords.</p>
           <a className='ac-link' href={passwordsUrl}>Open Vault settings in Passwords<Icon name='arrow' /></a>
         </div>
       </div>
