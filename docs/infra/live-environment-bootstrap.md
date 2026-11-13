@@ -21,10 +21,10 @@ Use `gcloud` authenticated as an operator with permission to create these resour
 
 ## Architecture
 
-- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api` plus the consumer web apps `bakerrang-web-{launcher,storybook,polyglot,sign,budget,passwords,account}`. The web apps (other than the apex) use direct Cloud Run domain mappings (see each `docs/apps/*-Runbook.md`).
+- MAIN/live: `avian-cable-379805` (`307696703523`), region `us-west1`. The Cloud Run service set is `bakerrang-api` plus the consumer web apps `bakerrang-web-{launcher,storybook,polyglot,sign,budget,passwords,account}`. **Every public host — including the apex `bakerrang.com` / `www.` and `api.` — uses a direct Cloud Run domain mapping** (see [Public ingress](#public-ingress-cloud-run-domain-mappings)).
 - **Retired 2026-11-12:** `bakerrang-client` (legacy SPA), `bakerrang-portal` and `bakerrang-site-renderer` (marketing-site platform). See [Retirement cutover](#retirement-cutover-2026-11) for the one-time manual teardown.
 - Local data backing: `bakerrang-dev` retains only Firestore `(default)`, `bakerrang-dev-media-marketing`, and the developer IAM needed for ADC. Its former Cloud Run/LB/WIF deployment stack is historical inventory below.
-- Live images use the `bakerrang` Artifact Registry repository. The global external Application Load Balancer uses static IPv4 `34.8.236.85` (`bakerrang-web-ip`).
+- Live images use the `bakerrang` Artifact Registry repository. The former global external Application Load Balancer (static IPv4 `34.8.236.85`, `bakerrang-web-ip`) has been **decommissioned**: no URL maps, backends, NEGs, forwarding rules, or reserved global addresses remain (verified 2026-11-12).
 
 ## APIs
 
@@ -56,146 +56,55 @@ The steady-state policy keeps immutable tags enabled, intentionally retains tagg
 `git-<SHA>` rollback images at the current scale, and configures no cleanup policy.
 See the [MAIN/live operations guide](../operations/live-ops.md#artifact-registry-retention).
 
-## Global static IP
+## Public ingress: Cloud Run domain mappings
+
+All public hosts are Cloud Run domain mappings in `us-west1` (Google-managed certificates). Subdomains use a
+`CNAME` to `ghs.googlehosted.com.`; the apex uses Cloud Run's fixed `A`/`AAAA` records
+(`216.239.32/34/36/38.21`, `2001:4860:4802:32/34/36/38::15`) in the `bakerrang-client` Cloud DNS zone.
+
+| Host | Cloud Run service |
+|---|---|
+| `api.bakerrang.com` | `bakerrang-api` |
+| `bakerrang.com`, `www.bakerrang.com` | `bakerrang-web-launcher` (target; see below) — `web/nginx/apps/launcher.conf` answers these hosts with a 301 to `https://launch.bakerrang.com/`, old paths going to their subdomain |
+| `launch.` / `storybook.` / `polyglot.` / `sign.` / `budget.` / `passwords.` / `account.bakerrang.com` | `bakerrang-web-<app>` |
+
+Cloud Run domain mappings pass the original `Host` header to the container, which is what lets the Launcher's nginx tell the apex apart from `launch.`.
 
 ```powershell
-gcloud compute addresses create bakerrang-web-ip --project $ProjectId --global --ip-version IPV4
-gcloud compute addresses describe bakerrang-web-ip --project $ProjectId --global --format="value(address)"
+gcloud beta run domain-mappings list --project $ProjectId --region $Region
 ```
 
-The current address is `34.8.236.85`.
-
-## MAIN global external Application Load Balancer
-
-The MAIN load balancer is live on `34.8.236.85`. Target topology (after the 2026-11 retirement cutover) is two regional serverless NEGs and two global `EXTERNAL_MANAGED` backend services:
-
-| Cloud Run service | Serverless NEG | Backend service |
-|---|---|---|
-| `bakerrang-api` | `bakerrang-api-neg` | `bakerrang-api-backend` |
-| `bakerrang-web-launcher` | `bakerrang-launcher-neg` | `bakerrang-launcher-backend` |
-
-The URL map `bakerrang-web-urlmap` routes `api.bakerrang.com` to API and `bakerrang.com` / `www.bakerrang.com` to the Launcher, whose nginx config (`web/nginx/apps/launcher.conf`) answers those two hosts with a 301 to `https://launch.bakerrang.com/` (old `/passwords`, `/budget`, … paths go to the matching subdomain). The default backend is the Launcher. `launch.bakerrang.com` itself keeps its direct Cloud Run domain mapping.
-
-Reconstruction commands for the target topology. They are not idempotent; describe existing resources before using them and do not run them as an update procedure.
-
-```powershell
-$P = "avian-cable-379805"
-$R = "us-west1"
-
-foreach ($m in @(
-  @{neg="bakerrang-api-neg";      svc="bakerrang-api"},
-  @{neg="bakerrang-launcher-neg"; svc="bakerrang-web-launcher"})) {
-  gcloud compute network-endpoint-groups create $($m.neg) `
-    --project=$P --region=$R --network-endpoint-type=serverless `
-    --cloud-run-service=$($m.svc)
-}
-
-foreach ($m in @(
-  @{be="bakerrang-api-backend";      neg="bakerrang-api-neg"},
-  @{be="bakerrang-launcher-backend"; neg="bakerrang-launcher-neg"})) {
-  gcloud compute backend-services create $($m.be) `
-    --project=$P --global --load-balancing-scheme=EXTERNAL_MANAGED
-  gcloud compute backend-services add-backend $($m.be) `
-    --project=$P --global --network-endpoint-group=$($m.neg) `
-    --network-endpoint-group-region=$R
-}
-
-gcloud compute url-maps create bakerrang-web-urlmap `
-  --project=$P --global --default-service=bakerrang-launcher-backend
-gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
-  --path-matcher-name=apex-matcher --default-service=bakerrang-launcher-backend `
-  --new-hosts="bakerrang.com,www.bakerrang.com"
-gcloud compute url-maps add-path-matcher bakerrang-web-urlmap --project=$P --global `
-  --path-matcher-name=api-matcher --default-service=bakerrang-api-backend `
-  --new-hosts="api.bakerrang.com"
-```
+Unrelated services share the project and zone (`danbaker.info`, `claude-exam.`, `plex-requests.`); leave them alone.
 
 ### Retirement cutover (2026-11)
 
-Before the cutover the URL map sent the apex to `bakerrang-client-backend`, `portal.` to `bakerrang-portal-backend`, `sites.` to `bakerrang-renderer-backend`, and **unmatched hosts (customer domains) to the Renderer by default**. One-time, operator-run, live-impact order — deploy the Launcher image containing `launcher.conf` first:
+Before the cutover `bakerrang.com` and `www.` were mapped to `bakerrang-client`, `portal.` to `bakerrang-portal`, and `sites.` / `custom.` to `bakerrang-site-renderer`. One-time, operator-run, live-impact order — **only after the merge has deployed the Launcher image containing `launcher.conf`**:
 
 ```powershell
-# 1. Launcher behind the LB.
-gcloud compute network-endpoint-groups create bakerrang-launcher-neg --project=$P --region=$R `
-  --network-endpoint-type=serverless --cloud-run-service=bakerrang-web-launcher
-gcloud compute backend-services create bakerrang-launcher-backend --project=$P --global `
-  --load-balancing-scheme=EXTERNAL_MANAGED
-gcloud compute backend-services add-backend bakerrang-launcher-backend --project=$P --global `
-  --network-endpoint-group=bakerrang-launcher-neg --network-endpoint-group-region=$R
+$P = "avian-cable-379805"; $R = "us-west1"
 
-# 2. Repoint the apex and the default away from the retired backends (edit, then import).
-gcloud compute url-maps export bakerrang-web-urlmap --project=$P --global --destination=urlmap.yaml
-#    In urlmap.yaml: defaultService and the client-matcher defaultService -> bakerrang-launcher-backend;
-#    delete the portal-matcher and sites-matcher path matchers and their hostRules.
-gcloud compute url-maps import bakerrang-web-urlmap --project=$P --global --source=urlmap.yaml
+# 1. Remap the apex and www to the Launcher. A mapping's target can't be edited in place, so delete and
+#    recreate it. DNS records stay the same; expect a few minutes (occasionally longer) of TLS errors while
+#    Cloud Run re-provisions the certificate.
+foreach ($d in "bakerrang.com", "www.bakerrang.com") {
+  gcloud beta run domain-mappings delete --domain $d --project $P --region $R --quiet
+  gcloud beta run domain-mappings create --domain $d --service bakerrang-web-launcher --project $P --region $R
+}
+gcloud beta run domain-mappings describe --domain bakerrang.com --project $P --region $R --format="value(status.conditions)"
 curl.exe -sI https://bakerrang.com/passwords   # expect 301 -> https://passwords.bakerrang.com/
 
-# 3. Only then delete the retired backends, NEGs, and services.
-foreach ($b in "client","portal","renderer") {
-  gcloud compute backend-services delete "bakerrang-$b-backend" --project=$P --global
-  gcloud compute network-endpoint-groups delete "bakerrang-$b-neg" --project=$P --region=$R
+# 2. Remove the retired mappings, their DNS records, and the services.
+foreach ($d in "portal.bakerrang.com", "sites.bakerrang.com", "custom.bakerrang.com") {
+  gcloud beta run domain-mappings delete --domain $d --project $P --region $R --quiet
 }
-foreach ($svc in "bakerrang-client","bakerrang-portal","bakerrang-site-renderer") {
-  gcloud run services delete $svc --project=$P --region=$R
-}
-```
-
-Also retire: the media bucket `gs://bakerrang-media-marketing`, the Secret Manager secrets `bakerrang-preview-token-secret`, `bakerrang-resend-api-key`, `bakerrang-internal-drain-token` (and any Blizzard secret), the lead-notification Cloud Scheduler job, any customer-domain certificate-map entries, and the API env vars `PORTAL_DOMAIN`, `SITE_RENDERER_DOMAIN`, `CLIENT_DOMAIN`, `MEDIA_BUCKET_NAME`, `PREVIEW_TOKEN_SECRET`, `RESEND_API_KEY`, `LEAD_NOTIFICATION_FROM`, `INTERNAL_DRAIN_TOKEN`, `BLIZZARD_CLIENT_*` (remove with `--remove-env-vars` / `--remove-secrets`, never a replacing update). Optionally prune the deployed Firestore indexes with `firebase deploy --only firestore:indexes --force`.
-
-### MAIN TLS and frontends
-
-Certificate Manager uses one `PER_PROJECT_RECORD` DNS authorization, `bakerrang-main-auth`, for `bakerrang.com`. Its generated project-unique `_acme-challenge_<id>.bakerrang.com` CNAME coexists with DEV's fixed `_acme-challenge.bakerrang.com` record; never replace or hand-craft either authorization record.
-
-The active managed certificate `bakerrang-web-cert` covers both `bakerrang.com` and `*.bakerrang.com`. Certificate map `bakerrang-web-cert-map` has explicit entries `bakerrang-apex-entry` and `bakerrang-wildcard-entry`. The HTTPS frontend is `bakerrang-web-https-proxy` plus global forwarding rule `bakerrang-web-https` on port 443. The HTTP frontend (`bakerrang-web-redirect`, `bakerrang-web-http-proxy`, and `bakerrang-web-http`) redirects port 80 requests to HTTPS.
-
-```powershell
-gcloud certificate-manager dns-authorizations create bakerrang-main-auth --project=$P `
-  --domain="bakerrang.com" --type=PER_PROJECT_RECORD
-gcloud certificate-manager dns-authorizations describe bakerrang-main-auth --project=$P `
-  --format="value(dnsResourceRecord.name,dnsResourceRecord.type,dnsResourceRecord.data)"
-# Add the exact printed CNAME to the authoritative zone before requesting the certificate.
-
-gcloud certificate-manager certificates create bakerrang-web-cert --project=$P `
-  --domains="bakerrang.com,*.bakerrang.com" --dns-authorizations="bakerrang-main-auth"
-gcloud certificate-manager maps create bakerrang-web-cert-map --project=$P
-gcloud certificate-manager maps entries create bakerrang-apex-entry --project=$P `
-  --map=bakerrang-web-cert-map --certificates=bakerrang-web-cert --hostname="bakerrang.com"
-gcloud certificate-manager maps entries create bakerrang-wildcard-entry --project=$P `
-  --map=bakerrang-web-cert-map --certificates=bakerrang-web-cert --hostname="*.bakerrang.com"
-
-gcloud compute target-https-proxies create bakerrang-web-https-proxy --project=$P `
-  --url-map=bakerrang-web-urlmap --certificate-map=bakerrang-web-cert-map
-gcloud compute forwarding-rules create bakerrang-web-https --project=$P --global `
-  --load-balancing-scheme=EXTERNAL_MANAGED --network-tier=PREMIUM `
-  --address=bakerrang-web-ip --target-https-proxy=bakerrang-web-https-proxy --ports=443
-```
-
-Use read-only descriptions to reconstruct the exact deployed HTTP redirect configuration rather than replacing it from memory:
-
-```powershell
-gcloud compute url-maps describe bakerrang-web-redirect --project=$P --global
-gcloud compute target-http-proxies describe bakerrang-web-http-proxy --project=$P
-gcloud compute forwarding-rules describe bakerrang-web-http --project=$P --global
-```
-
-### Public DNS cutover
-
-Public DNS points `api.bakerrang.com` and apex `bakerrang.com` to `34.8.236.85`. (`portal.`, `sites.` and `custom.bakerrang.com` also pointed here until the 2026-11 retirement; delete those A records once their LB host rules are gone.) The API's former Cloud Run domain-mapping CNAME and the former apex target were replaced during controlled DNS transactions. The apex has no AAAA record because this frontend is IPv4-only.
-
-For reconstruction in a fresh zone, the desired A records are:
-
-```powershell
-foreach ($HostName in @(
-  "api.bakerrang.com.",
-  "bakerrang.com.")) {
-  gcloud dns record-sets create $HostName --zone=bakerrang-client --project=$P `
-    --type=A --ttl=300 --rrdatas="34.8.236.85"
+#    Then delete the portal./sites./custom. CNAME records from the bakerrang-client zone
+#    (gcloud dns record-sets delete <host>. --zone=bakerrang-client --type=CNAME).
+foreach ($svc in "bakerrang-client", "bakerrang-portal", "bakerrang-site-renderer") {
+  gcloud run services delete $svc --project $P --region $R --quiet
 }
 ```
 
-Against an existing zone, use a reviewed `gcloud dns record-sets transaction` that removes the exact current record and adds the desired A record atomically; do not issue the fresh-zone commands blindly. The apex and API use the LB; the consumer web subdomains use direct Cloud Run domain mappings.
-
-Deployment smoke intentionally uses each Cloud Run service's `status.url`. Public hostname smoke is a separate ingress check for DNS, load balancer, certificate, and routing health.
+Also retire: the media bucket `gs://bakerrang-media-marketing`, the Secret Manager secrets for `PREVIEW_TOKEN_SECRET`, `RESEND_API_KEY`, `INTERNAL_DRAIN_TOKEN` and `BLIZZARD_CLIENT_SECRET`, any lead-notification Cloud Scheduler job, the now-unused API env vars (`CLIENT_DOMAIN`, `PORTAL_DOMAIN`, `SITE_RENDERER_DOMAIN`, `MEDIA_BUCKET_NAME`, `LEAD_NOTIFICATION_FROM`, `BLIZZARD_CLIENT_ID`, plus the secret-backed ones above — remove with `--remove-env-vars` / `--remove-secrets`, never a replacing update), and the GitHub `production` variables `CLIENT_*`, `PORTAL_*`, `RENDERER_SERVICE`, `NEXT_PUBLIC_SITE_*`, `CUSTOM_DOMAIN_IPV4_ADDRESS`. Optionally prune the deployed Firestore indexes with `firebase deploy --only firestore:indexes --force`.
 
 ## Frontend runtime service account
 
@@ -294,9 +203,9 @@ Do not read secret version data during an audit. Do not blindly replace existing
 
 ## Live-impact boundary
 
-**SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, WIF, service skeletons, and IP reservation. They are still infrastructure changes requiring operator review.
+**SAFE/FOUNDATION when deliberately created and verified:** Artifact Registry, WIF, and service skeletons. They are still infrastructure changes requiring operator review.
 
-**CURRENT LIVE PATH:** the global load balancer, DNS/TLS, and selective automatic MAIN deployment are in place. Future changes to Cloud Run configuration, runtime identities, load-balancer resources, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
+**CURRENT LIVE PATH:** Cloud Run domain mappings, DNS/TLS, and selective automatic MAIN deployment are in place. Future changes to Cloud Run configuration, runtime identities, domain mappings, certificates, or public DNS remain live-impact operations requiring separate review. Normal CI changes only an affected service's image digest and verifies its runtime identity.
 
 ## Historical DEV deployment inventory
 

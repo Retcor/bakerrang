@@ -2,7 +2,7 @@
 
 MAIN/live is the sole deployed environment. Its deployment targets are the API and the seven consumer web apps: Web Launcher, Web Story Book, Web Polyglot, Web Sign, Web Budget, Web Passwords, and Web Account. Pull requests validate only, and pushes to `main` selectively deploy affected services to MAIN/live. DEV has no cloud deployment path; the `bakerrang-dev` project remains only as local-development data backing.
 
-The legacy Client, Portal, and Site Renderer targets were retired on 2026-11-12. `bakerrang.com` is now answered by the Launcher service with a redirect (see [live-environment-bootstrap.md](infra/live-environment-bootstrap.md#main-global-external-application-load-balancer)).
+The legacy Client, Portal, and Site Renderer targets were retired on 2026-11-12. `bakerrang.com` is now answered by the Launcher service with a redirect (see [live-environment-bootstrap.md](infra/live-environment-bootstrap.md#public-ingress-cloud-run-domain-mappings)).
 
 For routine release, verification, compatibility, and retention policy, see the [MAIN/live operations guide](operations/live-ops.md). For emergency recovery, see the [MAIN rollback runbook](operations/rollback.md).
 
@@ -71,7 +71,7 @@ MAIN deployment smoke resolves each deployed Cloud Run service's `status.url` af
 - API: `<status.url>/health` → HTTP 200 and body `Healthy`;
 - every web app: `<status.url>/` → HTTP 200 and the `<div id="root"` SPA shell.
 
-This proves the revision, image, and runtime work. Public ingress verification for `api.bakerrang.com`, the `bakerrang.com` redirect, and each web subdomain is separate because it proves DNS, load balancing or domain mapping, TLS, and host routing. The one-time prerequisites are in the per-app runbooks under [`docs/apps/`](apps).
+This proves the revision, image, and runtime work. Public ingress verification for `api.bakerrang.com`, the `bakerrang.com` redirect, and each web subdomain is separate because it proves DNS, the Cloud Run domain mapping, TLS, and host routing. The one-time prerequisites are in the per-app runbooks under [`docs/apps/`](apps).
 
 ## Read-only live verification
 

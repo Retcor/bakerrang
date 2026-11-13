@@ -8,7 +8,7 @@ A small family of consumer web tools that share one Google sign-in, backed by a 
 | `web/` | npm workspace of Vite + React 18 apps, one per subdomain: Launcher (`launch.`), Story Book, Polyglot, Sign, Budget, Passwords, Account. See [`web/README.md`](web/README.md). |
 | `docs/` | CI/CD, infrastructure, operations runbooks, and the per-app migration history in `docs/apps/`. |
 
-`https://bakerrang.com/` (and `www.`) is answered by the Launcher service, which 301-redirects it to
+`https://bakerrang.com/` (and `www.`) is Cloud Run domain-mapped to the Launcher service, which 301-redirects it to
 `https://launch.bakerrang.com/` (old `/passwords`, `/budget`, … paths go to the matching subdomain; see
 `web/nginx/apps/launcher.conf`).
 

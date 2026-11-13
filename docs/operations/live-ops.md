@@ -10,13 +10,13 @@ Local development runs the API and the web apps on the developer machine. Those
 processes use developer Application Default Credentials (ADC) and Firestore in
 `bakerrang-dev`. There is no deployed DEV environment.
 
-MAIN/live runs in project `avian-cable-379805`. The API and the apex sit behind one
-external load balancer; each consumer web app uses its own Cloud Run domain mapping:
+MAIN/live runs in project `avian-cable-379805`. Every public host is a Cloud Run
+domain mapping (the former external load balancer is decommissioned):
 
 | Service | Public host |
 | --- | --- |
 | API | `api.bakerrang.com` |
-| Web Launcher | `launch.bakerrang.com` (also answers `bakerrang.com` / `www.` via the LB, with a 301 to the Launcher) |
+| Web Launcher | `launch.bakerrang.com` (also mapped to `bakerrang.com` / `www.`, which it answers with a 301 to the Launcher) |
 | Web Story Book | `storybook.bakerrang.com` |
 | Web Polyglot | `polyglot.bakerrang.com` |
 | Web Sign | `sign.bakerrang.com` |

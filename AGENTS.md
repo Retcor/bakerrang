@@ -9,8 +9,9 @@ A small family of consumer web tools sharing one Google sign-in:
 - **`web/`** — npm workspace of Vite + React 18 apps, each its own Cloud Run service + subdomain:
   `launcher` (`launch.`), `storybook`, `polyglot`, `sign`, `budget`, `passwords`, `account`, plus shared
   `@bakerrang/web-*` packages. Follow `web/AGENTS.md`; design truth is `web/PRODUCT.md` + `web/DESIGN.md`.
-- **`bakerrang.com` / `www.`** are served by the Launcher service and only 301-redirect (old paths →
-  matching subdomain, else the Launcher) — `web/nginx/apps/launcher.conf`.
+- **`bakerrang.com` / `www.`** are Cloud Run domain-mapped to the Launcher service and only 301-redirect
+  (old paths → matching subdomain, else the Launcher) — `web/nginx/apps/launcher.conf`. All public hosts are
+  Cloud Run domain mappings; there is no load balancer.
 - Per-app migration history: `docs/apps/Phase*.md`. CI/CD: `docs/CI-CD.md`.
 
 **Retired 2026-11-12 (deleted, do not reintroduce):** the legacy combined `client/` SPA, the `platform/`
