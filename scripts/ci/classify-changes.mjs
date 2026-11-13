@@ -2,20 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const BOTH_PLATFORM_SERVICES = ['portal', 'renderer']
 const ALL_WEB_SERVICES = ['web-launcher', 'web-storybook', 'web-polyglot', 'web-sign', 'web-budget', 'web-passwords', 'web-account']
 
 // This is the single repository-path policy used by CI and future deployment
 // workflows. Keep CI-only inputs distinct from deploy/build inputs.
 const PATH_RULES = [
   { prefix: 'server/', ci: ['api'], deploy: ['api'] },
-  { prefix: 'client/', ci: ['client'], deploy: ['client'] },
-  { prefix: 'platform/apps/portal/', ci: ['portal'], deploy: ['portal'] },
-  { prefix: 'platform/apps/site-renderer/', ci: ['renderer'], deploy: ['renderer'] },
-  { prefix: 'platform/packages/site-schema/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { prefix: 'platform/packages/ui/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { prefix: 'platform/packages/site-components/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { prefix: 'platform/packages/site-runtime/', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
   { prefix: 'web/apps/launcher/', ci: ['web-launcher'], deploy: ['web-launcher'] },
   { prefix: 'web/apps/storybook/', ci: ['web-storybook'], deploy: ['web-storybook'] },
   { prefix: 'web/apps/polyglot/', ci: ['web-polyglot'], deploy: ['web-polyglot'] },
@@ -25,21 +17,13 @@ const PATH_RULES = [
   { prefix: 'web/apps/account/', ci: ['web-account'], deploy: ['web-account'] },
   { prefix: 'web/packages/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
 
-  { exact: 'platform/package.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { exact: 'platform/package-lock.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { exact: 'platform/.dockerignore', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { exact: 'platform/scripts/config-validation.mjs', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { exact: 'platform/tsconfig.base.json', ci: BOTH_PLATFORM_SERVICES, deploy: BOTH_PLATFORM_SERVICES },
-  { exact: 'platform/scripts/config-validation.d.mts', ci: BOTH_PLATFORM_SERVICES, deploy: [] },
-  { exact: 'platform/eslint.config.mjs', ci: BOTH_PLATFORM_SERVICES, deploy: [] },
-  { exact: 'platform/.gitignore', ci: [], deploy: [] },
-  { exact: 'platform/.nvmrc', ci: [], deploy: [] },
   { exact: 'web/package.json', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/package-lock.json', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/Dockerfile', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/.dockerignore', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/eslint.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
   { exact: 'web/vitest.config.js', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
+  { exact: 'web/nginx/apps/launcher.conf', ci: ['web-launcher'], deploy: ['web-launcher'] },
   { exact: 'web/nginx/apps/passwords.conf', ci: ['web-passwords'], deploy: ['web-passwords'] },
   { exact: 'web/nginx/apps/account.conf', ci: ['web-account'], deploy: ['web-account'] },
   { prefix: 'web/nginx/', ci: ALL_WEB_SERVICES, deploy: ALL_WEB_SERVICES },
@@ -51,11 +35,11 @@ const PATH_RULES = [
   { exact: 'web/CLAUDE.md', ci: [], deploy: [] },
   { exact: 'web/.gitignore', ci: [], deploy: [] },
   { exact: 'web/.nvmrc', ci: [], deploy: [] },
+  // Brand masters (the canonical logo); each app ships its own copies.
+  { prefix: 'web/brand/', ci: [], deploy: [] },
 
   // Known repository areas outside service CI and deployment.
   { prefix: 'docs/', ci: [], deploy: [] },
-  { prefix: 'extension/', ci: [], deploy: [] },
-  { prefix: 'addon/', ci: [], deploy: [] },
   { prefix: '.github/', ci: [], deploy: [] },
   { prefix: '.claude/', ci: [], deploy: [] },
   { prefix: '.codex/', ci: [], deploy: [] },
@@ -63,8 +47,13 @@ const PATH_RULES = [
   { exact: 'scripts/verify-live.ps1', ci: [], deploy: [] },
   { prefix: '.impeccable/', ci: [], deploy: [] },
   { prefix: '.agents/', ci: [], deploy: [] },
-  // Historical tombstone: deleted-path and stale ranges must remain classifiable.
+  // Historical tombstones: deleted paths (and stale ranges that still contain
+  // them) must remain classifiable, but never trigger CI or a deploy.
   { exact: 'scripts/deploy-dev.ps1', ci: [], deploy: [] },
+  { prefix: 'client/', ci: [], deploy: [] },
+  { prefix: 'platform/', ci: [], deploy: [] },
+  { prefix: 'extension/', ci: [], deploy: [] },
+  { prefix: 'addon/', ci: [], deploy: [] },
   { exact: 'firestore.indexes.json', ci: [], deploy: [] },
   { exact: 'firebase.json', ci: [], deploy: [] },
   { exact: '.firebaserc', ci: [], deploy: [] },
@@ -103,9 +92,6 @@ export function classifyChanges (repositoryPaths) {
   return {
     ci: {
       api: ci.has('api'),
-      portal: ci.has('portal'),
-      renderer: ci.has('renderer'),
-      client: ci.has('client'),
       'web-launcher': ci.has('web-launcher'),
       'web-storybook': ci.has('web-storybook'),
       'web-polyglot': ci.has('web-polyglot'),
@@ -116,9 +102,6 @@ export function classifyChanges (repositoryPaths) {
     },
     deploy: {
       api: deploy.has('api'),
-      portal: deploy.has('portal'),
-      renderer: deploy.has('renderer'),
-      client: deploy.has('client'),
       'web-launcher': deploy.has('web-launcher'),
       'web-storybook': deploy.has('web-storybook'),
       'web-polyglot': deploy.has('web-polyglot'),
@@ -140,9 +123,6 @@ function readChangedPaths (inputPath) {
 function writeGitHubOutputs (outputPath, result) {
   const outputs = {
     api: result.ci.api,
-    portal: result.ci.portal,
-    renderer: result.ci.renderer,
-    client: result.ci.client,
     web_launcher: result.ci['web-launcher'],
     web_storybook: result.ci['web-storybook'],
     web_polyglot: result.ci['web-polyglot'],
@@ -151,9 +131,6 @@ function writeGitHubOutputs (outputPath, result) {
     web_passwords: result.ci['web-passwords'],
     web_account: result.ci['web-account'],
     deploy_api: result.deploy.api,
-    deploy_portal: result.deploy.portal,
-    deploy_renderer: result.deploy.renderer,
-    deploy_client: result.deploy.client,
     deploy_web_launcher: result.deploy['web-launcher'],
     deploy_web_storybook: result.deploy['web-storybook'],
     deploy_web_polyglot: result.deploy['web-polyglot'],

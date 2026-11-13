@@ -27,9 +27,6 @@ Image root: `us-west1-docker.pkg.dev/avian-cable-379805/bakerrang`.
 | Input | Cloud Run service | Image package | Expected runtime SA prefix |
 | --- | --- | --- | --- |
 | `api` | `bakerrang-api` | `api` | `bakerrang-api` |
-| `portal` | `bakerrang-portal` | `portal` | `bakerrang-frontend` |
-| `renderer` | `bakerrang-site-renderer` | `site-renderer` | `bakerrang-frontend` |
-| `client` | `bakerrang-client` | `client` | `bakerrang-frontend` |
 | `web-launcher` | `bakerrang-web-launcher` | `web-launcher` | `bakerrang-frontend` |
 | `web-storybook` | `bakerrang-web-storybook` | `web-storybook` | `bakerrang-frontend` |
 
@@ -129,9 +126,6 @@ are tested with the normal deployment markers:
 | Service | Path / public endpoint | Assertion |
 | --- | --- | --- |
 | API | `/health` / `https://api.bakerrang.com/health` | 200 + `Healthy` |
-| Portal | `/` / `https://portal.bakerrang.com/` | 200 |
-| Renderer | `/robots.txt` / `https://sites.bakerrang.com/robots.txt` | 200 + `User-agent` |
-| Client | `/` / `https://bakerrang.com/` | 200 + `<div id="root"` |
 | Web Launcher | `/` / `https://launch.bakerrang.com/` | 200 + `<div id="root"` |
 | Web Story Book | `/` / `https://storybook.bakerrang.com/` | 200 + `<div id="root"` |
 

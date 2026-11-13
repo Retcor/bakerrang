@@ -13,53 +13,6 @@
       "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "wow_game_data",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "region", "order": "ASCENDING" },
-        {
-          "fieldPath": "embedding",
-          "vectorConfig": { "dimension": 1536, "flat": {} }
-        }
-      ]
-    },
-    {
-      "collectionGroup": "wow_character_chunks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "charKey", "order": "ASCENDING" },
-        {
-          "fieldPath": "embedding",
-          "vectorConfig": { "dimension": 1536, "flat": {} }
-        }
-      ]
-    },
-    {
-      "collectionGroup": "leadNotifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "nextAttemptAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "leadNotifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "leaseUntil", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "auditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "occurredAt", "order": "DESCENDING" },
-        { "fieldPath": "eventId", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "audit",
       "queryScope": "COLLECTION",
       "fields": [

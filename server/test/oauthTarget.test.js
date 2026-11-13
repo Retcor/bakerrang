@@ -14,8 +14,6 @@ import {
 import { buildGoogleStrategyOptions } from '../config/googleOAuth.js'
 
 const env = {
-  CLIENT_DOMAIN: 'http://localhost:3000',
-  PORTAL_DOMAIN: 'http://localhost:3001',
   LAUNCHER_DOMAIN: 'http://localhost:3010',
   STORYBOOK_DOMAIN: 'http://localhost:3020',
   POLYGLOT_DOMAIN: 'http://localhost:3030',
@@ -42,23 +40,19 @@ const response = () => ({
 })
 
 test('OAuth targets are a closed symbolic set and never arbitrary URLs', () => {
-  assert.equal(oauthTargetFromQuery(undefined), 'client')
-  assert.equal(oauthTargetFromQuery('client'), 'client')
-  assert.equal(oauthTargetFromQuery('portal'), 'portal')
+  assert.equal(oauthTargetFromQuery(undefined), 'launcher')
   assert.equal(oauthTargetFromQuery('launcher'), 'launcher')
   assert.equal(oauthTargetFromQuery('storybook'), 'storybook')
   assert.equal(oauthTargetFromQuery('polyglot'), 'polyglot')
   assert.equal(oauthTargetFromQuery('sign'), 'sign')
   assert.equal(oauthTargetFromQuery('budget'), 'budget')
-  assert.equal(resolveOAuthTarget('client', env), env.CLIENT_DOMAIN)
-  assert.equal(resolveOAuthTarget('portal', env), env.PORTAL_DOMAIN)
   assert.equal(resolveOAuthTarget('launcher', env), env.LAUNCHER_DOMAIN)
   assert.equal(resolveOAuthTarget('storybook', env), env.STORYBOOK_DOMAIN)
   assert.equal(resolveOAuthTarget('polyglot', env), env.POLYGLOT_DOMAIN)
   assert.equal(resolveOAuthTarget('sign', env), env.SIGN_DOMAIN)
   assert.equal(resolveOAuthTarget('budget', env), env.BUDGET_DOMAIN)
-  assert.equal(isValidOAuthTarget('client'), true)
-  assert.equal(isValidOAuthTarget('portal'), true)
+  assert.equal(isValidOAuthTarget('client'), false)
+  assert.equal(isValidOAuthTarget('portal'), false)
   assert.equal(isValidOAuthTarget('launcher'), true)
   assert.equal(isValidOAuthTarget('storybook'), true)
   assert.equal(isValidOAuthTarget('polyglot'), true)
@@ -66,6 +60,8 @@ test('OAuth targets are a closed symbolic set and never arbitrary URLs', () => {
   assert.equal(isValidOAuthTarget('budget'), true)
   assert.equal(isValidOAuthTarget('https://evil.example'), false)
   assert.throws(() => oauthTargetFromQuery('https://evil.example'), { status: 400 })
+  assert.throws(() => oauthTargetFromQuery('client'), { status: 400 })
+  assert.throws(() => oauthTargetFromQuery('portal'), { status: 400 })
   assert.throws(() => resolveOAuthTarget('https://evil.example', env), { status: 500 })
 })
 
@@ -76,8 +72,8 @@ test('a valid target with missing configuration fails safely', async () => {
   const originalError = console.error
   console.error = () => {}
   try {
-    await rememberOAuthTarget({ CLIENT_DOMAIN: env.CLIENT_DOMAIN })({
-      query: { target: 'portal' },
+    await rememberOAuthTarget({ LAUNCHER_DOMAIN: env.LAUNCHER_DOMAIN })({
+      query: { target: 'budget' },
       session: { save: () => { saved = true } }
     }, res, () => { continued = true })
   } finally {
@@ -98,18 +94,18 @@ test('login entry stores the target and saves the session before continuing to G
       callback()
     }
   }
-  await rememberOAuthTarget(env)({ query: { target: 'portal' }, session }, response(), () => {
+  await rememberOAuthTarget(env)({ query: { target: 'storybook' }, session }, response(), () => {
     events.push('next')
   })
 
-  assert.equal(session.oauthTarget, 'portal')
-  assert.deepEqual(events, ['save:portal', 'next'])
+  assert.equal(session.oauthTarget, 'storybook')
+  assert.deepEqual(events, ['save:storybook', 'next'])
 
   const defaultSession = {
     save (callback) { callback() }
   }
   await rememberOAuthTarget(env)({ query: {}, session: defaultSession }, response(), () => {})
-  assert.equal(defaultSession.oauthTarget, 'client')
+  assert.equal(defaultSession.oauthTarget, 'launcher')
 })
 
 test('invalid login target returns 400 without saving or continuing', async () => {
@@ -129,7 +125,7 @@ test('invalid login target returns 400 without saving or continuing', async () =
 test('callback consumes, clears, and persists target before redirecting', async () => {
   const events = []
   const session = {
-    oauthTarget: 'portal',
+    oauthTarget: 'storybook',
     save (callback) {
       events.push(`save:${String(this.oauthTarget)}`)
       callback()
@@ -144,18 +140,18 @@ test('callback consumes, clears, and persists target before redirecting', async 
   await handler({ user: { id: 'user-1' }, session }, res, () => {})
 
   assert.equal(session.oauthTarget, undefined)
-  assert.equal(res.redirectUrl, env.PORTAL_DOMAIN)
+  assert.equal(res.redirectUrl, env.STORYBOOK_DOMAIN)
   assert.deepEqual(events, ['store-user', 'save:undefined'])
 
   const defaultSession = { save: (callback) => callback() }
   const defaultRes = response()
   await handler({ user: { id: 'user-1' }, session: defaultSession }, defaultRes, () => {})
-  assert.equal(defaultRes.redirectUrl, env.CLIENT_DOMAIN)
+  assert.equal(defaultRes.redirectUrl, env.LAUNCHER_DOMAIN)
 })
 
 test('consumeOAuthTarget clears one-time state', () => {
-  const session = { oauthTarget: 'portal', unrelated: true }
-  assert.equal(consumeOAuthTarget(session, env), env.PORTAL_DOMAIN)
+  const session = { oauthTarget: 'polyglot', unrelated: true }
+  assert.equal(consumeOAuthTarget(session, env), env.POLYGLOT_DOMAIN)
   assert.deepEqual(session, { unrelated: true })
 })
 

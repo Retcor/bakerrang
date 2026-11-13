@@ -28,17 +28,17 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Launcher', () => {
-  it('renders the approved signed-out masthead and exact six-tool inventory', () => {
+  it('renders the approved signed-out masthead and exact five-tool inventory', () => {
     render(<Launcher />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Variety of Tools.One Workshop.')
     expect(screen.getAllByText('Story Book').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Polyglot').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Sign Language').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Budget').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('WoW Advisor').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Passwords').length).toBeGreaterThan(0)
-    expect(screen.getByText('6 tools')).not.toBeNull()
+    expect(screen.getByText('5 tools')).not.toBeNull()
     expect(screen.queryByText('Supermarket')).toBeNull()
+    expect(screen.queryByText('WoW Advisor')).toBeNull()
   })
 
   it('gives Polyglot one destination with no Instant mode and keeps Account outside the tool count', () => {
@@ -52,7 +52,7 @@ describe('Launcher', () => {
     expect(screen.queryByText(/security/i)).toBeNull()
   })
 
-  it('renders the signed-in state and six-tool app switcher with Account separated', async () => {
+  it('renders the signed-in state and five-tool app switcher with Account separated', async () => {
     authState = {
       status: 'authenticated',
       user: { displayName: 'Alex Rang', email: 'alex@example.com' },
@@ -63,7 +63,7 @@ describe('Launcher', () => {
     expect(screen.getByText(/Welcome back, Alex/)).not.toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Switch app' }))
     const menu = screen.getByRole('menu', { name: 'Your tools' })
-    expect(menu.querySelectorAll('.br-switcher__cell')).toHaveLength(6)
+    expect(menu.querySelectorAll('.br-switcher__cell')).toHaveLength(5)
     expect(menu.querySelector('.br-popover__item').textContent).toContain('Account')
   })
 })

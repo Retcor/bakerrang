@@ -16,16 +16,14 @@ const response = () => ({
   }
 })
 
-test('GET and POST logout routes share the same logout handler', () => {
+test('logout is POST-only (the CSRF-free GET was retired with the legacy client)', () => {
   const logoutRoutes = authRouter.stack
     .filter((layer) => layer.route && layer.route.path === '/logout')
 
   assert.deepEqual(logoutRoutes.map((layer) => Object.keys(layer.route.methods)), [
-    ['get'],
     ['post']
   ])
   assert.equal(logoutRoutes[0].route.stack[0].handle, logoutHandler)
-  assert.equal(logoutRoutes[1].route.stack[0].handle, logoutHandler)
 })
 
 test('logout handler invokes Passport logout semantics', () => {

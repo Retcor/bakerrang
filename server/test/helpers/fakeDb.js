@@ -29,12 +29,7 @@ class FakeDocumentReference {
   }
 
   async set (value, options = {}) {
-    const isTenant = this.path.startsWith('tenants/') && this.path.split('/').length === 2
-    const record = isTenant && value && typeof value === 'object' &&
-      !Object.prototype.hasOwnProperty.call(value, 'status') && !options.merge
-      ? { ...value, status: 'ACTIVE' }
-      : value
-    this.database.write(this.path, record, options)
+    this.database.write(this.path, value, options)
   }
 
   async delete () {
@@ -162,18 +157,7 @@ export class FakeDb {
   }
 
   seed (path, value) {
-    const parts = path.split('/')
-    if (parts[0] === 'tenants' && parts.length > 2 && !this.records.has(`tenants/${parts[1]}`)) {
-      this.write(`tenants/${parts[1]}`, { status: 'ACTIVE' })
-    }
-    // Existing service fixtures predate the lifecycle field. A top-level
-    // seeded tenant represents the ordinary, writable tenant state unless a
-    // test explicitly supplies a lifecycle status.
-    const seeded = path.split('/').length === 2 && path.startsWith('tenants/') &&
-      value && typeof value === 'object' && !Object.prototype.hasOwnProperty.call(value, 'status')
-      ? { ...value, status: 'ACTIVE' }
-      : value
-    this.write(path, seeded)
+    this.write(path, value)
     return this
   }
 

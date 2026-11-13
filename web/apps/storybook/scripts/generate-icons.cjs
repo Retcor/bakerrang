@@ -5,7 +5,7 @@ const sharp = require('../../../../platform/node_modules/sharp')
 const appRoot = path.resolve(__dirname, '..')
 const repoRoot = path.resolve(appRoot, '../../..')
 const sourcePath = path.join(repoRoot, 'web/.impeccable/mocks/storybook-icon.svg')
-const logoPath = path.join(repoRoot, 'client/src/assets/bakerrang-logo.png')
+const logoPath = path.join(repoRoot, 'web/brand/bakerrang-logo.png')
 const publicPath = path.join(appRoot, 'public')
 
 const icoFromPng = (png) => {

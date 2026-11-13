@@ -259,7 +259,7 @@ describe('Session', () => {
     renderApp()
     await ready()
     const session = screen.getByRole('region', { name: 'Session' })
-    expect(within(session).getByText('Vault lock timing and browser-extension autofill are in Passwords.')).not.toBeNull()
+    expect(within(session).getByText('Vault lock timing is in Passwords.')).not.toBeNull()
     expect(within(session).getByText("Deleting your BakerRang account or downloading a copy of your data isn't available yet.")).not.toBeNull()
     expect(within(session).queryByRole('button', { name: /delete account|export/i })).toBeNull()
     expect(within(session).getByText('sam.example@example.test on this browser')).not.toBeNull()

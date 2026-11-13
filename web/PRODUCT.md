@@ -11,9 +11,8 @@ web
 Decided (architecture-locked, see `docs/apps/Phase0-EcosystemArchitecture.md`): a `web/` npm
 workspace of **Vite + React 18 + Tailwind 3** consumer apps, one per product, each an independently
 deployable static SPA served by nginx on its own Cloud Run service and its own subdomain, plus an
-installable PWA per product. This is a deliberate evolution of the existing `client/` SPA, not a
-rewrite. (The separate `platform/` Next.js workspace — the B2B website builder — is a different
-product line and out of scope here.)
+installable PWA per product. It replaced the original combined `client/` SPA, which was retired
+and deleted on 2026-11-12 (`bakerrang.com` now redirects to the Launcher).
 
 ## Users
 
@@ -49,11 +48,10 @@ while family resemblance comes from shared foundations, not from one universal p
 
 ## Capabilities and Constraints
 
-- Current products needing representation on the launcher (**6 tools + Account**): **Story Book** (AI
+- Current products needing representation on the launcher (**5 tools + Account**): **Story Book** (AI
   story generation with narration), **Polyglot** (spoken translation in your own cloned voice; the
   legacy "Instant" experience *is* Polyglot — no separate mode), **Sign** ("Sign Language" in the registry: ASL handshape practice via the camera, read on-device; not an interpreter), **Budget** (a
-  paycheck-to-bills planner, not a spending tracker), **WoW Advisor** (World of Warcraft assistant; **retired from
-  migration 2026-09-27**: legacy-only until decommission, never extracted or redesigned), **Passwords** (a password
+  paycheck-to-bills planner, not a spending tracker), **Passwords** (a password
   vault encrypted in the browser with a separate master password), and **Account** (cross-cutting, not a tool).
 - **Supermarket is removed from the ecosystem (obsolete).** It was built for a game/use case no
   longer relevant and is being **deleted, not migrated** (no `supermarket.` subdomain, no app, no
@@ -162,7 +160,7 @@ Full inventory, security audit, crypto/API contracts and architecture: `docs/app
 - **Legacy design is the inspiration (owner):** the three-pane vault (folders | dense list + A–Z rail | entry sheet)
   carries forward. Entries open in View, with an explicit Edit.
 - **Not offered (don't imply):** password recovery, changing the master password (deferred), TOTP/2FA codes,
-  attachments, favorites, tags, breach or "health" checks, autofill from the web app (the browser extension does that),
+  attachments, favorites, tags, breach or "health" checks, autofill (the browser extension was retired 2026-11-12),
   offline access, a password score.
 
 ## Product: Account (Phase H truth, 2026-09-29)
@@ -182,7 +180,7 @@ Full inventory, ownership decisions, API contracts and architecture: `docs/apps/
   description, not the audio. Story Book and Polyglot only choose among them per device.
 - **Identity is Google's:** name and email can't be edited in BakerRang, and no photo, user id, "member since" or sign-in
   history is shown (none of the last two is stored).
-- **Owns no app-specific settings:** vault lock timing and extension autofill live in Passwords. **Supermarket is gone
+- **Owns no app-specific settings:** vault lock timing lives in Passwords. **Supermarket is gone
   from Account** (new and legacy).
 - **Not offered (don't imply):** deleting your account, downloading your data, signing out other devices, changing email,
   notifications, security settings, billing. Account says plainly that deletion and export aren't available yet.
@@ -202,15 +200,12 @@ Full inventory, ownership decisions, API contracts and architecture: `docs/apps/
 
 ## Evidence on Hand
 
-- The existing consumer apps live in `client/` (the current combined SPA) and are the functional
-  source of truth for each product's behavior.
-- **Canonical BakerRang logo: `client/src/assets/bakerrang-logo.png`** (the gold/charcoal blocky
-  "B" monogram; used in the app header + login today). This is the real mark to use everywhere —
-  never redraw it. Favicons/PWA icons in `client/public/`; source master in
+- The shipped apps under `web/apps/*` are the functional source of truth for each product's
+  behavior (the legacy `client/` SPA they were extracted from has been deleted).
+- **Canonical BakerRang logo: `web/brand/bakerrang-logo.png`** (the gold/charcoal blocky "B"
+  monogram). This is the real mark to use everywhere — never redraw it. The shared favicon/PWA icon
+  set is identical in every app's `public/` (e.g. `web/apps/launcher/public/`); source master in
   `~/Downloads/bakerrang-logo-assets`.
-- **No World of Warcraft logo asset exists in the repo** (only `client/src/components/WoW/` code;
-  the legacy launcher pulls a Google favicon URL). The WoW mark must be provided; do not
-  redraw/approximate it. Until then the WoW Advisor emblem is a neutral placeholder crest.
 - No testimonials, customer counts, benchmarks, pricing, or awards exist — none may be fabricated in
   any design work.
 

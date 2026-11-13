@@ -214,7 +214,6 @@ test('audit queries reject malformed pagination and all vault errors are no-stor
     assert.equal(response.headers.get('cache-control'), 'no-store')
   }
   assert.equal((await request('/pubkey', { method: 'POST', body: { email: 'bad' } })).status, 400)
-  assert.equal((await request('/pubkey?email=bad')).status, 400)
 })
 
 test('unexpected failures disclose neither bodies nor identifiers and retain no-store', async () => {

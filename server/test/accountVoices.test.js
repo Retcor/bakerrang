@@ -345,7 +345,7 @@ test('DELETE treats a provider 404 as already gone and a provider 500 as a failu
   assert.equal(firestore.data('voices/stuck').name, 'Voice stuck')
 })
 
-test('DELETE keeps the legacy 403 for a foreign or missing voice and 400 for a malformed id', async () => {
+test('DELETE answers 403 for a foreign or missing voice and 400 for a malformed id', async () => {
   seedVoice('theirs', 'B')
   for (const id of ['theirs', 'missing']) {
     const response = await call(`/v1/voice/${id}`, { method: 'DELETE' })
@@ -355,46 +355,6 @@ test('DELETE keeps the legacy 403 for a foreign or missing voice and 400 for a m
   assert.equal((await call('/v1/voice/bad%20id', { method: 'DELETE' })).status, 400)
   assert.equal(firestore.data('voices/theirs').name, 'Voice theirs')
   assert.equal(providerCalls.length, 0)
-})
-
-test('legacy Update All whitelists name, description and isPrimary and skips foreign voices', async () => {
-  seedVoice('v1', 'A', { isPrimary: true })
-  seedVoice('theirs', 'B')
-  const response = await call('/v1/voices', {
-    method: 'PUT',
-    body: {
-      voices: [
-        { id: 'v1', name: 'Renamed', description: 'D', isPrimary: false, userId: 'B', evil: 'x', createdAt: 999, consentConfirmedAt: 1 },
-        { id: 'theirs', name: 'Hijack', description: '', isPrimary: true },
-        { id: 'v1', name: '' }
-      ]
-    }
-  })
-  assert.equal(response.status, 200)
-  const body = await response.json()
-  assert.equal(body.successes.length, 1)
-  assert.equal(body.warnings.length, 2)
-  const stored = firestore.data('voices/v1')
-  assert.equal(stored.userId, 'A')
-  assert.equal(stored.createdAt, 1)
-  assert.equal(stored.name, 'Renamed')
-  assert.equal(stored.isPrimary, false)
-  assert.equal(Object.hasOwn(stored, 'evil'), false)
-  assert.equal(Object.hasOwn(stored, 'consentConfirmedAt'), false)
-  assert.equal(firestore.data('voices/theirs').name, 'Voice theirs')
-  assert.equal((await call('/v1/voices', { method: 'PUT', body: {} })).status, 400)
-})
-
-test('legacy create-with-id still edits an owned voice, stores only the whitelist, and refuses others', async () => {
-  seedVoice('v1', 'A', { isPrimary: true })
-  seedVoice('theirs', 'B')
-  const ok = await call('/v1/voice', { method: 'POST', form: createForm({ name: 'Edited', extra: { id: 'v1', userId: 'B' } }) })
-  assert.equal(ok.status, 200)
-  assert.equal(firestore.data('voices/v1').name, 'Edited')
-  assert.equal(firestore.data('voices/v1').userId, 'A')
-  const denied = await call('/v1/voice', { method: 'POST', form: createForm({ extra: { id: 'theirs' } }) })
-  assert.equal(denied.status, 403)
-  assert.equal(firestore.data('voices/theirs').name, 'Voice theirs')
 })
 
 test('every new mutation is rejected with 403 when the CSRF token is missing', async () => {

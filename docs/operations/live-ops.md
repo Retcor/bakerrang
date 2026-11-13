@@ -6,22 +6,25 @@ deployed environment. For detailed emergency procedures, use the
 
 ## Architecture at a glance
 
-Local development runs the API, Portal, Site Renderer, Client, and Web Launcher on the
-developer machine. Those processes use developer Application Default
-Credentials (ADC), Firestore in `bakerrang-dev`, and the
-`bakerrang-dev-media-marketing` bucket. There is no deployed DEV environment.
+Local development runs the API and the web apps on the developer machine. Those
+processes use developer Application Default Credentials (ADC) and Firestore in
+`bakerrang-dev`. There is no deployed DEV environment.
 
-MAIN/live has the same five deployment targets in project `avian-cable-379805`.
-The established four services are behind one external load balancer; the staged
-Launcher uses its reviewed non-apex Cloud Run domain mapping:
+MAIN/live runs in project `avian-cable-379805`. Every public host is a Cloud Run
+domain mapping (the former external load balancer is decommissioned):
 
 | Service | Public host |
 | --- | --- |
 | API | `api.bakerrang.com` |
-| Portal | `portal.bakerrang.com` |
-| Site Renderer | `sites.bakerrang.com` and customer domains |
-| Client | `bakerrang.com` |
-| Web Launcher | `launch.bakerrang.com` |
+| Web Launcher | `launch.bakerrang.com` (also mapped to `bakerrang.com` / `www.`, which it answers with a 301 to the Launcher) |
+| Web Story Book | `storybook.bakerrang.com` |
+| Web Polyglot | `polyglot.bakerrang.com` |
+| Web Sign | `sign.bakerrang.com` |
+| Web Budget | `budget.bakerrang.com` |
+| Web Passwords | `passwords.bakerrang.com` |
+| Web Account | `account.bakerrang.com` |
+
+The legacy Client, Portal, and Site Renderer were retired on 2026-11-12.
 
 Merges to `main` selectively deploy only affected services.
 
@@ -100,20 +103,6 @@ guardrails, and post-checks.
 Image rollback combines an old immutable `git-<full SHA>` Artifact Registry
 image with the current Cloud Run configuration. It creates a new latest revision
 and preserves symbolic `LATEST` traffic. This is the primary rollback mechanism.
-
-Client has a temporary bootstrap limitation. At completion of Step 2.6, MAIN
-Artifact Registry had no `client` package because no Client-affecting deployment
-had yet populated it. Until Client has at least one prior `git-<full SHA>` image:
-
-- primary image rollback may have no Client target;
-- historical Cloud Run revision rollback remains the emergency fallback, with
-  the normal pinned-traffic caveats.
-
-Do not fabricate or import historical Client images, and do not force a Client
-deployment to populate the package. The first future Client deployment through
-the unified MAIN pipeline creates its first immutable image; after a subsequent
-Client version deploys, that prior image becomes a normal primary rollback
-candidate.
 
 ## Revision rollback warning
 

@@ -32,9 +32,9 @@ describe('Account PWA', () => {
   })
 
   it('ships the shared BakerRang favicon set, byte-for-byte, like every other web app', () => {
-    const repoRoot = path.resolve(appRoot, '../../..')
+    const launcherPublic = path.resolve(appRoot, '../launcher/public')
     for (const file of ['android-chrome-192x192.png', 'android-chrome-512x512.png', 'apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png', 'favicon.ico']) {
-      expect(readFileSync(path.join(appRoot, 'public', file)).equals(readFileSync(path.join(repoRoot, 'client/public', file))), file).toBe(true)
+      expect(readFileSync(path.join(appRoot, 'public', file)).equals(readFileSync(path.join(launcherPublic, file))), file).toBe(true)
     }
   })
 })

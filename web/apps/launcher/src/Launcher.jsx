@@ -8,14 +8,12 @@ const descriptions = Object.freeze({
   storybook: 'Write and illustrate a story with a few words, then have it read aloud.',
   polyglot: 'Speak and translate between languages, out loud, in real time.',
   sign: 'Practise ASL handshapes with your camera. Sign reads your hand on this device.',
-  budget: 'See which paycheck covers which bills, month by month.',
-  wow: 'Get World of Warcraft advice tuned to your character and goals.'
+  budget: 'See which paycheck covers which bills, month by month.'
 })
 
 const groups = Object.freeze([
   { title: 'Make & learn', ids: ['storybook', 'polyglot', 'sign'], large: true },
-  { title: 'Manage day to day', ids: ['budget'] },
-  { title: 'Play', ids: ['wow'] }
+  { title: 'Manage day to day', ids: ['budget'] }
 ])
 
 const Arrow = () => <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'><path d='M5 12h14M13 6l6 6-6 6' /></svg>
@@ -33,7 +31,7 @@ const ToolRow = ({ tool, large = false }) => (
 
 const Bench = ({ tools }) => (
   <div className='bench' aria-hidden='true'>
-    <div className='bench__label'><span>The bench</span><span>6 tools</span></div>
+    <div className='bench__label'><span>The bench</span><span>{tools.length} tools</span></div>
     <div className='bench__grid'>
       {tools.map((tool) => <div className='bench__cell' key={tool.id} style={{ '--accent': tool.accent }}><ProductEmblem id={tool.id} /></div>)}
     </div>
@@ -79,7 +77,7 @@ export const Launcher = () => {
               <h1 className='br-display'><span>Variety of Tools.</span><br />One Workshop.</h1>
               <p className='hero__lead'>{authenticated
                 ? `Welcome back, ${userFirstName}. Pick up where you left off, or reach for a different tool — they all know you're signed in.`
-                : 'BakerRang builds six focused apps — for stories, translation, signing, budgeting, game advice, and private passwords. Each is its own tool. All share one account.'}
+                : 'BakerRang builds five focused apps — for stories, translation, signing, budgeting, and private passwords. Each is its own tool. All share one account.'}
               </p>
               <div className='hero__actions'>
                 {!authenticated && <Button variant='gold' onClick={handleLogin}>Sign in with Google</Button>}
@@ -101,7 +99,7 @@ export const Launcher = () => {
           <div className='br-wrap'>
             <div className='tools__head'>
               <h2 className='br-display'>What's on the bench</h2>
-              <p>Six tools, each built for one job. Open one — or install it on its own.</p>
+              <p>Five tools, each built for one job. Open one — or install it on its own.</p>
             </div>
 
             {groups.map((group) => (

@@ -57,38 +57,6 @@ test('payday delete unpins bills and bumps their revision atomically', async () 
   assert.equal(firestore.data('budget/A').items[0].paydayId, null)
 })
 
-test('legacy replace preserves server metadata and returns the unchanged legacy shape', async () => {
-  const created = await request('/budget/bills', { method: 'POST', body: bill() }); const current = (await created.json()).bill
-  const legacy = { id: current.id, name: 'Legacy rent', amount: 1550, category: 'utility', dayType: 'fixed', day: 1, active: true, requestId: 'forged', rev: 99 }
-  const response = await request('/budget/item', { method: 'POST', body: legacy })
-  assert.deepEqual(await response.json(), legacy)
-  const stored = firestore.data('budget/A').items[0]
-  assert.equal(stored.requestId, bill().requestId); assert.equal(stored.rev, 2); assert.equal(stored.amount, 1550)
-  const retry = await request('/budget/bills', { method: 'POST', body: bill() })
-  assert.equal(retry.status, 200); assert.equal((await retry.json()).bill.amountCents, 155000)
-  assert.equal(firestore.data('budget/A').items.length, 1)
-})
-
-test('payday request ids survive hostile legacy replacement and keep creates idempotent', async () => {
-  const created = await request('/budget/paydays', { method: 'POST', body: payday() }); const current = (await created.json()).payday
-  const legacy = { id: current.id, name: 'Legacy payroll', amount: 2200, frequency: 'monthly', dayType: 'fixed', day: 15, requestId: 'forged', rev: 99 }
-  const replaced = await request('/budget/payday', { method: 'POST', body: legacy })
-  assert.deepEqual(await replaced.json(), legacy)
-  const stored = firestore.data('budget/A').paydays[0]
-  assert.equal(stored.requestId, payday().requestId); assert.equal(stored.rev, 2); assert.equal(stored.amount, 2200)
-  const retry = await request('/budget/paydays', { method: 'POST', body: payday() })
-  assert.equal(retry.status, 200); assert.equal((await retry.json()).payday.amountCents, 220000)
-  assert.equal(firestore.data('budget/A').paydays.length, 1)
-})
-
-test('legacy creates cannot choose revision or seed server-owned metadata', async () => {
-  const legacy = { id: 'legacy', name: 'Legacy bill', amount: 10, category: 'utility', dayType: 'fixed', day: 1, active: true, requestId: 'forged', rev: 99 }
-  const response = await request('/budget/item', { method: 'POST', body: legacy })
-  assert.deepEqual(await response.json(), legacy)
-  const stored = firestore.data('budget/A').items[0]
-  assert.equal(stored.rev, 1); assert.equal(Object.prototype.hasOwnProperty.call(stored, 'requestId'), false)
-})
-
 test('ids never cross user document ownership boundaries', async () => {
   firestore.seed('budget/B', { userId: 'B', items: [{ id: 'foreign', category: 'utility', name: 'Private', amount: 1, dayType: 'fixed', day: 1, active: true, rev: 1 }], paydays: [] })
   const response = await request('/budget/bills/foreign', { method: 'DELETE', user: 'A' })
@@ -118,7 +86,7 @@ test('validation, not-found, conflict, limit, and unexpected errors are all no-s
   assert.equal(text.includes('Rent'), false); assert.equal(text.includes('145000'), false)
 })
 
-test('transaction retries preserve concurrent writes from new and legacy clients', async () => {
+test('transaction retries preserve concurrent writes', async () => {
   const race = () => {
     let arrivals = 0; let release
     const gate = new Promise((resolve) => { release = resolve })
@@ -132,21 +100,5 @@ test('transaction retries preserve concurrent writes from new and legacy clients
   ])
   assert.equal(first.status, 201); assert.equal(second.status, 201); assert.equal(firestore.data('budget/A').items.length, 2)
 
-  firestore.beforeCommit = null
-  race()
-  const legacy = { id: 'legacy', name: 'Water', amount: 20, category: 'utility', dayType: 'fixed', day: 5, active: true }
-  const thirdBill = bill({ requestId: '44444444-4444-4444-8444-444444444444', name: 'Phone' })
-  const [legacyResponse, newResponse] = await Promise.all([
-    request('/budget/item', { method: 'POST', body: legacy }),
-    request('/budget/bills', { method: 'POST', body: thirdBill })
-  ])
-  assert.equal(legacyResponse.status, 200); assert.deepEqual(await legacyResponse.json(), legacy)
-  assert.equal(newResponse.status, 201)
-  assert.deepEqual(new Set(firestore.data('budget/A').items.map(({ name }) => name)), new Set(['Rent', 'Electric', 'Water', 'Phone']))
-})
-
-test('legacy deletes keep their compatible success response', async () => {
-  firestore.seed('budget/A', { userId: 'A', items: [{ id: 'old' }], paydays: [{ id: 'pay' }] })
-  const item = await request('/budget/item/old', { method: 'DELETE' }); const paydayResponse = await request('/budget/payday/pay', { method: 'DELETE' })
-  assert.deepEqual(await item.json(), { success: true }); assert.deepEqual(await paydayResponse.json(), { success: true })
+  assert.deepEqual(new Set(firestore.data('budget/A').items.map(({ name }) => name)), new Set(['Rent', 'Electric']))
 })

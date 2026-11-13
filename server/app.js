@@ -6,7 +6,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { FirestoreSessionStore } from './client/firestoreSessionStore.js'
-import { csrfProtection, authLimiter, accountLimiter, vaultLimiter, budgetLimiter, tenantLimiter, chatbotLimiter, previewReadLimiter } from './middleware/security.js'
+import { csrfProtection, authLimiter, accountLimiter, vaultLimiter, budgetLimiter, chatbotLimiter } from './middleware/security.js'
 import { buildAllowedOrigins, createCorsOptionsDelegate } from './config/origins.js'
 import { buildGoogleStrategyOptions } from './config/googleOAuth.js'
 import { validateServerRuntimeConfig } from './config/runtimeConfig.js'
@@ -15,18 +15,11 @@ import authRouter, { isAuthenticated } from './routes/auth.js'
 import accountRouter from './routes/account.js'
 import chatgptRouter from './routes/chatgpt.js'
 import textToSpeechRouter from './routes/textToSpeech.js'
-import superMarketRouter from './routes/superMarket.js'
 import budgetRouter from './routes/budget.js'
 import { noStore } from './middleware/contentSecurity.js'
 import storybookRouter from './routes/storybook.js'
 import chatbotRouter from './routes/chatbot.js'
-import wowRouter from './routes/wow.js'
 import vaultRouter from './routes/vault.js'
-import tenantRouter from './routes/tenants.js'
-import publicSiteRouter from './routes/publicSites.js'
-import publicLeadRouter from './routes/publicLeads.js'
-import internalLeadNotificationRouter from './routes/internalLeadNotifications.js'
-import { resolveActiveDomain } from './services/siteDomainService.js'
 import { fileURLToPath } from 'url'
 import { sanitizeLogUrl } from './logging/accessLog.js'
 
@@ -50,8 +43,8 @@ app.use(['/text/to/speech/v1/voices', '/text/to/speech/v1/voice'], noStore)
 // TLS termination (used by the 'auto' secure-cookie setting below).
 app.set('trust proxy', 1)
 
-// The client is served from a different origin than this API (a separate port
-// in dev, CLIENT_DOMAIN vs SERVER_DOMAIN in prod). Helmet defaults
+// The web apps are served from different origins than this API (a separate
+// port in dev, *.bakerrang.com subdomains vs SERVER_DOMAIN in prod). Helmet defaults
 // Cross-Origin-Resource-Policy to 'same-origin', which blocks the browser from
 // loading cross-origin no-cors subresources like <audio src> / <img src>
 // (fetch() is unaffected — it's governed by CORS instead). Relax CORP to
@@ -61,16 +54,10 @@ app.use(helmet({
 }))
 
 const allowedOrigins = buildAllowedOrigins()
-app.use(cors(createCorsOptionsDelegate({ allowedOrigins, resolveActiveDomain })))
+app.use(cors(createCorsOptionsDelegate({ allowedOrigins })))
 logger.token('safe-url', (req) => sanitizeLogUrl(req.originalUrl || req.url))
 app.use(logger(':method :safe-url :status :response-time ms - :res[content-length]'))
-const generalJsonParser = express.json({ limit: '10mb' })
-app.use((req, res, next) => {
-  const publicLeadPost = req.method === 'POST' &&
-    /^\/public\/sites\/[^/]+\/leads\/?$/.test(req.path)
-  if (publicLeadPost) return next()
-  return generalJsonParser(req, res, next)
-})
+app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
@@ -112,21 +99,13 @@ passport.use(new GoogleStrategy(buildGoogleStrategyOptions(), (token, tokenSecre
 }))
 
 app.use('/chatbot', chatbotLimiter, chatbotRouter)
-app.use('/public', publicLeadRouter)
-app.use('/public/preview', previewReadLimiter)
-app.use('/public', publicSiteRouter)
-// Cloud Scheduler calls this with Authorization: Bearer $INTERNAL_DRAIN_TOKEN.
-app.use('/internal', internalLeadNotificationRouter)
 app.use('/auth', authLimiter, authRouter)
 app.use('/account', noStore, accountLimiter, isAuthenticated, accountRouter)
 app.use('/chat/gpt', isAuthenticated, chatgptRouter)
 app.use('/text/to/speech', isAuthenticated, textToSpeechRouter)
-app.use('/supermarket', isAuthenticated, superMarketRouter)
 app.use('/budget', noStore, budgetLimiter, isAuthenticated, budgetRouter)
 app.use('/storybook', isAuthenticated, storybookRouter)
-app.use('/wow', isAuthenticated, wowRouter)
 app.use('/vault', noStore, vaultLimiter, isAuthenticated, vaultRouter)
-app.use('/tenants', tenantLimiter, isAuthenticated, tenantRouter)
 
 app.get('/health', (req, res) => {
   res.status(200).send('Healthy')

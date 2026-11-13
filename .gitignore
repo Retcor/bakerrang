@@ -1,11 +1,7 @@
 .idea
 server/node_modules/
-client/node_modules/
 server/.env
 /.playwright-mcp/
-client/dist/
-client/.env.local
-client/.env.*.local
 .pnpm-store/
 
 # Machine-local AI tooling permissions, runtime paths, and session state

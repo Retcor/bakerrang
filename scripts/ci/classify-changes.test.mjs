@@ -4,8 +4,8 @@ import test from 'node:test'
 import { classifyChanges } from './classify-changes.mjs'
 
 const expected = (ci, deploy = ci) => ({
-  ci: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...ci },
-  deploy: { api: false, portal: false, renderer: false, client: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...deploy },
+  ci: { api: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...ci },
+  deploy: { api: false, 'web-launcher': false, 'web-storybook': false, 'web-polyglot': false, 'web-sign': false, 'web-budget': false, 'web-passwords': false, 'web-account': false, ...deploy },
   unknown: []
 })
 
@@ -14,9 +14,25 @@ test('classifies API-only source and lockfile changes', () => {
   assert.deepEqual(classifyChanges(['server/package-lock.json']), expected({ api: true }))
 })
 
-test('classifies Client source for Client CI and deployment only', () => {
-  assert.deepEqual(classifyChanges(['client/src/App.jsx']), expected({ client: true }))
-  assert.deepEqual(classifyChanges(['client/package-lock.json']), expected({ client: true }))
+test('keeps retired areas classifiable but never schedules CI or a deploy for them', () => {
+  for (const repositoryPath of [
+    'client/src/App.jsx',
+    'client/package-lock.json',
+    'platform/apps/portal/app/page.tsx',
+    'platform/package-lock.json',
+    'extension/src/background.js',
+    'addon/WoWAdvisor/WoWAdvisor.lua'
+  ]) {
+    assert.deepEqual(classifyChanges([repositoryPath]), expected({}), repositoryPath)
+  }
+})
+
+test('classifies the Launcher nginx config (apex redirect) for the Launcher only', () => {
+  assert.deepEqual(classifyChanges(['web/nginx/apps/launcher.conf']), expected({ 'web-launcher': true }))
+})
+
+test('keeps the brand masters out of every service build', () => {
+  assert.deepEqual(classifyChanges(['web/brand/bakerrang-logo.png']), expected({}))
 })
 
 test('classifies Launcher source for Launcher CI and deployment only', () => {
@@ -57,9 +73,8 @@ test('classifies Account source and nginx config for Account only', () => {
   assert.deepEqual(classifyChanges(['web/nginx/apps/passwords.conf']), expected({ 'web-passwords': true }))
 })
 
-test('keeps server, legacy client, and Account design-record changes from crossing into Account', () => {
+test('keeps server and Account design-record changes from crossing into Account', () => {
   assert.deepEqual(classifyChanges(['server/routes/account.js', 'server/routes/textToSpeech.js']), expected({ api: true }))
-  assert.deepEqual(classifyChanges(['client/src/components/Account.jsx']), expected({ client: true }))
   assert.deepEqual(classifyChanges(['docs/apps/PhaseH-Account.md', 'docs/apps/Account-PhaseH-Runbook.md']), expected({}))
   assert.deepEqual(classifyChanges(['web/.impeccable/mocks/account-comp.html', 'web/.impeccable/surfaces/account.md']), expected({}))
 })
@@ -113,52 +128,11 @@ test('fails closed on unknown consumer app and root paths', () => {
   assert.deepEqual(classifyChanges(['web/unrecognized.config.js']).unknown, ['web/unrecognized.config.js'])
 })
 
-test('classifies app-only paths', () => {
-  assert.deepEqual(classifyChanges(['platform/apps/portal/app/page.tsx']), expected({ portal: true }))
-  assert.deepEqual(classifyChanges(['platform/apps/site-renderer/app/page.tsx']), expected({ renderer: true }))
-})
-
-test('fans shared packages out according to the dependency graph', () => {
-  assert.deepEqual(classifyChanges(['platform/packages/site-schema/src/index.ts']), expected({ portal: true, renderer: true }))
-  assert.deepEqual(classifyChanges(['platform/packages/ui/src/Button.tsx']), expected({ portal: true, renderer: true }))
-  assert.deepEqual(classifyChanges(['platform/packages/site-components/src/Hero.tsx']), expected({ portal: true, renderer: true }))
-  assert.deepEqual(classifyChanges(['platform/packages/site-runtime/src/SitePageRenderer.tsx']), expected({ portal: true, renderer: true }))
-})
-
-test('classifies shared platform build inputs for CI and deployment', () => {
-  for (const repositoryPath of [
-    'platform/package-lock.json',
-    'platform/package.json',
-    'platform/.dockerignore',
-    'platform/scripts/config-validation.mjs',
-    'platform/tsconfig.base.json'
-  ]) {
-    assert.deepEqual(classifyChanges([repositoryPath]), expected({ portal: true, renderer: true }), repositoryPath)
-  }
-})
-
-test('keeps lint and declaration inputs CI-only', () => {
-  for (const repositoryPath of [
-    'platform/eslint.config.mjs',
-    'platform/scripts/config-validation.d.mts'
-  ]) {
-    assert.deepEqual(
-      classifyChanges([repositoryPath]),
-      expected({ portal: true, renderer: true }, {}),
-      repositoryPath
-    )
-  }
-})
-
 test('explicitly classifies docs, non-service applications, workflows, and ops as no-service', () => {
   for (const repositoryPath of [
     'README.md',
     'docs/CI-CD.md',
-    'extension/src/background.js',
-    'addon/WoWAdvisor/WoWAdvisor.lua',
     '.github/workflows/ci.yml',
-    'platform/.gitignore',
-    'platform/.nvmrc',
     'scripts/verify-live.ps1',
     'scripts/deploy-dev.ps1',
     'firebase.json'
@@ -177,50 +151,17 @@ test('classifies nested Impeccable and agent tooling as repository-only paths', 
   }
 })
 
-test('combines API and Portal changes', () => {
+test('combines API and web app changes', () => {
   assert.deepEqual(
-    classifyChanges(['server/app.js', 'platform/apps/portal/app/page.tsx']),
-    expected({ api: true, portal: true })
-  )
-})
-
-test('keeps repository-only tooling out of a mixed Portal change', () => {
-  assert.deepEqual(
-    classifyChanges(['.impeccable/mocks/x.html', 'platform/apps/portal/app/page.tsx']),
-    expected({ portal: true })
-  )
-})
-
-test('combines Portal and Renderer changes', () => {
-  assert.deepEqual(
-    classifyChanges(['platform/apps/portal/app/page.tsx', 'platform/apps/site-renderer/app/page.tsx']),
-    expected({ portal: true, renderer: true })
-  )
-})
-
-test('combines all three services', () => {
-  assert.deepEqual(
-    classifyChanges(['server/app.js', 'platform/packages/ui/src/Button.tsx']),
-    expected({ api: true, portal: true, renderer: true })
-  )
-})
-
-test('keeps Client independent from API and Platform dependency fan-out', () => {
-  assert.deepEqual(
-    classifyChanges([
-      'client/src/App.jsx',
-      'platform/packages/site-schema/src/index.ts',
-      'platform/packages/ui/src/Button.tsx',
-      'platform/packages/site-components/src/Hero.tsx'
-    ]),
-    expected({ client: true, portal: true, renderer: true })
+    classifyChanges(['server/app.js', 'web/apps/passwords/src/App.jsx']),
+    expected({ api: true, 'web-passwords': true })
   )
 })
 
 test('normalizes Windows separators and deduplicates paths', () => {
   assert.deepEqual(
-    classifyChanges(['platform\\apps\\portal\\app\\page.tsx', './platform/apps/portal/app/page.tsx']),
-    expected({ portal: true })
+    classifyChanges(['web\\apps\\budget\\src\\App.jsx', './web/apps/budget/src/App.jsx']),
+    expected({ 'web-budget': true })
   )
 })
 
