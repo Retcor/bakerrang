@@ -1097,7 +1097,7 @@ values (light-mode values in parens):
 ### Neutral
 - **Ground** (`#161514` dark / `#efece6` light): The page background; the charcoal is the world.
 - **Ground 2** (`#1c1b1a` / `#e7e3db`): Recessed bands (ecosystem strip) and emblem tile fills.
-- **Plane** (`#201f1d` / `#ffffff`): Raised surfaces — bench, hovered rows, vault, popovers, menus.
+- **Plane** (`#201f1d` / `#ffffff`): Raised surfaces — bench, hovered rows and vault, popovers, menus.
 - **Plane 2** (`#262523` / `#f6f4ef`): The nested step above Plane (segmented-control active pill,
   menu-item hover, switcher cell hover).
 - **Line** (`rgba(255,255,255,0.10)` / `rgba(20,18,16,0.12)`): The default hairline rule and border.
@@ -1171,7 +1171,7 @@ carries the brand alone.
 Hybrid, but quiet: surfaces are flat charcoal planes separated by 1px rules, with **restrained real
 shadows** (offset + blur) used structurally on genuinely raised objects — never glass, never blur,
 never ambient gradients. Depth is read primarily from the tonal step between Ground → Plane → Plane-2
-and from hairline rules, with shadow as a secondary cue on the bench, the vault, popovers, and
+and from hairline rules, with shadow as a secondary cue on the bench, popovers, and
 hovered rows.
 
 ### Shadow Vocabulary
@@ -1223,9 +1223,11 @@ kit. No colored border ever exceeds 1px.
   drawn SVG. Flagship rows (`row--lg`, the Make & learn tools) sit taller with larger names.
 
 ### Vault (signature, high-trust)
-- **Character:** A distinct, sturdier module for the zero-knowledge Passwords product — visibly more
-  serious than a row. `64px / 1fr / auto` grid, 8px radius, Plane background, `--line-strong` border,
-  resting shadow, always present (not hover-summoned).
+- **Character:** A distinct, sturdier module for the zero-knowledge Passwords product. `64px / 1fr / auto`
+  grid, 8px radius, larger padding and emblem than a row. **At rest it is flat like the directory rows**
+  (transparent border, no Plane, no shadow); on hover/focus it takes the same lift as a row (Plane,
+  `--line` border, contact shadow, 2px nudge, arrow in the accent). Owner decision 2026-11-12: the earlier
+  always-elevated treatment read as permanently hovered.
 - **Detail:** Passwords accent (`#AEB8C2`), a `Zero-knowledge` secure tag (accent text + accent 1px
   border) beside the Expanded name, and a masked `••••••••` dot string in the accent.
 

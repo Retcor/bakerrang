@@ -327,14 +327,24 @@
   align-items: center;
   gap: 1.2rem;
   padding: 1.5rem 1.4rem;
-  border: 1px solid var(--line-strong);
+  border: 1px solid transparent;
   border-radius: var(--radius-panel);
-  background: var(--plane);
-  box-shadow: var(--shadow-resting);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 100ms ease;
 }
 
-.vault:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+/* Rests flat like the directory rows; it only lifts while hovered or focused. */
+.vault:hover,
+.vault:focus-visible {
+  border-color: var(--line);
+  background: var(--plane);
+  box-shadow: var(--shadow-contact);
+  transform: translateX(2px);
+}
+
+.vault:hover .vault__arrow,
+.vault:focus-visible .vault__arrow {
+  color: var(--accent);
+  transform: translateX(3px);
 }
 
 .vault__emblem {
